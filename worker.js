@@ -11,8 +11,10 @@ export default {
 
     const isApi = url.pathname.startsWith('/api/') || url.pathname.startsWith('/admin/api/');
     const isWs  = url.pathname === '/ws' || url.pathname.startsWith('/ws/');
+    // The MediaWiki lives behind nginx on the backend at /wiki.
+    const isWiki = url.pathname === '/wiki' || url.pathname.startsWith('/wiki/');
 
-    if (isApi || isWs) {
+    if (isApi || isWs || isWiki) {
       const target = BACKEND + url.pathname + url.search;
       // Rebuild the request against the backend URL so the Host header and TLS
       // SNI become 168.75.110.180.sslip.io (matching the cert and the nginx
