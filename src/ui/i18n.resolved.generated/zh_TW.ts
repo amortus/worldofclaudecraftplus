@@ -480,6 +480,16 @@ export const zh_TW: EnTranslations = {
       "deactivated": "您的帳號已停用。",
       "logOut": "登出",
       "logOutSummary": "登出目前的裝置。"
+    },
+    "donate": {
+      "title": "Apoie o World of ClaudeCraft",
+      "intro": "Sua doacao ajuda a manter os servidores no ar e o jogo sempre evoluindo. Qualquer valor faz diferenca. Obrigado!",
+      "qrAlt": "QR Code do PIX para doacao",
+      "pixLabel": "PIX copia e cola",
+      "copy": "Copiar codigo PIX",
+      "copied": "Copiado!",
+      "thanks": "Pague pelo QR Code ou copie o codigo acima no app do seu banco.",
+      "close": "Fechar"
     }
   },
   "skinEvent": {
@@ -588,10 +598,7 @@ export const zh_TW: EnTranslations = {
     "playAria": "遊玩 World of ClaudeCraft",
     "serverLabel": "選擇你的伺服器",
     "serverAria": "選擇伺服器：線上或離線",
-    "serverOfflineSub": "即時本地世界",
-    "caLabel": "$WOC 合約地址",
-    "caCopyAria": "複製合約地址",
-    "caNote": "WOC 是我們的社群代幣，並非遊玩所需。加入 Discord 一起討論 WOC 的用途與飛輪效應。"
+    "serverOfflineSub": "即時本地世界"
   },
   "auth": {
     "enterRealm": "進入伺服器",

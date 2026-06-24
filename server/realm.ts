@@ -5,7 +5,7 @@
 // value, so two processes with different REALM_NAME share a DB yet form fully
 // isolated worlds. Defaults to a single realm for local dev / single-shard prod.
 
-export const DEFAULT_REALM_NAME = 'Claudemoon';
+export const DEFAULT_REALM_NAME = 'Tupanor';
 
 export function resolveRealm(rawName: string | undefined): string {
   const raw = (rawName ?? '').trim();

@@ -17,7 +17,15 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.ads.reviveReady",
     "hudChrome.ads.skip",
     "hudChrome.ads.watchForBoost",
-    "hudChrome.ads.watchForRevive"
+    "hudChrome.ads.watchForRevive",
+    "hudChrome.donate.close",
+    "hudChrome.donate.copied",
+    "hudChrome.donate.copy",
+    "hudChrome.donate.intro",
+    "hudChrome.donate.pixLabel",
+    "hudChrome.donate.qrAlt",
+    "hudChrome.donate.thanks",
+    "hudChrome.donate.title"
   ],
   "es_ES": [
     "hudChrome.ads.adNotAvailable",
@@ -27,7 +35,15 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.ads.reviveReady",
     "hudChrome.ads.skip",
     "hudChrome.ads.watchForBoost",
-    "hudChrome.ads.watchForRevive"
+    "hudChrome.ads.watchForRevive",
+    "hudChrome.donate.close",
+    "hudChrome.donate.copied",
+    "hudChrome.donate.copy",
+    "hudChrome.donate.intro",
+    "hudChrome.donate.pixLabel",
+    "hudChrome.donate.qrAlt",
+    "hudChrome.donate.thanks",
+    "hudChrome.donate.title"
   ],
   "fr_FR": [
     "hudChrome.ads.adNotAvailable",
@@ -37,7 +53,15 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.ads.reviveReady",
     "hudChrome.ads.skip",
     "hudChrome.ads.watchForBoost",
-    "hudChrome.ads.watchForRevive"
+    "hudChrome.ads.watchForRevive",
+    "hudChrome.donate.close",
+    "hudChrome.donate.copied",
+    "hudChrome.donate.copy",
+    "hudChrome.donate.intro",
+    "hudChrome.donate.pixLabel",
+    "hudChrome.donate.qrAlt",
+    "hudChrome.donate.thanks",
+    "hudChrome.donate.title"
   ],
   "fr_CA": [
     "hudChrome.ads.adNotAvailable",
@@ -47,7 +71,15 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.ads.reviveReady",
     "hudChrome.ads.skip",
     "hudChrome.ads.watchForBoost",
-    "hudChrome.ads.watchForRevive"
+    "hudChrome.ads.watchForRevive",
+    "hudChrome.donate.close",
+    "hudChrome.donate.copied",
+    "hudChrome.donate.copy",
+    "hudChrome.donate.intro",
+    "hudChrome.donate.pixLabel",
+    "hudChrome.donate.qrAlt",
+    "hudChrome.donate.thanks",
+    "hudChrome.donate.title"
   ],
   "en_CA": [],
   "it_IT": [
@@ -58,7 +90,15 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.ads.reviveReady",
     "hudChrome.ads.skip",
     "hudChrome.ads.watchForBoost",
-    "hudChrome.ads.watchForRevive"
+    "hudChrome.ads.watchForRevive",
+    "hudChrome.donate.close",
+    "hudChrome.donate.copied",
+    "hudChrome.donate.copy",
+    "hudChrome.donate.intro",
+    "hudChrome.donate.pixLabel",
+    "hudChrome.donate.qrAlt",
+    "hudChrome.donate.thanks",
+    "hudChrome.donate.title"
   ],
   "de_DE": [
     "hudChrome.ads.adNotAvailable",
@@ -68,7 +108,15 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.ads.reviveReady",
     "hudChrome.ads.skip",
     "hudChrome.ads.watchForBoost",
-    "hudChrome.ads.watchForRevive"
+    "hudChrome.ads.watchForRevive",
+    "hudChrome.donate.close",
+    "hudChrome.donate.copied",
+    "hudChrome.donate.copy",
+    "hudChrome.donate.intro",
+    "hudChrome.donate.pixLabel",
+    "hudChrome.donate.qrAlt",
+    "hudChrome.donate.thanks",
+    "hudChrome.donate.title"
   ],
   "zh_CN": [
     "hudChrome.ads.adNotAvailable",
@@ -78,7 +126,15 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.ads.reviveReady",
     "hudChrome.ads.skip",
     "hudChrome.ads.watchForBoost",
-    "hudChrome.ads.watchForRevive"
+    "hudChrome.ads.watchForRevive",
+    "hudChrome.donate.close",
+    "hudChrome.donate.copied",
+    "hudChrome.donate.copy",
+    "hudChrome.donate.intro",
+    "hudChrome.donate.pixLabel",
+    "hudChrome.donate.qrAlt",
+    "hudChrome.donate.thanks",
+    "hudChrome.donate.title"
   ],
   "zh_TW": [
     "hudChrome.ads.adNotAvailable",
@@ -88,7 +144,15 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.ads.reviveReady",
     "hudChrome.ads.skip",
     "hudChrome.ads.watchForBoost",
-    "hudChrome.ads.watchForRevive"
+    "hudChrome.ads.watchForRevive",
+    "hudChrome.donate.close",
+    "hudChrome.donate.copied",
+    "hudChrome.donate.copy",
+    "hudChrome.donate.intro",
+    "hudChrome.donate.pixLabel",
+    "hudChrome.donate.qrAlt",
+    "hudChrome.donate.thanks",
+    "hudChrome.donate.title"
   ],
   "ko_KR": [
     "hudChrome.ads.adNotAvailable",
@@ -98,7 +162,15 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.ads.reviveReady",
     "hudChrome.ads.skip",
     "hudChrome.ads.watchForBoost",
-    "hudChrome.ads.watchForRevive"
+    "hudChrome.ads.watchForRevive",
+    "hudChrome.donate.close",
+    "hudChrome.donate.copied",
+    "hudChrome.donate.copy",
+    "hudChrome.donate.intro",
+    "hudChrome.donate.pixLabel",
+    "hudChrome.donate.qrAlt",
+    "hudChrome.donate.thanks",
+    "hudChrome.donate.title"
   ],
   "ja_JP": [
     "hudChrome.ads.adNotAvailable",
@@ -108,7 +180,15 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.ads.reviveReady",
     "hudChrome.ads.skip",
     "hudChrome.ads.watchForBoost",
-    "hudChrome.ads.watchForRevive"
+    "hudChrome.ads.watchForRevive",
+    "hudChrome.donate.close",
+    "hudChrome.donate.copied",
+    "hudChrome.donate.copy",
+    "hudChrome.donate.intro",
+    "hudChrome.donate.pixLabel",
+    "hudChrome.donate.qrAlt",
+    "hudChrome.donate.thanks",
+    "hudChrome.donate.title"
   ],
   "pt_BR": [
     "hudChrome.ads.adNotAvailable",
@@ -118,7 +198,15 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.ads.reviveReady",
     "hudChrome.ads.skip",
     "hudChrome.ads.watchForBoost",
-    "hudChrome.ads.watchForRevive"
+    "hudChrome.ads.watchForRevive",
+    "hudChrome.donate.close",
+    "hudChrome.donate.copied",
+    "hudChrome.donate.copy",
+    "hudChrome.donate.intro",
+    "hudChrome.donate.pixLabel",
+    "hudChrome.donate.qrAlt",
+    "hudChrome.donate.thanks",
+    "hudChrome.donate.title"
   ],
   "ru_RU": [
     "hudChrome.ads.adNotAvailable",
@@ -128,6 +216,14 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.ads.reviveReady",
     "hudChrome.ads.skip",
     "hudChrome.ads.watchForBoost",
-    "hudChrome.ads.watchForRevive"
+    "hudChrome.ads.watchForRevive",
+    "hudChrome.donate.close",
+    "hudChrome.donate.copied",
+    "hudChrome.donate.copy",
+    "hudChrome.donate.intro",
+    "hudChrome.donate.pixLabel",
+    "hudChrome.donate.qrAlt",
+    "hudChrome.donate.thanks",
+    "hudChrome.donate.title"
   ]
 };

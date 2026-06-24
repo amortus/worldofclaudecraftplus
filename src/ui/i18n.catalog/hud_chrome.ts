@@ -412,4 +412,16 @@ export const hudChromeStrings = {
     logOut: "Log Out",
     logOutSummary: "Sign out of this device.",
   },
+  // Donate popup (PIX). Brazil-only payment method; values are Portuguese on
+  // purpose so the donation copy reads in the payer's language everywhere.
+  donate: {
+    title: "Apoie o World of ClaudeCraft",
+    intro: "Sua doacao ajuda a manter os servidores no ar e o jogo sempre evoluindo. Qualquer valor faz diferenca. Obrigado!",
+    qrAlt: "QR Code do PIX para doacao",
+    pixLabel: "PIX copia e cola",
+    copy: "Copiar codigo PIX",
+    copied: "Copiado!",
+    thanks: "Pague pelo QR Code ou copie o codigo acima no app do seu banco.",
+    close: "Fechar",
+  },
 };

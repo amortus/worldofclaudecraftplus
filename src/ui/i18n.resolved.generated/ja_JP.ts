@@ -480,6 +480,16 @@ export const ja_JP: EnTranslations = {
       "deactivated": "アカウントが無効化されました。",
       "logOut": "ログアウト",
       "logOutSummary": "このデバイスからログアウトします。"
+    },
+    "donate": {
+      "title": "Apoie o World of ClaudeCraft",
+      "intro": "Sua doacao ajuda a manter os servidores no ar e o jogo sempre evoluindo. Qualquer valor faz diferenca. Obrigado!",
+      "qrAlt": "QR Code do PIX para doacao",
+      "pixLabel": "PIX copia e cola",
+      "copy": "Copiar codigo PIX",
+      "copied": "Copiado!",
+      "thanks": "Pague pelo QR Code ou copie o codigo acima no app do seu banco.",
+      "close": "Fechar"
     }
   },
   "skinEvent": {
@@ -588,10 +598,7 @@ export const ja_JP: EnTranslations = {
     "playAria": "World of ClaudeCraftをプレイ",
     "serverLabel": "レルムを選択",
     "serverAria": "レルムを選択：オンラインまたはオフライン",
-    "serverOfflineSub": "即座にローカルの世界へ",
-    "caLabel": "$WOC コントラクトアドレス",
-    "caCopyAria": "コントラクトアドレスをコピー",
-    "caNote": "WOCはコミュニティトークンです。プレイには必要ありません。Discordに参加して、WOCのユーティリティとフライホイールについて語り合いましょう。"
+    "serverOfflineSub": "即座にローカルの世界へ"
   },
   "auth": {
     "enterRealm": "レルムに入る",

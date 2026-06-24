@@ -44,7 +44,7 @@ export const supportedLanguages = [...SUPPORTED_LANGUAGES] as SupportedLanguage[
 // map (whose keys were the old membership test) is no longer imported.
 const SUPPORTED_SET: ReadonlySet<string> = new Set(SUPPORTED_LANGUAGES);
 
-let currentLanguage: SupportedLanguage = "en";
+let currentLanguage: SupportedLanguage = "pt_BR";
 
 // --- en_XA dev-only pseudo-locale --------------------------------------
 //

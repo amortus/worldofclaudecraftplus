@@ -480,6 +480,16 @@ export const ko_KR: EnTranslations = {
       "deactivated": "계정이 비활성화되었습니다.",
       "logOut": "로그아웃",
       "logOutSummary": "이 기기에서 로그아웃합니다."
+    },
+    "donate": {
+      "title": "Apoie o World of ClaudeCraft",
+      "intro": "Sua doacao ajuda a manter os servidores no ar e o jogo sempre evoluindo. Qualquer valor faz diferenca. Obrigado!",
+      "qrAlt": "QR Code do PIX para doacao",
+      "pixLabel": "PIX copia e cola",
+      "copy": "Copiar codigo PIX",
+      "copied": "Copiado!",
+      "thanks": "Pague pelo QR Code ou copie o codigo acima no app do seu banco.",
+      "close": "Fechar"
     }
   },
   "skinEvent": {
@@ -588,10 +598,7 @@ export const ko_KR: EnTranslations = {
     "playAria": "World of ClaudeCraft 플레이",
     "serverLabel": "렐름을 선택하세요",
     "serverAria": "렐름 선택: 온라인 또는 오프라인",
-    "serverOfflineSub": "즉시 시작하는 로컬 세상",
-    "caLabel": "$WOC 계약 주소",
-    "caCopyAria": "계약 주소 복사",
-    "caNote": "WOC는 커뮤니티 토큰입니다. 플레이에는 필요하지 않습니다. WOC의 활용과 선순환 구조에 관해 이야기하려면 Discord에 참여하세요."
+    "serverOfflineSub": "즉시 시작하는 로컬 세상"
   },
   "auth": {
     "enterRealm": "렐름 입장",

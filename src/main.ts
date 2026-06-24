@@ -3193,51 +3193,6 @@ async function loadNews(): Promise<void> {
   }).join('');
 }
 
-let caCopyResetTimer: number | null = null;
-
-// Click-to-copy for the $WOC contract address on the landing page. Falls back to
-// a hidden-textarea copy when the async Clipboard API is unavailable (insecure
-// context / older browsers); the copied state is only shown on a real success.
-function wireContractAddressCopy(): void {
-  const btn = document.getElementById('btn-copy-ca');
-  const container = document.getElementById('token-ca');
-  if (!btn || !container) return;
-
-  const showCopied = () => {
-    container.classList.add('is-copied');
-    if (caCopyResetTimer !== null) window.clearTimeout(caCopyResetTimer);
-    caCopyResetTimer = window.setTimeout(() => {
-      container.classList.remove('is-copied');
-      caCopyResetTimer = null;
-    }, 1800);
-  };
-
-  const fallbackCopy = (text: string): boolean => {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.setAttribute('readonly', '');
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.select();
-    let ok = false;
-    try { ok = document.execCommand('copy'); } catch { ok = false; }
-    document.body.removeChild(ta);
-    return ok;
-  };
-
-  btn.addEventListener('click', () => {
-    const ca = btn.getAttribute('data-ca');
-    if (!ca) return;
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(ca).then(showCopied).catch(() => {
-        if (fallbackCopy(ca)) showCopied();
-      });
-    } else if (fallbackCopy(ca)) {
-      showCopied();
-    }
-  });
-}
 
 function syncHomepageMusicToggle(): void {
   const btn = document.getElementById('homepage-music-toggle') as HTMLButtonElement | null;
@@ -3274,6 +3229,53 @@ function setHomepageMusicMuted(muted: boolean): void {
   syncHomepageMusicToggle();
 }
 
+// Hidden-textarea clipboard fallback for insecure contexts / older browsers.
+function fallbackCopyText(text: string): boolean {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch { ok = false; }
+  document.body.removeChild(ta);
+  return ok;
+}
+
+// Donate popup: PIX QR + copy-the-code, plus a GitHub Sponsors link. Opened by
+// any [data-donate-open] trigger (nav CTA, header button, footer link).
+function wireDonateModal(): void {
+  const modal = document.getElementById('donate-modal');
+  if (!modal) return;
+  const open = () => modal.removeAttribute('hidden');
+  const close = () => modal.setAttribute('hidden', '');
+  document.querySelectorAll<HTMLElement>('[data-donate-open]').forEach((el) => {
+    el.addEventListener('click', (e) => { e.preventDefault(); open(); });
+  });
+  document.getElementById('btn-close-donate')?.addEventListener('click', close);
+  modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.hasAttribute('hidden')) close();
+  });
+  const copyBtn = document.getElementById('btn-copy-pix');
+  const codeEl = document.getElementById('donate-pix-code');
+  copyBtn?.addEventListener('click', () => {
+    const code = codeEl?.textContent?.trim() ?? '';
+    if (!code) return;
+    const done = () => {
+      copyBtn.classList.add('is-copied');
+      window.setTimeout(() => copyBtn.classList.remove('is-copied'), 1600);
+    };
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(code).then(done).catch(() => { if (fallbackCopyText(code)) done(); });
+    } else if (fallbackCopyText(code)) {
+      done();
+    }
+  });
+}
+
 function wireHomepageMusicToggle(): void {
   const btn = document.getElementById('homepage-music-toggle') as HTMLButtonElement | null;
   if (!btn) return;
@@ -3298,10 +3300,8 @@ let walletVerifyModalUnsubscribe: (() => void) | null = null;
 let walletFlowStatus: 'connect' | 'sign' | 'verify' | null = null;
 let walletHiddenNoticeTimeout: number | null = null;
 
-// Feature flag: Wallet Standard support needs no project id. Keep an escape
-// hatch for deploys that want to hide the wallet UI entirely. Native app builds
-// intentionally exclude wallet verification for now.
-const WALLET_ENABLED = !NATIVE_APP && String(import.meta.env.VITE_WALLET_DISABLED ?? '').trim() !== '1';
+// Wallet/token UI permanently removed from this distribution.
+const WALLET_ENABLED = false;
 
 function walletCharacterScreenVisible(): boolean {
   try {
@@ -4018,9 +4018,9 @@ function wireStartScreens(): void {
   void ensureLocaleLoaded(bootLang).then(revealLocalized, revealLocalized);
   hydrateIcons();
   void loadProjectStats();
-  wireContractAddressCopy();
   wireHomepageMusicToggle();
   wireWallet();
+  wireDonateModal();
 
   // mode select
   const onlineBtn = $('#btn-online');

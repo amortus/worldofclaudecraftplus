@@ -480,6 +480,16 @@ export const pt_BR: EnTranslations = {
       "deactivated": "Sua conta foi desativada.",
       "logOut": "Sair",
       "logOutSummary": "Sair deste dispositivo."
+    },
+    "donate": {
+      "title": "Apoie o World of ClaudeCraft",
+      "intro": "Sua doacao ajuda a manter os servidores no ar e o jogo sempre evoluindo. Qualquer valor faz diferenca. Obrigado!",
+      "qrAlt": "QR Code do PIX para doacao",
+      "pixLabel": "PIX copia e cola",
+      "copy": "Copiar codigo PIX",
+      "copied": "Copiado!",
+      "thanks": "Pague pelo QR Code ou copie o codigo acima no app do seu banco.",
+      "close": "Fechar"
     }
   },
   "skinEvent": {
@@ -588,10 +598,7 @@ export const pt_BR: EnTranslations = {
     "playAria": "Jogar World of ClaudeCraft",
     "serverLabel": "Escolha seu reino",
     "serverAria": "Escolher reino: Online ou Offline",
-    "serverOfflineSub": "Mundo local instantâneo",
-    "caLabel": "Endereço do contrato $WOC",
-    "caCopyAria": "Copiar endereço do contrato",
-    "caNote": "WOC é o token da nossa comunidade. Não é necessário para jogar. Entre no Discord para discutir a utilidade e o flywheel do WOC."
+    "serverOfflineSub": "Mundo local instantâneo"
   },
   "auth": {
     "enterRealm": "Entrar no reino",
