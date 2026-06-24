@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.worldofclaudecraft',
+  appId: 'com.worldofclaudecraft.brasil',
   appName: 'World of ClaudeCraft',
   webDir: 'dist',
   bundledWebRuntime: false,
