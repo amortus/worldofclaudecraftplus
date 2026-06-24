@@ -75,6 +75,7 @@ const PERF_REPORT_RETENTION_DAYS = Number(process.env.PERF_REPORT_RETENTION_DAYS
 const TURNSTILE_SECRET = process.env.TURNSTILE_SECRET ?? '';
 // Hard WS connection limit per IP. Soft threshold (adds bot evidence) is in game.ts.
 const MAX_WS_PER_IP_HARD = Number(process.env.MAX_WS_PER_IP_HARD ?? '20');
+const MAX_PLAYERS_TOTAL = Number(process.env.MAX_PLAYERS_TOTAL ?? '300');
 // Each realm re-reads the blocklist on this interval so edits on another realm
 // process propagate and expired blocks fall out.
 const BLOCKED_IP_REFRESH_MS = 60_000;
@@ -922,6 +923,11 @@ async function main(): Promise<void> {
     // they consume a session slot.
     const ip = requestMetadata(req).ip;
     const isAdmin = await isAdminAccount(accountId);
+    if (!isAdmin && game.clients.size >= MAX_PLAYERS_TOTAL) {
+      ws.send(JSON.stringify({ t: 'error', error: 'Server is full, try again later' }));
+      ws.close(1013, 'Server full');
+      return;
+    }
     if (isConnectionRefused({ blocked: game.isIpBlocked(ip), isAdmin, ipSessions: game.countIpSessions(ip), hardLimit: MAX_WS_PER_IP_HARD })) {
       ws.close(1008, 'Too many connections from your network');
       return;
@@ -954,7 +960,9 @@ async function main(): Promise<void> {
     ws.on('message', (data) => {
       game.handleMessage(session, String(data));
     });
+    const keepAlive = setInterval(() => { if (ws.readyState === ws.OPEN) ws.ping(); }, 30_000);
     ws.on('close', () => {
+      clearInterval(keepAlive);
       void game.leave(session, 'disconnected');
       console.log(`- ${character.name} left — ${game.clients.size} online`);
     });
