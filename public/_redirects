@@ -22,5 +22,4 @@
 /support /support.html 200
 /support/ /support.html 200
 
-# SPA fallback: all other routes serve the main game
-/* /index.html 200
+# SPA fallback handled by wrangler.toml not_found_handling = "single-page-application"
