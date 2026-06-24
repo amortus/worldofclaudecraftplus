@@ -6,7 +6,7 @@ Last updated: 21 June 2026
 
 This Privacy Policy explains what personal information we collect, why we collect it, how we use and share it, and the choices you have. It applies when you play World of ClaudeCraft (the "Game"), visit worldofclaudecraft.com (the "Site"), or use our mobile application (the "App"). The Game, Site, and App together are the "Service."
 
-**Who we are.** The Service is operated by Dream Home AI Limited, trading as Levy Street, New Zealand company number 8703066 ("we," "us," "our"), based in Wellington, New Zealand. We are the data controller for personal information processed through the Service.
+**Who we are.** The Service is operated by the World of ClaudeCraft team, an independent project based in Brazil ("we," "us," "our"). We are the data controller for personal information processed through the Service.
 
 By using the Service you agree to this Policy. If you do not agree, do not use the Service.
 
@@ -107,7 +107,7 @@ Depending on where you live, you may have some or all of these rights:
 - Receive a copy of your information in a portable format.
 - Withdraw consent where we rely on it.
 
-**New Zealand:** under the Privacy Act 2020 you may request access to and correction of your personal information.
+**Brazil:** under the Lei Geral de Protecao de Dados (LGPD) you may request access to and correction of your personal information.
 
 **EEA and UK:** you have the GDPR rights listed above and may lodge a complaint with your local data protection authority.
 
@@ -131,7 +131,7 @@ The Service is not directed to children under 13, and you must be at least 13 to
 
 ## 10. International data transfers
 
-We are based in New Zealand and may process your information in New Zealand and in other countries, including where our service providers operate. These countries may have different data protection laws than yours. Where required, we use appropriate safeguards for international transfers, such as standard contractual clauses.
+We are based in Brazil and may process your information in Brazil and in other countries, including where our service providers operate. These countries may have different data protection laws than yours. Where required, we use appropriate safeguards for international transfers, such as standard contractual clauses.
 
 ---
 
@@ -153,7 +153,7 @@ For privacy questions or to exercise your rights:
 
 Email: contact@worldofclaudecraft.com.br
 
-New Zealand users may also contact the Office of the Privacy Commissioner at privacy.org.nz.
+Brazil users may also contact the Autoridade Nacional de Protecao de Dados (ANPD) at gov.br/anpd.
 
 ---
 

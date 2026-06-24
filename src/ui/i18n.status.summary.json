@@ -26,8 +26,8 @@
   "counts": {
     "keys": 3535,
     "rows": 45955,
-    "translated": 45704,
-    "pending": 192,
+    "translated": 45712,
+    "pending": 184,
     "blocked": 59,
     "blockedSource": 92
   },
@@ -88,8 +88,8 @@
       "blocked": 0
     },
     "pt_BR": {
-      "translated": 3511,
-      "pending": 16,
+      "translated": 3519,
+      "pending": 8,
       "blocked": 8
     },
     "ru_RU": {

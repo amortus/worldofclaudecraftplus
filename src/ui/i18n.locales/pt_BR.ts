@@ -2937,4 +2937,12 @@ export const pt_BR: Partial<Record<TranslationKey, string>> = {
   "hudChrome.options.browserEffectsReduced": "Reduzidos",
   "hudChrome.options.browserEffectsMinimal": "Mínimos",
   "hudChrome.options.browserEffectsNote": "O modo automático suaviza os efeitos CSS pesados (desfoque, brilho, movimento de fundo) com base no seu navegador e dispositivo. Reduza-o manualmente se a interface parecer lenta.",
+  "hudChrome.ads.watchForRevive": "Assista a um anúncio curto para reviver aqui",
+  "hudChrome.ads.reviveReady": "Reviver Aqui!",
+  "hudChrome.ads.watchForBoost": "Assista a um anúncio curto para um bônus de XP",
+  "hudChrome.ads.earnedRevive": "Revivendo no local...",
+  "hudChrome.ads.earnedBoost": "Bônus de XP ativo! XP de abate dobrado pelas próximas 5 bolhas.",
+  "hudChrome.ads.adNotAvailable": "Nenhum anúncio disponível agora.",
+  "hudChrome.ads.boostOfferTitle": "Você limpou a masmorra!",
+  "hudChrome.ads.skip": "Não, obrigado",
 };

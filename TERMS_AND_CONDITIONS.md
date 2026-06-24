@@ -6,7 +6,7 @@ Last updated: 21 June 2026
 
 ## 1. Who we are and what these terms cover
 
-These Terms and Conditions (the "Terms") are a legal agreement between you and Dream Home AI Limited, trading as Levy Street, New Zealand company number 8703066 ("we," "us," "our"). They govern your use of World of ClaudeCraft (the "Game"), worldofclaudecraft.com (the "Site"), and our mobile application (the "App"), together the "Service."
+These Terms and Conditions (the "Terms") are a legal agreement between you and the World of ClaudeCraft team, an independent project based in Brazil ("we," "us," "our"). They govern your use of World of ClaudeCraft (the "Game"), worldofclaudecraft.com.br (the "Site"), and our mobile application (the "App"), together the "Service."
 
 By using the Service you agree to these Terms and to our Privacy Policy. If you do not agree, do not use the Service.
 
@@ -55,7 +55,7 @@ The Game includes virtual items, gear, and in-game currency. These have no monet
 
 ## 9. Donations
 
-Donations through GitHub Sponsors are voluntary and are processed by GitHub. Donations are not a purchase, are non-refundable except where the law requires, and do not entitle you to any product, in-game advantage, ownership, equity, token, or other benefit.
+Donations (for example via PIX or GitHub Sponsors) are voluntary and are processed by the relevant payment or platform provider. Donations are not a purchase, are non-refundable except where the law requires, and do not entitle you to any product, in-game advantage, ownership, equity, token, or other benefit.
 
 ## 10. Service availability and changes
 
@@ -79,11 +79,11 @@ To the fullest extent permitted by law, the Service is provided "as is" and "as 
 
 ## 14. Consumer law
 
-Nothing in these Terms limits rights you have under laws that cannot be excluded, including, for consumers in New Zealand, the Consumer Guarantees Act 1993 and the Fair Trading Act 1986, and similar consumer protection laws elsewhere. Where the Service is supplied free of charge and for personal use, those guarantees apply only to the extent the law requires.
+Nothing in these Terms limits rights you have under laws that cannot be excluded, including, for consumers in Brazil, the Brazilian Consumer Protection Code (Codigo de Defesa do Consumidor), and similar consumer protection laws elsewhere. Where the Service is supplied free of charge and for personal use, those guarantees apply only to the extent the law requires.
 
 ## 15. Limitation of liability
 
-To the fullest extent permitted by law, we and our directors, employees, and contractors will not be liable for any indirect, incidental, special, consequential, or punitive damages, or for any loss of data, progress, profits, goodwill, or virtual items, arising from or related to your use of or inability to use the Service. To the extent we are found liable despite the above, our total liability for all claims relating to the Service is limited to NZD 100. Some jurisdictions do not allow certain limitations, so some of these may not apply to you.
+To the fullest extent permitted by law, we and our directors, employees, and contractors will not be liable for any indirect, incidental, special, consequential, or punitive damages, or for any loss of data, progress, profits, goodwill, or virtual items, arising from or related to your use of or inability to use the Service. To the extent we are found liable despite the above, our total liability for all claims relating to the Service is limited to BRL 100. Some jurisdictions do not allow certain limitations, so some of these may not apply to you.
 
 ## 16. Indemnification
 
@@ -95,7 +95,7 @@ You may stop using the Service and delete your account at any time. We may suspe
 
 ## 18. Governing law and disputes
 
-These Terms are governed by the laws of New Zealand. The courts of New Zealand have non-exclusive jurisdiction over any dispute, without affecting any mandatory rights you have to bring proceedings in your country of residence.
+These Terms are governed by the laws of Brazil. The courts of Brazil have non-exclusive jurisdiction over any dispute, without affecting any mandatory rights you have to bring proceedings in your country of residence.
 
 ## 19. General
 
