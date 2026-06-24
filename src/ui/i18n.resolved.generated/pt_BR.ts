@@ -310,14 +310,14 @@ export const pt_BR: EnTranslations = {
       "help": "O analógico esquerdo move, o direito controla a câmera. Abra uma janela para usar o ponteiro na tela."
     },
     "ads": {
-      "watchForRevive": "Watch a short ad to revive here",
-      "reviveReady": "Revive Here!",
-      "watchForBoost": "Watch a short ad for an XP boost",
-      "earnedRevive": "Reviving in place...",
-      "earnedBoost": "XP boost active! Kill XP doubled for the next 5 bubbles.",
-      "adNotAvailable": "No ad available right now.",
-      "boostOfferTitle": "You cleared the dungeon!",
-      "skip": "No thanks"
+      "watchForRevive": "Assista a um anúncio curto para reviver aqui",
+      "reviveReady": "Reviver aqui!",
+      "watchForBoost": "Assista a um anúncio curto para um impulso de XP",
+      "earnedRevive": "Revivendo no local...",
+      "earnedBoost": "Impulso de XP ativo! XP de abate dobrado nas próximas 5 bolhas.",
+      "adNotAvailable": "Nenhum anúncio disponível no momento.",
+      "boostOfferTitle": "Você limpou a masmorra!",
+      "skip": "Não, obrigado"
     },
     "perf": {
       "title": "Sobreposição de Desempenho",

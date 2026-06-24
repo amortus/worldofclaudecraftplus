@@ -310,14 +310,14 @@ export const ko_KR: EnTranslations = {
       "help": "왼쪽 스틱으로 이동, 오른쪽 스틱으로 시점 조작. 창을 열면 화면 포인터를 사용할 수 있습니다."
     },
     "ads": {
-      "watchForRevive": "Watch a short ad to revive here",
-      "reviveReady": "Revive Here!",
-      "watchForBoost": "Watch a short ad for an XP boost",
-      "earnedRevive": "Reviving in place...",
-      "earnedBoost": "XP boost active! Kill XP doubled for the next 5 bubbles.",
-      "adNotAvailable": "No ad available right now.",
-      "boostOfferTitle": "You cleared the dungeon!",
-      "skip": "No thanks"
+      "watchForRevive": "짧은 광고를 보고 이 자리에서 부활하세요",
+      "reviveReady": "이 자리에서 부활!",
+      "watchForBoost": "짧은 광고를 보고 경험치 보너스를 받으세요",
+      "earnedRevive": "제자리에서 부활하는 중...",
+      "earnedBoost": "경험치 보너스 활성화! 다음 5칸 동안 처치 경험치가 두 배가 됩니다.",
+      "adNotAvailable": "지금은 사용할 수 있는 광고가 없습니다.",
+      "boostOfferTitle": "던전을 클리어했습니다!",
+      "skip": "괜찮습니다"
     },
     "perf": {
       "title": "성능 오버레이",

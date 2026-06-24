@@ -119,14 +119,6 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.donate.title"
   ],
   "zh_CN": [
-    "hudChrome.ads.adNotAvailable",
-    "hudChrome.ads.boostOfferTitle",
-    "hudChrome.ads.earnedBoost",
-    "hudChrome.ads.earnedRevive",
-    "hudChrome.ads.reviveReady",
-    "hudChrome.ads.skip",
-    "hudChrome.ads.watchForBoost",
-    "hudChrome.ads.watchForRevive",
     "hudChrome.donate.close",
     "hudChrome.donate.copied",
     "hudChrome.donate.copy",
@@ -137,14 +129,6 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.donate.title"
   ],
   "zh_TW": [
-    "hudChrome.ads.adNotAvailable",
-    "hudChrome.ads.boostOfferTitle",
-    "hudChrome.ads.earnedBoost",
-    "hudChrome.ads.earnedRevive",
-    "hudChrome.ads.reviveReady",
-    "hudChrome.ads.skip",
-    "hudChrome.ads.watchForBoost",
-    "hudChrome.ads.watchForRevive",
     "hudChrome.donate.close",
     "hudChrome.donate.copied",
     "hudChrome.donate.copy",
@@ -155,14 +139,6 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.donate.title"
   ],
   "ko_KR": [
-    "hudChrome.ads.adNotAvailable",
-    "hudChrome.ads.boostOfferTitle",
-    "hudChrome.ads.earnedBoost",
-    "hudChrome.ads.earnedRevive",
-    "hudChrome.ads.reviveReady",
-    "hudChrome.ads.skip",
-    "hudChrome.ads.watchForBoost",
-    "hudChrome.ads.watchForRevive",
     "hudChrome.donate.close",
     "hudChrome.donate.copied",
     "hudChrome.donate.copy",
@@ -173,14 +149,6 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.donate.title"
   ],
   "ja_JP": [
-    "hudChrome.ads.adNotAvailable",
-    "hudChrome.ads.boostOfferTitle",
-    "hudChrome.ads.earnedBoost",
-    "hudChrome.ads.earnedRevive",
-    "hudChrome.ads.reviveReady",
-    "hudChrome.ads.skip",
-    "hudChrome.ads.watchForBoost",
-    "hudChrome.ads.watchForRevive",
     "hudChrome.donate.close",
     "hudChrome.donate.copied",
     "hudChrome.donate.copy",
@@ -191,14 +159,6 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.donate.title"
   ],
   "pt_BR": [
-    "hudChrome.ads.adNotAvailable",
-    "hudChrome.ads.boostOfferTitle",
-    "hudChrome.ads.earnedBoost",
-    "hudChrome.ads.earnedRevive",
-    "hudChrome.ads.reviveReady",
-    "hudChrome.ads.skip",
-    "hudChrome.ads.watchForBoost",
-    "hudChrome.ads.watchForRevive",
     "hudChrome.donate.close",
     "hudChrome.donate.copied",
     "hudChrome.donate.copy",
@@ -209,14 +169,6 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.donate.title"
   ],
   "ru_RU": [
-    "hudChrome.ads.adNotAvailable",
-    "hudChrome.ads.boostOfferTitle",
-    "hudChrome.ads.earnedBoost",
-    "hudChrome.ads.earnedRevive",
-    "hudChrome.ads.reviveReady",
-    "hudChrome.ads.skip",
-    "hudChrome.ads.watchForBoost",
-    "hudChrome.ads.watchForRevive",
     "hudChrome.donate.close",
     "hudChrome.donate.copied",
     "hudChrome.donate.copy",

@@ -5,3 +5,8 @@
 # them from language statistics. Display hygiene only - not removal, not gitignore.
 src/ui/i18n.resolved.generated/** linguist-generated
 src/admin/i18n.resolved.generated/** linguist-generated
+
+
+# Scripts must stay LF (shebang + vitest loader break on CRLF on Windows)
+*.mjs text eol=lf
+*.sh text eol=lf

@@ -124,7 +124,7 @@ describe('client HTML shell', () => {
     expect(html).toContain(
       '<meta name="robots" content="index, follow, max-image-preview:large" />',
     );
-    expect(html).toContain('<link rel="canonical" href="https://worldofclaudecraft.com/" />');
+    expect(html).toContain('<link rel="canonical" href="https://worldofclaudecraft.com.br/" />');
     expect(html).toContain('<meta property="og:site_name" content="World of ClaudeCraft" />');
     expect(html).toContain('"alternateName": "World of Claudecraft"');
     expect(html).toContain('"https://github.com/levy-street/world-of-claudecraft"');
@@ -151,29 +151,29 @@ describe('client HTML shell', () => {
     expect(sitemapXml).toContain('<loc>https://worldofclaudecraft.com/data-deletion</loc>');
     expect(sitemapXml).toContain('<loc>https://worldofclaudecraft.com/support</loc>');
     expect(privacyHtml).toContain(
-      '<link rel="canonical" href="https://worldofclaudecraft.com/privacy" />',
+      '<link rel="canonical" href="https://worldofclaudecraft.com.br/privacy" />',
     );
     expect(privacyHtml).toContain('<h1>Privacy Policy</h1>');
     expect(privacyHtml).toContain('href="/support">Support</a>');
     expect(privacyHtml).toContain('href="/data-deletion">Data Deletion</a>');
     expect(termsHtml).toContain(
-      '<link rel="canonical" href="https://worldofclaudecraft.com/terms" />',
+      '<link rel="canonical" href="https://worldofclaudecraft.com.br/terms" />',
     );
     expect(termsHtml).toContain('<h1>Terms and Conditions</h1>');
     expect(termsHtml).toContain('href="/support">Support</a>');
     expect(termsHtml).toContain('href="/data-deletion">Data Deletion</a>');
     expect(dataDeletionHtml).toContain(
-      '<link rel="canonical" href="https://worldofclaudecraft.com/data-deletion" />',
+      '<link rel="canonical" href="https://worldofclaudecraft.com.br/data-deletion" />',
     );
     expect(dataDeletionHtml).toContain('<h1>Data Deletion</h1>');
-    expect(dataDeletionHtml).toContain('href="mailto:woc@levystreet.com"');
+    expect(dataDeletionHtml).toContain('href="mailto:contact@worldofclaudecraft.com.br"');
     expect(dataDeletionHtml).toContain('href="https://discord.gg/GjhnUsBtw"');
     expect(dataDeletionHtml).toContain('href="/support">Support</a>');
     expect(supportHtml).toContain(
-      '<link rel="canonical" href="https://worldofclaudecraft.com/support" />',
+      '<link rel="canonical" href="https://worldofclaudecraft.com.br/support" />',
     );
     expect(supportHtml).toContain('<h1>Support</h1>');
-    expect(supportHtml).toContain('href="mailto:woc@levystreet.com"');
+    expect(supportHtml).toContain('href="mailto:contact@worldofclaudecraft.com.br"');
     expect(supportHtml).toContain('href="https://discord.gg/GjhnUsBtw"');
     expect(supportHtml).toContain('href="/data-deletion">Data Deletion page</a>');
     expect(supportHtml).toContain('"@type": "ContactPage"');
@@ -211,9 +211,8 @@ describe('client HTML shell', () => {
       'body.native-app .cs-wallet,\n  body.native-app .cs-wallet-hidden-note,\n  body.native-app .account-wallet-card',
     );
     expect(html).toContain('<section class="account-card account-wallet-card">');
-    expect(mainTs).toContain(
-      "const WALLET_ENABLED = !NATIVE_APP && String(import.meta.env.VITE_WALLET_DISABLED ?? '').trim() !== '1';",
-    );
+    // Wallet UI is permanently off in our fork (was a NATIVE_APP / VITE_WALLET_DISABLED flag).
+    expect(mainTs).toContain('const WALLET_ENABLED = false;');
     expect(mainTs).toContain("document.querySelector('.cs-wallet')?.remove();");
     expect(mainTs).toContain("document.querySelector('.account-wallet-card')?.remove();");
   });
@@ -301,7 +300,8 @@ describe('client HTML shell', () => {
     expect(html).toContain('<summary class="community-toggle"');
     expect(html).toContain('<div class="community-tray">');
     expect(html).toContain('<a class="community-link discord"');
-    expect(html).toContain('<a class="community-link github"');
+    // Our fork drops the in-game GitHub community button; only Discord + Donate remain.
+    expect(html).not.toContain('<a class="community-link github"');
     expect(html).toContain('<a class="community-link donate"');
     expect(html).toContain('body.mobile-touch.game-active #ui { z-index: 80; }');
     expect(html).toContain(

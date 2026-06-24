@@ -310,14 +310,14 @@ export const ja_JP: EnTranslations = {
       "help": "左スティックで移動、右スティックで視点。ウィンドウを開くと画面ポインターが使えます。"
     },
     "ads": {
-      "watchForRevive": "Watch a short ad to revive here",
-      "reviveReady": "Revive Here!",
-      "watchForBoost": "Watch a short ad for an XP boost",
-      "earnedRevive": "Reviving in place...",
-      "earnedBoost": "XP boost active! Kill XP doubled for the next 5 bubbles.",
-      "adNotAvailable": "No ad available right now.",
-      "boostOfferTitle": "You cleared the dungeon!",
-      "skip": "No thanks"
+      "watchForRevive": "短い広告を見てこの場で復活する",
+      "reviveReady": "この場で復活！",
+      "watchForBoost": "短い広告を見て経験値ブーストを獲得",
+      "earnedRevive": "その場で復活しています…",
+      "earnedBoost": "経験値ブースト発動！ 次の5バブルの間、討伐経験値が2倍になります。",
+      "adNotAvailable": "現在、視聴できる広告がありません。",
+      "boostOfferTitle": "ダンジョンを攻略しました！",
+      "skip": "結構です"
     },
     "perf": {
       "title": "パフォーマンスオーバーレイ",

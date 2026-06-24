@@ -151,8 +151,10 @@ describe("?lang=en_XA dev selector (game runtime)", () => {
     vi.stubGlobal("window", { location: { search: "?lang=en_XA" } });
     const mod = await import("../src/ui/i18n");
 
-    // The base locale stays "en" and en_XA never enters supportedLanguages.
-    expect(mod.getLanguage()).toBe("en");
+    // The base locale stays the default (pt_BR on this fork) and en_XA never enters
+    // supportedLanguages: ?lang=en_XA only flips the pseudo flag, it does not change
+    // currentLanguage, so the pseudo table overlays on top of the default base locale.
+    expect(mod.getLanguage()).toBe("pt_BR");
     expect(mod.supportedLanguages).not.toContain("en_XA");
 
     const home = (mod.t as unknown as (k: string) => string)("nav.home");

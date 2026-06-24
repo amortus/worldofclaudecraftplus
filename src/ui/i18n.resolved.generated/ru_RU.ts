@@ -310,14 +310,14 @@ export const ru_RU: EnTranslations = {
       "help": "Левый стик — движение, правый — камера. Откройте окно, чтобы использовать экранный указатель."
     },
     "ads": {
-      "watchForRevive": "Watch a short ad to revive here",
-      "reviveReady": "Revive Here!",
-      "watchForBoost": "Watch a short ad for an XP boost",
-      "earnedRevive": "Reviving in place...",
-      "earnedBoost": "XP boost active! Kill XP doubled for the next 5 bubbles.",
-      "adNotAvailable": "No ad available right now.",
-      "boostOfferTitle": "You cleared the dungeon!",
-      "skip": "No thanks"
+      "watchForRevive": "Посмотрите короткую рекламу, чтобы возродиться здесь",
+      "reviveReady": "Возродиться здесь!",
+      "watchForBoost": "Посмотрите короткую рекламу ради прибавки к опыту",
+      "earnedRevive": "Возрождение на месте...",
+      "earnedBoost": "Прибавка к опыту активна! Опыт за убийства удвоен на следующие 5 пузырьков.",
+      "adNotAvailable": "Сейчас нет доступной рекламы.",
+      "boostOfferTitle": "Вы зачистили подземелье!",
+      "skip": "Нет, спасибо"
     },
     "perf": {
       "title": "Оверлей производительности",

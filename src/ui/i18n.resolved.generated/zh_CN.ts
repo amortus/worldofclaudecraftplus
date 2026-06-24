@@ -310,14 +310,14 @@ export const zh_CN: EnTranslations = {
       "help": "左摇杆移动，右摇杆控制镜头。打开窗口即可使用屏幕指针。"
     },
     "ads": {
-      "watchForRevive": "Watch a short ad to revive here",
-      "reviveReady": "Revive Here!",
-      "watchForBoost": "Watch a short ad for an XP boost",
-      "earnedRevive": "Reviving in place...",
-      "earnedBoost": "XP boost active! Kill XP doubled for the next 5 bubbles.",
-      "adNotAvailable": "No ad available right now.",
-      "boostOfferTitle": "You cleared the dungeon!",
-      "skip": "No thanks"
+      "watchForRevive": "观看一段短广告即可在此处复活",
+      "reviveReady": "在此处复活！",
+      "watchForBoost": "观看一段短广告即可获得经验加成",
+      "earnedRevive": "正在原地复活……",
+      "earnedBoost": "经验加成已激活！接下来 5 格内击杀经验翻倍。",
+      "adNotAvailable": "暂时没有可用的广告。",
+      "boostOfferTitle": "你已清通本副本！",
+      "skip": "不用了"
     },
     "perf": {
       "title": "性能监视器",

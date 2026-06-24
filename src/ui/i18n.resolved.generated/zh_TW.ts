@@ -310,14 +310,14 @@ export const zh_TW: EnTranslations = {
       "help": "左搖桿移動，右搖桿控制鏡頭。開啟視窗即可使用螢幕指標。"
     },
     "ads": {
-      "watchForRevive": "Watch a short ad to revive here",
-      "reviveReady": "Revive Here!",
-      "watchForBoost": "Watch a short ad for an XP boost",
-      "earnedRevive": "Reviving in place...",
-      "earnedBoost": "XP boost active! Kill XP doubled for the next 5 bubbles.",
-      "adNotAvailable": "No ad available right now.",
-      "boostOfferTitle": "You cleared the dungeon!",
-      "skip": "No thanks"
+      "watchForRevive": "觀看一段短廣告即可在此復活",
+      "reviveReady": "在此復活！",
+      "watchForBoost": "觀看一段短廣告以獲得經驗加成",
+      "earnedRevive": "正在原地復活……",
+      "earnedBoost": "經驗加成已啟動！接下來 5 顆泡泡的擊殺經驗加倍。",
+      "adNotAvailable": "目前沒有可觀看的廣告。",
+      "boostOfferTitle": "你清空了副本！",
+      "skip": "不用了"
     },
     "perf": {
       "title": "效能監視器",

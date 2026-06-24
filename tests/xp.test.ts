@@ -27,6 +27,7 @@ import {
   PRESTIGE_XP_PER_RANK, maxPrestigeRank, canPrestige, xpUntilNextPrestige,
 } from '../src/sim/types';
 import { xpBarView, formatXp } from '../src/ui/xp_bar';
+import { formatNumber, t } from '../src/ui/i18n';
 import { GameServer } from '../server/game';
 import { ClientWorld } from '../src/net/online';
 import { terrainHeight } from '../src/sim/world';
@@ -366,7 +367,11 @@ describe('xp-bar label states', () => {
   it('pre-cap shows the level bar', () => {
     const v = xpBarView({ level: 5, xp: 1000, lifetimeXp: 0, showOverflow: true });
     expect(v.postCap).toBe(false);
-    expect(v.label).toBe('1,000 / 2,800 XP (35%)');
+    // Numbers/percent route through the locale-aware formatter (our default UI
+    // language is pt_BR, so grouping is "1.000"), so rebuild the expected label
+    // with the same formatters the bar uses rather than hardcoding en grouping.
+    const pct = formatNumber(0.35, { style: 'percent', maximumFractionDigits: 0 });
+    expect(v.label).toBe(`${formatXp(1000)} / ${formatXp(2800)} ${t('game.xp.suffix')} (${pct})`);
   });
 
   it('at-cap with overflow shows the virtual-level bar starting at +0', () => {

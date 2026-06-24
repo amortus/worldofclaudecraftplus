@@ -144,6 +144,18 @@ describe('i18n whole-catalog completeness', () => {
       'guide.brandShort', // "ClaudeCraft" - brand (Guide)
       'guide.home.title', // "World of ClaudeCraft" - brand (Guide hero)
       'guide.footer.rights', // "World of ClaudeCraft" - brand (Guide footer)
+      // Donate popup (Brazil-only PIX): the catalog stores this copy in Portuguese
+      // on purpose (see i18n.catalog/hud_chrome.ts donate block) so the donation
+      // text reads in the payer's language in every locale. It is intentionally
+      // verbatim across locales, not untranslated English.
+      'hudChrome.donate.title',
+      'hudChrome.donate.intro',
+      'hudChrome.donate.qrAlt',
+      'hudChrome.donate.pixLabel',
+      'hudChrome.donate.copy',
+      'hudChrome.donate.copied',
+      'hudChrome.donate.thanks',
+      'hudChrome.donate.close',
     ]);
     const wordy = (v: string) => /[a-z]{4,}/.test(v.replace(/\{[^}]*\}/g, ''));
     const nonLatin: SupportedLanguage[] = ['zh_CN', 'zh_TW', 'ja_JP', 'ko_KR', 'ru_RU'];
