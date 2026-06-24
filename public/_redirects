@@ -1,0 +1,26 @@
+# Admin panel
+/admin /admin.html 200
+/admin/ /admin.html 200
+
+# Static page URL aliases (mirrors STATIC_PAGE_ALIASES in vite.config.ts)
+/links /links.html 200
+/links/ /links.html 200
+/social /links.html 200
+/social/ /links.html 200
+/social-media-links /links.html 200
+/social-media-links/ /links.html 200
+/play /play.html 200
+/play/ /play.html 200
+/privacy /privacy.html 200
+/privacy/ /privacy.html 200
+/terms /terms.html 200
+/terms/ /terms.html 200
+/merch /merch.html 200
+/merch/ /merch.html 200
+/data-deletion /data-deletion.html 200
+/data-deletion/ /data-deletion.html 200
+/support /support.html 200
+/support/ /support.html 200
+
+# SPA fallback: all other routes serve the main game
+/* /index.html 200
