@@ -265,6 +265,16 @@ export const ko_KR: EnTranslations = {
       "menuAction": "게임 메뉴",
       "help": "왼쪽 스틱으로 이동, 오른쪽 스틱으로 시점 조작. 창을 열면 화면 포인터를 사용할 수 있습니다."
     },
+    "ads": {
+      "watchForRevive": "Watch a short ad to revive here",
+      "reviveReady": "Revive Here!",
+      "watchForBoost": "Watch a short ad for an XP boost",
+      "earnedRevive": "Reviving in place...",
+      "earnedBoost": "XP boost active! Kill XP doubled for the next 5 bubbles.",
+      "adNotAvailable": "No ad available right now.",
+      "boostOfferTitle": "You cleared the dungeon!",
+      "skip": "No thanks"
+    },
     "perf": {
       "title": "성능 오버레이",
       "enable": "성능 오버레이 표시",

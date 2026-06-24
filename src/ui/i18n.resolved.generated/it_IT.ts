@@ -265,6 +265,16 @@ export const it_IT: EnTranslations = {
       "menuAction": "Menu di gioco",
       "help": "Lo stick sinistro muove, quello destro orienta la telecamera. Apri una finestra per usare il puntatore a schermo."
     },
+    "ads": {
+      "watchForRevive": "Watch a short ad to revive here",
+      "reviveReady": "Revive Here!",
+      "watchForBoost": "Watch a short ad for an XP boost",
+      "earnedRevive": "Reviving in place...",
+      "earnedBoost": "XP boost active! Kill XP doubled for the next 5 bubbles.",
+      "adNotAvailable": "No ad available right now.",
+      "boostOfferTitle": "You cleared the dungeon!",
+      "skip": "No thanks"
+    },
     "perf": {
       "title": "Pannello prestazioni",
       "enable": "Mostra pannello prestazioni",

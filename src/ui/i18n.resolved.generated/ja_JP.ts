@@ -265,6 +265,16 @@ export const ja_JP: EnTranslations = {
       "menuAction": "ゲームメニュー",
       "help": "左スティックで移動、右スティックで視点。ウィンドウを開くと画面ポインターが使えます。"
     },
+    "ads": {
+      "watchForRevive": "Watch a short ad to revive here",
+      "reviveReady": "Revive Here!",
+      "watchForBoost": "Watch a short ad for an XP boost",
+      "earnedRevive": "Reviving in place...",
+      "earnedBoost": "XP boost active! Kill XP doubled for the next 5 bubbles.",
+      "adNotAvailable": "No ad available right now.",
+      "boostOfferTitle": "You cleared the dungeon!",
+      "skip": "No thanks"
+    },
     "perf": {
       "title": "パフォーマンスオーバーレイ",
       "enable": "パフォーマンスオーバーレイを表示",

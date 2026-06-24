@@ -597,6 +597,18 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
         return json(res, 400, { error: err instanceof Error ? err.message : 'could not submit report' });
       }
     }
+    if (req.method === 'POST' && url === '/api/ad-reward') {
+      const accountId = await bearerActiveAccount(req, res);
+      if (accountId === null) return;
+      let body: Record<string, unknown>;
+      try { body = await readBody(req); } catch { return json(res, 400, { error: 'bad request' }); }
+      const type = body.type;
+      if (type !== 'xp_boost' && type !== 'death_revive') return json(res, 400, { error: 'invalid type' });
+      const result = game.applyAdReward(accountId, type);
+      if (result === 'no_session') return json(res, 404, { error: 'no active session' });
+      if (result === 'cooldown') return json(res, 429, { error: 'cooldown active' });
+      return json(res, 200, { ok: true });
+    }
     if (req.method === 'POST' && url === '/api/bug-reports') {
       const accountId = await bearerActiveAccount(req, res);
       if (accountId === null) return;

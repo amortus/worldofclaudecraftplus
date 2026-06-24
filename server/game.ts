@@ -1057,6 +1057,44 @@ export class GameServer {
     this.restartCountdownTimers.length = 0;
   }
 
+  // -------------------------------------------------------------------------
+  // Ad reward (AdMob rewarded ads on the mobile client)
+  // -------------------------------------------------------------------------
+
+  // Per-character in-memory cooldowns. Intentionally not persisted: a server
+  // restart resets them, which is acceptable for ad-monetization frequency caps.
+  private readonly adCooldowns = new Map<number, { xpBoostAt: number; reviveAt: number }>();
+
+  // Max 2 XP boosts and 1 revive per hour per character. The client never
+  // decides outcomes; only this method touches the sim.
+  applyAdReward(accountId: number, type: 'xp_boost' | 'death_revive'): 'ok' | 'cooldown' | 'no_session' {
+    let session: ClientSession | undefined;
+    for (const s of this.clients.values()) {
+      if (s.accountId === accountId) { session = s; break; }
+    }
+    if (!session) return 'no_session';
+
+    const { pid, characterId } = session;
+    const now = Date.now();
+    let cd = this.adCooldowns.get(characterId);
+    if (!cd) { cd = { xpBoostAt: 0, reviveAt: 0 }; this.adCooldowns.set(characterId, cd); }
+
+    const HOUR_MS = 3_600_000;
+    const XP_COOLDOWN_MS = HOUR_MS / 2; // 2 boosts per hour
+    const REVIVE_COOLDOWN_MS = HOUR_MS / 6; // 6 revives per hour max
+
+    if (type === 'xp_boost') {
+      if (now - cd.xpBoostAt < XP_COOLDOWN_MS) return 'cooldown';
+      cd.xpBoostAt = now;
+      this.sim.addRestedXp(pid);
+    } else {
+      if (now - cd.reviveAt < REVIVE_COOLDOWN_MS) return 'cooldown';
+      cd.reviveAt = now;
+      this.sim.reviveInPlace(pid);
+    }
+    return 'ok';
+  }
+
   muteAccountChat(accountId: number, mutedUntil: string, reason: string): void {
     const until = new Date(mutedUntil);
     if (!Number.isFinite(until.getTime())) return;

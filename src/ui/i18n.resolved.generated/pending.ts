@@ -9,17 +9,125 @@
 // Reproducibility is checked by tests/i18n_resolved_equivalence.test.ts.
 
 export const pending: Record<string, readonly string[]> = {
-  "es": [],
-  "es_ES": [],
-  "fr_FR": [],
-  "fr_CA": [],
+  "es": [
+    "hudChrome.ads.adNotAvailable",
+    "hudChrome.ads.boostOfferTitle",
+    "hudChrome.ads.earnedBoost",
+    "hudChrome.ads.earnedRevive",
+    "hudChrome.ads.reviveReady",
+    "hudChrome.ads.skip",
+    "hudChrome.ads.watchForBoost",
+    "hudChrome.ads.watchForRevive"
+  ],
+  "es_ES": [
+    "hudChrome.ads.adNotAvailable",
+    "hudChrome.ads.boostOfferTitle",
+    "hudChrome.ads.earnedBoost",
+    "hudChrome.ads.earnedRevive",
+    "hudChrome.ads.reviveReady",
+    "hudChrome.ads.skip",
+    "hudChrome.ads.watchForBoost",
+    "hudChrome.ads.watchForRevive"
+  ],
+  "fr_FR": [
+    "hudChrome.ads.adNotAvailable",
+    "hudChrome.ads.boostOfferTitle",
+    "hudChrome.ads.earnedBoost",
+    "hudChrome.ads.earnedRevive",
+    "hudChrome.ads.reviveReady",
+    "hudChrome.ads.skip",
+    "hudChrome.ads.watchForBoost",
+    "hudChrome.ads.watchForRevive"
+  ],
+  "fr_CA": [
+    "hudChrome.ads.adNotAvailable",
+    "hudChrome.ads.boostOfferTitle",
+    "hudChrome.ads.earnedBoost",
+    "hudChrome.ads.earnedRevive",
+    "hudChrome.ads.reviveReady",
+    "hudChrome.ads.skip",
+    "hudChrome.ads.watchForBoost",
+    "hudChrome.ads.watchForRevive"
+  ],
   "en_CA": [],
-  "it_IT": [],
-  "de_DE": [],
-  "zh_CN": [],
-  "zh_TW": [],
-  "ko_KR": [],
-  "ja_JP": [],
-  "pt_BR": [],
-  "ru_RU": []
+  "it_IT": [
+    "hudChrome.ads.adNotAvailable",
+    "hudChrome.ads.boostOfferTitle",
+    "hudChrome.ads.earnedBoost",
+    "hudChrome.ads.earnedRevive",
+    "hudChrome.ads.reviveReady",
+    "hudChrome.ads.skip",
+    "hudChrome.ads.watchForBoost",
+    "hudChrome.ads.watchForRevive"
+  ],
+  "de_DE": [
+    "hudChrome.ads.adNotAvailable",
+    "hudChrome.ads.boostOfferTitle",
+    "hudChrome.ads.earnedBoost",
+    "hudChrome.ads.earnedRevive",
+    "hudChrome.ads.reviveReady",
+    "hudChrome.ads.skip",
+    "hudChrome.ads.watchForBoost",
+    "hudChrome.ads.watchForRevive"
+  ],
+  "zh_CN": [
+    "hudChrome.ads.adNotAvailable",
+    "hudChrome.ads.boostOfferTitle",
+    "hudChrome.ads.earnedBoost",
+    "hudChrome.ads.earnedRevive",
+    "hudChrome.ads.reviveReady",
+    "hudChrome.ads.skip",
+    "hudChrome.ads.watchForBoost",
+    "hudChrome.ads.watchForRevive"
+  ],
+  "zh_TW": [
+    "hudChrome.ads.adNotAvailable",
+    "hudChrome.ads.boostOfferTitle",
+    "hudChrome.ads.earnedBoost",
+    "hudChrome.ads.earnedRevive",
+    "hudChrome.ads.reviveReady",
+    "hudChrome.ads.skip",
+    "hudChrome.ads.watchForBoost",
+    "hudChrome.ads.watchForRevive"
+  ],
+  "ko_KR": [
+    "hudChrome.ads.adNotAvailable",
+    "hudChrome.ads.boostOfferTitle",
+    "hudChrome.ads.earnedBoost",
+    "hudChrome.ads.earnedRevive",
+    "hudChrome.ads.reviveReady",
+    "hudChrome.ads.skip",
+    "hudChrome.ads.watchForBoost",
+    "hudChrome.ads.watchForRevive"
+  ],
+  "ja_JP": [
+    "hudChrome.ads.adNotAvailable",
+    "hudChrome.ads.boostOfferTitle",
+    "hudChrome.ads.earnedBoost",
+    "hudChrome.ads.earnedRevive",
+    "hudChrome.ads.reviveReady",
+    "hudChrome.ads.skip",
+    "hudChrome.ads.watchForBoost",
+    "hudChrome.ads.watchForRevive"
+  ],
+  "pt_BR": [
+    "hudChrome.ads.adNotAvailable",
+    "hudChrome.ads.boostOfferTitle",
+    "hudChrome.ads.earnedBoost",
+    "hudChrome.ads.earnedRevive",
+    "hudChrome.ads.reviveReady",
+    "hudChrome.ads.skip",
+    "hudChrome.ads.watchForBoost",
+    "hudChrome.ads.watchForRevive"
+  ],
+  "ru_RU": [
+    "hudChrome.ads.adNotAvailable",
+    "hudChrome.ads.boostOfferTitle",
+    "hudChrome.ads.earnedBoost",
+    "hudChrome.ads.earnedRevive",
+    "hudChrome.ads.reviveReady",
+    "hudChrome.ads.skip",
+    "hudChrome.ads.watchForBoost",
+    "hudChrome.ads.watchForRevive"
+  ]
 };

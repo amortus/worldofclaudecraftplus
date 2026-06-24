@@ -152,6 +152,18 @@ export const hudChromeStrings = {
     menuAction: "Game Menu",
     help: "Left stick moves, right stick looks. Open a window to use the on-screen pointer.",
   },
+  // AdMob rewarded-ad and interstitial UI strings. Shown only in native
+  // (Android/iOS) builds when VITE_NATIVE_APP=1.
+  ads: {
+    watchForRevive: "Watch a short ad to revive here",
+    reviveReady: "Revive Here!",
+    watchForBoost: "Watch a short ad for an XP boost",
+    earnedRevive: "Reviving in place...",
+    earnedBoost: "XP boost active! Kill XP doubled for the next 5 bubbles.",
+    adNotAvailable: "No ad available right now.",
+    boostOfferTitle: "You cleared the dungeon!",
+    skip: "No thanks",
+  },
   // Performance overlay (the customizable in-game stats panel + its Options
   // sub-view). Player-facing, so every label is a key here; the live numbers in
   // the overlay run through formatNumber and these unit strings. Distinct from

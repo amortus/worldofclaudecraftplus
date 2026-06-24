@@ -8152,6 +8152,40 @@ export class Sim {
     this.emit({ type: 'respawn', pid: meta.entityId });
   }
 
+  // Revive a dead player at their current position (used for ad-rewarded revival).
+  // Same as releaseSpirit but skips the graveyard teleport.
+  reviveInPlace(pid: number): void {
+    const r = this.resolve(pid);
+    if (!r) return;
+    const { meta, e: p } = r;
+    if (!p.dead) return;
+    if (this.arenaMatches.has(p.id)) return;
+    p.dead = false;
+    p.auras = [];
+    p.ccDr.clear();
+    recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta));
+    p.hp = p.maxHp;
+    p.resource = p.resourceType === 'mana' ? p.maxResource : p.resourceType === 'energy' ? 100 : 0;
+    p.targetId = null;
+    p.autoAttack = false;
+    p.queuedOnSwing = null;
+    p.combatTimer = 99;
+    p.inCombat = false;
+    this.emit({ type: 'respawn', pid: meta.entityId });
+  }
+
+  // Add rested XP as an ad-reward bonus (5 bubbles = 25% of the current level's XP).
+  // Capped at the same ceiling as inn resting (RESTED_CAP_LEVELS levels).
+  addRestedXp(pid: number): void {
+    const r = this.resolve(pid);
+    if (!r) return;
+    const { meta, e: p } = r;
+    if (p.level >= MAX_LEVEL) return;
+    const bonus = Math.floor(RESTED_FILL_FRACTION * xpForLevel(p.level) * 5);
+    const cap = RESTED_CAP_LEVELS * xpForLevel(p.level);
+    meta.restedXp = Math.min(meta.restedXp + bonus, cap);
+  }
+
   // Token-bucket throttle: returns false (and notifies the player once) when
   // they are out of chat tokens. Keeps /g and /w from being spam amplifiers.
   private chatAllowed(pid: number): boolean {

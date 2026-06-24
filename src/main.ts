@@ -21,7 +21,8 @@ import { voice } from './game/voice';
 import { sfx } from './game/sfx';
 import { activePvpOpponentIds, handlePickedEntity, hoverCursorKind, isAttackableEntity } from './game/interactions';
 import { clickMoveShouldWalk, clickMoveStep, distance2d, latencyAdjustedStopDistance, resolveClickMoveAction, stepAngleToward } from './game/click_move';
-import { Api, isAuthError, ClientWorld, CharacterSummary, NATIVE_APP, type ReleaseEntry } from './net/online';
+import { Api, apiUrl, isAuthError, ClientWorld, CharacterSummary, NATIVE_APP, type ReleaseEntry } from './net/online';
+import { initAds, setAdRewardCallback } from './ui/ads';
 import { setWalletDisplayAvailable, setWocBalance, setWalletUiEnabled, resolveWocBalanceUpdate } from './ui/wallet_balance';
 import {
   accountPortalModel, validatePasswordChange, validateEmailShape, deactivateConfirmReady,
@@ -1667,6 +1668,22 @@ async function startOffline(playerClass: PlayerClass, name: string, skin = 0): P
 // ---------------------------------------------------------------------------
 
 const api = new Api();
+
+// Wire the ad reward callback so ads.ts can call the server after a
+// rewarded ad completes, without importing from net/. The token and base
+// are read at call time so they always reflect the current auth state.
+if (NATIVE_APP) {
+  void initAds();
+  setAdRewardCallback(async (type) => {
+    if (!api.token) return;
+    const res = await fetch(apiUrl('/api/ad-reward', api.base), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${api.token}` },
+      body: JSON.stringify({ type }),
+    });
+    if (!res.ok) console.warn('[ads] ad-reward failed:', res.status);
+  });
+}
 
 // Referral capture: a visitor who arrives from a shared player card link
 // (?ref=<slug>) carries the referrer's slug into registration. Read it once at

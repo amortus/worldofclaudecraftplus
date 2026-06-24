@@ -265,6 +265,16 @@ export const fr_FR: EnTranslations = {
       "menuAction": "Menu du jeu",
       "help": "Le stick gauche déplace, le droit oriente la caméra. Ouvrez une fenêtre pour utiliser le pointeur à l'écran."
     },
+    "ads": {
+      "watchForRevive": "Watch a short ad to revive here",
+      "reviveReady": "Revive Here!",
+      "watchForBoost": "Watch a short ad for an XP boost",
+      "earnedRevive": "Reviving in place...",
+      "earnedBoost": "XP boost active! Kill XP doubled for the next 5 bubbles.",
+      "adNotAvailable": "No ad available right now.",
+      "boostOfferTitle": "You cleared the dungeon!",
+      "skip": "No thanks"
+    },
     "perf": {
       "title": "Surcouche de performance",
       "enable": "Afficher la surcouche de performance",

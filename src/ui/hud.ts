@@ -106,6 +106,7 @@ import {
   parseHotbarAction, parseHotbarActions,
   placeAbilityOnSlot, placeItemOnSlot, shouldSeedFormBar, swapHotbarSlots, syncHotbarActions,
 } from './hotbar';
+import { showRewardedAd, claimAdReward } from './ads';
 
 // hooks main wires after Input exists (the options menu drives input, audio,
 // graphics, and logout, all of which live outside the HUD). PerfOverlayHooks
@@ -497,6 +498,14 @@ export class Hud {
   private xpLabelEl = $('#xpbar .label');
   private deathOverlayEl = $('#death-overlay');
   private releaseSpiritBtnEl = $('#release-btn');
+  private adReviveBtnEl = $('#ad-revive-btn') as HTMLButtonElement;
+  private adReviveReadyEl = $('#ad-revive-ready-btn') as HTMLButtonElement;
+  private adBoostOfferEl = $('#ad-boost-offer') as HTMLElement;
+  private adBoostTimer: ReturnType<typeof setTimeout> | undefined;
+  private lastInDungeon = false;
+  private adRevivePending = false;
+  private adReviveReady = false;
+  private adBoostPending = false;
   private hotWriteCache = new Map<HTMLElement, string>();
   private hotDomWrites = 0;
   private hotDomSkippedWrites = 0;
@@ -705,6 +714,44 @@ export class Hud {
     this.releaseSpiritBtnEl.addEventListener('click', () => {
       if (this.sim.arenaInfo?.match) return;
       this.sim.releaseSpirit();
+    });
+    this.adReviveReadyEl.addEventListener('click', () => {
+      if (!this.adReviveReady) return;
+      this.adReviveReady = false;
+      void claimAdReward('death_revive').then(() => {
+        this.log(t('hudChrome.ads.earnedRevive'), '#7fdc4f');
+      });
+    });
+    this.adReviveBtnEl.addEventListener('click', () => {
+      if (this.adRevivePending || this.adReviveReady) return;
+      this.adRevivePending = true;
+      void showRewardedAd('death_revive').then((earned) => {
+        this.adRevivePending = false;
+        if (earned) {
+          this.adReviveReady = true;
+          // Frame update will hide this button and show adReviveReadyEl.
+        } else {
+          this.log(t('hudChrome.ads.adNotAvailable'), '#ff8c00');
+        }
+      });
+    });
+    ($('#ad-boost-btn') as HTMLButtonElement).addEventListener('click', () => {
+      if (this.adBoostPending) return;
+      this.adBoostPending = true;
+      this.hideAdBoostOffer();
+      void showRewardedAd('xp_boost').then((earned) => {
+        this.adBoostPending = false;
+        if (earned) {
+          void claimAdReward('xp_boost').then(() => {
+            this.log(t('hudChrome.ads.earnedBoost'), '#7fdc4f');
+          });
+        } else {
+          this.log(t('hudChrome.ads.adNotAvailable'), '#ff8c00');
+        }
+      });
+    });
+    ($('#ad-boost-skip') as HTMLButtonElement).addEventListener('click', () => {
+      this.hideAdBoostOffer();
     });
     document.addEventListener('pointerdown', (ev) => {
       const target = ev.target as Node | null;
@@ -2898,8 +2945,20 @@ export class Hud {
     const deadInArena = p.dead && !!this.sim.arenaInfo?.match;
     this.setDisplay(this.deathOverlayEl, p.dead ? 'flex' : 'none');
     this.setDisplay(this.releaseSpiritBtnEl, deadInArena ? 'none' : '');
+    // If the player is alive again (released spirit or revived externally), clear the earned-ad state.
+    if (!p.dead && this.adReviveReady) this.adReviveReady = false;
+    const isNativeAndDead = document.body.classList.contains('native-app') && p.dead && !deadInArena;
+    // "Watch ad" button: shown while no ad has been earned yet.
+    this.setDisplay(this.adReviveBtnEl, (isNativeAndDead && !this.adReviveReady) ? '' : 'none');
+    // "Revive Here!" button: shown after the ad is earned, waiting for the player to confirm.
+    this.setDisplay(this.adReviveReadyEl, (isNativeAndDead && this.adReviveReady) ? '' : 'none');
 
     const inDungeon = p.pos.x > DUNGEON_X_THRESHOLD;
+    // Dungeon exit: offer the XP boost ad in native builds.
+    if (this.lastInDungeon && !inDungeon && document.body.classList.contains('native-app') && !p.dead) {
+      this.showAdBoostOffer();
+    }
+    this.lastInDungeon = inDungeon;
     const currentZone = zoneAt(p.pos.z);
     if (mediumHud) {
       // zone transitions: banner + welcome hint when crossing into a new band.
@@ -4453,6 +4512,18 @@ export class Hud {
   private logZoneWelcome(zone: ZoneDef): void {
     if (zone.welcomeQuestId && this.sim.questState(zone.welcomeQuestId) !== 'available') return;
     this.log(zoneWelcome(zone.id), '#ffd100');
+  }
+
+  private showAdBoostOffer(): void {
+    this.setDisplay(this.adBoostOfferEl, 'flex');
+    clearTimeout(this.adBoostTimer);
+    // Auto-dismiss after 30 seconds if the player ignores it.
+    this.adBoostTimer = setTimeout(() => this.hideAdBoostOffer(), 30_000);
+  }
+
+  private hideAdBoostOffer(): void {
+    clearTimeout(this.adBoostTimer);
+    this.setDisplay(this.adBoostOfferEl, 'none');
   }
 
   private chatLogFrom(name: string, text: string, color: string, templateKey: TranslationKey, chan: string): void {

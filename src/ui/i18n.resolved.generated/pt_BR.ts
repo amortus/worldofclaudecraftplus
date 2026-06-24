@@ -265,6 +265,16 @@ export const pt_BR: EnTranslations = {
       "menuAction": "Menu do Jogo",
       "help": "O analógico esquerdo move, o direito controla a câmera. Abra uma janela para usar o ponteiro na tela."
     },
+    "ads": {
+      "watchForRevive": "Watch a short ad to revive here",
+      "reviveReady": "Revive Here!",
+      "watchForBoost": "Watch a short ad for an XP boost",
+      "earnedRevive": "Reviving in place...",
+      "earnedBoost": "XP boost active! Kill XP doubled for the next 5 bubbles.",
+      "adNotAvailable": "No ad available right now.",
+      "boostOfferTitle": "You cleared the dungeon!",
+      "skip": "No thanks"
+    },
     "perf": {
       "title": "Sobreposição de Desempenho",
       "enable": "Mostrar Sobreposição de Desempenho",

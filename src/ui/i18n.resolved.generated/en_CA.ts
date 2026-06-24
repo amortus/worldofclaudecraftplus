@@ -265,6 +265,16 @@ export const en_CA: EnTranslations = {
       "menuAction": "Game Menu",
       "help": "Left stick moves, right stick looks. Open a window to use the on-screen pointer."
     },
+    "ads": {
+      "watchForRevive": "Watch a short ad to revive here",
+      "reviveReady": "Revive Here!",
+      "watchForBoost": "Watch a short ad for an XP boost",
+      "earnedRevive": "Reviving in place...",
+      "earnedBoost": "XP boost active! Kill XP doubled for the next 5 bubbles.",
+      "adNotAvailable": "No ad available right now.",
+      "boostOfferTitle": "You cleared the dungeon!",
+      "skip": "No thanks"
+    },
     "perf": {
       "title": "Performance Overlay",
       "enable": "Show Performance Overlay",

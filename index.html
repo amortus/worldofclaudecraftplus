@@ -2189,7 +2189,22 @@
   #death-overlay { position: absolute; inset: 0; background: radial-gradient(ellipse at center, #40000077 0%, #300000bb 100%);
     display: none; align-items: center; justify-content: center; flex-direction: column; gap: 18px; z-index: 30; }
   #death-overlay h2 { color: #ddd; font-size: 44px; text-shadow: 2px 2px 8px #000; font-family: var(--title-font); }
-  
+  #ad-revive-btn { background: linear-gradient(135deg, #b8860b, #daa520); border: 1px solid #ffd700; color: #fff; display: none; }
+  #ad-revive-btn:hover { background: linear-gradient(135deg, #daa520, #ffd700); }
+  #ad-revive-ready-btn { background: linear-gradient(135deg, #1a6b1a, #2ea82e); border: 2px solid #5eff5e; color: #fff; display: none;
+    font-size: 17px; padding: 12px 28px; animation: pulse-green 1.2s ease-in-out infinite; }
+  #ad-revive-ready-btn:hover { background: linear-gradient(135deg, #2ea82e, #5eff5e); }
+  @keyframes pulse-green { 0%,100% { box-shadow: 0 0 0 0 #2ea82e88; } 50% { box-shadow: 0 0 0 8px #2ea82e00; } }
+  /* Dungeon-clear XP boost offer panel */
+  #ad-boost-offer { position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(180deg, #1a1209 0%, #0d0a00 100%); border: 1px solid #b8860b;
+    border-radius: 6px; padding: 14px 20px; display: none; flex-direction: column; align-items: center;
+    gap: 10px; z-index: 25; text-align: center; min-width: 260px; max-width: 340px; }
+  #ad-boost-offer p { color: #ffd700; font-size: 13px; margin: 0; font-family: var(--title-font); }
+  #ad-boost-btn { background: linear-gradient(135deg, #b8860b, #daa520); border: 1px solid #ffd700; color: #fff; width: 100%; }
+  #ad-boost-btn:hover { background: linear-gradient(135deg, #daa520, #ffd700); }
+  #ad-boost-skip { background: transparent; border: 1px solid #555; color: #aaa; font-size: 11px; padding: 4px 12px; }
+
   /* Hide all other UI components while the start screen is visible to prevent keyboard focus leakage */
   body:has(#start-screen:not([style*="display: none"])) #ui {
     display: none !important;
@@ -8122,6 +8137,13 @@
     <div id="death-overlay">
       <h2 data-i18n="hud.core.deathTitle">You have died.</h2>
       <button class="btn" id="release-btn" data-i18n="hud.core.releaseSpirit">Release Spirit</button>
+      <button class="btn" id="ad-revive-btn" data-i18n="hudChrome.ads.watchForRevive">Watch a short ad to revive here</button>
+      <button class="btn" id="ad-revive-ready-btn" data-i18n="hudChrome.ads.reviveReady">Revive Here!</button>
+    </div>
+    <div id="ad-boost-offer">
+      <p data-i18n="hudChrome.ads.boostOfferTitle">You cleared the dungeon!</p>
+      <button class="btn" id="ad-boost-btn" data-i18n="hudChrome.ads.watchForBoost">Watch a short ad for an XP boost</button>
+      <button id="ad-boost-skip" data-i18n="hudChrome.ads.skip">No thanks</button>
     </div>
   </div>
 
