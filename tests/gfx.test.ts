@@ -38,11 +38,17 @@ describe('graphics tier resolution', () => {
     expect(isConstrainedBrowser(desktop)).toBe(false);
   });
 
-  it('defaults missing presets to ultra while preserving legacy low and forced high', () => {
+  it('defaults missing presets to ultra on desktop but auto-lowers constrained devices', () => {
     expect(tierFromHints(desktop, false)).toBe('ultra');
     expect(tierFromHints({ ...desktop, graphicsPreset: 0 }, false)).toBe('low');
     expect(tierFromHints(desktop, true)).toBe('ultra');
-    expect(tierFromHints({ ...desktop, maxTouchPoints: 1, coarsePointer: true }, false)).toBe('ultra');
+    // A phone-class device with no saved preset auto-lowers (medium, or low when
+    // memory-constrained) instead of booting the full ultra pipeline.
+    expect(tierFromHints({ ...desktop, maxTouchPoints: 1, coarsePointer: true }, false)).toBe('medium');
+    expect(tierFromHints({ ...desktop, maxTouchPoints: 1, coarsePointer: true, deviceMemory: 4 }, false)).toBe('low');
+    expect(tierFromHints({ ...desktop, deviceMemory: 4 }, false)).toBe('low');
+    // An explicit Options preset or a forced URL tier still wins on those devices.
+    expect(tierFromHints({ ...desktop, maxTouchPoints: 1, coarsePointer: true, graphicsPreset: 4 }, false)).toBe('ultra');
     expect(tierFromHints({ ...desktop, search: '?gfx=high', maxTouchPoints: 1, coarsePointer: true }, false)).toBe('high');
     expect(tierFromHints({ ...desktop, search: '?gfx=ultra' }, true)).toBe('ultra');
   });
@@ -77,6 +83,12 @@ describe('graphics tier resolution', () => {
     expect(shouldUseAutoGovernor({ search: '?gfx=ultra', graphicsPreset: 4 })).toBe(false);
     expect(shouldUseAutoGovernor({ search: '?governor=0', graphicsPreset: 1 })).toBe(false);
     expect(shouldUseAutoGovernor({ search: '?gfx=ultra&governor=1', graphicsPreset: 0 })).toBe(true);
+    // Resolved-tier form: an auto-tiered mobile device on medium/low engages the
+    // governor even with no stored preset (the preset-label form would not).
+    expect(shouldUseAutoGovernor({ search: '', graphicsPreset: undefined }, 'medium')).toBe(true);
+    expect(shouldUseAutoGovernor({ search: '', graphicsPreset: undefined }, 'low')).toBe(true);
+    expect(shouldUseAutoGovernor({ search: '', graphicsPreset: undefined }, 'ultra')).toBe(false);
+    expect(shouldUseAutoGovernor({ search: '?gfx=ultra' }, 'medium')).toBe(false);
   });
 
   it('keeps every quality tier bounded by explicit runtime budgets', () => {

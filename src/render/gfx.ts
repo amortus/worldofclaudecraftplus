@@ -253,13 +253,20 @@ export function graphicsPresetLabel(value: number | undefined): 'low' | 'medium'
   }
 }
 
-export function shouldUseAutoGovernor(hints?: Pick<GfxRuntimeHints, 'search' | 'graphicsPreset'>): boolean {
+export function shouldUseAutoGovernor(
+  hints?: Pick<GfxRuntimeHints, 'search' | 'graphicsPreset'>,
+  resolvedTier?: GfxTier,
+): boolean {
   if (!hints) return false;
   const params = new URLSearchParams(hints.search);
   const override = params.get('governor') ?? params.get('autoGovernor');
   if (override === '1' || override === 'true' || override === 'on') return true;
   if (override === '0' || override === 'false' || override === 'off') return false;
   if (forcedTierFromSearch(hints.search) === 'ultra') return false;
+  // Engage the adaptive governor on every tier except ultra. Prefer the
+  // RESOLVED tier so an auto-tiered mobile device (medium/low with no stored
+  // preset) gets it; fall back to the stored preset label when unknown.
+  if (resolvedTier !== undefined) return resolvedTier !== 'ultra';
   return graphicsPresetLabel(hints.graphicsPreset) !== 'ultra';
 }
 
@@ -285,7 +292,7 @@ function settingsFor(
     bucketBands,
     bucketBaselines: bucketBaselines(bucketBands),
     budget: GFX_BUDGETS[tier],
-    autoGovernor: shouldUseAutoGovernor(hints),
+    autoGovernor: shouldUseAutoGovernor(hints, tier),
     composer: tier === 'high' || tier === 'ultra',
     // N8AO runs on both composer tiers: half-res + Low quality on high keeps
     // it ~1ms-class on real GPUs; ultra gets full-res Medium
@@ -374,10 +381,8 @@ export function isConstrainedBrowser(hints: GfxRuntimeHints): boolean {
   return hints.maxTouchPoints > 0 && (hints.coarsePointer || hints.narrowViewport);
 }
 
-export function tierFromHints(hints: GfxRuntimeHints, softwareGl: boolean): GfxTier {
-  const forced = forcedTierFromSearch(hints.search);
-  if (forced) return forced;
-  switch (Math.round(hints.graphicsPreset ?? DEFAULT_PRESET)) {
+function tierFromPreset(preset: number): GfxTier {
+  switch (Math.round(preset)) {
     case PRESET_LOW: return 'low';
     case PRESET_MEDIUM: return 'medium';
     case PRESET_HIGH: return 'high';
@@ -385,6 +390,26 @@ export function tierFromHints(hints: GfxRuntimeHints, softwareGl: boolean): GfxT
     case PRESET_ADVANCED: return 'high';
   }
   return 'low';
+}
+
+// Auto-detect the tier when the player has not explicitly chosen one. Phones,
+// the native app, and low-memory machines must never boot the full ultra
+// pipeline (post chain + 4k shadows + 2.5x DPR); a weak device (<=4 GB) drops
+// to low, any other constrained device to medium. Desktop browsers are NOT
+// "constrained" (fine pointer, ample memory), so they keep the ultra default
+// unchanged. A player who picks a preset in Options overrides this everywhere.
+export function autoTierForDevice(hints: GfxRuntimeHints): GfxTier {
+  if (!isConstrainedBrowser(hints)) return tierFromPreset(DEFAULT_PRESET);
+  return hints.deviceMemory !== undefined && hints.deviceMemory <= 4 ? 'low' : 'medium';
+}
+
+export function tierFromHints(hints: GfxRuntimeHints, softwareGl: boolean): GfxTier {
+  const forced = forcedTierFromSearch(hints.search);
+  if (forced) return forced;
+  // An explicit Options choice is authoritative on every device.
+  if (hints.graphicsPreset !== undefined) return tierFromPreset(hints.graphicsPreset);
+  // No saved preset: pick by device class (desktop stays ultra; see above).
+  return autoTierForDevice(hints);
 }
 
 // Software GL (SwiftShader/llvmpipe — headless test runners, VMs) can't take
