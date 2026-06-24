@@ -254,6 +254,19 @@ function isReleaseBuild(): boolean {
   }
 }
 
+// Stricter than isReleaseBuild: true ONLY when the CI release-tier gate is explicitly
+// requested (I18N_RELEASE=1, which exists only in Node). A plain production browser build
+// is intentionally NOT treated as a hard gate here: a pending key degrades to the English
+// fill instead of throwing, so this fork can ship pt_BR before every key is translated
+// rather than crashing the client. The build/test gate still enforces completeness in CI.
+function releaseGateEnforced(): boolean {
+  try {
+    return typeof process !== "undefined" && !!process.env && process.env.I18N_RELEASE === "1";
+  } catch {
+    return false;
+  }
+}
+
 // Keys each locale has NOT translated (the resolved table English-fills them).
 // Empty while overlays stay dense; populated once a locale goes sparse. Built once
 // from the generated `pending` lists. PENDING_TOTAL lets the hot path skip the
@@ -303,7 +316,7 @@ export function t(key: TranslationKey, values?: InterpolationValues): string {
     }
   }
   if (typeof current !== "string") return onUntrackedKey(key);
-  if (PENDING_TOTAL > 0 && PENDING_SETS[currentLanguage]?.has(key) && isReleaseBuild()) {
+  if (PENDING_TOTAL > 0 && PENDING_SETS[currentLanguage]?.has(key) && releaseGateEnforced()) {
     throw new Error(
       `i18n: key "${key}" is untranslated (pending) for locale "${currentLanguage}" on a release build; English must never ship to a translated player`,
     );
