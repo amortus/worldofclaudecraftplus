@@ -191,6 +191,14 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.donate.title"
   ],
   "pt_BR": [
+    "hudChrome.ads.adNotAvailable",
+    "hudChrome.ads.boostOfferTitle",
+    "hudChrome.ads.earnedBoost",
+    "hudChrome.ads.earnedRevive",
+    "hudChrome.ads.reviveReady",
+    "hudChrome.ads.skip",
+    "hudChrome.ads.watchForBoost",
+    "hudChrome.ads.watchForRevive",
     "hudChrome.donate.close",
     "hudChrome.donate.copied",
     "hudChrome.donate.copy",

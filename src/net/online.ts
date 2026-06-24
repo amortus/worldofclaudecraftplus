@@ -1,22 +1,57 @@
 // Online play: REST auth client + WebSocket world mirror.
 
-import { NPCS, abilitiesKnownAt } from '../sim/data';
-import { computeQuestState, ResolvedAbility } from '../sim/sim';
-import {
-  cloneAllocation, computeTalentModifiers, emptyAllocation, talentPointsAtLevel, pointsSpent,
-  type TalentAllocation, type SavedLoadout, type Role,
-} from '../sim/content/talents';
+import { signChallenge } from '../sim/client_challenge';
 import { mechChromaItemId, mechChromaSkinIndex } from '../sim/content/skins';
 import {
-  Entity, EquipSlot, InvSlot, LootRollChoice, MoveInput, PlayerClass, QuestProgress, QuestState, SimEvent,
-  emptyMoveInput,
-} from '../sim/types';
+  cloneAllocation,
+  computeTalentModifiers,
+  emptyAllocation,
+  pointsSpent,
+  type Role,
+  type SavedLoadout,
+  type TalentAllocation,
+  talentPointsAtLevel,
+} from '../sim/content/talents';
+import { abilitiesKnownAt, NPCS, resolveDelveShopOffers } from '../sim/data';
+import { LEADERBOARD_PAGE_SIZE } from '../sim/leaderboard_page';
+import type { Ante, PickAction } from '../sim/lockpick';
 import { normalizeMoveFacing, sanitizeMoveInput } from '../sim/move_input';
+import { computeQuestState, type ResolvedAbility } from '../sim/sim';
 import {
+  type Entity,
+  type EquipSlot,
+  emptyMoveInput,
+  type InvSlot,
+  type LootRollChoice,
+  type LootRollPrompt,
+  type MoveInput,
+  type PlayerClass,
+  type QuestProgress,
+  type QuestState,
+  type SimEvent,
+} from '../sim/types';
+import {
+  type AccountCosmetics,
+  type ArenaInfo,
+  type CharacterSearchResult,
+  type DelveCompanionInfo,
+  type DelveDailyInfo,
+  type DelveRunInfo,
+  type DelveShopOfferView,
+  type DuelInfo,
+  type FriendInfo,
+  type IWorld,
   isOverheadEmoteId,
-  type AccountCosmetics, type ArenaInfo, type CharacterSearchResult, type DuelInfo, type FriendInfo,
-  type IWorld, type LeaderboardEntry, type MarketInfo, type OverheadEmoteId, type PartyInfo,
-  type PresenceStatus, type SocialInfo, type TradeInfo,
+  type LeaderboardEntry,
+  type LeaderboardPage,
+  type LockpickView,
+  type MarketInfo,
+  type OverheadEmoteId,
+  type PartyInfo,
+  type PresenceStatus,
+  type RaidLockout,
+  type SocialInfo,
+  type TradeInfo,
 } from '../world_api';
 
 // ---------------------------------------------------------------------------
@@ -31,14 +66,18 @@ export interface CharacterSummary {
   skin: number;
   online: boolean;
   forceRename: boolean;
+  lastPlayed?: string | null;
+  playtimeSeconds?: number;
 }
 
 function stringList(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
 }
 
 function normalizeAccountCosmetics(value: unknown): AccountCosmetics {
-  const src = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  const src = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
   return {
     completedQuestIds: stringList(src.completedQuestIds),
     mechChromaIds: stringList(src.mechChromaIds),
@@ -63,8 +102,12 @@ export function apiUrl(path: string, base = ''): string {
   return origin ? `${origin}${path}` : path;
 }
 
-export function buildWebSocketAuthMessage(token: string, characterId: number): { t: 'auth'; token: string; character: number } {
-  return { t: 'auth', token, character: characterId };
+export function buildWebSocketAuthMessage(
+  token: string,
+  characterId: number,
+  clientSeed = '',
+): { t: 'auth'; token: string; character: number; clientSeed: string } {
+  return { t: 'auth', token, character: characterId, clientSeed };
 }
 
 export type RealmType = 'Normal' | 'PvP' | 'RP' | 'RP-PvP';
@@ -98,13 +141,17 @@ export interface AccountInfo {
   email: string;
   createdAt: string;
   characterCount: number;
+  twoFactorEnabled: boolean;
 }
 
 // Carries the HTTP status alongside the server's error text so callers can
 // distinguish an auth failure (401/403 → clear the stored session) from a
 // transient 5xx/network blip (keep the token; the session may still be valid).
 export class ApiError extends Error {
-  constructor(message: string, readonly status: number) {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
     super(message);
     this.name = 'ApiError';
   }
@@ -132,7 +179,9 @@ export class Api {
   // token (when logged in) also returns per-realm character counts.
   async realms(): Promise<RealmDirectory> {
     try {
-      const res = await fetch(apiUrl('/api/realms'), { headers: this.token ? { Authorization: `Bearer ${this.token}` } : {} });
+      const res = await fetch(apiUrl('/api/realms'), {
+        headers: this.token ? { Authorization: `Bearer ${this.token}` } : {},
+      });
       if (!res.ok) return { current: '', realms: [], characters: {} };
       const d = await res.json();
       return { current: d.current ?? '', realms: d.realms ?? [], characters: d.characters ?? {} };
@@ -190,16 +239,47 @@ export class Api {
     return data;
   }
 
-  async register(username: string, password: string, turnstileToken = '', ref = ''): Promise<void> {
-    const data = await this.post('/api/register', { username, password, turnstileToken, ref });
+  async register(
+    username: string,
+    password: string,
+    turnstileToken = '',
+    ref = '',
+    nativeAttestation: unknown = undefined,
+  ): Promise<void> {
+    const data = await this.post('/api/register', {
+      username,
+      password,
+      turnstileToken,
+      ref,
+      nativeAttestation,
+    });
     this.token = data.token;
     this.username = data.username;
   }
 
-  async login(username: string, password: string, turnstileToken = ''): Promise<void> {
-    const data = await this.post('/api/login', { username, password, turnstileToken });
+  // Returns { twoFactorRequired: true } when the account has 2FA on and no code
+  // was supplied: the caller then re-invokes with `code` (or `recoveryCode`). A
+  // wrong code throws ApiError(401), like a wrong password.
+  async login(
+    username: string,
+    password: string,
+    turnstileToken = '',
+    code = '',
+    recoveryCode = '',
+    nativeAttestation: unknown = undefined,
+  ): Promise<{ twoFactorRequired?: boolean }> {
+    const data = await this.post('/api/login', {
+      username,
+      password,
+      turnstileToken,
+      code,
+      recoveryCode,
+      nativeAttestation,
+    });
+    if (data.twoFactorRequired && !data.token) return { twoFactorRequired: true };
     this.token = data.token;
     this.username = data.username;
+    return {};
   }
 
   // ── Persistent session (home-page account portal) ──────────────────────────
@@ -209,8 +289,13 @@ export class Api {
   saveSession(): void {
     if (!this.token || !this.username) return;
     try {
-      localStorage.setItem(Api.SESSION_KEY, JSON.stringify({ token: this.token, username: this.username }));
-    } catch { /* storage may be unavailable (private mode); session stays in-memory */ }
+      localStorage.setItem(
+        Api.SESSION_KEY,
+        JSON.stringify({ token: this.token, username: this.username }),
+      );
+    } catch {
+      /* storage may be unavailable (private mode); session stays in-memory */
+    }
   }
 
   restoreSession(): boolean {
@@ -230,7 +315,11 @@ export class Api {
   clearSession(): void {
     this.token = null;
     this.username = null;
-    try { localStorage.removeItem(Api.SESSION_KEY); } catch { /* ignore */ }
+    try {
+      localStorage.removeItem(Api.SESSION_KEY);
+    } catch {
+      /* ignore */
+    }
   }
 
   // Account-wide self-service (whoami / password / email / deactivate) routes
@@ -256,13 +345,54 @@ export class Api {
     await this.post('/api/account/logout', {});
   }
 
-  async setEmail(email: string): Promise<string> {
-    const data = await this.post('/api/account/email', { email });
-    return typeof data.email === 'string' ? data.email : '';
-  }
-
   async deactivateAccount(username: string, password: string): Promise<void> {
     await this.post('/api/account/deactivate', { username, password });
+  }
+
+  // Request a verified email change: server mails a confirm link to the new
+  // address and a notice to the old one. The address only changes on verify.
+  async changeEmail(password: string, newEmail: string): Promise<void> {
+    await this.post('/api/account/email/change', { password, newEmail });
+  }
+
+  // ── Two-factor (TOTP) ──────────────────────────────────────────────────────
+  // setup returns the secret + otpauth URI to render as a QR code; enable
+  // confirms a live code and returns the one-time recovery codes.
+  async twoFactorSetup(password: string): Promise<{ secret: string; otpauthUri: string }> {
+    return this.post('/api/account/2fa/setup', { password });
+  }
+
+  async twoFactorEnable(code: string): Promise<{ recoveryCodes: string[] }> {
+    const data = await this.post('/api/account/2fa/enable', { code });
+    return { recoveryCodes: Array.isArray(data.recoveryCodes) ? data.recoveryCodes : [] };
+  }
+
+  async twoFactorDisable(password: string): Promise<void> {
+    await this.post('/api/account/2fa/disable', { password });
+  }
+
+  // GDPR data export: downloads the account + characters as a JSON file. Returns
+  // the parsed bundle too, so the caller can trigger a browser download.
+  async exportData(): Promise<unknown> {
+    const res = await fetch(apiUrl('/api/account/export', this.base), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+      },
+      body: '{}',
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      let msg = `request failed (${res.status})`;
+      try {
+        msg = JSON.parse(text).error ?? msg;
+      } catch {
+        /* non-JSON error body */
+      }
+      throw new ApiError(msg, res.status);
+    }
+    return JSON.parse(text);
   }
 
   async characters(): Promise<CharacterSummary[]> {
@@ -291,11 +421,21 @@ export class Api {
     return data.takenOver === true;
   }
 
-  async reportPlayer(reporterCharacterId: number, targetPid: number, reason: string, details: string): Promise<void> {
+  async reportPlayer(
+    reporterCharacterId: number,
+    targetPid: number,
+    reason: string,
+    details: string,
+  ): Promise<void> {
     await this.post('/api/reports', { reporterCharacterId, targetPid, reason, details });
   }
 
-  async reportPlayerByName(reporterCharacterId: number, targetCharacterName: string, reason: string, details: string): Promise<void> {
+  async reportPlayerByName(
+    reporterCharacterId: number,
+    targetCharacterName: string,
+    reason: string,
+    details: string,
+  ): Promise<void> {
     await this.post('/api/reports', { reporterCharacterId, targetCharacterName, reason, details });
   }
 
@@ -313,14 +453,23 @@ export class Api {
     return { screenshotStored: res?.screenshotStored !== false };
   }
 
-  async projectStats(): Promise<{ accounts_created: number; players_online: number; realm: string }> {
+  async projectStats(): Promise<{
+    accounts_created: number;
+    players_online: number;
+    realm: string;
+  }> {
     return this.get('/api/project-stats');
   }
 
   // Lifetime-XP leaderboard for the home page. 'global' ranks across all realms.
-  async leaderboard(scope: 'realm' | 'global' = 'global', limit = 100): Promise<LeaderboardEntry[]> {
+  async leaderboard(
+    scope: 'realm' | 'global' = 'global',
+    limit = 100,
+  ): Promise<LeaderboardEntry[]> {
     try {
-      const data = await this.get(`/api/leaderboard?scope=${scope}&metric=lifetimeXp&limit=${limit}`);
+      const data = await this.get(
+        `/api/leaderboard?scope=${scope}&metric=lifetimeXp&limit=${limit}`,
+      );
       return data.leaders ?? [];
     } catch {
       return [];
@@ -397,7 +546,8 @@ export class Api {
   async characterStanding(characterId: number): Promise<{ rank: number; total: number } | null> {
     try {
       const data = await this.get(`/api/characters/${characterId}/standing`);
-      if (typeof data.rank === 'number' && typeof data.total === 'number') return { rank: data.rank, total: data.total };
+      if (typeof data.rank === 'number' && typeof data.total === 'number')
+        return { rank: data.rank, total: data.total };
       return null;
     } catch {
       return null;
@@ -415,7 +565,10 @@ function wrapAngle(d: number): number {
   return d;
 }
 
-function copyPos(dst: { x: number; y: number; z: number }, src: { x: number; y: number; z: number }): void {
+function copyPos(
+  dst: { x: number; y: number; z: number },
+  src: { x: number; y: number; z: number },
+): void {
   dst.x = src.x;
   dst.y = src.y;
   dst.z = src.z;
@@ -446,29 +599,116 @@ const DESPAWN_GRACE_MIN_DIST_SQ = 70 * 70;
 
 function blankEntity(id: number): Entity {
   return {
-    id, kind: 'mob', templateId: '', name: '', level: 1, mendTimer: 0, wardTimer: 0, rallyTimer: 0, warcryTimer: 0,
-    petPath: [], petPathCooldown: 0,
-    pos: { x: 0, y: 0, z: 0 }, prevPos: { x: 0, y: 0, z: 0 }, facing: 0, prevFacing: 0,
-    vx: 0, vz: 0, vy: 0, onGround: true, jumping: false, fallStartY: 0,
-    hp: 1, maxHp: 1, resource: 0, maxResource: 0, resourceType: null,
-    overheadEmoteId: null, overheadEmoteUntil: 0, overheadEmoteSeq: 0,
+    id,
+    kind: 'mob',
+    templateId: '',
+    name: '',
+    level: 1,
+    mendTimer: 0,
+    wardTimer: 0,
+    rallyTimer: 0,
+    warcryTimer: 0,
+    petPath: [],
+    petPathCooldown: 0,
+    pos: { x: 0, y: 0, z: 0 },
+    prevPos: { x: 0, y: 0, z: 0 },
+    facing: 0,
+    prevFacing: 0,
+    vx: 0,
+    vz: 0,
+    vy: 0,
+    onGround: true,
+    jumping: false,
+    fallStartY: 0,
+    hp: 1,
+    maxHp: 1,
+    resource: 0,
+    maxResource: 0,
+    resourceType: null,
+    overheadEmoteId: null,
+    overheadEmoteUntil: 0,
+    overheadEmoteSeq: 0,
     stats: { str: 0, agi: 0, sta: 0, int: 0, spi: 0, armor: 0 },
     weapon: { min: 1, max: 2, speed: 2 },
-    attackPower: 0, rangedPower: 0, critChance: 0.05, dodgeChance: 0.05, moveSpeed: 7, hostile: false,
-    targetId: null, autoAttack: false, swingTimer: 0,
-    inCombat: false, combatTimer: 99,
-    auras: [], ccDr: new Map(), castingAbility: null, castRemaining: 0, castTotal: 0,
-    channeling: false, channelTickTimer: 0, channelTickEvery: 0,
-    gcdRemaining: 0, cooldowns: new Map(), queuedOnSwing: null, fiveSecondRule: 99,
-    comboPoints: 0, comboTargetId: null, overpowerUntil: -1, potionCooldownUntil: -1, savedMana: 0,
-    chargeTargetId: null, chargeTimeLeft: 0, chargePath: [], followTargetId: null,
-    sitting: false, eating: null, drinking: null,
-    aiState: 'idle', tappedById: null, pulseTimer: 0, stompTimer: 0, stoneskinTimer: 0, terrifyTimer: 0, detonateTimer: Infinity, firedSummons: 0, summonedIds: [], enraged: false, healedThisPull: false,
-    threat: new Map(), forcedTargetId: null, forcedTargetTimer: 0, ownerId: null, petMode: 'defensive', petTauntTimer: 0,
-    spawnPos: { x: 0, y: 0, z: 0 }, leashAnchor: null, evadeStall: 0, fleeTimer: 0, fleeReturnTimer: 0, hasFled: false, wanderTarget: null, wanderTimer: 0,
-    aggroTargetId: null, respawnTimer: 0, corpseTimer: 0, lootable: false, loot: null,
-    xpValue: 0, questIds: [], vendorItems: [], objectItemId: null, dungeonId: null,
-    dead: false, scale: 1, color: 0xffffff, skinCatalog: 'class', skin: 0, guild: '',
+    attackPower: 0,
+    rangedPower: 0,
+    critChance: 0.05,
+    dodgeChance: 0.05,
+    moveSpeed: 7,
+    hostile: false,
+    targetId: null,
+    autoAttack: false,
+    swingTimer: 0,
+    inCombat: false,
+    combatTimer: 99,
+    auras: [],
+    ccDr: new Map(),
+    castingAbility: null,
+    castRemaining: 0,
+    castTotal: 0,
+    channeling: false,
+    channelTickTimer: 0,
+    channelTickEvery: 0,
+    gcdRemaining: 0,
+    cooldowns: new Map(),
+    queuedOnSwing: null,
+    fiveSecondRule: 99,
+    comboPoints: 0,
+    comboTargetId: null,
+    overpowerUntil: -1,
+    potionCooldownUntil: -1,
+    savedMana: 0,
+    chargeTargetId: null,
+    chargeTimeLeft: 0,
+    chargePath: [],
+    followTargetId: null,
+    sitting: false,
+    eating: null,
+    drinking: null,
+    aiState: 'idle',
+    tappedById: null,
+    pulseTimer: 0,
+    stompTimer: 0,
+    stoneskinTimer: 0,
+    terrifyTimer: 0,
+    detonateTimer: Infinity,
+    firedSummons: 0,
+    summonedIds: [],
+    enraged: false,
+    healedThisPull: false,
+    threat: new Map(),
+    forcedTargetId: null,
+    forcedTargetTimer: 0,
+    ownerId: null,
+    petMode: 'defensive',
+    petTauntTimer: 0,
+    petAutoTaunt: false,
+    petManualTauntPending: false,
+    spawnPos: { x: 0, y: 0, z: 0 },
+    leashAnchor: null,
+    evadeStall: 0,
+    fleeTimer: 0,
+    fleeReturnTimer: 0,
+    hasFled: false,
+    wanderTarget: null,
+    wanderTimer: 0,
+    aggroTargetId: null,
+    respawnTimer: 0,
+    corpseTimer: 0,
+    lootable: false,
+    loot: null,
+    xpValue: 0,
+    questIds: [],
+    vendorItems: [],
+    objectItemId: null,
+    dungeonId: null,
+    dead: false,
+    scale: 1,
+    color: 0xffffff,
+    skinCatalog: 'class',
+    skin: 0,
+    mainhandItemId: null,
+    guild: '',
   };
 }
 
@@ -504,7 +744,19 @@ export class ClientWorld implements IWorld {
   socialInfo: SocialInfo | null = null;
   arenaInfo: ArenaInfo | null = null;
   marketInfo: MarketInfo | null = null;
+  delveRun: DelveRunInfo | null = null;
+  companionState: DelveCompanionInfo | null = null;
+  // Lockpicking: rebuilt from the lockpick* events (there is no snapshot field).
+  // Holds only the fog-windowed cells the server discloses.
+  lockpickState: LockpickView | null = null;
+  delveMarks = 0;
+  companionUpgrades: Record<string, number> = {};
+  // Per-delve clears (key `${delveId}:${tierId}`), mirrored from the self-wire so
+  // delveShopOffers can resolve the shop lock badge client-side.
+  delveClears: Record<string, number> = {};
+  delveDaily: DelveDailyInfo = { date: '', firstClearXp: [], markClears: 0 };
   markers: Record<number, number> = {}; // entityId -> markerId, mirrored from the self-wire
+  private lootRollPrompts: LootRollPrompt[] = []; // open need-greed rolls, mirrored from the self-wire
   realm = '';
   // bumped whenever a fresh social snapshot lands, so an open panel re-renders
   private socialDirty = false;
@@ -523,6 +775,7 @@ export class ClientWorld implements IWorld {
   private ws: WebSocket;
   private readonly token: string;
   private readonly base: string;
+  private readonly clientSeed: string;
   private eventQueue: SimEvent[] = [];
   // inventory deltas arrive in snapshots, separate from the event frames the
   // HUD redraws on — the frame loop polls this so open panels re-render
@@ -543,19 +796,20 @@ export class ClientWorld implements IWorld {
   private ackedInputSeq = 0;
   private inputEchoSamples: number[] = [];
 
-  constructor(token: string, characterId: number, cls: PlayerClass, base = '') {
+  constructor(token: string, characterId: number, cls: PlayerClass, base = '', clientSeed = '') {
     this.characterId = characterId;
     this.token = token;
     this.base = normalizeOrigin(base) || NATIVE_API_ORIGIN;
+    this.clientSeed = clientSeed;
     this.cfg = { seed: 20061, playerClass: cls };
     // when a realm was picked, connect to that realm's origin; otherwise the
     // page's own host
     const wsUrl = this.base
-      ? this.base.replace(/^http/, 'ws') + '/ws'
+      ? `${this.base.replace(/^http/, 'ws')}/ws`
       : buildWebSocketUrl(location.protocol, location.host);
     this.ws = new WebSocket(wsUrl);
     this.ws.onopen = () => {
-      this.ws.send(JSON.stringify(buildWebSocketAuthMessage(token, characterId)));
+      this.ws.send(JSON.stringify(buildWebSocketAuthMessage(token, characterId, this.clientSeed)));
     };
     this.ws.onmessage = (ev) => this.onMessage(String(ev.data));
     this.ws.onclose = () => {
@@ -608,12 +862,17 @@ export class ClientWorld implements IWorld {
 
   private inputSignature(): string {
     const mi = this.moveInput;
-    const facing = this.mouselookFacing === null ? '' : Math.round(this.mouselookFacing * 10000).toString();
+    const facing =
+      this.mouselookFacing === null ? '' : Math.round(this.mouselookFacing * 10000).toString();
     return [
-      mi.forward ? 1 : 0, mi.back ? 1 : 0,
-      mi.turnLeft ? 1 : 0, mi.turnRight ? 1 : 0,
-      mi.strafeLeft ? 1 : 0, mi.strafeRight ? 1 : 0,
-      mi.jump ? 1 : 0, facing,
+      mi.forward ? 1 : 0,
+      mi.back ? 1 : 0,
+      mi.turnLeft ? 1 : 0,
+      mi.turnRight ? 1 : 0,
+      mi.strafeLeft ? 1 : 0,
+      mi.strafeRight ? 1 : 0,
+      mi.jump ? 1 : 0,
+      facing,
     ].join(',');
   }
 
@@ -629,9 +888,12 @@ export class ClientWorld implements IWorld {
       t: 'input',
       seq: ++this.inputSeq,
       mi: {
-        f: mi.forward ? 1 : 0, b: mi.back ? 1 : 0,
-        tl: mi.turnLeft ? 1 : 0, tr: mi.turnRight ? 1 : 0,
-        sl: mi.strafeLeft ? 1 : 0, sr: mi.strafeRight ? 1 : 0,
+        f: mi.forward ? 1 : 0,
+        b: mi.back ? 1 : 0,
+        tl: mi.turnLeft ? 1 : 0,
+        tr: mi.turnRight ? 1 : 0,
+        sl: mi.strafeLeft ? 1 : 0,
+        sr: mi.strafeRight ? 1 : 0,
         j: mi.jump ? 1 : 0,
       },
     };
@@ -675,7 +937,9 @@ export class ClientWorld implements IWorld {
       this.cfg.seed = msg.seed;
       if (typeof msg.realm === 'string') this.realm = msg.realm;
       if (Array.isArray(msg.softWords)) {
-        this.profanityWords = msg.softWords.filter((w: unknown): w is string => typeof w === 'string');
+        this.profanityWords = msg.softWords.filter(
+          (w: unknown): w is string => typeof w === 'string',
+        );
         this.profanityDirty = true;
       }
       this.connected = true;
@@ -695,11 +959,18 @@ export class ClientWorld implements IWorld {
       return;
     }
     if (msg.t === 'events') {
-      for (const ev of msg.list) this.eventQueue.push(ev as SimEvent);
+      for (const ev of msg.list) {
+        this.applyLockpickEvent(ev as SimEvent);
+        this.eventQueue.push(ev as SimEvent);
+      }
       return;
     }
     if (msg.t === 'social') {
-      this.socialInfo = { friends: msg.friends ?? [], blocks: msg.blocks ?? [], guild: msg.guild ?? null };
+      this.socialInfo = {
+        friends: msg.friends ?? [],
+        blocks: msg.blocks ?? [],
+        guild: msg.guild ?? null,
+      };
       this.socialDirty = true;
       return;
     }
@@ -707,16 +978,35 @@ export class ClientWorld implements IWorld {
       // live position refresh for friends/guildmates (drives the world map);
       // merge into the existing roster in place — snapshots own online/offline.
       if (this.socialInfo && Array.isArray(msg.list)) {
-        const byId = new Map<number, { x: number; z: number; zone: string; status: PresenceStatus }>();
+        const byId = new Map<
+          number,
+          { x: number; z: number; zone: string; status: PresenceStatus }
+        >();
         for (const e of msg.list) byId.set(e.id, e);
         const apply = (arr: FriendInfo[]) => {
           for (const m of arr) {
             const u = byId.get(m.id);
-            if (u) { m.x = u.x; m.z = u.z; m.zone = u.zone; m.status = u.status; m.online = true; }
+            if (u) {
+              m.x = u.x;
+              m.z = u.z;
+              m.zone = u.zone;
+              m.status = u.status;
+              m.online = true;
+            }
           }
         };
         apply(this.socialInfo.friends);
         if (this.socialInfo.guild) apply(this.socialInfo.guild.members);
+      }
+      return;
+    }
+    if (msg.t === 'challenge') {
+      // Server-presented challenge: solve it and return the answer signed with
+      // this client's seed so the answer is bound to us. WIP not yet interactive.
+      if (typeof msg.nonce === 'string' && typeof msg.challenge === 'string') {
+        const challengeResponse = '42';
+        const signature = signChallenge(msg.nonce, challengeResponse, this.clientSeed);
+        this.cmd({ cmd: 'challengeResponse', n: msg.nonce, r: challengeResponse, sig: signature });
       }
       return;
     }
@@ -742,9 +1032,10 @@ export class ClientWorld implements IWorld {
     // the interpolation alpha the render loop reached on its last frame
     // (same formula and caps as main.ts); used below to re-anchor the new
     // interpolation segment at the pose currently on screen
-    const contAlpha = this.lastSnapAt > 0
-      ? Math.min(1.25, (now - this.lastSnapAt) / Math.max(20, this.snapInterval))
-      : 1;
+    const contAlpha =
+      this.lastSnapAt > 0
+        ? Math.min(1.25, (now - this.lastSnapAt) / Math.max(20, this.snapInterval))
+        : 1;
     if (this.lastSnapAt > 0) {
       const gap = now - this.lastSnapAt;
       if (gap > 5 && gap < 500) this.snapInterval = this.snapInterval * 0.9 + gap * 0.1;
@@ -776,6 +1067,7 @@ export class ClientWorld implements IWorld {
         e.name = w.nm;
         e.level = w.lv;
         e.skin = w.sk ?? 0;
+        e.mainhandItemId = w.mh ?? null; // equipped mainhand → held weapon model (render-only)
         e.skinCatalog = w.cat === 'mech' ? 'mech' : 'class';
         e.holderTier = w.ht ?? 0; // $WOC holder-tier flair (cosmetic, server-set)
         e.holderBalance = typeof w.hb === 'number' ? w.hb : undefined; // exact $WOC, for inspect
@@ -799,9 +1091,10 @@ export class ClientWorld implements IWorld {
       // the global snapshot clock the camera follow uses.
       const prevUpdatedAt = e.netUpdatedAt;
       const prevInterval = e.netInterval;
-      const entAlpha = w.id !== this.playerId && prevUpdatedAt !== undefined && prevInterval !== undefined
-        ? Math.min(1.25, (now - prevUpdatedAt) / Math.max(20, prevInterval))
-        : contAlpha;
+      const entAlpha =
+        w.id !== this.playerId && prevUpdatedAt !== undefined && prevInterval !== undefined
+          ? Math.min(1.25, (now - prevUpdatedAt) / Math.max(20, prevInterval))
+          : contAlpha;
       const entFacingAlpha = Math.min(1, entAlpha);
       // per-entity update clock: distant entities are sent below snapshot
       // rate, so each one interpolates over its own measured cadence. Only
@@ -822,7 +1115,8 @@ export class ClientWorld implements IWorld {
       // the global alpha and the entity sticks at its old pose until its next
       // real update (e.g. taking damage). Snap both poses to the destination so
       // it appears exactly where the server placed it.
-      const teleDx = w.x - e.pos.x, teleDz = w.z - e.pos.z;
+      const teleDx = w.x - e.pos.x,
+        teleDz = w.z - e.pos.z;
       const wasDead = e.dead;
       const nowDead = !!w.dead;
       if ((wasDead && !nowDead) || teleDx * teleDx + teleDz * teleDz > TELEPORT_SNAP_DIST_SQ) {
@@ -836,7 +1130,9 @@ export class ClientWorld implements IWorld {
         };
         e.prevFacing = e.prevFacing + wrapAngle(e.facing - e.prevFacing) * entFacingAlpha;
       }
-      e.pos.x = w.x; e.pos.y = w.y; e.pos.z = w.z;
+      e.pos.x = w.x;
+      e.pos.y = w.y;
+      e.pos.z = w.z;
       e.facing = w.f;
       e.hp = w.hp;
       e.maxHp = w.mhp;
@@ -856,10 +1152,19 @@ export class ClientWorld implements IWorld {
       e.ownerId = w.own ?? null;
       e.petMode = w.pm ?? 'defensive';
       e.petTauntTimer = w.pt ?? 0;
+      e.petAutoTaunt = !!w.pa;
+      e.petManualTauntPending = false;
       e.threat = new Map(w.thr ?? []);
       e.auras = (w.auras ?? []).map((a: any) => ({
-        id: a.id, name: a.name, kind: a.kind, remaining: a.rem, duration: a.dur,
-        value: 0, sourceId: 0, school: 'physical' as const,
+        id: a.id,
+        name: a.name,
+        kind: a.kind,
+        remaining: a.rem,
+        duration: a.dur,
+        value: 0,
+        sourceId: 0,
+        school: 'physical' as const,
+        stacks: a.stacks,
       }));
       e.loot = w.lootList ?? null;
       return e;
@@ -894,7 +1199,8 @@ export class ClientWorld implements IWorld {
       e.resourceType = s.rtype;
       // delta fields: the server omits them while unchanged, so only the
       // snapshots that carry them rebuild the local structures
-      if (s.cds !== undefined) e.cooldowns = new Map(Object.entries(s.cds).map(([k, v]) => [k, Number(v)]));
+      if (s.cds !== undefined)
+        e.cooldowns = new Map(Object.entries(s.cds).map(([k, v]) => [k, Number(v)]));
       e.gcdRemaining = s.gcd ?? 0;
       e.comboPoints = s.combo ?? 0;
       e.comboTargetId = s.comboTgt ?? null;
@@ -919,15 +1225,23 @@ export class ClientWorld implements IWorld {
       this.prestigeRank = s.prk ?? 0;
       if (s.milestones !== undefined) this.unlockedMilestones = s.milestones;
       this.copper = s.copper ?? 0;
-      if (s.inv !== undefined) { this.inventory = s.inv; this.invChanged = true; }
-      if (s.buyback !== undefined) { this.vendorBuyback = s.buyback; this.invChanged = true; }
+      if (s.inv !== undefined) {
+        this.inventory = s.inv;
+        this.invChanged = true;
+      }
+      if (s.buyback !== undefined) {
+        this.vendorBuyback = s.buyback;
+        this.invChanged = true;
+      }
       if (s.equip !== undefined) this.equipment = s.equip;
       if (s.cosmetics !== undefined) {
         this.accountCosmetics = normalizeAccountCosmetics(s.cosmetics);
         this.cosmeticsChanged = true;
       }
-      if (s.qlog !== undefined) this.questLog = new Map((s.qlog as QuestProgress[]).map((q) => [q.questId, q]));
+      if (s.qlog !== undefined)
+        this.questLog = new Map((s.qlog as QuestProgress[]).map((q) => [q.questId, q]));
       if (s.qdone !== undefined) this.questsDone = new Set(s.qdone);
+      if (s.lockouts !== undefined) this.selfLockouts = s.lockouts as Record<string, number>;
       if (s.qlog !== undefined || s.qdone !== undefined) this.pendingQuestCommands?.clear();
       // talent state (heavy field, sent on change): mirror it, then resolve known
       // with the precomputed modifiers so granted abilities + tweaks show locally.
@@ -938,14 +1252,26 @@ export class ClientWorld implements IWorld {
         this.loadouts = s.tal.loadouts ?? [];
         this.activeLoadout = typeof s.tal.activeLoadout === 'number' ? s.tal.activeLoadout : -1;
       }
-      const talents = this.talents ?? (this.talents = emptyAllocation());
-      this.known = abilitiesKnownAt(this.cfg.playerClass, e.level, computeTalentModifiers(this.cfg.playerClass, talents));
+      if (!this.talents) this.talents = emptyAllocation();
+      const talents = this.talents;
+      this.known = abilitiesKnownAt(
+        this.cfg.playerClass,
+        e.level,
+        computeTalentModifiers(this.cfg.playerClass, talents),
+      );
       if (s.party !== undefined) this.partyInfo = s.party;
       if (s.marks !== undefined) this.markers = s.marks ?? {}; // null = cleared (no party/disband)
       if (s.trade !== undefined) this.tradeInfo = s.trade;
       if (s.duel !== undefined) this.duelInfo = s.duel;
       if (s.arena !== undefined) this.arenaInfo = s.arena;
       if (s.market !== undefined) this.marketInfo = s.market;
+      if (s.lroll !== undefined) this.lootRollPrompts = s.lroll ?? [];
+      if (s.drun !== undefined) this.delveRun = s.drun;
+      if (s.dcompanion !== undefined) this.companionState = s.dcompanion;
+      if (s.dmarks !== undefined) this.delveMarks = s.dmarks ?? 0;
+      if (s.dcomp !== undefined) this.companionUpgrades = s.dcomp ?? {};
+      if (s.dclears !== undefined) this.delveClears = s.dclears ?? {};
+      if (s.delveDaily !== undefined) this.delveDaily = s.delveDaily;
       // camera follows server-side facing changes when not mouselooking
       if (prevSelfFacing !== undefined && this.mouselookFacing === null) {
         let d = e.facing - prevSelfFacing;
@@ -994,7 +1320,10 @@ export class ClientWorld implements IWorld {
   questState(questId: string): QuestState {
     const state = computeQuestState(questId, this.questLog, this.questsDone, this.player.level);
     const pending = this.pendingQuestCommands?.get(questId);
-    if ((pending === 'accept' && state === 'available') || (pending === 'turnin' && state === 'ready')) {
+    if (
+      (pending === 'accept' && state === 'available') ||
+      (pending === 'turnin' && state === 'ready')
+    ) {
       return 'active';
     }
     return state;
@@ -1020,7 +1349,7 @@ export class ClientWorld implements IWorld {
   // self-heals on the next GCD. (Mob respawn clears attackers' targetId, so it
   // has no such window.)
   private deadTargetCast(def: ResolvedAbility['def'] | undefined): boolean {
-    if (!def || !def.requiresTarget || def.targetType === 'friendly') return false;
+    if (!def?.requiresTarget || def.targetType === 'friendly') return false;
     const tid = this.player.targetId;
     const target = tid !== null ? this.entities.get(tid) : undefined;
     return !!target && target.dead;
@@ -1078,6 +1407,9 @@ export class ClientWorld implements IWorld {
   submitLootRoll(rollId: number, choice: LootRollChoice): void {
     this.cmd({ cmd: 'lootRoll', rollId, choice });
   }
+  activeLootRolls(): LootRollPrompt[] {
+    return this.lootRollPrompts;
+  }
   pickUpObject(id: number): void {
     this.cmd({ cmd: 'pickup', id });
   }
@@ -1091,11 +1423,18 @@ export class ClientWorld implements IWorld {
     this.pendingQuestCommands.set(questId, 'turnin');
     this.cmd({ cmd: 'turnin', quest: questId });
   }
+  reportTelemetry(kind: string, data: Record<string, number>): void {
+    if (!this.canSendCommand()) return;
+    this.cmd({ cmd: 'telemetry', kind, ...data });
+  }
   abandonQuest(questId: string): void {
     if (!this.canSendCommand()) return;
     this.questLog.delete(questId);
     this.pendingQuestCommands.delete(questId);
     this.cmd({ cmd: 'abandon', quest: questId });
+  }
+  acceptLinkedQuest(questId: string, fromPid: number): void {
+    this.cmd({ cmd: 'qlinkaccept', quest: questId, from: fromPid });
   }
   equipItem(itemId: string): void {
     this.cmd({ cmd: 'equip', item: itemId });
@@ -1115,13 +1454,17 @@ export class ClientWorld implements IWorld {
   sellItem(itemId: string, count?: number): void {
     this.cmd({ cmd: 'sell', item: itemId, count });
   }
+  sellAllJunk(): void {
+    this.cmd({ cmd: 'sell_all_junk' });
+  }
   buyBackItem(itemId: string): void {
     this.cmd({ cmd: 'buyback', item: itemId });
   }
   changeSkin(skin: number, catalog: 'class' | 'mech' = 'class'): void {
-    const idx = catalog === 'mech'
-      ? Math.max(0, Math.floor(skin))
-      : Math.max(0, Math.min(7, Math.floor(skin)));
+    const idx =
+      catalog === 'mech'
+        ? Math.max(0, Math.floor(skin))
+        : Math.max(0, Math.min(7, Math.floor(skin)));
     const p = this.entities.get(this.playerId);
     if (p) {
       p.skin = idx;
@@ -1148,9 +1491,9 @@ export class ClientWorld implements IWorld {
       }
       const existing = this.inventory.find((slot) => slot.itemId === itemId);
       this.inventory = existing
-        ? this.inventory.map((slot) => (
-          slot.itemId === itemId ? { ...slot, count: slot.count + 1 } : slot
-        ))
+        ? this.inventory.map((slot) =>
+            slot.itemId === itemId ? { ...slot, count: slot.count + 1 } : slot,
+          )
         : [...this.inventory, { itemId, count: 1 }];
       this.invChanged = true;
       this.cosmeticsChanged = true;
@@ -1186,6 +1529,15 @@ export class ClientWorld implements IWorld {
   petTaunt(): void {
     this.cmd({ cmd: 'pet_taunt' });
   }
+  setPetAutoTaunt(enabled: boolean): void {
+    for (const e of this.entities.values()) {
+      if (e.kind === 'mob' && e.ownerId === this.playerId) {
+        e.petAutoTaunt = enabled;
+        break;
+      }
+    }
+    this.cmd({ cmd: 'pet_auto_taunt', enabled });
+  }
   feedPet(itemId: string): void {
     this.cmd({ cmd: 'pet_feed', item: itemId });
   }
@@ -1213,6 +1565,9 @@ export class ClientWorld implements IWorld {
   }
   convertPartyToRaid(): void {
     this.cmd({ cmd: 'praid' });
+  }
+  convertRaidToParty(): void {
+    this.cmd({ cmd: 'punraid' });
   }
   moveRaidMember(targetPid: number, group: 1 | 2): void {
     this.cmd({ cmd: 'pmoveRaid', id: targetPid, group });
@@ -1252,25 +1607,55 @@ export class ClientWorld implements IWorld {
     this.cmd({ cmd: 'duel_decline' });
   }
   // persistent social (resolved server-side by character name)
-  friendAdd(name: string): void { this.cmd({ cmd: 'friend_add', name }); }
-  friendRemove(name: string): void { this.cmd({ cmd: 'friend_remove', name }); }
-  blockAdd(name: string): void { this.cmd({ cmd: 'block_add', name }); }
-  blockRemove(name: string): void { this.cmd({ cmd: 'block_remove', name }); }
-  guildCreate(name: string): void { this.cmd({ cmd: 'guild_create', name }); }
-  guildInvite(name: string): void { this.cmd({ cmd: 'guild_invite', name }); }
-  guildAccept(): void { this.cmd({ cmd: 'guild_accept' }); }
-  guildDecline(): void { this.cmd({ cmd: 'guild_decline' }); }
-  guildLeave(): void { this.cmd({ cmd: 'guild_leave' }); }
-  guildKick(name: string): void { this.cmd({ cmd: 'guild_kick', name }); }
-  guildPromote(name: string): void { this.cmd({ cmd: 'guild_promote', name }); }
-  guildDemote(name: string): void { this.cmd({ cmd: 'guild_demote', name }); }
-  guildTransfer(name: string): void { this.cmd({ cmd: 'guild_transfer', name }); }
-  guildDisband(): void { this.cmd({ cmd: 'guild_disband' }); }
+  friendAdd(name: string): void {
+    this.cmd({ cmd: 'friend_add', name });
+  }
+  friendRemove(name: string): void {
+    this.cmd({ cmd: 'friend_remove', name });
+  }
+  blockAdd(name: string): void {
+    this.cmd({ cmd: 'block_add', name });
+  }
+  blockRemove(name: string): void {
+    this.cmd({ cmd: 'block_remove', name });
+  }
+  guildCreate(name: string): void {
+    this.cmd({ cmd: 'guild_create', name });
+  }
+  guildInvite(name: string): void {
+    this.cmd({ cmd: 'guild_invite', name });
+  }
+  guildAccept(): void {
+    this.cmd({ cmd: 'guild_accept' });
+  }
+  guildDecline(): void {
+    this.cmd({ cmd: 'guild_decline' });
+  }
+  guildLeave(): void {
+    this.cmd({ cmd: 'guild_leave' });
+  }
+  guildKick(name: string): void {
+    this.cmd({ cmd: 'guild_kick', name });
+  }
+  guildPromote(name: string): void {
+    this.cmd({ cmd: 'guild_promote', name });
+  }
+  guildDemote(name: string): void {
+    this.cmd({ cmd: 'guild_demote', name });
+  }
+  guildTransfer(name: string): void {
+    this.cmd({ cmd: 'guild_transfer', name });
+  }
+  guildDisband(): void {
+    this.cmd({ cmd: 'guild_disband' });
+  }
   async searchCharacters(query: string): Promise<CharacterSearchResult[]> {
     const q = query.trim();
     if (!q) return [];
     try {
-      const res = await fetch(apiUrl(`/api/search?q=${encodeURIComponent(q)}`, this.base), { headers: { Authorization: `Bearer ${this.token}` } });
+      const res = await fetch(apiUrl(`/api/search?q=${encodeURIComponent(q)}`, this.base), {
+        headers: { Authorization: `Bearer ${this.token}` },
+      });
       if (!res.ok) return [];
       return (await res.json()).results ?? [];
     } catch {
@@ -1307,13 +1692,101 @@ export class ClientWorld implements IWorld {
   leaveDungeon(): void {
     this.cmd({ cmd: 'leave_dungeon' });
   }
-  async leaderboard(): Promise<LeaderboardEntry[]> {
+  enterDelve(delveId: string, tierId: string): void {
+    this.cmd({ cmd: 'enter_delve', delveId, tierId });
+  }
+  leaveDelve(): void {
+    this.cmd({ cmd: 'leave_delve' });
+  }
+  delveInteract(objectId: number): void {
+    this.cmd({ cmd: 'delve_interact', objectId });
+  }
+  companionUpgrade(companionId: string): void {
+    this.cmd({ cmd: 'companion_upgrade', companionId });
+  }
+  delveBuyShopItem(delveId: string, itemId: string): void {
+    this.cmd({ cmd: 'delve_buy', delveId, itemId });
+  }
+  delveShopOffers(delveId: string): DelveShopOfferView[] {
+    return resolveDelveShopOffers(delveId, this.delveClears);
+  }
+  lockpickEngage(objectId: number, ante: Ante): void {
+    this.cmd({ cmd: 'lockpick_engage', objectId, ante });
+  }
+  lockpickAction(action: PickAction): void {
+    this.cmd({ cmd: 'lockpick_action', sid: this.lockpickState?.sessionId, action });
+  }
+  lockpickAbort(): void {
+    this.cmd({ cmd: 'lockpick_abort', sid: this.lockpickState?.sessionId });
+  }
+  collectDelveChestLoot(chestId: number): void {
+    this.cmd({ cmd: 'collect_delve_chest_loot', objectId: chestId });
+  }
+  // Mirror the authoritative lockpick lifecycle into lockpickState. The events
+  // still flow to the HUD (drainEvents) for transient feedback (juice/sounds).
+  private applyLockpickEvent(ev: SimEvent): void {
+    if (ev.type === 'lockpickSession') {
+      this.lockpickState = {
+        sessionId: ev.sessionId,
+        objectId: ev.objectId,
+        w: ev.w,
+        h: ev.h,
+        col: ev.col,
+        row: ev.row,
+        page: ev.page,
+        pageCount: ev.pageCount,
+        tries: ev.tries,
+        triesTotal: ev.triesTotal,
+        lootTier: ev.lootTier,
+        allowed: ev.allowed,
+        visible: ev.visible,
+        stepTimeoutMs: ev.stepTimeoutMs,
+      };
+    } else if (ev.type === 'lockpickStep') {
+      const s = this.lockpickState;
+      if (s && s.sessionId === ev.sessionId) {
+        s.col = ev.col;
+        s.row = ev.row;
+        s.page = ev.page;
+        s.pageCount = ev.pageCount;
+        s.tries = ev.tries;
+        s.triesTotal = ev.triesTotal;
+        s.visible = ev.visible;
+      }
+    } else if (ev.type === 'lockpickEnd') {
+      if (this.lockpickState?.sessionId === ev.sessionId) this.lockpickState = null;
+    }
+  }
+  // Raid lockouts mirrored from snapshot self as {dungeonId: expiryEpochMs}; the
+  // remaining time is derived locally so the countdown ticks down without traffic.
+  private selfLockouts: Record<string, number> = {};
+  raidLockouts(): RaidLockout[] {
+    const now = Date.now();
+    const src = this.selfLockouts ?? {};
+    const out: RaidLockout[] = [];
+    for (const id of Object.keys(src)) {
+      const msRemaining = src[id] - now;
+      if (msRemaining > 0) out.push({ id, msRemaining });
+    }
+    return out;
+  }
+  async leaderboard(page = 0, pageSize = LEADERBOARD_PAGE_SIZE): Promise<LeaderboardPage> {
+    const empty: LeaderboardPage = { leaders: [], page: 0, pageCount: 1, total: 0, pageSize };
     try {
-      const res = await fetch(apiUrl('/api/leaderboard?metric=lifetimeXp&limit=100', this.base));
-      if (!res.ok) return [];
-      return (await res.json()).leaders ?? [];
+      const res = await fetch(
+        apiUrl(`/api/leaderboard?metric=lifetimeXp&page=${page}&pageSize=${pageSize}`, this.base),
+      );
+      if (!res.ok) return empty;
+      const data = await res.json();
+      return {
+        leaders: data.leaders ?? [],
+        page: data.page ?? page,
+        pageCount: data.pageCount ?? 1,
+        total: data.total ?? data.leaders?.length ?? 0,
+        pageSize: data.pageSize ?? pageSize,
+      };
     } catch {
-      return [];
+      return empty;
     }
   }
   prestige(): void {
@@ -1337,7 +1810,9 @@ export class ClientWorld implements IWorld {
     this.cmd({ cmd: 'saveLoadout', name, bar, alloc });
     if (alloc) {
       const clean = (name || 'Build').toString().slice(0, 24);
-      const safeBar = Array.isArray(bar) ? bar.slice(0, 16).map((b) => (typeof b === 'string' ? b : null)) : [];
+      const safeBar = Array.isArray(bar)
+        ? bar.slice(0, 16).map((b) => (typeof b === 'string' ? b : null))
+        : [];
       const saved = { name: clean, alloc: cloneAllocation(alloc), bar: safeBar };
       this.talents = cloneAllocation(alloc);
       const existing = this.loadouts.findIndex((l) => l.name === clean);
@@ -1348,7 +1823,11 @@ export class ClientWorld implements IWorld {
         this.loadouts = [...this.loadouts, saved];
         this.activeLoadout = this.loadouts.length - 1;
       }
-      this.known = abilitiesKnownAt(this.cfg.playerClass, this.player.level, computeTalentModifiers(this.cfg.playerClass, this.talents));
+      this.known = abilitiesKnownAt(
+        this.cfg.playerClass,
+        this.player.level,
+        computeTalentModifiers(this.cfg.playerClass, this.talents),
+      );
     }
   }
   switchLoadout(index: number): void {
@@ -1360,11 +1839,16 @@ export class ClientWorld implements IWorld {
     const wasActive = this.activeLoadout === index;
     this.loadouts = this.loadouts.filter((_, i) => i !== index);
     if (wasActive) {
-      this.activeLoadout = this.loadouts.length > 0 ? Math.min(index, this.loadouts.length - 1) : -1;
+      this.activeLoadout =
+        this.loadouts.length > 0 ? Math.min(index, this.loadouts.length - 1) : -1;
       const next = this.activeLoadout >= 0 ? this.loadouts[this.activeLoadout] : null;
       if (next) {
         this.talents = cloneAllocation(next.alloc);
-        this.known = abilitiesKnownAt(this.cfg.playerClass, this.player.level, computeTalentModifiers(this.cfg.playerClass, this.talents));
+        this.known = abilitiesKnownAt(
+          this.cfg.playerClass,
+          this.player.level,
+          computeTalentModifiers(this.cfg.playerClass, this.talents),
+        );
       }
     } else if (this.activeLoadout > index) this.activeLoadout -= 1;
   }

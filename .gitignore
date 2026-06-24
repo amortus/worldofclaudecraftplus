@@ -17,7 +17,8 @@ src/admin/i18n.resolved.generated/*.tmp
 src/ui/i18n.status.json
 
 # private extensions (e.g. bot-detector)
-private/
+private/*
+!private/.dockerkeep
 
 # test artifacts & screenshots
 tmp/
@@ -36,6 +37,8 @@ __pycache__/
 .env
 .env.*
 !.env.example
+# Meshy asset-gen tooling embeds an API key, never commit it
+scripts/generate_treasure_chest.mjs
 
 # editor & OS noise
 .DS_Store
@@ -52,3 +55,11 @@ android/key.properties
 *.key
 ssh-key-*.key
 android/key.properties
+.cursor/
+
+# local SDK/tooling dump (extracted command-line tools, not project source)
+postgres/
+
+pr-assets-2fa
+
+.vite/
