@@ -3951,7 +3951,6 @@ export class Renderer {
       this.selectionRing.visible = false;
     }
     this.updateClickMarkers(dt);
-    this.updateQuestArrow();
     // dev-only Tab-target cone overlay: re-drape the front cone on the terrain
     // under the local player, oriented to the model's rendered facing.
     if (this.targetCone) {
@@ -4120,6 +4119,9 @@ export class Renderer {
     const fullNameplatePass = this.nameplateTimer >= nameplateInterval;
     if (fullNameplatePass) this.nameplateTimer = 0;
     this.updateNameplates(fullNameplatePass);
+    // After the camera + nameplate projection, so the arrow uses this frame's
+    // camera + the smoothed self position (no trembling vs the character).
+    this.updateQuestArrow();
     this.updateChatBubbles();
     markPhase('nameplates');
     this.updateTravelSpeedFx(p, selfPos, dt);
@@ -4871,7 +4873,7 @@ export class Renderer {
   private updateQuestArrow(): void {
     const wp = this.questWaypoint;
     const p = this.sim.player;
-    if (!wp || !p || p.dead) {
+    if (!wp || !p || p.dead || !this.selfRenderPositionReady) {
       if (this.questArrowEl) this.questArrowEl.style.display = 'none';
       return;
     }
@@ -4883,17 +4885,21 @@ export class Renderer {
       this.questArrowEl = el;
     }
     const el = this.questArrowEl;
-    const head = this.worldToScreen(p.pos.x, p.pos.y + 2.4, p.pos.z);
+    // Anchor + measure from the SMOOTHED self render position (what the character
+    // model + camera use), not the raw 20 Hz sim pos, or the arrow jitters
+    // against the gliding character.
+    const sp = this.selfRenderPosition;
+    const head = this.worldToScreen(sp.x, sp.y + 2.4, sp.z);
     if (head.behind) {
       el.style.display = 'none';
       return;
     }
-    const dirx = wp.x - p.pos.x;
-    const dirz = wp.z - p.pos.z;
+    const dirx = wp.x - sp.x;
+    const dirz = wp.z - sp.z;
     const dist = Math.hypot(dirx, dirz);
     const inv = 1 / (dist || 1);
-    const foot = this.worldToScreen(p.pos.x, p.pos.y, p.pos.z);
-    const ahead = this.worldToScreen(p.pos.x + dirx * inv * 4, p.pos.y, p.pos.z + dirz * inv * 4);
+    const foot = this.worldToScreen(sp.x, sp.y, sp.z);
+    const ahead = this.worldToScreen(sp.x + dirx * inv * 4, sp.y, sp.z + dirz * inv * 4);
     const screenAngle = Math.atan2(ahead.y - foot.y, ahead.x - foot.x);
     // Alignment of the target bearing to the player's heading (facing = atan2(dx,dz)).
     let rel = Math.atan2(dirx, dirz) - p.facing;
