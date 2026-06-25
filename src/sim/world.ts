@@ -23,6 +23,7 @@ const BIOME_SHAPE: Record<BiomeId, { hill: number; base: number; hubHeight: numb
   vale: { hill: 26, base: 0, hubHeight: 1.5 },
   marsh: { hill: 11, base: -1.0, hubHeight: 1.2 },
   peaks: { hill: 34, base: 7, hubHeight: 9 },
+  blight: { hill: 14, base: -1.5, hubHeight: 1.4 },
 };
 
 // Ridge walls between zone bands, each opened by a road pass.
@@ -222,6 +223,10 @@ export function generateDecorations(seed: number): Decoration[] {
       } else if (biome === 'marsh') {
         if (r > 0.34) continue;
         kind = r < 0.08 ? 'tree' : r < 0.26 ? 'tree2' : 'rock';
+      } else if (biome === 'blight') {
+        // dead and sparse: mostly bare trees and grey rocks
+        if (r > 0.26) continue;
+        kind = r < 0.13 ? 'tree2' : r < 0.17 ? 'tree' : 'rock';
       } else {
         if (r > 0.44) continue;
         kind = r < 0.20 ? 'tree' : r < 0.24 ? 'tree2' : 'rock';

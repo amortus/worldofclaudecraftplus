@@ -24,6 +24,7 @@ import {
   QUESTS,
   WORLD_MAX_Z,
   WORLD_MIN_Z,
+  zoneAt,
   ZONES,
 } from '../sim/data';
 import type { DelveModuleId } from '../sim/delve_layout';
@@ -950,13 +951,16 @@ export class Renderer {
     setRenderCategory(this.sky, 'sky');
     this.scene.add(this.sky);
 
-    // Naxx: a flying necropolis high in the sky, riding the camera so it is
-    // visible from every outdoor zone. Offset/size/spin are visual tuning.
+    // Naxx: a flying necropolis that drifts LOW over the Ashen Wastes (the dead
+    // zone), riding the camera so it looms nearby anywhere in that zone. Gated to
+    // that zone in sync(). Size/offset/clearance/spin are visual tuning.
     this.naxx = new SkyLandmark(this.scene, {
       url: '/models/props/Naxx.glb',
-      size: 110,
-      offset: new THREE.Vector3(150, 230, 110),
-      spin: 0.015,
+      size: 64,
+      offset: new THREE.Vector3(58, 0, 34),
+      spin: 0.02,
+      clearance: 12, // base hovers a little above the dead ground
+      fog: true,
     });
 
     // IBL: prefilter the real per-biome HDRI equirects so PBR materials get
@@ -3223,6 +3227,8 @@ export class Renderer {
     vale: { color: 0xa6c6e0, near: 130, far: 470 },
     marsh: { color: 0xa3b294, near: 80, far: 330 },
     peaks: { color: 0xbdd3ec, near: 160, far: 560 },
+    // blight: heavy, dark, close fog - choked dead air
+    blight: { color: 0x3a372f, near: 45, far: 195 },
   };
   private static LOW_FOG = { color: 0xa6c6e0, near: 70, far: 260 };
 
@@ -4105,7 +4111,12 @@ export class Renderer {
     // sky dome + sun disc ride along with the camera
     this.sky.position.set(this.camera.position.x, 0, this.camera.position.z);
     this.sky.visible = this.fogState === 'outdoor';
-    this.naxx?.update(this.camera, dt, this.fogState === 'outdoor');
+    this.naxx?.update(
+      this.camera,
+      dt,
+      this.fogState === 'outdoor' && zoneAt(p.pos.z).id === 'ashen_wastes',
+      this.sim.cfg.seed,
+    );
     if (this.sky.visible) {
       this.skyView.setCameraZ(this.camera.position.z, dt);
       this.updateEnvBiome(dt);

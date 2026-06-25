@@ -1239,6 +1239,23 @@ export const GUIDE_ZONES: GuideZoneInfo[] = [
       "Gravewyrm Sanctum"
     ],
     "welcome": "Captain Thessaly holds the wall at Highwatch — barely."
+  },
+  {
+    "id": "ashen_wastes",
+    "name": "The Ashen Wastes",
+    "min": 20,
+    "max": 26,
+    "biome": "blight",
+    "hub": "Gravewatch",
+    "pois": [
+      "Gravewatch",
+      "The Ashen Pass",
+      "The Stillmere",
+      "The Bonefields",
+      "Hollow Barrows",
+      "The Pale Reach"
+    ],
+    "welcome": "The Ashen Wastes stretch out, grey and lifeless. Something vast drifts low over the dead ground."
   }
 ];
 

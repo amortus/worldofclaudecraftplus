@@ -6231,6 +6231,30 @@ export const it_IT: EnTranslations = {
             "label": "Santuario del Gravewyrm"
           }
         }
+      },
+      "ashen_wastes": {
+        "name": "The Ashen Wastes",
+        "welcome": "The Ashen Wastes stretch out, grey and lifeless. Something vast drifts low over the dead ground.",
+        "pois": {
+          "0": {
+            "label": "Gravewatch"
+          },
+          "1": {
+            "label": "The Ashen Pass"
+          },
+          "2": {
+            "label": "The Stillmere"
+          },
+          "3": {
+            "label": "The Bonefields"
+          },
+          "4": {
+            "label": "Hollow Barrows"
+          },
+          "5": {
+            "label": "The Pale Reach"
+          }
+        }
       }
     },
     "dungeons": {

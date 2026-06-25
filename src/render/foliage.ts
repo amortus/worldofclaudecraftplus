@@ -97,13 +97,13 @@ for (const urls of Object.values(MODEL_URLS)) {
 // Desaturated biome tints riding instanceColor. The textured models carry
 // their own hue, so tints are lerped most of the way to white before use
 // (raw tints multiply into the albedo and read as grime).
-const PINE_TINT: Record<BiomeId, number> = { vale: 0x9bb48d, marsh: 0x87966b, peaks: 0x6f8a7a };
-const OAK_TINT: Record<BiomeId, number> = { vale: 0xa7b886, marsh: 0x8d9865, peaks: 0x92a37f };
-const ROCK_TINT: Record<BiomeId, number> = { vale: 0x8d8d85, marsh: 0x565c4e, peaks: 0x878e99 };
-const TRUNK_TINT: Record<BiomeId, number> = { vale: 0xffffff, marsh: 0xd2d8bc, peaks: 0xd9dde4 };
-const GRASS_TINT: Record<BiomeId, number> = { vale: 0xdde4c0, marsh: 0xbfc492, peaks: 0xc2cec8 };
+const PINE_TINT: Record<BiomeId, number> = { vale: 0x9bb48d, marsh: 0x87966b, peaks: 0x6f8a7a, blight: 0x6a6658 };
+const OAK_TINT: Record<BiomeId, number> = { vale: 0xa7b886, marsh: 0x8d9865, peaks: 0x92a37f, blight: 0x6b6452 };
+const ROCK_TINT: Record<BiomeId, number> = { vale: 0x8d8d85, marsh: 0x565c4e, peaks: 0x878e99, blight: 0x5a5852 };
+const TRUNK_TINT: Record<BiomeId, number> = { vale: 0xffffff, marsh: 0xd2d8bc, peaks: 0xd9dde4, blight: 0x8a8276 };
+const GRASS_TINT: Record<BiomeId, number> = { vale: 0xdde4c0, marsh: 0xbfc492, peaks: 0xc2cec8, blight: 0x8a8470 };
 const SWAMP_CANOPY_TINT = 0x7e8b58;
-const DRESS_TINT: Record<BiomeId, number> = { vale: 0xaebf8e, marsh: 0x8d9865, peaks: 0x93a78f };
+const DRESS_TINT: Record<BiomeId, number> = { vale: 0xaebf8e, marsh: 0x8d9865, peaks: 0x93a78f, blight: 0x6b6658 };
 // how far tints collapse toward white (1 = no tint at all)
 const LEAF_TINT_SOFTEN = 0.6;
 const BARK_TINT_SOFTEN = 0.85;
@@ -748,11 +748,11 @@ function buildTrees(parent: THREE.Group, seed: number, registry: BucketMesh[], h
   for (const bucket of buckets.values()) {
     const { items } = bucket;
     const pines = items.filter((d) => d.kind === 'tree');
-    const oaks = items.filter((d) => d.kind === 'tree2' && d.biome !== 'marsh');
-    const swamps = items.filter((d) => d.kind === 'tree2' && d.biome === 'marsh');
-    // marsh swamp trees split between twisted (mossy) and dead (bare) models
-    const twisteds = swamps.filter((d) => hashAt(d.x, d.z, 19) >= 0.35);
-    const deads = swamps.filter((d) => hashAt(d.x, d.z, 19) < 0.35);
+    const oaks = items.filter((d) => d.kind === 'tree2' && d.biome !== 'marsh' && d.biome !== 'blight');
+    const swamps = items.filter((d) => d.kind === 'tree2' && (d.biome === 'marsh' || d.biome === 'blight'));
+    // marsh swamp trees split twisted (mossy) / dead (bare); blight is all dead
+    const twisteds = swamps.filter((d) => d.biome === 'marsh' && hashAt(d.x, d.z, 19) >= 0.35);
+    const deads = swamps.filter((d) => d.biome === 'blight' || hashAt(d.x, d.z, 19) < 0.35);
     const rocks = items.filter((d) => d.kind === 'rock');
 
     let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
@@ -841,7 +841,7 @@ interface DressingSpot {
 
 const DRESS_STEP_HIGH = 12;
 const DRESS_STEP_LOW = 10;
-const DRESS_DENSITY: Record<BiomeId, number> = { vale: 0.26, marsh: 0.26, peaks: 0.15 };
+const DRESS_DENSITY: Record<BiomeId, number> = { vale: 0.26, marsh: 0.26, peaks: 0.15, blight: 0.1 };
 const DRESS_DENSITY_LOW_SCALE = 1.24;
 const DRESS_LOW_SCALE_BOOST = 1.08;
 const DRESS_TINT_SOFTEN_LOW = 0.56;
@@ -862,6 +862,7 @@ function dressKindFor(biome: BiomeId, r: number): DressKind {
     if (r < 0.62) return 'fern';
     return 'mushroom';
   }
+  if (biome === 'blight') return r < 0.55 ? 'mushroom' : 'fern';
   return r < 0.62 ? 'bush' : 'fern';
 }
 

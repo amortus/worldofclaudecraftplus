@@ -6231,6 +6231,30 @@ export const pt_BR: EnTranslations = {
             "label": "Santuário do Gravewyrm"
           }
         }
+      },
+      "ashen_wastes": {
+        "name": "O Ermo das Cinzas",
+        "welcome": "O Ermo das Cinzas se estende, cinzento e sem vida. Algo imenso paira baixo sobre o chão morto.",
+        "pois": {
+          "0": {
+            "label": "Vigília dos Túmulos"
+          },
+          "1": {
+            "label": "A Passagem das Cinzas"
+          },
+          "2": {
+            "label": "O Lago Imóvel"
+          },
+          "3": {
+            "label": "Os Campos de Ossos"
+          },
+          "4": {
+            "label": "Túmulos Ocos"
+          },
+          "5": {
+            "label": "O Alcance Pálido"
+          }
+        }
       }
     },
     "dungeons": {

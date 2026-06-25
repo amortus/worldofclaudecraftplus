@@ -6231,6 +6231,30 @@ export const zh_TW: EnTranslations = {
             "label": "墓龍聖所"
           }
         }
+      },
+      "ashen_wastes": {
+        "name": "灰燼荒原",
+        "welcome": "灰燼荒原一望無際，灰暗而毫無生機。某個龐然之物低低地飄浮在死寂的大地之上。",
+        "pois": {
+          "0": {
+            "label": "守墓哨"
+          },
+          "1": {
+            "label": "灰燼隘口"
+          },
+          "2": {
+            "label": "死寂之湖"
+          },
+          "3": {
+            "label": "白骨之野"
+          },
+          "4": {
+            "label": "空塚"
+          },
+          "5": {
+            "label": "蒼白之境"
+          }
+        }
       }
     },
     "dungeons": {

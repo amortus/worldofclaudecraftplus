@@ -106,10 +106,12 @@ const BIOME_PALETTE: Record<BiomeId, { grass: number; grassDark: number; grassYe
   vale: { grass: 0x548545, grassDark: 0x3e6635, grassYellow: 0x768c44, dirt: 0x8a6f47, sand: 0xc2b283 },
   marsh: { grass: 0x596d36, grassDark: 0x41522b, grassYellow: 0x71764a, dirt: 0x6e5a3e, sand: 0x8f7f5c },
   peaks: { grass: 0x687a55, grassDark: 0x4d5c45, grassYellow: 0x8d9168, dirt: 0x7d6a50, sand: 0xb0a486 },
+  // blight: dead, desaturated grey-brown ground (no living green)
+  blight: { grass: 0x4c4a40, grassDark: 0x37362d, grassYellow: 0x5a5645, dirt: 0x423a31, sand: 0x575044 },
 };
 
 // rock starts creeping in at lower slopes in the peaks, later in the marsh
-const ROCK_SLOPE_START: Record<BiomeId, number> = { vale: 0.55, marsh: 0.62, peaks: 0.45 };
+const ROCK_SLOPE_START: Record<BiomeId, number> = { vale: 0.55, marsh: 0.62, peaks: 0.45, blight: 0.5 };
 
 const clamp01 = (v: number): number => Math.max(0, Math.min(1, v));
 

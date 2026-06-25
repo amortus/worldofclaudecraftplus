@@ -36,18 +36,21 @@ const HDRI_TUNE: Record<BiomeId, { gain: number; clamp: number }> = {
   vale: { gain: 0.6, clamp: 2.6 },
   marsh: { gain: 0.6, clamp: 2.2 },
   peaks: { gain: 0.48, clamp: 1.7 },
+  blight: { gain: 0.34, clamp: 1.6 },
 };
 
 const BIOME_HDRI_2K: Record<BiomeId, string> = {
   vale: '/env/vale_day_2k.hdr',
   marsh: '/env/marsh_overcast_2k.hdr',
   peaks: '/env/peaks_dawn_2k.hdr',
+  blight: '/env/marsh_overcast_2k.hdr',
 };
 
 const BIOME_HDRI_1K: Record<BiomeId, string> = {
   vale: '/env/vale_day_1k.hdr',
   marsh: '/env/marsh_overcast_1k.hdr',
   peaks: '/env/peaks_dawn_1k.hdr',
+  blight: '/env/marsh_overcast_1k.hdr',
 };
 
 function shouldUseLiteHdri(): boolean {
@@ -73,18 +76,21 @@ const BIOME_BACKDROP_8K: Record<BiomeId, string> = {
   vale: '/env/vale_backdrop.webp',
   marsh: '/env/marsh_backdrop.webp',
   peaks: '/env/peaks_backdrop.webp',
+  blight: '/env/marsh_backdrop.webp',
 };
 
 const BIOME_BACKDROP_4K: Record<BiomeId, string> = {
   vale: '/env/vale_backdrop_4k.webp',
   marsh: '/env/marsh_backdrop_4k.webp',
   peaks: '/env/peaks_backdrop_4k.webp',
+  blight: '/env/marsh_backdrop_4k.webp',
 };
 
 const BACKDROP_Y_BIAS: Record<BiomeId, number> = {
   vale: 0,
   marsh: 0,
   peaks: 0,
+  blight: 0,
 };
 
 interface NetworkInformationLike {
@@ -131,7 +137,7 @@ const BIOME_BACKDROP = shouldUseLiteBackdrop() ? BIOME_BACKDROP_4K : BIOME_BACKD
 
 // Measured brightest-texel u (sun azimuth in equirect space) per HDRI — see
 // tmp/analyze_hdr.mjs. Used to rotate each map so its sun matches SUN_ANCHOR.
-const HDRI_SUN_U: Record<BiomeId, number> = { vale: 0.595, marsh: 0.657, peaks: 0.631 };
+const HDRI_SUN_U: Record<BiomeId, number> = { vale: 0.595, marsh: 0.657, peaks: 0.631, blight: 0.657 };
 
 const hdriStore: Partial<Record<BiomeId, THREE.DataTexture>> = {};
 const backdropStore: Partial<Record<BiomeId, THREE.Texture>> = {};

@@ -10,6 +10,14 @@
 
 export const pending: Record<string, readonly string[]> = {
   "es": [
+    "entities.zones.ashen_wastes.name",
+    "entities.zones.ashen_wastes.pois.0.label",
+    "entities.zones.ashen_wastes.pois.1.label",
+    "entities.zones.ashen_wastes.pois.2.label",
+    "entities.zones.ashen_wastes.pois.3.label",
+    "entities.zones.ashen_wastes.pois.4.label",
+    "entities.zones.ashen_wastes.pois.5.label",
+    "entities.zones.ashen_wastes.welcome",
     "hudChrome.ads.adNotAvailable",
     "hudChrome.ads.boostOfferTitle",
     "hudChrome.ads.earnedBoost",
@@ -31,6 +39,14 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.questTracker.untrackHint"
   ],
   "es_ES": [
+    "entities.zones.ashen_wastes.name",
+    "entities.zones.ashen_wastes.pois.0.label",
+    "entities.zones.ashen_wastes.pois.1.label",
+    "entities.zones.ashen_wastes.pois.2.label",
+    "entities.zones.ashen_wastes.pois.3.label",
+    "entities.zones.ashen_wastes.pois.4.label",
+    "entities.zones.ashen_wastes.pois.5.label",
+    "entities.zones.ashen_wastes.welcome",
     "hudChrome.ads.adNotAvailable",
     "hudChrome.ads.boostOfferTitle",
     "hudChrome.ads.earnedBoost",
@@ -52,6 +68,14 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.questTracker.untrackHint"
   ],
   "fr_FR": [
+    "entities.zones.ashen_wastes.name",
+    "entities.zones.ashen_wastes.pois.0.label",
+    "entities.zones.ashen_wastes.pois.1.label",
+    "entities.zones.ashen_wastes.pois.2.label",
+    "entities.zones.ashen_wastes.pois.3.label",
+    "entities.zones.ashen_wastes.pois.4.label",
+    "entities.zones.ashen_wastes.pois.5.label",
+    "entities.zones.ashen_wastes.welcome",
     "hudChrome.ads.adNotAvailable",
     "hudChrome.ads.boostOfferTitle",
     "hudChrome.ads.earnedBoost",
@@ -73,6 +97,14 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.questTracker.untrackHint"
   ],
   "fr_CA": [
+    "entities.zones.ashen_wastes.name",
+    "entities.zones.ashen_wastes.pois.0.label",
+    "entities.zones.ashen_wastes.pois.1.label",
+    "entities.zones.ashen_wastes.pois.2.label",
+    "entities.zones.ashen_wastes.pois.3.label",
+    "entities.zones.ashen_wastes.pois.4.label",
+    "entities.zones.ashen_wastes.pois.5.label",
+    "entities.zones.ashen_wastes.welcome",
     "hudChrome.ads.adNotAvailable",
     "hudChrome.ads.boostOfferTitle",
     "hudChrome.ads.earnedBoost",
@@ -95,6 +127,14 @@ export const pending: Record<string, readonly string[]> = {
   ],
   "en_CA": [],
   "it_IT": [
+    "entities.zones.ashen_wastes.name",
+    "entities.zones.ashen_wastes.pois.0.label",
+    "entities.zones.ashen_wastes.pois.1.label",
+    "entities.zones.ashen_wastes.pois.2.label",
+    "entities.zones.ashen_wastes.pois.3.label",
+    "entities.zones.ashen_wastes.pois.4.label",
+    "entities.zones.ashen_wastes.pois.5.label",
+    "entities.zones.ashen_wastes.welcome",
     "hudChrome.ads.adNotAvailable",
     "hudChrome.ads.boostOfferTitle",
     "hudChrome.ads.earnedBoost",
@@ -116,6 +156,14 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.questTracker.untrackHint"
   ],
   "de_DE": [
+    "entities.zones.ashen_wastes.name",
+    "entities.zones.ashen_wastes.pois.0.label",
+    "entities.zones.ashen_wastes.pois.1.label",
+    "entities.zones.ashen_wastes.pois.2.label",
+    "entities.zones.ashen_wastes.pois.3.label",
+    "entities.zones.ashen_wastes.pois.4.label",
+    "entities.zones.ashen_wastes.pois.5.label",
+    "entities.zones.ashen_wastes.welcome",
     "hudChrome.ads.adNotAvailable",
     "hudChrome.ads.boostOfferTitle",
     "hudChrome.ads.earnedBoost",

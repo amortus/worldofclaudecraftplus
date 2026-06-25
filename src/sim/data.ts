@@ -85,6 +85,17 @@ import {
   ZONE3_ROADS,
   ZONE3_ZONE,
 } from './content/zone3';
+import {
+  ZONE4_CAMPS,
+  ZONE4_MOBS,
+  ZONE4_NPCS,
+  ZONE4_OBJECTS,
+  ZONE4_PROPS,
+  ZONE4_QUEST_ORDER,
+  ZONE4_QUESTS,
+  ZONE4_ROADS,
+  ZONE4_ZONE,
+} from './content/zone4';
 import { DUNGEON_WALL_HW } from './dungeon_layout';
 
 export type { DelveShopEntry, DelveShopGate, DelveShopOffer } from './content/delves';
@@ -148,6 +159,7 @@ export const MOBS: Record<string, MobTemplate> = {
   ...TEMPLE_MOBS,
   ...TEMPLE_DUNGEON_MOBS,
   ...DELVE_MOBS,
+  ...ZONE4_MOBS,
 };
 
 export const NPCS: Record<string, NpcDef> = {
@@ -155,6 +167,7 @@ export const NPCS: Record<string, NpcDef> = {
   ...ZONE2_NPCS,
   ...ZONE3_NPCS,
   ...TEMPLE_NPCS,
+  ...ZONE4_NPCS,
   brother_halven: BROTHER_HALVEN,
 };
 
@@ -163,6 +176,7 @@ export const QUESTS: Record<string, QuestDef> = {
   ...ZONE2_QUESTS,
   ...ZONE3_QUESTS,
   ...TEMPLE_QUESTS,
+  ...ZONE4_QUESTS,
 };
 
 export const QUEST_ORDER: string[] = [
@@ -170,6 +184,7 @@ export const QUEST_ORDER: string[] = [
   ...ZONE2_QUEST_ORDER,
   ...ZONE3_QUEST_ORDER,
   ...TEMPLE_QUEST_ORDER,
+  ...ZONE4_QUEST_ORDER,
 ];
 
 // Camps spawn in array order, each drawing world-gen RNG, so an entry inserted
@@ -183,6 +198,7 @@ export const CAMPS: CampDef[] = [
   ...TEMPLE_CAMPS,
   ...ZONE1_CHAPEL_CAMPS,
   { mobId: 'grix_the_tunnelking', center: { x: -95, z: -78 }, radius: 4, count: 1 },
+  ...ZONE4_CAMPS, // appended LAST: keep every existing camp's RNG draw order
 ];
 
 export const GROUND_OBJECTS: GroundObjectDef[] = [
@@ -190,15 +206,17 @@ export const GROUND_OBJECTS: GroundObjectDef[] = [
   ...ZONE2_OBJECTS,
   ...ZONE3_OBJECTS,
   ...TEMPLE_OBJECTS,
+  ...ZONE4_OBJECTS,
 ];
 
-export const ROADS: { x: number; z: number }[][] = [...ZONE1_ROADS, ...ZONE2_ROADS, ...ZONE3_ROADS];
+export const ROADS: { x: number; z: number }[][] = [...ZONE1_ROADS, ...ZONE2_ROADS, ...ZONE3_ROADS, ...ZONE4_ROADS];
 
 export const PROPS: ZonePropsDef = mergeProps([
   ZONE1_PROPS,
   ZONE2_PROPS,
   ZONE3_PROPS,
   TEMPLE_PROPS,
+  ZONE4_PROPS,
 ]);
 
 function mergeProps(sets: ZonePropsDef[]): ZonePropsDef {
@@ -255,7 +273,7 @@ export const GROUP_XP_BONUS = [1, 1, 1.166, 1.3, 1.43];
 // graveyard, its lakes, and a biome palette the renderer keys off.
 // ---------------------------------------------------------------------------
 
-export const ZONES: ZoneDef[] = [ZONE1_ZONE, ZONE2_ZONE, ZONE3_ZONE];
+export const ZONES: ZoneDef[] = [ZONE1_ZONE, ZONE2_ZONE, ZONE3_ZONE, ZONE4_ZONE];
 
 export const WORLD_SIZE = 360; // world width: x spans [-180, 180]
 export const WORLD_MIN_X = -WORLD_SIZE / 2;

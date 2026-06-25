@@ -37,14 +37,16 @@ export function shouldResetMusicForDungeonEntry(previousDungeonId: string | null
 /** Pick the soundtrack layer from world position context. */
 export function musicZoneForLocation(
   zoneId: string,
-  biome: 'vale' | 'marsh' | 'peaks',
+  biome: 'vale' | 'marsh' | 'peaks' | 'blight',
   inHub: boolean,
   inDungeon: boolean,
   dungeonId: string | null = null,
 ): MusicZone {
   if (inDungeon) return dungeonId ? dungeonMusicZoneForDungeon(dungeonId) : 'dungeon_hollow_crypt';
-  if (inHub) return TOWN_MUSIC[zoneId] ?? biome;
-  return ZONE_MUSIC[zoneId] ?? biome;
+  // blight has no bespoke theme yet; lean on the somber peaks layer
+  const biomeMusic: MusicZone = biome === 'blight' ? 'peaks' : biome;
+  if (inHub) return TOWN_MUSIC[zoneId] ?? biomeMusic;
+  return ZONE_MUSIC[zoneId] ?? biomeMusic;
 }
 
 type Inst = 'strings' | 'flute' | 'harp' | 'horn' | 'choir' | 'bell' | 'timpani' | 'bass' | 'stacc' | 'pad'

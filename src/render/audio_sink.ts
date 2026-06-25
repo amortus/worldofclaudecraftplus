@@ -13,5 +13,5 @@ export interface SpatialAudioSink {
   /** A discrete movement event (jump / land / water entry / swim stroke). */
   movement(kind: 'jump' | 'land' | 'splash' | 'swim', x: number, y: number, z: number, self: boolean): void;
   /** Per-frame ambience state around the player; the engine cross-fades loops. */
-  ambience(biome: 'vale' | 'marsh' | 'peaks', inDungeon: boolean, precip: 'snow' | 'rain' | null, nearWater: boolean): void;
+  ambience(biome: 'vale' | 'marsh' | 'peaks' | 'blight', inDungeon: boolean, precip: 'snow' | 'rain' | null, nearWater: boolean): void;
 }

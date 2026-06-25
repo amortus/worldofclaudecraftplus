@@ -20,7 +20,7 @@ export interface MotesView {
 
 // per-biome speck colour — warm gold pollen, sickly green marsh spores, pale
 // blue snow dust; kept lighter than GRASS_TINT so they read as glints in air
-const MOTE_TINT: Record<BiomeId, number> = { vale: 0xf4e6a0, marsh: 0xb8d28a, peaks: 0xdce8f2 };
+const MOTE_TINT: Record<BiomeId, number> = { vale: 0xf4e6a0, marsh: 0xb8d28a, peaks: 0xdce8f2, blight: 0x8a857a };
 
 const RADIUS = 26; // motes live within this ring of the player
 const FLOOR = 0.6; // min height above the sampled ground
