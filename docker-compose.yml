@@ -39,6 +39,9 @@ services:
       REALM_NAME: ${REALM_NAME:-}
       WEB_ORIGINS: ${WEB_ORIGINS:-}
       MAX_PLAYERS_TOTAL: ${MAX_PLAYERS_TOTAL:-300}
+      # GitHub repo the home-page "News & Updates" feed mirrors (our fork, so the
+      # news shows OUR releases, not the upstream project's). Read from .env.
+      GITHUB_REPO: ${GITHUB_REPO:-}
       # Target the game server 302-redirects /wiki to when hit directly (not via the
       # reverse proxy). Public origin in prod; localhost fallback for local dev.
       WIKI_URL: ${WIKI_URL:-http://localhost:8080/wiki/index.php/Main_Page}
