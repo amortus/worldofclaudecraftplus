@@ -206,6 +206,28 @@ export const en_XA: EnTranslations = {
     "questArrow": {
       "distance": "[{n} ɱ]"
     },
+    "character": {
+      "tabsAria": "[Çĥáŕáçţéŕ ŵíñðóŵ ţáƀš]",
+      "tabOverview": "[Çĥáŕáçţéŕ]",
+      "tabReputation": "[Ŕéþúţáţíóñ]"
+    },
+    "reputation": {
+      "empty": "[Ýóú ĥáʋé ñó ŕéþúţáţíóñš ýéţ.]",
+      "maxed": "[Ɱáẋéð]",
+      "standing": {
+        "hated": "[Ĥáţéð]",
+        "hostile": "[Ĥóšţíļé]",
+        "unfriendly": "[Úñƒŕíéñðļý]",
+        "neutral": "[Ñéúţŕáļ]",
+        "friendly": "[Ƒŕíéñðļý]",
+        "honored": "[Ĥóñóŕéð]",
+        "revered": "[Ŕéʋéŕéð]",
+        "exalted": "[Éẋáļţéð]"
+      },
+      "faction": {
+        "dawnOfClaude": "[Ðáŵñ óƒ Çļáúðé]"
+      }
+    },
     "chatTimestamps": {
       "show": "[Šĥóŵ Çĥáţ Ţíɱéšţáɱþš]",
       "format": "[Ţíɱéšţáɱþ Ƒóŕɱáţ]",

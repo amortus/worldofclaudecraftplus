@@ -206,6 +206,28 @@ export const ko_KR: EnTranslations = {
     "questArrow": {
       "distance": "{n} m"
     },
+    "character": {
+      "tabsAria": "캐릭터 창 탭",
+      "tabOverview": "캐릭터",
+      "tabReputation": "평판"
+    },
+    "reputation": {
+      "empty": "아직 평판이 없습니다.",
+      "maxed": "최대",
+      "standing": {
+        "hated": "증오",
+        "hostile": "적대",
+        "unfriendly": "비우호",
+        "neutral": "중립",
+        "friendly": "우호",
+        "honored": "존경",
+        "revered": "숭배",
+        "exalted": "숭상"
+      },
+      "faction": {
+        "dawnOfClaude": "클로드의 여명"
+      }
+    },
     "chatTimestamps": {
       "show": "채팅 시각 표시",
       "format": "시각 표시 형식",

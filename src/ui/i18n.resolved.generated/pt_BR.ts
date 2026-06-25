@@ -206,6 +206,28 @@ export const pt_BR: EnTranslations = {
     "questArrow": {
       "distance": "{n} m"
     },
+    "character": {
+      "tabsAria": "Abas da janela de personagem",
+      "tabOverview": "Personagem",
+      "tabReputation": "Reputação"
+    },
+    "reputation": {
+      "empty": "Você ainda não tem reputações.",
+      "maxed": "Máximo",
+      "standing": {
+        "hated": "Odiado",
+        "hostile": "Hostil",
+        "unfriendly": "Inamistoso",
+        "neutral": "Neutro",
+        "friendly": "Amigável",
+        "honored": "Honrado",
+        "revered": "Reverenciado",
+        "exalted": "Exaltado"
+      },
+      "faction": {
+        "dawnOfClaude": "Dawn of Claude"
+      }
+    },
     "chatTimestamps": {
       "show": "Mostrar horário no chat",
       "format": "Formato do horário",

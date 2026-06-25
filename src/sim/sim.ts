@@ -50,6 +50,7 @@ import {
   validateAllocation,
 } from './content/talents';
 import type { DelveShopGate, DelveShopOffer } from './data';
+import { atLeastStanding, FACTIONS, REP_MAX, REP_MIN } from './reputation';
 import {
   ABILITIES,
   ARENA_SLOT_COUNT,
@@ -807,6 +808,8 @@ export interface PlayerMeta {
   known: ResolvedAbility[];
   questLog: Map<string, QuestProgress>;
   questsDone: Set<string>;
+  // Faction reputation: factionId -> points (relative to Neutral=0). Persisted.
+  reputation: Record<string, number>;
   counters: RewardCounters;
   autoEquip: boolean;
   // sim.time when this character entered the world; powers /played. Session-only
@@ -937,6 +940,8 @@ export interface CharacterState {
   vendorBuyback?: InvSlot[];
   questLog: { questId: string; counts: number[]; state: 'active' | 'ready' | 'done' }[];
   questsDone: string[];
+  // Faction reputation (factionId -> points). Optional: pre-rep saves load as {}.
+  reputation?: Record<string, number>;
   // Legacy arenaRating/Wins/Losses are treated as 1v1 data. The explicit
   // 1v1 fields are written by new saves, while old saves fall back cleanly.
   arenaRating?: number;
@@ -1393,6 +1398,7 @@ export class Sim {
       known: [],
       questLog: new Map(),
       questsDone: new Set(),
+      reputation: {},
       counters: freshCounters(),
       autoEquip: opts?.autoEquip ?? false,
       joinedAt: this.time,
@@ -1474,6 +1480,7 @@ export class Sim {
       meta.delveMarks = s.delveMarks ?? 0;
       meta.delveClears = { ...(s.delveClears ?? {}) };
       meta.companionUpgrades = { ...(s.companionUpgrades ?? {}) };
+      meta.reputation = { ...(s.reputation ?? {}) };
       if (s.delveLoreUnlocked) for (const id of s.delveLoreUnlocked) meta.delveLoreUnlocked.add(id);
       if (s.delveDaily) {
         meta.delveDaily = {
@@ -1600,6 +1607,7 @@ export class Sim {
         state: q.state,
       })),
       questsDone: [...meta.questsDone],
+      reputation: { ...meta.reputation },
       arenaRating: meta.arenaRating,
       arenaWins: meta.arenaWins,
       arenaLosses: meta.arenaLosses,
@@ -1848,6 +1856,9 @@ export class Sim {
   }
   get questsDone(): Set<string> {
     return this.primary.questsDone;
+  }
+  get reputation(): Record<string, number> {
+    return this.primary.reputation;
   }
   raidLockouts(): import('../world_api').RaidLockout[] {
     const now = this.lockoutNowMs();
@@ -10034,6 +10045,13 @@ export class Sim {
       this.error(meta.entityId, 'Too far away.');
       return;
     }
+    // Reputation gate (the vendor UI greys + explains locked items; this is the
+    // authoritative backstop, so it reuses an existing localized refusal).
+    const req = NPCS[npc.templateId]?.vendorReqs?.[itemId];
+    if (req && !atLeastStanding(meta.reputation[req.faction] ?? 0, req.standing)) {
+      this.error(meta.entityId, 'That item is not for sale.');
+      return;
+    }
     if (meta.copper < def.buyValue) {
       this.error(meta.entityId, 'Not enough money.');
       return;
@@ -10815,6 +10833,7 @@ export class Sim {
     const rewardItem = questRewardItemId(quest, meta.cls);
     if (rewardItem) this.addItem(rewardItem, 1, meta.entityId);
     this.grantXp(quest.xpReward, meta);
+    if (quest.repReward) this.grantReputation(meta, quest.repReward.faction, quest.repReward.amount);
     this.emit({ type: 'questDone', questId, pid: meta.entityId });
     this.emit({
       type: 'log',
@@ -10827,7 +10846,19 @@ export class Sim {
   // No-op in offline mode
   reportTelemetry(): void {}
 
+  // Award faction reputation to a player, clamped to the standing range. Pure
+  // points bookkeeping; the standing/tier math lives in reputation.ts and the
+  // client shows the gain + the rep bar from the synced points.
+  private grantReputation(meta: PlayerMeta, faction: string, amount: number): void {
+    if (!amount || !FACTIONS[faction]) return;
+    const before = meta.reputation[faction] ?? 0;
+    const after = Math.max(REP_MIN, Math.min(REP_MAX, before + amount));
+    if (after !== before) meta.reputation[faction] = after;
+  }
+
   private onMobKilledForQuests(mob: Entity, meta: PlayerMeta): void {
+    const rep = MOBS[mob.templateId]?.repOnKill;
+    if (rep) this.grantReputation(meta, rep.faction, rep.amount);
     for (const qp of meta.questLog.values()) {
       if (qp.state !== 'active') continue;
       const quest = QUESTS[qp.questId];

@@ -738,6 +738,7 @@ export class ClientWorld implements IWorld {
   activeLoadout = -1;
   questLog = new Map<string, QuestProgress>();
   questsDone = new Set<string>();
+  reputation: Record<string, number> = {};
   partyInfo: PartyInfo | null = null;
   tradeInfo: TradeInfo | null = null;
   duelInfo: DuelInfo | null = null;
@@ -1241,6 +1242,7 @@ export class ClientWorld implements IWorld {
       if (s.qlog !== undefined)
         this.questLog = new Map((s.qlog as QuestProgress[]).map((q) => [q.questId, q]));
       if (s.qdone !== undefined) this.questsDone = new Set(s.qdone);
+      if (s.rep !== undefined) this.reputation = (s.rep as Record<string, number>) ?? {};
       if (s.lockouts !== undefined) this.selfLockouts = s.lockouts as Record<string, number>;
       if (s.qlog !== undefined || s.qdone !== undefined) this.pendingQuestCommands?.clear();
       // talent state (heavy field, sent on change): mirror it, then resolve known

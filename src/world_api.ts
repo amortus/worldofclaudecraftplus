@@ -360,6 +360,8 @@ export interface IWorld {
   known: ResolvedAbility[];
   questLog: Map<string, QuestProgress>;
   questsDone: Set<string>;
+  /** Faction reputation: factionId -> points (relative to Neutral=0). */
+  reputation: Record<string, number>;
   questState(questId: string): QuestState;
   castAbility(abilityId: string): void;
   castAbilityBySlot(slot: number): void;

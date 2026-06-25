@@ -70,6 +70,29 @@ export const hudChromeStrings = {
   questArrow: {
     distance: '{n} m',
   },
+  // Character window tabs + the Reputation panel (faction standing, WoW-style).
+  character: {
+    tabsAria: 'Character window tabs',
+    tabOverview: 'Character',
+    tabReputation: 'Reputation',
+  },
+  reputation: {
+    empty: 'You have no reputations yet.',
+    maxed: 'Maxed',
+    standing: {
+      hated: 'Hated',
+      hostile: 'Hostile',
+      unfriendly: 'Unfriendly',
+      neutral: 'Neutral',
+      friendly: 'Friendly',
+      honored: 'Honored',
+      revered: 'Revered',
+      exalted: 'Exalted',
+    },
+    faction: {
+      dawnOfClaude: 'Dawn of Claude',
+    },
+  },
   chatTimestamps: {
     show: 'Show Chat Timestamps',
     format: 'Timestamp Format',

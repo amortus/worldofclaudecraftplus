@@ -206,6 +206,28 @@ export const zh_TW: EnTranslations = {
     "questArrow": {
       "distance": "{n} 公尺"
     },
+    "character": {
+      "tabsAria": "角色視窗標籤頁",
+      "tabOverview": "角色",
+      "tabReputation": "聲望"
+    },
+    "reputation": {
+      "empty": "你還沒有任何聲望。",
+      "maxed": "已滿",
+      "standing": {
+        "hated": "仇恨",
+        "hostile": "敵對",
+        "unfriendly": "不友好",
+        "neutral": "中立",
+        "friendly": "友好",
+        "honored": "尊敬",
+        "revered": "崇敬",
+        "exalted": "崇拜"
+      },
+      "faction": {
+        "dawnOfClaude": "克勞德黎明"
+      }
+    },
     "chatTimestamps": {
       "show": "顯示聊天時間戳記",
       "format": "時間戳記格式",

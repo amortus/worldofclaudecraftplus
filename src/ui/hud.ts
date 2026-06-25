@@ -51,6 +51,7 @@ import {
   validateAllocation,
 } from '../sim/content/talents';
 import type { ZoneDef } from '../sim/data';
+import { FACTION_IDS, FACTIONS, reputationFor, type ReputationStanding } from '../sim/reputation';
 import {
   ABILITIES,
   CLASSES,
@@ -1041,6 +1042,7 @@ export class Hud {
   // Talents: a local staged allocation the user edits before committing (Apply).
   private talentStage: TalentAllocation | null = null;
   private talentTab: 'class' | 'spec' = 'class';
+  private charTab: 'overview' | 'reputation' = 'overview';
 
   constructor(
     private sim: IWorld,
@@ -9298,6 +9300,44 @@ export class Hud {
     el.style.display = 'block';
   }
 
+  // The Reputation tab of the character window: a WoW-style rep bar per faction
+  // (standing label + filled tier progress). Driven by the synced sim.reputation
+  // points through the pure reputationFor() tier math.
+  private reputationPanelHtml(): string {
+    const STANDING_KEY = {
+      hated: 'hudChrome.reputation.standing.hated',
+      hostile: 'hudChrome.reputation.standing.hostile',
+      unfriendly: 'hudChrome.reputation.standing.unfriendly',
+      neutral: 'hudChrome.reputation.standing.neutral',
+      friendly: 'hudChrome.reputation.standing.friendly',
+      honored: 'hudChrome.reputation.standing.honored',
+      revered: 'hudChrome.reputation.standing.revered',
+      exalted: 'hudChrome.reputation.standing.exalted',
+    } as const satisfies Record<ReputationStanding, string>;
+    const FACTION_KEY: Record<string, 'hudChrome.reputation.faction.dawnOfClaude'> = {
+      dawn_of_claude: 'hudChrome.reputation.faction.dawnOfClaude',
+    };
+    const rep = this.sim.reputation;
+    let rows = '';
+    for (const id of FACTION_IDS) {
+      const r = reputationFor(rep[id] ?? 0);
+      const fk = FACTION_KEY[id];
+      const name = esc(fk ? t(fk) : FACTIONS[id].name);
+      const standing = esc(t(STANDING_KEY[r.standing]));
+      const pct = r.max > 0 ? Math.round((r.current / r.max) * 100) : 100;
+      const detail = r.max > 0
+        ? esc(`${formatNumber(r.current)} / ${formatNumber(r.max)}`)
+        : esc(t('hudChrome.reputation.maxed'));
+      rows +=
+        `<div class="rep-row"><div class="rep-head"><span class="rep-name">${name}</span>` +
+        `<span class="rep-standing rep-${r.standing}">${standing}</span></div>` +
+        `<div class="rep-bar"><div class="rep-fill rep-${r.standing}" style="width:${pct}%"></div></div>` +
+        `<div class="rep-detail">${detail}</div></div>`;
+    }
+    if (!rows) rows = `<div class="rep-empty">${esc(t('hudChrome.reputation.empty'))}</div>`;
+    return `<div class="rep-panel" role="tabpanel">${rows}</div>`;
+  }
+
   renderChar(): void {
     const el = $('#char-window');
     const sim = this.sim;
@@ -9305,6 +9345,13 @@ export class Hud {
     const cls = CLASSES[sim.cfg.playerClass];
     const className = classDisplayName(cls.id);
     let html = `<div class="panel-title char-title-portrait">${portraitChipHtml({ cls: sim.cfg.playerClass, skin: p.skin ?? 0, name: p.name, variant: 'md' })}<span class="char-title-text">${esc(p.name)} <span class="panel-subtitle">${esc(t('itemUi.equipment.levelClass', { level: formatNumber(p.level, { maximumFractionDigits: 0 }), className }))}</span></span><button type="button" class="x-btn" data-close aria-label="${esc(t('hud.options.returnToGame'))}">${svgIcon('close')}</button></div>`;
+    html += `<div class="char-tabs" role="tablist" aria-label="${esc(t('hudChrome.character.tabsAria'))}">` +
+      `<button type="button" class="char-tab${this.charTab === 'overview' ? ' active' : ''}" role="tab" aria-selected="${this.charTab === 'overview'}" data-ctab="overview">${esc(t('hudChrome.character.tabOverview'))}</button>` +
+      `<button type="button" class="char-tab${this.charTab === 'reputation' ? ' active' : ''}" role="tab" aria-selected="${this.charTab === 'reputation'}" data-ctab="reputation">${esc(t('hudChrome.character.tabReputation'))}</button>` +
+      `</div>`;
+    if (this.charTab === 'reputation') {
+      html += this.reputationPanelHtml();
+    } else {
     html += `<div class="paperdoll">
       <div class="equip-col" id="equip-col-left"></div>
       <div class="char-model-panel">
@@ -9330,7 +9377,17 @@ export class Hud {
     html += this.progressionHtml(p.level);
     const shareGlyph = `<svg class="pc-share-ico" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M18 16.1a3 3 0 0 0-2.3 1.1l-6.7-3.9a3 3 0 0 0 0-2.6l6.7-3.9A3 3 0 1 0 15 4l-6.7 3.9a3 3 0 1 0 0 8.2L15 20a3 3 0 1 0 3-3.9z"/></svg>`;
     html += `<div class="pc-share-row"><button type="button" class="btn pc-share-btn" data-act="share-card">${shareGlyph}<span>${esc(t('playerCard.shareButton'))}</span></button></div>`;
+    }
     el.innerHTML = html;
+    el.querySelectorAll<HTMLElement>('.char-tab').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        const next = tab.dataset.ctab as 'overview' | 'reputation';
+        if (next && next !== this.charTab) {
+          this.charTab = next;
+          this.renderChar();
+        }
+      });
+    });
     hydratePortraits(el);
     el.querySelector('[data-act="prestige"]')?.addEventListener('click', () =>
       this.openPrestigeDialog(),

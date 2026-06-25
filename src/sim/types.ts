@@ -1,6 +1,7 @@
 // Core shared types for the simulation. The sim layer has zero DOM/rendering deps.
 
 import type { LockSession, LootTier, PickAction, StepResult, VisibleCell } from './lockpick';
+import type { ReputationStanding } from './reputation';
 
 export const TICK_RATE = 20; // sim ticks per second
 export const DT = 1 / TICK_RATE;
@@ -323,6 +324,8 @@ export interface MobTemplate {
   moveSpeed: number;
   aggroRadius: number; // base, at equal level
   loot: LootEntry[];
+  /** Faction reputation granted to the killer (and credited group members). */
+  repOnKill?: { faction: string; amount: number };
   scale: number; // render hint
   color: number; // render hint
   boss?: boolean;
@@ -946,6 +949,8 @@ export interface NpcDef {
   color: number;
   questIds: string[];
   vendorItems?: string[];
+  /** Per-item reputation gate: itemId -> required faction standing to buy it. */
+  vendorReqs?: Record<string, { faction: string; standing: ReputationStanding }>;
   // The Merchant: talking to this NPC opens the player-driven World Market
   // (auction house) instead of a fixed vendor stock.
   market?: boolean;
@@ -1092,6 +1097,8 @@ export interface QuestDef {
   xpReward: number;
   copperReward: number;
   itemRewards: Partial<Record<PlayerClass, string>>;
+  /** Faction reputation granted on turn-in. */
+  repReward?: { faction: string; amount: number };
   requiresQuest?: string; // prerequisite quest id (must be turned in)
   requiredItems?: string[]; // quest items obtained earlier (e.g. a prerequisite reward) that this
   // quest needs; re-granted on accept if the player no longer has them, to avoid a progression block

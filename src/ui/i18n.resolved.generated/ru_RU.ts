@@ -206,6 +206,28 @@ export const ru_RU: EnTranslations = {
     "questArrow": {
       "distance": "{n} м"
     },
+    "character": {
+      "tabsAria": "Вкладки окна персонажа",
+      "tabOverview": "Персонаж",
+      "tabReputation": "Репутация"
+    },
+    "reputation": {
+      "empty": "У вас пока нет репутаций.",
+      "maxed": "Максимум",
+      "standing": {
+        "hated": "Ненависть",
+        "hostile": "Враждебность",
+        "unfriendly": "Неприязнь",
+        "neutral": "Нейтралитет",
+        "friendly": "Дружелюбие",
+        "honored": "Уважение",
+        "revered": "Почтение",
+        "exalted": "Превознесение"
+      },
+      "faction": {
+        "dawnOfClaude": "Рассвет Клода"
+      }
+    },
     "chatTimestamps": {
       "show": "Показывать время в чате",
       "format": "Формат времени",

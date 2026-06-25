@@ -206,6 +206,28 @@ export const ja_JP: EnTranslations = {
     "questArrow": {
       "distance": "{n} m"
     },
+    "character": {
+      "tabsAria": "キャラクターウィンドウのタブ",
+      "tabOverview": "キャラクター",
+      "tabReputation": "評判"
+    },
+    "reputation": {
+      "empty": "まだ評判がありません。",
+      "maxed": "最大",
+      "standing": {
+        "hated": "敵対",
+        "hostile": "敵視",
+        "unfriendly": "非友好的",
+        "neutral": "中立",
+        "friendly": "友好的",
+        "honored": "尊敬",
+        "revered": "崇敬",
+        "exalted": "崇拝"
+      },
+      "faction": {
+        "dawnOfClaude": "クロードの夜明け"
+      }
+    },
     "chatTimestamps": {
       "show": "チャットに時刻を表示",
       "format": "時刻の表記形式",

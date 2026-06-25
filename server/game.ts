@@ -2197,6 +2197,7 @@ export class GameServer {
     maybe('cosmetics', session.accountCosmetics);
     maybe('qlog', [...meta.questLog.values()]);
     maybe('qdone', [...meta.questsDone]);
+    maybe('rep', meta.reputation);
     // Raid lockouts as {dungeonId: expiryEpochMs}, future-only. Absolute expiry
     // (not a countdown) so the serialized form is stable between resets and the
     // delta guard ships it only on grant / reset / expiry; the client derives the
