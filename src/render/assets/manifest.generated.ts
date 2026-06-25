@@ -479,6 +479,7 @@ export const MEDIA_ASSETS: Record<string, string> =
   "models/foliage/twisted_1.glb": "/media/models/foliage/twisted_1.8748ea1bc7bf.glb",
   "models/foliage/twisted_2.glb": "/media/models/foliage/twisted_2.b4b1b65ed6ec.glb",
   "models/foliage/twisted_3.glb": "/media/models/foliage/twisted_3.0271cd66c39a.glb",
+  "models/props/Naxx.glb": "/media/models/props/Naxx.245f744ffff0.glb",
   "models/props/anvil.glb": "/media/models/props/anvil.6e95bdb978f6.glb",
   "models/props/barrel.glb": "/media/models/props/barrel.deb062e0fa27.glb",
   "models/props/bell_tower.glb": "/media/models/props/bell_tower.c264ba9d8a00.glb",

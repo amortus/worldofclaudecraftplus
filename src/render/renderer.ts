@@ -91,6 +91,7 @@ import { RenderBudgetGovernor, type RenderBudgetState } from './render_budget';
 import { downscaleDims } from './screenshot';
 import { drapeRingLocalY } from './selection_ring';
 import { buildClouds, buildSky, type SkyView } from './sky';
+import { SkyLandmark } from './sky_landmark';
 import { shouldRenderStealthGhost } from './stealth';
 import { buildFlaredConeFan, buildRingXZ, drapeConeWorld } from './target_cone_debug';
 import { buildTerrain, type TerrainView } from './terrain';
@@ -781,6 +782,7 @@ export class Renderer {
   private hemi!: THREE.HemisphereLight;
   private sky!: THREE.Mesh;
   private skyView!: SkyView;
+  private naxx: SkyLandmark | null = null;
   private sunSprites: THREE.Sprite[] = [];
   private sunDir = new THREE.Vector3();
   private sunAzimuth = new THREE.Vector3(SUN_DIR.x, 0, SUN_DIR.z).normalize();
@@ -947,6 +949,15 @@ export class Renderer {
     this.sky = this.skyView.dome;
     setRenderCategory(this.sky, 'sky');
     this.scene.add(this.sky);
+
+    // Naxx: a flying necropolis high in the sky, riding the camera so it is
+    // visible from every outdoor zone. Offset/size/spin are visual tuning.
+    this.naxx = new SkyLandmark(this.scene, {
+      url: '/models/props/Naxx.glb',
+      size: 110,
+      offset: new THREE.Vector3(150, 230, 110),
+      spin: 0.015,
+    });
 
     // IBL: prefilter the real per-biome HDRI equirects so PBR materials get
     // sky-matched ambient; swapped as the camera crosses biome bands (the
@@ -4094,6 +4105,7 @@ export class Renderer {
     // sky dome + sun disc ride along with the camera
     this.sky.position.set(this.camera.position.x, 0, this.camera.position.z);
     this.sky.visible = this.fogState === 'outdoor';
+    this.naxx?.update(this.camera, dt, this.fogState === 'outdoor');
     if (this.sky.visible) {
       this.skyView.setCameraZ(this.camera.position.z, dt);
       this.updateEnvBiome(dt);
