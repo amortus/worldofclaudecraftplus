@@ -11660,6 +11660,26 @@ export class Hud {
         this.attachTooltip(rewardRow, () => this.itemTooltip(ITEMS[rewardItem]));
       const actions = document.createElement('div');
       actions.className = 'ql-detail-actions';
+      // Track toggle (a star), also reachable on mobile where the on-screen
+      // tracker overlay is hidden. Reuses the tracker's localized hint as the
+      // accessible name; the star glyph itself is a symbol (no t() needed).
+      const track = document.createElement('button');
+      track.className = 'btn ql-track';
+      track.type = 'button';
+      const isTracked = this.questTracking.isTracked(this.selectedQuestLogId);
+      track.textContent = isTracked ? '★' : '☆';
+      track.classList.toggle('tracked', isTracked);
+      const trackHint = t(isTracked ? 'hudChrome.questTracker.untrackHint' : 'hudChrome.questTracker.trackHint');
+      track.title = trackHint;
+      track.setAttribute('aria-label', trackHint);
+      track.setAttribute('aria-pressed', isTracked ? 'true' : 'false');
+      track.addEventListener('click', () => {
+        if (!this.selectedQuestLogId) return;
+        this.questTracking.toggle(this.selectedQuestLogId);
+        this.updateQuestTracker();
+        this.renderQuestLog();
+      });
+      actions.appendChild(track);
       const abandon = document.createElement('button');
       abandon.className = 'btn';
       abandon.type = 'button';

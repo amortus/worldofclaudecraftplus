@@ -1508,7 +1508,9 @@
   .ql-item:hover, .ql-item.sel { background: #ffffff14; color: var(--gold); }
   .ql-detail { flex: 1; font-size: 12px; max-height: 380px; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
   .ql-detail-body { min-height: 0; overflow-y: auto; padding-right: var(--spacing-xs); }
-  .ql-detail-actions { flex: 0 0 auto; padding-top: var(--spacing-sm); }
+  .ql-detail-actions { flex: 0 0 auto; padding-top: var(--spacing-sm); display: flex; gap: var(--spacing-sm); align-items: center; }
+  .ql-track { font-size: 16px; line-height: 1; padding: 2px 8px; color: var(--color-text-muted); }
+  .ql-track.tracked { color: var(--gold); }
   .ql-empty { color: var(--color-text-muted); font-size: 12px; padding: var(--spacing-xs); }
   .ql-detail-title { font-size: 15px; }
   .ql-detail-text { margin-top: var(--spacing-sm); }
