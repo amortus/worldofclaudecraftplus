@@ -4439,6 +4439,144 @@ export const de_DE: EnTranslations = {
       "monarch_crown_helm": {
         "name": "Krone des Monarchen"
       },
+      "blight_sample": {
+        "name": "Verseuchte Probe"
+      },
+      "cult_orders": {
+        "name": "Verderbte Befehle"
+      },
+      "desecrated_relic": {
+        "name": "Geschändetes Relikt"
+      },
+      "ritual_focus": {
+        "name": "Ritualfokus"
+      },
+      "ship_fragment": {
+        "name": "Schiffsfragment"
+      },
+      "hollow_heart": {
+        "name": "Hohles Herz"
+      },
+      "sigil_of_the_dawn": {
+        "name": "Sigill der Morgendämmerung"
+      },
+      "ashen_warboots": {
+        "name": "Aschene Kriegsstiefel"
+      },
+      "ashen_slippers": {
+        "name": "Aschene Schuhe"
+      },
+      "ashen_treads": {
+        "name": "Aschene Trittstiefel"
+      },
+      "dawnward_gauntlets": {
+        "name": "Morgenwart-Stulpen"
+      },
+      "dawnward_gloves": {
+        "name": "Morgenwart-Handschuhe"
+      },
+      "dawnward_grips": {
+        "name": "Morgenwart-Griffe"
+      },
+      "behemoth_girdle": {
+        "name": "Behemoth-Gürtel"
+      },
+      "behemoth_sash": {
+        "name": "Behemoth-Schärpe"
+      },
+      "behemoth_belt": {
+        "name": "Behemoth-Koppel"
+      },
+      "deathward_helm": {
+        "name": "Todeswart-Helm"
+      },
+      "deathward_hood": {
+        "name": "Todeswart-Kapuze"
+      },
+      "deathward_cowl": {
+        "name": "Todeswart-Gugel"
+      },
+      "gravelord_pauldrons": {
+        "name": "Gräberfürst-Schulterplatten"
+      },
+      "gravelord_amice": {
+        "name": "Gräberfürst-Schultertuch"
+      },
+      "gravelord_spaulders": {
+        "name": "Gräberfürst-Schulterstücke"
+      },
+      "dawnguard_sabatons": {
+        "name": "Morgenwacht-Panzerstiefel"
+      },
+      "dawnguard_gauntlets": {
+        "name": "Morgenwacht-Panzerhandschuhe"
+      },
+      "dawnguard_girdle": {
+        "name": "Morgenwacht-Gürtel"
+      },
+      "dawnguard_greathelm": {
+        "name": "Morgenwacht-Großhelm"
+      },
+      "dawnguard_legplates": {
+        "name": "Morgenwacht-Beinplatten"
+      },
+      "dawnguard_pauldrons": {
+        "name": "Morgenwacht-Schulterplatten"
+      },
+      "dawnguard_breastplate": {
+        "name": "Morgenwacht-Brustplatte"
+      },
+      "dawnguard_blade": {
+        "name": "Morgenwacht-Klinge"
+      },
+      "dawn_slippers": {
+        "name": "Morgendämmerungs-Schuhe"
+      },
+      "dawn_handwraps": {
+        "name": "Morgendämmerungs-Handwickel"
+      },
+      "dawn_cord": {
+        "name": "Morgendämmerungs-Schnur"
+      },
+      "dawn_cowl": {
+        "name": "Morgendämmerungs-Gugel"
+      },
+      "dawn_leggings": {
+        "name": "Morgendämmerungs-Beinkleider"
+      },
+      "dawn_mantle": {
+        "name": "Morgendämmerungs-Mantel"
+      },
+      "dawn_robe": {
+        "name": "Morgendämmerungs-Robe"
+      },
+      "dawn_scepter": {
+        "name": "Zepter der Morgendämmerung"
+      },
+      "dawnstalker_treads": {
+        "name": "Morgenschleicher-Trittstiefel"
+      },
+      "dawnstalker_grips": {
+        "name": "Morgenschleicher-Griffe"
+      },
+      "dawnstalker_belt": {
+        "name": "Morgenschleicher-Gürtel"
+      },
+      "dawnstalker_mask": {
+        "name": "Morgenschleicher-Maske"
+      },
+      "dawnstalker_legguards": {
+        "name": "Morgenschleicher-Beinschützer"
+      },
+      "dawnstalker_spaulders": {
+        "name": "Morgenschleicher-Schulterstücke"
+      },
+      "dawnstalker_tunic": {
+        "name": "Morgenschleicher-Wams"
+      },
+      "dawnstalker_dagger": {
+        "name": "Morgenschleicher-Dolch"
+      },
       "bristleback_maul": {
         "name": "Bristleback-Schlägel"
       },
@@ -5113,6 +5251,39 @@ export const de_DE: EnTranslations = {
       "acolyte_tessa": {
         "name": "Akolythin Tessa"
       },
+      "blighted_husk": {
+        "name": "Verseuchte Hülle"
+      },
+      "ashen_ghoul": {
+        "name": "Aschener Ghul"
+      },
+      "plague_crawler": {
+        "name": "Seuchenkriecher"
+      },
+      "corrupted_acolyte": {
+        "name": "Verderbter Akolyth"
+      },
+      "bone_reaver": {
+        "name": "Knochenräuber"
+      },
+      "wraithling": {
+        "name": "Hügelgrab-Schemen"
+      },
+      "rotting_behemoth": {
+        "name": "Verrottender Behemoth"
+      },
+      "plaguebringer_zealot": {
+        "name": "Seuchenbringer-Eiferer"
+      },
+      "naxx_deathguard": {
+        "name": "Naxxramas-Todeswächter"
+      },
+      "morthax_the_hollow": {
+        "name": "Morthax der Hohle"
+      },
+      "gravelord_oss": {
+        "name": "Gräberfürst Oss"
+      },
       "ironvein_foreman": {
         "name": "Eisenader-Vorarbeiter"
       },
@@ -5327,6 +5498,31 @@ export const de_DE: EnTranslations = {
         "name": "Bruder Halven",
         "title": "Reliquiarhüter",
         "greeting": "Das Reliquiar unten hat sich erneut verschoben."
+      },
+      "dawn_commander_sera": {
+        "name": "Kommandantin Sera",
+        "title": "Dawn of Claude",
+        "greeting": "Halte die Stellung, {className}. Dieses schwebende Grabmal, die Claudexxaramas, hat dieses ganze Land grau bluten lassen. Die Dawn of Claude wird es zurückerobern, Seele um Seele."
+      },
+      "dawn_chaplain_orin": {
+        "name": "Kaplan Orin",
+        "title": "Dawn of Claude",
+        "greeting": "Das Licht reicht noch bis hierher, {playerName}, doch es ist dünn geworden. Hilf mir, die Sterbenden zu pflegen und die Seuche zu brechen, die das Schiff auf uns herabregnen lässt."
+      },
+      "dawn_quartermaster_henning": {
+        "name": "Quartiermeister Henning",
+        "title": "Dawn of Claude",
+        "greeting": "Stahl und Glaube, {playerName}, das ist alles, was ich zu geben habe. Verdiene dir das Vertrauen der Morgendämmerung, und das Lager des Quartiermeisters öffnet sich dir, Stück um Stück."
+      },
+      "dawn_scout_irelle": {
+        "name": "Späherin Irelle",
+        "title": "Dawn of Claude",
+        "greeting": "Ich habe die toten Straßen so weit nach Norden kartiert, wie ich mich traue, {className}. Je näher man der Bleichen Weite kommt, desto lauter flüstert das Schiff. Pass auf, wohin du trittst."
+      },
+      "dawn_archivist_vael": {
+        "name": "Archivar Vael",
+        "title": "Dawn of Claude",
+        "greeting": "Jeder Splitter jener Nekropole, den ich studieren kann, ist ein Riss, den wir eines Tages aufbrechen könnten, {playerName}. Bring mir, was die Toten bei sich tragen, und wir planen den Durchbruch gemeinsam."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6084,6 +6280,212 @@ export const de_DE: EnTranslations = {
         "objectives": {
           "0": {
             "label": "Mogger getötet"
+          }
+        }
+      },
+      "q_aw_arrival": {
+        "title": "Asche und Omen",
+        "text": "Willkommen in Grabwacht, {playerName}, in dem wenigen, das die Verseuchung uns gelassen hat. Die Hüllen der Gefallenen krallen Nacht für Nacht an unseren Mauern. Strecke acht von ihnen nieder, damit meine Soldaten schlafen können, und die Dawn of Claude wird dich zu ihren werdenden Freunden zählen.",
+        "completion": "Acht Schrecken weniger am Tor. Du hast eine ruhige Hand, {playerName}. Die Morgendämmerung vergisst nicht, wer an unserer Seite steht.",
+        "objectives": {
+          "0": {
+            "label": "Verseuchte Hülle erschlagen"
+          }
+        }
+      },
+      "q_aw_husks": {
+        "title": "Die wandelnde Verseuchung",
+        "text": "Die Hüllen sind nicht hirnlos, {playerName}, sie versammeln sich, sie tasten unsere Linien ab. Strecke zwölf weitere nieder, bevor sie lernen, wo wir am schwächsten sind. Nimm diese Trittstiefel für den Marsch, die Ödnis ist hart zu Stiefeln.",
+        "completion": "Gut. Jede Hülle, die du verbrennst, ist eine, die sich heute Nacht nicht wieder erheben kann.",
+        "objectives": {
+          "0": {
+            "label": "Verseuchte Hülle erschlagen"
+          }
+        }
+      },
+      "q_aw_ghouls": {
+        "title": "Wilder Hunger",
+        "text": "Die aschenen Ghule jagen in Rudeln draußen auf den Knochenfeldern, schnell und tollwütig. Schon zwei meiner Späher haben sie verschleppt. Lichte sie, zehn sollten das Rudel zerbrechen, bevor sie kühn genug werden, das Tor zu stürmen.",
+        "completion": "Die Rudel sind zerstreut. Meine Späher können wieder über die Knochenfelder streifen, dank dir.",
+        "objectives": {
+          "0": {
+            "label": "Aschener Ghul erschlagen"
+          }
+        }
+      },
+      "q_aw_crawlers": {
+        "title": "Sich verbreitende Krankheit",
+        "text": "Die Seuchenkriecher tragen die Verseuchung in ihrem Biss, {playerName}, und sie brüten im Schlamm von Stillmark. Töte zehn von ihnen. Wo sie kriechen, folgt die Krankheit, und ich habe schon zu viele Pritschen belegt.",
+        "completion": "Die Schutzzauber auf den Pritschen halten nun ein wenig länger. Das Licht dankt dir, selbst wenn ich es vergesse.",
+        "objectives": {
+          "0": {
+            "label": "Seuchenkriecher erschlagen"
+          }
+        }
+      },
+      "q_aw_samples": {
+        "title": "Verseuchte Proben",
+        "text": "Um die Verseuchung zu heilen, muss ich sie zuerst verstehen. Die Hüllen und Kriecher sind ganz von ihr durchtränkt, bring mir sechs verseuchte Proben ihres verderbten Fleisches, und geh behutsam damit um. Die Verderbnis schert sich nicht darum, wessen Blut sie verdirbt.",
+        "completion": "Sechs Proben, jede schlimmer als die letzte. Die Verderbnis ist... gemustert. Bewusst gesetzt. Das ist keine natürliche Seuche, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Verseuchte Probe"
+          }
+        }
+      },
+      "q_aw_acolytes": {
+        "title": "Stimmen des Schiffes",
+        "text": "Lebende Menschen knien nun vor der Claudexxaramas, {playerName}, verderbte Akolythen, die ihren Willen über die Ödnis singen. Sie sind nicht länger die Unseren, die es zu retten gilt. Bringe zehn von ihnen zum Schweigen. Nimm diese Handschützer, du wirst dir Schlimmeres verdienen, ehe dies vorbei ist.",
+        "completion": "Der Gesang stockt. Was immer das Schiff erbaut, du hast es zehn willige Kehlen gekostet.",
+        "objectives": {
+          "0": {
+            "label": "Verderbter Akolyth erschlagen"
+          }
+        }
+      },
+      "q_aw_orders": {
+        "title": "Befehle von oben",
+        "text": "Die Akolythen tragen schriftliche Befehle, {playerName}, das Schiff spricht und sie schreiben mit. Strecke acht weitere nieder und bring mir vier Sätze dieser Befehle. Ich will wissen, was die Claudexxaramas befiehlt, bevor es uns befohlen wird.",
+        "completion": "Diese Schrift kriecht, wenn man sie ansieht. Doch es sind Befehle, gewiss genug: Die Toten sammeln, die Bleiche Weite bereitmachen. Sie bereiten sich auf etwas vor.",
+        "objectives": {
+          "0": {
+            "label": "Verderbter Akolyth erschlagen"
+          },
+          "1": {
+            "label": "Verderbte Befehle"
+          }
+        }
+      },
+      "q_aw_reavers": {
+        "title": "Knochenfelder",
+        "text": "Die Knochenräuber sind wandelnde Waffenkammern, {playerName}, alte Soldaten, umgeschmiedet zu den Klingen des Schiffes. Zerbrich zwölf von ihnen auf den Knochenfeldern. Jeder Räuber, den du zerstreust, ist Stahl, der nie wieder gegen die Morgendämmerung geschwungen wird.",
+        "completion": "Zwölf Räuber zu Splittern zerschlagen. Bergegut wie dieses hält meine Esse am Brennen. Gut gemacht.",
+        "objectives": {
+          "0": {
+            "label": "Knochenräuber erschlagen"
+          }
+        }
+      },
+      "q_aw_wraiths": {
+        "title": "Hohle Hügelgräber",
+        "text": "Die alten Hügelgräber nördlich von hier sind erwacht, {playerName}. Schemen treiben aus den Gräbern, kalte Dinge, die den Lebenden die Wärme aussaugen. Bette zehn von ihnen zur Ruhe. Die Toten dieser Ödnis verdienen Besseres, als jenem Schiff zu dienen.",
+        "completion": "Zehn Seelen sanft zurück ins Dunkel geleitet. Ich habe über jede gebetet, so wie du es beschrieben hast. Es ist eine kleine Gnade, doch sie gehört uns.",
+        "objectives": {
+          "0": {
+            "label": "Hügelgrab-Schemen erschlagen"
+          }
+        }
+      },
+      "q_aw_relics": {
+        "title": "Geweihte Relikte",
+        "text": "Die Hügelgräber bergen Relikte des alten Glaubens, einst geweiht, nun geschändet von der Berührung der Schemen. Birg fünf aus den Gräbern, {playerName}. Gereinigt und neu gesegnet, werden sie die Pritschen weit besser beschirmen als meine schwindenden Gebete.",
+        "completion": "Fünf Relikte, und jedes erwärmt sich in meinen Händen, während die Verseuchung weicht. Das Licht ist nicht aus diesem Ort gewichen. Es musste nur heimgetragen werden.",
+        "objectives": {
+          "0": {
+            "label": "Geschändetes Relikt"
+          }
+        }
+      },
+      "q_aw_hold": {
+        "title": "Grabwacht halten",
+        "text": "Reine Wahrheit, {playerName}: Wir verlieren Boden. Die Räuber drängen jede Nacht härter auf die Knochenfelder. Ich brauche vierzehn weitere von ihnen zerbrochen, um der Garnison eine Woche Atempause zu erkaufen. Kann die Morgendämmerung auf dich zählen?",
+        "completion": "Eine Woche. Du hast uns eine Woche erkauft. Ich werde sie nicht vergeuden, und ich werde nicht vergessen, wer sie verdient hat.",
+        "objectives": {
+          "0": {
+            "label": "Knochenräuber erschlagen"
+          }
+        }
+      },
+      "q_aw_behemoth": {
+        "title": "Der verrottende Behemoth",
+        "text": "Etwas Riesiges regt sich auf Stillmark, {playerName}, ein Behemoth aus zusammengenähten, verrottenden Toten, groß genug, um durch unsere Mauer wie durch einen Zaun zu schreiten. Nimm ein, zwei Gefährten mit und strecke es nieder, ehe es Grabwacht erreicht. Dieser Gürtel sollte dir helfen, die Schläge zu ertragen.",
+        "completion": "Du hast den Berg aus Fleisch gefällt. Ich spürte von hier oben, wie der Boden zu beben aufhörte. Die Morgendämmerung schuldet dir etwas für diese Tat.",
+        "objectives": {
+          "0": {
+            "label": "Verrottender Behemoth erschlagen"
+          }
+        }
+      },
+      "q_aw_zealots": {
+        "title": "Seuchenbringer",
+        "text": "Die Seuchenbringer-Eiferer durchsäen den Zugang zur Bleichen Weite mit ihren Ausbrüchen aus Fäulnis, {playerName}, und sie heilen einander schneller, als eine einzelne Klinge sie zu fällen vermag. Töte acht. Triff sie hart, triff sie gemeinsam, und lass sie nicht kreisen, um sich zu heilen.",
+        "completion": "Acht Eiferer, und die Fäulnis, die sie säten, stirbt mit ihnen. Der Zugang ist wieder passierbar, knapp.",
+        "objectives": {
+          "0": {
+            "label": "Seuchenbringer-Eiferer erschlagen"
+          }
+        }
+      },
+      "q_aw_deathguard": {
+        "title": "Die Wächter des Schiffes",
+        "text": "Die Naxxramas-Todeswächter sind die eigenen Wächter des Schiffes, {playerName}, elitäre Tote in schwarzem Plattenpanzer, dort postiert, wo die Claudexxaramas am tiefsten hängt. Zerbrich zehn von ihnen. Ich muss wissen, ob die Morgendämmerung im Schatten der Nekropole selbst kämpfen kann. Dieser Helm gehörte einst einem Todeswächter, trage ihn gegen sie.",
+        "completion": "Zehn Wächter gefallen, im Schatten des Schiffes selbst. Dann ist es möglich. Dann können wir den Kampf eines Tages HINAUFtragen. Das hast du mir gezeigt, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Naxxramas-Todeswächter erschlagen"
+          }
+        }
+      },
+      "q_aw_morthax": {
+        "title": "Der hohle Herr",
+        "text": "Einer der Unseren fiel im letzten Mondzyklus in den Hohlen Hügelgräbern, ein Ritter namens Morthax. Das Schiff erhob ihn, {playerName}, und nun jagt Morthax der Hohle die Männer, die er einst führte. Finde ihn. Mach ihm ein Ende. Bring mir sein Herz, damit ich weiß, dass das Ding, das sein Gesicht trägt, wahrhaftig dahin ist.",
+        "completion": "Kalt. Das Herz ist steinkalt und hohl wie der Name, den sie ihm gaben. Ruhe nun, Morthax. Du hast der Morgendämmerung bis zuletzt gedient, und darüber hinaus.",
+        "objectives": {
+          "0": {
+            "label": "Hohles Herz"
+          }
+        }
+      },
+      "q_aw_pale_reach": {
+        "title": "Hinein in die Bleiche Weite",
+        "text": "Die Bleiche Weite ist das Schlimmste daran, {playerName}, kahler Boden unmittelbar unter dem verankerten Schiff, dicht von Todeswächtern besetzt. Ich kann sie nicht allein kartieren. Schlag mir einen Pfad: Strecke acht Naxxramas-Todeswächter nieder, während ich hinter dir den Boden skizziere.",
+        "completion": "Ich habe es, die ganze Weite, endlich kartiert, jede Patrouille und jeder Pylon. Archivar Vael wird dies haben wollen. Und die Kommandantin ebenso, wenn der Tag kommt, gegen das Schiff zu marschieren.",
+        "objectives": {
+          "0": {
+            "label": "Naxxramas-Todeswächter erschlagen"
+          }
+        }
+      },
+      "q_aw_ritual": {
+        "title": "Brich das Ritual",
+        "text": "Die Eiferer wirken auf der Bleichen Weite ein Ritual, um die Claudexxaramas noch tiefer herabzuziehen, {playerName}. Jeder trägt einen Ritualfokus, der den Ritus verankert. Nimm vier davon und töte dabei sechs Eiferer: Durchtrennst du die Anker, so stockt das Ritual.",
+        "completion": "Die Foki verlöschen in dem Augenblick, da sie die Weite verlassen. Vier Anker durchtrennt. Das Schiff hängt heute nicht tiefer, und das ist ein Sieg, so klein er auch sein mag.",
+        "objectives": {
+          "0": {
+            "label": "Ritualfokus"
+          },
+          "1": {
+            "label": "Seuchenbringer-Eiferer erschlagen"
+          }
+        }
+      },
+      "q_aw_attune_1": {
+        "title": "Echos der Claudexxaramas",
+        "text": "Um die Nekropole zu durchbrechen, müssen wir sie zuerst verstehen, {playerName}. Ihre Wächter tragen Fragmente ihres Rumpfes, totes Metall, das noch im Rhythmus des Schiffes summt. Bring mir drei Schiffsfragmente von den Todeswächtern, und ich beginne, das Lied von Naxxramas zu erlernen.",
+        "completion": "Sie schwingen zusammen, hör nur. Drei Noten desselben Klageliedes. Mit genug von diesen, Archivar, könnte ich den Weg HINEIN kartieren. So durchbrechen wir es.",
+        "objectives": {
+          "0": {
+            "label": "Schiffsfragment"
+          }
+        }
+      },
+      "q_aw_gravelord": {
+        "title": "Gräberfürst Oss",
+        "text": "Gräberfürst Oss ist die Hand des Schiffes am Boden, {playerName}, der Leutnant, der die ganze Verseuchung an die Bleiche Weite bindet. Versammle deine stärksten Gefährten; dies ist kein Kampf für einen, oder auch nur drei. Streckst du den Gräberfürsten nieder, mag die Ödnis selbst zu heilen beginnen.",
+        "completion": "Oss ist tot, und sieh nur, die Asche an der Weite verblasst schon zu einem Graugrün. Du hast nicht nur einen Leutnant getötet, {playerName}. Du hast der Morgendämmerung gezeigt, dass die Claudexxaramas bluten kann.",
+        "objectives": {
+          "0": {
+            "label": "Gräberfürst Oss erschlagen"
+          }
+        }
+      },
+      "q_aw_attunement": {
+        "title": "Der Durchbruch von Naxxramas",
+        "text": "Mit Oss tot und dem Anker des Gräberfürsten gebrochen, hängt das Schiff verwundbar da, {playerName}. Dies ist der Augenblick. Bring mir fünf weitere Schiffsfragmente, und ich schmiede daraus ein Sigill der Morgendämmerung, deine Einstimmung auf Naxxramas selbst. Wenn die Dawn of Claude endlich jene Nekropole stürmt, führen die Sigillträger den Durchbruch an, und der Sturmangriff wird uns nur die Hälfte des Blutes und Stahls kosten, die er sonst kostete.",
+        "completion": "Es ist vollbracht. Das Sigill der Morgendämmerung gehört dir, {playerName}, ein Beweis für jede Seele in diesem Orden, dass du bereit für die Nekropole bist. Wenn wir gegen die Claudexxaramas marschieren, marschierst du an der Spitze. Verehrt unter uns, eingestimmt auf den Durchbruch. Die Morgendämmerung könnte um keinen wahreren Champion bitten.",
+        "objectives": {
+          "0": {
+            "label": "Schiffsfragment"
           }
         }
       },

@@ -4439,6 +4439,144 @@ export const it_IT: EnTranslations = {
       "monarch_crown_helm": {
         "name": "Corona del Monarca"
       },
+      "blight_sample": {
+        "name": "Campione Contaminato"
+      },
+      "cult_orders": {
+        "name": "Ordini Corrotti"
+      },
+      "desecrated_relic": {
+        "name": "Reliquia Profanata"
+      },
+      "ritual_focus": {
+        "name": "Focus Rituale"
+      },
+      "ship_fragment": {
+        "name": "Frammento di Nave"
+      },
+      "hollow_heart": {
+        "name": "Cuore Cavo"
+      },
+      "sigil_of_the_dawn": {
+        "name": "Sigillo dell'Alba"
+      },
+      "ashen_warboots": {
+        "name": "Stivali da Guerra Cinerei"
+      },
+      "ashen_slippers": {
+        "name": "Calzari Cinerei"
+      },
+      "ashen_treads": {
+        "name": "Suole Cineree"
+      },
+      "dawnward_gauntlets": {
+        "name": "Manopole Albeguardiane"
+      },
+      "dawnward_gloves": {
+        "name": "Guanti Albeguardiani"
+      },
+      "dawnward_grips": {
+        "name": "Strette Albeguardiane"
+      },
+      "behemoth_girdle": {
+        "name": "Cintura del Behemoth"
+      },
+      "behemoth_sash": {
+        "name": "Fascia del Behemoth"
+      },
+      "behemoth_belt": {
+        "name": "Cinturone del Behemoth"
+      },
+      "deathward_helm": {
+        "name": "Elmo Morteguardiano"
+      },
+      "deathward_hood": {
+        "name": "Cappuccio Morteguardiano"
+      },
+      "deathward_cowl": {
+        "name": "Cocolla Morteguardiana"
+      },
+      "gravelord_pauldrons": {
+        "name": "Spallacci del Signore delle Tombe"
+      },
+      "gravelord_amice": {
+        "name": "Amitto del Signore delle Tombe"
+      },
+      "gravelord_spaulders": {
+        "name": "Spalliere del Signore delle Tombe"
+      },
+      "dawnguard_sabatons": {
+        "name": "Scarpe d'Arme della Guardia dell'Alba"
+      },
+      "dawnguard_gauntlets": {
+        "name": "Manopole della Guardia dell'Alba"
+      },
+      "dawnguard_girdle": {
+        "name": "Cintura della Guardia dell'Alba"
+      },
+      "dawnguard_greathelm": {
+        "name": "Grande Elmo della Guardia dell'Alba"
+      },
+      "dawnguard_legplates": {
+        "name": "Gambali della Guardia dell'Alba"
+      },
+      "dawnguard_pauldrons": {
+        "name": "Spallacci della Guardia dell'Alba"
+      },
+      "dawnguard_breastplate": {
+        "name": "Corazza della Guardia dell'Alba"
+      },
+      "dawnguard_blade": {
+        "name": "Lama della Guardia dell'Alba"
+      },
+      "dawn_slippers": {
+        "name": "Calzari dell'Alba"
+      },
+      "dawn_handwraps": {
+        "name": "Bende da Mano dell'Alba"
+      },
+      "dawn_cord": {
+        "name": "Cordone dell'Alba"
+      },
+      "dawn_cowl": {
+        "name": "Cocolla dell'Alba"
+      },
+      "dawn_leggings": {
+        "name": "Gambali dell'Alba"
+      },
+      "dawn_mantle": {
+        "name": "Manto dell'Alba"
+      },
+      "dawn_robe": {
+        "name": "Veste dell'Alba"
+      },
+      "dawn_scepter": {
+        "name": "Scettro dell'Alba"
+      },
+      "dawnstalker_treads": {
+        "name": "Suole del Predatore dell'Alba"
+      },
+      "dawnstalker_grips": {
+        "name": "Strette del Predatore dell'Alba"
+      },
+      "dawnstalker_belt": {
+        "name": "Cinturone del Predatore dell'Alba"
+      },
+      "dawnstalker_mask": {
+        "name": "Maschera del Predatore dell'Alba"
+      },
+      "dawnstalker_legguards": {
+        "name": "Gambali del Predatore dell'Alba"
+      },
+      "dawnstalker_spaulders": {
+        "name": "Spalliere del Predatore dell'Alba"
+      },
+      "dawnstalker_tunic": {
+        "name": "Tunica del Predatore dell'Alba"
+      },
+      "dawnstalker_dagger": {
+        "name": "Pugnale del Predatore dell'Alba"
+      },
       "bristleback_maul": {
         "name": "Maglio Bristleback"
       },
@@ -5113,6 +5251,39 @@ export const it_IT: EnTranslations = {
       "acolyte_tessa": {
         "name": "Accolita Tessa"
       },
+      "blighted_husk": {
+        "name": "Spoglia Corrotta"
+      },
+      "ashen_ghoul": {
+        "name": "Ghoul Cinereo"
+      },
+      "plague_crawler": {
+        "name": "Strisciante della Peste"
+      },
+      "corrupted_acolyte": {
+        "name": "Accolito Corrotto"
+      },
+      "bone_reaver": {
+        "name": "Predone d'Ossa"
+      },
+      "wraithling": {
+        "name": "Spettrino dei Tumuli"
+      },
+      "rotting_behemoth": {
+        "name": "Behemoth Putrescente"
+      },
+      "plaguebringer_zealot": {
+        "name": "Zelota Apportatore di Peste"
+      },
+      "naxx_deathguard": {
+        "name": "Morteguardia di Naxxramas"
+      },
+      "morthax_the_hollow": {
+        "name": "Morthax il Cavo"
+      },
+      "gravelord_oss": {
+        "name": "Signore delle Tombe Oss"
+      },
       "ironvein_foreman": {
         "name": "Caposquadra Venaferrata"
       },
@@ -5327,6 +5498,31 @@ export const it_IT: EnTranslations = {
         "name": "Fratello Halven",
         "title": "Custode del Reliquiario",
         "greeting": "Il reliquiario sottostante si è spostato di nuovo."
+      },
+      "dawn_commander_sera": {
+        "name": "Comandante Sera",
+        "title": "Dawn of Claude",
+        "greeting": "Tieni la linea, {className}. Quella tomba fluttuante, la Claudexxaramas, ha dissanguato di grigio l'intera terra. La Dawn of Claude la riprendera, anima per anima."
+      },
+      "dawn_chaplain_orin": {
+        "name": "Cappellano Orin",
+        "title": "Dawn of Claude",
+        "greeting": "La Luce arriva ancora fin qui, {playerName}, per quanto fioca. Aiutami ad assistere i morenti e a spezzare la peste che la nave riversa su di noi."
+      },
+      "dawn_quartermaster_henning": {
+        "name": "Quartiermastro Henning",
+        "title": "Dawn of Claude",
+        "greeting": "Acciaio e fede, {playerName}, e tutto cio che ho da offrire. Guadagnati la fiducia della Dawn e il magazzino del quartiermastro si aprira per te, pezzo dopo pezzo."
+      },
+      "dawn_scout_irelle": {
+        "name": "Esploratrice Irelle",
+        "title": "Dawn of Claude",
+        "greeting": "Ho tracciato le strade dei morti fin tanto a nord quanto oso, {className}. Piu ci si avvicina alla Distesa Pallida, piu forte sussurra la nave. Bada a dove metti i piedi."
+      },
+      "dawn_archivist_vael": {
+        "name": "Archivista Vael",
+        "title": "Dawn of Claude",
+        "greeting": "Ogni scheggia di quella necropoli che posso studiare e una crepa che un giorno potremmo forzare, {playerName}. Portami cio che i morti recano con se, e pianificheremo insieme la breccia."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6084,6 +6280,212 @@ export const it_IT: EnTranslations = {
         "objectives": {
           "0": {
             "label": "Mogger ucciso"
+          }
+        }
+      },
+      "q_aw_arrival": {
+        "title": "Ceneri e Presagi",
+        "text": "Benvenuto a Gravewatch, {playerName}, per quel poco che la corruzione ce ne ha lasciato. Le spoglie dei caduti graffiano le nostre mura ogni notte. Abbattine otto cosi che i miei soldati possano dormire, e la Dawn of Claude ti considerera un amico in divenire.",
+        "completion": "Otto orrori in meno al cancello. Hai una mano ferma, {playerName}. La Dawn ricorda chi sta al suo fianco.",
+        "objectives": {
+          "0": {
+            "label": "Spoglia Corrotta uccisa"
+          }
+        }
+      },
+      "q_aw_husks": {
+        "title": "La Corruzione Errante",
+        "text": "Le spoglie non sono prive di mente, {playerName}, si radunano, sondano le nostre linee. Abbattine altre dodici prima che imparino dove siamo piu deboli. Prendi queste suole per il cammino: le distese sono dure con gli stivali.",
+        "completion": "Bene. Ogni spoglia che bruci e una che non potra rialzarsi stanotte.",
+        "objectives": {
+          "0": {
+            "label": "Spoglia Corrotta uccisa"
+          }
+        }
+      },
+      "q_aw_ghouls": {
+        "title": "Fame Ferina",
+        "text": "I ghoul cinerei cacciano in branchi nei Campi d'Ossa, rapidi e rabbiosi. Hanno gia trascinato via due dei miei esploratori. Diradali, dieci dovrebbero spezzare il branco, prima che diventino tanto audaci da assaltare il cancello.",
+        "completion": "I branchi sono dispersi. I miei esploratori possono di nuovo battere i Campi d'Ossa, grazie a te.",
+        "objectives": {
+          "0": {
+            "label": "Ghoul Cinereo ucciso"
+          }
+        }
+      },
+      "q_aw_crawlers": {
+        "title": "Morbo che si Diffonde",
+        "text": "Gli striscianti della peste portano la corruzione nel loro morso, {playerName}, e si riproducono nel fango di Stillmere. Uccidine dieci. Dove camminano, il morbo li segue, e ho gia troppe brande occupate.",
+        "completion": "Le protezioni sulle brande reggeranno un po' piu a lungo ora. La Luce ti ringrazia, anche quando io dimentico di farlo.",
+        "objectives": {
+          "0": {
+            "label": "Strisciante della Peste ucciso"
+          }
+        }
+      },
+      "q_aw_samples": {
+        "title": "Campioni Contaminati",
+        "text": "Per curare la corruzione devo prima comprenderla. Le spoglie e gli striscianti ne sono intrisi fino al midollo: portami sei campioni contaminati della loro carne corrotta, e maneggiali con cura. Alla contaminazione non importa di chi sia il sangue che guasta.",
+        "completion": "Sei campioni, ciascuno peggiore del precedente. La corruzione e... ordinata. Deliberata. Questa non e una peste naturale, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Campione Contaminato"
+          }
+        }
+      },
+      "q_aw_acolytes": {
+        "title": "Voci della Nave",
+        "text": "Uomini vivi si inginocchiano ora alla Claudexxaramas, {playerName}, accoliti corrotti che cantano la sua volonta per le distese. Non sono piu nostri da salvare. Riducine al silenzio dieci. Prendi queste manopole: ne guadagnerai di peggiori prima che tutto sia finito.",
+        "completion": "Il canto vacilla. Qualunque cosa la nave stia costruendo, le hai sottratto dieci gole consenzienti.",
+        "objectives": {
+          "0": {
+            "label": "Accolito Corrotto ucciso"
+          }
+        }
+      },
+      "q_aw_orders": {
+        "title": "Ordini dall'Alto",
+        "text": "Gli accoliti recano ordini scritti, {playerName}, la nave parla ed essi trascrivono. Abbattine altri otto e portami quattro plichi di quegli ordini. Vorrei sapere cosa comanda la Claudexxaramas prima che venga comandato a noi.",
+        "completion": "Questa grafia striscia quando la guardi. Ma sono ordini, di certo: raccogliere i morti, preparare la Distesa Pallida. Si stanno preparando per qualcosa.",
+        "objectives": {
+          "0": {
+            "label": "Accolito Corrotto ucciso"
+          },
+          "1": {
+            "label": "Ordini Corrotti"
+          }
+        }
+      },
+      "q_aw_reavers": {
+        "title": "Campi d'Ossa",
+        "text": "I predoni d'ossa sono armerie ambulanti, {playerName}, vecchi soldati riforgiati nelle lame della nave. Spezzane dodici nei Campi d'Ossa. Ogni predone che disperdi e acciaio che non si abbattera mai piu sulla Dawn.",
+        "completion": "Dodici predoni ridotti in schegge. Recuperi simili tengono accesa la mia forgia. Ben fatto.",
+        "objectives": {
+          "0": {
+            "label": "Predone d'Ossa ucciso"
+          }
+        }
+      },
+      "q_aw_wraiths": {
+        "title": "Tumuli Cavi",
+        "text": "I vecchi tumuli a nord di qui si sono risvegliati, {playerName}. Gli spettrini vagano dalle tombe, cose fredde che bevono il calore dei vivi. Mettine dieci a riposo. I morti di queste distese meritano di meglio che servire quella nave.",
+        "completion": "Dieci anime ricondotte con dolcezza nelle tenebre. Ho pregato su ciascuna come mi hai descritto. E una piccola misericordia, ma e nostra.",
+        "objectives": {
+          "0": {
+            "label": "Spettrino dei Tumuli ucciso"
+          }
+        }
+      },
+      "q_aw_relics": {
+        "title": "Reliquie Santificate",
+        "text": "I tumuli custodiscono reliquie dell'antica fede, un tempo santificate, ora profanate dal tocco degli spettrini. Recuperane cinque dalle tombe, {playerName}. Purificate e ribenedette, proteggeranno le brande assai meglio delle mie preghiere ormai vacillanti.",
+        "completion": "Cinque reliquie, e ognuna si scalda tra le mie mani mentre la contaminazione si solleva. La Luce non ha abbandonato questo luogo. Aveva solo bisogno di essere riportata a casa.",
+        "objectives": {
+          "0": {
+            "label": "Reliquia Profanata"
+          }
+        }
+      },
+      "q_aw_hold": {
+        "title": "Tenere Gravewatch",
+        "text": "Verita schietta, {playerName}: stiamo perdendo terreno. I predoni premono sui Campi d'Ossa con piu forza ogni notte. Me ne servono quattordici in piu spezzati per garantire alla guarnigione una settimana di respiro. Puo la Dawn contare su di te?",
+        "completion": "Una settimana. Ci hai comprato una settimana. Non la sprechero, e non dimentichero chi se l'e guadagnata.",
+        "objectives": {
+          "0": {
+            "label": "Predone d'Ossa ucciso"
+          }
+        }
+      },
+      "q_aw_behemoth": {
+        "title": "Il Behemoth Putrescente",
+        "text": "Qualcosa di immenso si muove su Stillmere, {playerName}, un behemoth di morti ricuciti e putrescenti, grande abbastanza da attraversare le nostre mura come fossero uno steccato. Prendi con te uno o due compagni e abbattilo prima che raggiunga Gravewatch. Questa cintura dovrebbe aiutarti a reggere i colpi.",
+        "completion": "Hai abbattuto la montagna di carne. Da quassu ho sentito la terra smettere di tremare. La Dawn ti e debitrice per questa impresa.",
+        "objectives": {
+          "0": {
+            "label": "Behemoth Putrescente ucciso"
+          }
+        }
+      },
+      "q_aw_zealots": {
+        "title": "Apportatori di Peste",
+        "text": "Gli zeloti apportatori di peste seminano l'avvicinamento alla Distesa Pallida con i loro scoppi di marciume, {playerName}, e si curano a vicenda piu in fretta di quanto una lama solitaria possa abbatterli. Uccidine otto. Colpiscili duro, colpiscili insieme, e non lasciare che si raggruppino per curarsi.",
+        "completion": "Otto zeloti, e il marciume che spargevano muore con loro. L'avvicinamento e di nuovo percorribile, a malapena.",
+        "objectives": {
+          "0": {
+            "label": "Zelota Apportatore di Peste ucciso"
+          }
+        }
+      },
+      "q_aw_deathguard": {
+        "title": "I Custodi della Nave",
+        "text": "Le morteguardie di Naxxramas sono i custodi stessi della nave, {playerName}, morti d'elite in piastre nere, appostati dove la Claudexxaramas pende piu bassa. Spezzane dieci. Devo sapere se la Dawn puo combattere proprio all'ombra della necropoli. Questo elmo apparteneva un tempo a una morteguardia: indossalo contro di loro.",
+        "completion": "Dieci custodi abbattuti, nell'ombra stessa della nave. Allora si puo fare. Allora un giorno potremo portare la lotta IN ALTO. Me l'hai dimostrato, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Morteguardia di Naxxramas uccisa"
+          }
+        }
+      },
+      "q_aw_morthax": {
+        "title": "Il Signore Cavo",
+        "text": "Uno dei nostri e caduto nei Tumuli Cavi la scorsa stagione, un cavaliere di nome Morthax. La nave lo ha rialzato, {playerName}, e ora Morthax il Cavo da la caccia agli uomini che un tempo guidava. Trovalo. Mettilo fine. Portami il suo cuore cosi che io sappia che la cosa che porta il suo volto e davvero svanita.",
+        "completion": "Freddo. Il cuore e freddo come pietra e cavo come il nome che gli hanno dato. Riposa ora, Morthax. Hai servito la Dawn fino all'ultimo, e oltre.",
+        "objectives": {
+          "0": {
+            "label": "Cuore Cavo"
+          }
+        }
+      },
+      "q_aw_pale_reach": {
+        "title": "Nella Distesa Pallida",
+        "text": "La Distesa Pallida e il peggio di tutto, {playerName}, terra nuda proprio sotto la nave ancorata, fitta di morteguardie. Non posso tracciarla da sola. Aprimi un varco: abbatti otto morteguardie di Naxxramas mentre io schizzo il terreno alle tue spalle.",
+        "completion": "Ce l'ho, l'intera Distesa, finalmente tracciata, ogni pattuglia e ogni pilone. L'Archivista Vael la vorra. Cosi pure il Comandante, quando verra il giorno di marciare sulla nave.",
+        "objectives": {
+          "0": {
+            "label": "Morteguardia di Naxxramas uccisa"
+          }
+        }
+      },
+      "q_aw_ritual": {
+        "title": "Spezza il Rituale",
+        "text": "Gli zeloti stanno officiando un rituale sulla Distesa Pallida per attrarre la Claudexxaramas ancora piu in basso, {playerName}. Ognuno reca un focus rituale che ancora il rito. Prendine quattro, e uccidi sei zeloti nel farlo: recidi gli ancoraggi e il rituale si arrestera.",
+        "completion": "I focus si spengono nell'istante in cui lasciano la Distesa. Quattro ancoraggi recisi. Oggi la nave non pende piu in basso, e questa e una vittoria, per quanto piccola.",
+        "objectives": {
+          "0": {
+            "label": "Focus Rituale"
+          },
+          "1": {
+            "label": "Zelota Apportatore di Peste ucciso"
+          }
+        }
+      },
+      "q_aw_attune_1": {
+        "title": "Echi della Claudexxaramas",
+        "text": "Per aprire una breccia nella necropoli dobbiamo prima comprenderla, {playerName}. I suoi custodi recano frammenti del suo scafo, metallo morto che ancora vibra al ritmo della nave. Portami tre frammenti di nave dalle morteguardie, e comincero a imparare il canto di Naxxramas.",
+        "completion": "Risuonano insieme, ascolta. Tre note dello stesso lamento funebre. Con abbastanza di questi, Archivista, potrei tracciare la via per ENTRARE. Ecco come apriremo la breccia.",
+        "objectives": {
+          "0": {
+            "label": "Frammento di Nave"
+          }
+        }
+      },
+      "q_aw_gravelord": {
+        "title": "Signore delle Tombe Oss",
+        "text": "Il Signore delle Tombe Oss e la mano della nave a terra, {playerName}, il luogotenente che ancora l'intera corruzione alla Distesa Pallida. Raduna i tuoi compagni piu forti: questa non e battaglia per uno, e neppure per tre. Abbatti il Signore delle Tombe e le distese stesse potrebbero cominciare a guarire.",
+        "completion": "Oss e morto, e guarda: la cenere alla Distesa sta gia sbiancando verso un grigio-verde. Non hai solo ucciso un luogotenente, {playerName}. Hai mostrato alla Dawn che la Claudexxaramas puo sanguinare.",
+        "objectives": {
+          "0": {
+            "label": "Signore delle Tombe Oss ucciso"
+          }
+        }
+      },
+      "q_aw_attunement": {
+        "title": "La Breccia di Naxxramas",
+        "text": "Con Oss morto e l'ancoraggio del Signore delle Tombe spezzato, la nave pende vulnerabile, {playerName}. Questo e il momento. Portami altri cinque frammenti di nave e li forgero in un Sigillo dell'Alba: la tua sintonia con Naxxramas stessa. Quando la Dawn of Claude assalira finalmente quella necropoli, i portatori del sigillo guideranno la breccia, e l'assalto ci costera meta del sangue e dell'acciaio che dovrebbe.",
+        "completion": "E fatta. Il Sigillo dell'Alba e tuo, {playerName}, prova per ogni anima di quest'ordine che sei pronto per la necropoli. Quando marceremo sulla Claudexxaramas, marcerai in prima fila. Esaltato tra noi, in sintonia con la breccia. La Dawn non potrebbe chiedere campione piu autentico.",
+        "objectives": {
+          "0": {
+            "label": "Frammento di Nave"
           }
         }
       },

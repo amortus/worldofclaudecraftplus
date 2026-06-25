@@ -1244,7 +1244,7 @@ export const GUIDE_ZONES: GuideZoneInfo[] = [
     "id": "ashen_wastes",
     "name": "The Ashen Wastes",
     "min": 20,
-    "max": 26,
+    "max": 20,
     "biome": "blight",
     "hub": "Gravewatch",
     "pois": [

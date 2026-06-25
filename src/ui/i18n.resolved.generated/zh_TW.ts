@@ -4439,6 +4439,144 @@ export const zh_TW: EnTranslations = {
       "monarch_crown_helm": {
         "name": "君主之冠"
       },
+      "blight_sample": {
+        "name": "污染樣本"
+      },
+      "cult_orders": {
+        "name": "腐化的命令書"
+      },
+      "desecrated_relic": {
+        "name": "被褻瀆的聖物"
+      },
+      "ritual_focus": {
+        "name": "儀式法器"
+      },
+      "ship_fragment": {
+        "name": "船艦碎片"
+      },
+      "hollow_heart": {
+        "name": "空洞之心"
+      },
+      "sigil_of_the_dawn": {
+        "name": "黎明印記"
+      },
+      "ashen_warboots": {
+        "name": "灰燼戰靴"
+      },
+      "ashen_slippers": {
+        "name": "灰燼軟鞋"
+      },
+      "ashen_treads": {
+        "name": "灰燼踏靴"
+      },
+      "dawnward_gauntlets": {
+        "name": "守曦護手"
+      },
+      "dawnward_gloves": {
+        "name": "守曦手套"
+      },
+      "dawnward_grips": {
+        "name": "守曦緊握"
+      },
+      "behemoth_girdle": {
+        "name": "巨獸腰甲"
+      },
+      "behemoth_sash": {
+        "name": "巨獸腰帶"
+      },
+      "behemoth_belt": {
+        "name": "巨獸束帶"
+      },
+      "deathward_helm": {
+        "name": "禦死頭盔"
+      },
+      "deathward_hood": {
+        "name": "禦死兜帽"
+      },
+      "deathward_cowl": {
+        "name": "禦死頭巾"
+      },
+      "gravelord_pauldrons": {
+        "name": "墓主肩甲"
+      },
+      "gravelord_amice": {
+        "name": "墓主披肩"
+      },
+      "gravelord_spaulders": {
+        "name": "墓主護肩"
+      },
+      "dawnguard_sabatons": {
+        "name": "黎明衛戰靴"
+      },
+      "dawnguard_gauntlets": {
+        "name": "黎明衛護手"
+      },
+      "dawnguard_girdle": {
+        "name": "黎明衛腰甲"
+      },
+      "dawnguard_greathelm": {
+        "name": "黎明衛巨盔"
+      },
+      "dawnguard_legplates": {
+        "name": "黎明衛腿甲"
+      },
+      "dawnguard_pauldrons": {
+        "name": "黎明衛肩甲"
+      },
+      "dawnguard_breastplate": {
+        "name": "黎明衛胸甲"
+      },
+      "dawnguard_blade": {
+        "name": "黎明衛之刃"
+      },
+      "dawn_slippers": {
+        "name": "黎明軟鞋"
+      },
+      "dawn_handwraps": {
+        "name": "黎明手綁帶"
+      },
+      "dawn_cord": {
+        "name": "黎明束繩"
+      },
+      "dawn_cowl": {
+        "name": "黎明頭巾"
+      },
+      "dawn_leggings": {
+        "name": "黎明護腿"
+      },
+      "dawn_mantle": {
+        "name": "黎明披風"
+      },
+      "dawn_robe": {
+        "name": "黎明長袍"
+      },
+      "dawn_scepter": {
+        "name": "黎明權杖"
+      },
+      "dawnstalker_treads": {
+        "name": "曦行者踏靴"
+      },
+      "dawnstalker_grips": {
+        "name": "曦行者緊握"
+      },
+      "dawnstalker_belt": {
+        "name": "曦行者束帶"
+      },
+      "dawnstalker_mask": {
+        "name": "曦行者面具"
+      },
+      "dawnstalker_legguards": {
+        "name": "曦行者護腿"
+      },
+      "dawnstalker_spaulders": {
+        "name": "曦行者護肩"
+      },
+      "dawnstalker_tunic": {
+        "name": "曦行者外衣"
+      },
+      "dawnstalker_dagger": {
+        "name": "曦行者匕首"
+      },
       "bristleback_maul": {
         "name": "硬鬃重槌"
       },
@@ -5113,6 +5251,39 @@ export const zh_TW: EnTranslations = {
       "acolyte_tessa": {
         "name": "侍僧泰莎"
       },
+      "blighted_husk": {
+        "name": "枯萎軀殼"
+      },
+      "ashen_ghoul": {
+        "name": "灰燼食屍鬼"
+      },
+      "plague_crawler": {
+        "name": "瘟疫爬行者"
+      },
+      "corrupted_acolyte": {
+        "name": "腐化侍僧"
+      },
+      "bone_reaver": {
+        "name": "白骨掠奪者"
+      },
+      "wraithling": {
+        "name": "塚地幽靈"
+      },
+      "rotting_behemoth": {
+        "name": "腐爛巨獸"
+      },
+      "plaguebringer_zealot": {
+        "name": "瘟疫狂信徒"
+      },
+      "naxx_deathguard": {
+        "name": "納克薩瑪斯死亡守衛"
+      },
+      "morthax_the_hollow": {
+        "name": "空洞者莫薩克斯"
+      },
+      "gravelord_oss": {
+        "name": "墓主奧斯"
+      },
       "ironvein_foreman": {
         "name": "鐵脈工頭"
       },
@@ -5327,6 +5498,31 @@ export const zh_TW: EnTranslations = {
         "name": "哈爾文修士",
         "title": "聖物庫守護人",
         "greeting": "下方的聖物庫又移位了。"
+      },
+      "dawn_commander_sera": {
+        "name": "瑟拉指揮官",
+        "title": "克勞德黎明",
+        "greeting": "守住防線，{className}。那座漂浮的墳塚，克勞德薩瑪斯（Claudexxaramas），已將這整片土地染成灰白。克勞德黎明定要將它奪回，一個亡魂接著一個亡魂地奪回。"
+      },
+      "dawn_chaplain_orin": {
+        "name": "歐林牧師",
+        "title": "克勞德黎明",
+        "greeting": "聖光依然能照及此地，{playerName}，儘管已然微弱。幫我照料瀕死之人，並打破那艘船傾瀉而下的瘟疫吧。"
+      },
+      "dawn_quartermaster_henning": {
+        "name": "軍需官亨寧",
+        "title": "克勞德黎明",
+        "greeting": "鋼鐵與信念，{playerName}，這就是我所能給予的一切。贏得黎明的信任，軍需官的儲藏便會為你逐件開啟。"
+      },
+      "dawn_scout_irelle": {
+        "name": "斥候艾蕊兒",
+        "title": "克勞德黎明",
+        "greeting": "我已將這些死亡之路繪製到我膽敢前往的最北處，{className}。越是接近蒼白邊境，那艘船的低語便越是響亮。小心你的腳步。"
+      },
+      "dawn_archivist_vael": {
+        "name": "檔案官維爾",
+        "title": "克勞德黎明",
+        "greeting": "我能研究的每一片那座死靈城的碎片，都是我們或許有朝一日能撬開的裂縫，{playerName}。把死者身上攜帶之物帶來給我，我們便一同謀劃這場突破。"
       },
       "tidewatcher_ondrel": {
         "name": "翁德瑞爾·韋恩",
@@ -6084,6 +6280,212 @@ export const zh_TW: EnTranslations = {
         "objectives": {
           "0": {
             "label": "擊敗莫格"
+          }
+        }
+      },
+      "q_aw_arrival": {
+        "title": "灰燼與凶兆",
+        "text": "歡迎來到守墓堡，{playerName}，至少是枯萎瘟疫為我們留下的那一點殘餘。每晚都有倒下者的軀殼撕扯著我們的城牆。把其中八具放倒，好讓我的士兵能夠安睡，克勞德黎明便會把你視為一位日益深交的朋友。",
+        "completion": "城門前少了八個恐怖之物。你的手很穩，{playerName}。黎明銘記每一位與我們並肩之人。",
+        "objectives": {
+          "0": {
+            "label": "枯萎軀殼已殺"
+          }
+        }
+      },
+      "q_aw_husks": {
+        "title": "行走的枯萎瘟疫",
+        "text": "這些軀殼並非毫無心智，{playerName}，牠們會聚集，會試探我們的防線。在牠們摸清我們最薄弱之處前，再剷除十二具。拿上這雙踏靴行走吧，這片荒野對靴子可不留情。",
+        "completion": "很好。你焚毀的每一具軀殼，都是今夜無法再度爬起的一具。",
+        "objectives": {
+          "0": {
+            "label": "枯萎軀殼已殺"
+          }
+        }
+      },
+      "q_aw_ghouls": {
+        "title": "野性的飢渴",
+        "text": "灰燼食屍鬼成群獵食於白骨原野之上，迅捷而瘋狂。牠們已拖走了我兩名斥候。削減牠們，十隻應該足以打散這群東西，趁牠們還沒膽大到敢直衝城門。",
+        "completion": "鬼群已被打散。多虧了你，我的斥候又能在白骨原野上巡遊了。",
+        "objectives": {
+          "0": {
+            "label": "灰燼食屍鬼已殺"
+          }
+        }
+      },
+      "q_aw_crawlers": {
+        "title": "蔓延的病疫",
+        "text": "瘟疫爬行者的撕咬中帶著枯萎瘟疫，{playerName}，牠們在靜湖的泥沼中繁殖。殺掉牠們十隻。牠們走過之處，病疫便隨之而來，而我這裡已有太多病床躺滿了人。",
+        "completion": "病床上的護咒如今能再撐久一些了。聖光感謝你，即便我有時忘了道謝。",
+        "objectives": {
+          "0": {
+            "label": "瘟疫爬行者已殺"
+          }
+        }
+      },
+      "q_aw_samples": {
+        "title": "污染的樣本",
+        "text": "要治癒這枯萎瘟疫，我必須先理解它。那些軀殼與爬行者全身浸透了瘟疫，給我帶來六份牠們腐化血肉的污染樣本，並小心處理。那污染可不在乎它玷污的是誰的血。",
+        "completion": "六份樣本，一份比一份更糟。這腐化是……有規律的，是刻意為之的。這絕非自然的瘟疫，{playerName}。",
+        "objectives": {
+          "0": {
+            "label": "污染樣本"
+          }
+        }
+      },
+      "q_aw_acolytes": {
+        "title": "船艦之聲",
+        "text": "如今活人也跪拜於克勞德薩瑪斯之前，{playerName}，那些腐化的侍僧在荒野上吟誦著它的意志。他們已不再是我們所能拯救之人。讓其中十人安靜下來。拿上這雙護手吧，在此事了結之前，你還會遭遇更糟的。",
+        "completion": "吟誦聲動搖了。無論那艘船在建造什麼，你都讓它折損了十條甘願獻身的喉嚨。",
+        "objectives": {
+          "0": {
+            "label": "腐化侍僧已殺"
+          }
+        }
+      },
+      "q_aw_orders": {
+        "title": "來自上方的命令",
+        "text": "那些侍僧攜帶著書面命令，{playerName}，船開口言語，他們便謄錄下來。再砍倒八人，給我帶來四份那樣的命令書。我要在克勞德薩瑪斯所下達的命令臨到我們之前，先弄清它究竟下了什麼令。",
+        "completion": "這文字在你注視時彷彿在爬動。但確實是命令，一點不假：聚集死者，備妥蒼白邊境。他們正在為某件事做準備。",
+        "objectives": {
+          "0": {
+            "label": "腐化侍僧已殺"
+          },
+          "1": {
+            "label": "腐化的命令書"
+          }
+        }
+      },
+      "q_aw_reavers": {
+        "title": "白骨原野",
+        "text": "那些白骨掠奪者是行走的軍械庫，{playerName}，是被重鑄成船之利刃的舊日士兵。在白骨原野上擊碎牠們十二具。你打散的每一個掠奪者，都是再也不會揮向黎明的鋼鐵。",
+        "completion": "十二個掠奪者碎成了渣。那樣的殘料能讓我的鍛爐繼續燃燒。幹得好。",
+        "objectives": {
+          "0": {
+            "label": "白骨掠奪者已殺"
+          }
+        }
+      },
+      "q_aw_wraiths": {
+        "title": "空洞塚地",
+        "text": "此地以北的古老塚地已然甦醒，{playerName}。塚地幽靈從墳墓中飄出，那是會吸盡生者體溫的冰冷之物。讓其中十個安息。這片荒野的死者，理應得到比侍奉那艘船更好的歸宿。",
+        "completion": "十個亡魂得以重歸黑暗的安寧。我依你所述為每一個禱告。這是微小的慈悲，但它屬於我們。",
+        "objectives": {
+          "0": {
+            "label": "塚地幽靈已殺"
+          }
+        }
+      },
+      "q_aw_relics": {
+        "title": "受祝聖的聖物",
+        "text": "那些塚地藏有舊日信仰的聖物，曾受祝聖，如今卻被幽靈的觸碰所褻瀆。從墳墓中尋回五件，{playerName}。經過淨化與重新祝福，它們護衛病床的效力，將遠勝我那些日漸無力的禱告。",
+        "completion": "五件聖物，當污染消退時，每一件都在我手中變得溫熱。聖光並未離棄此地。它只是需要有人將它帶回家。",
+        "objectives": {
+          "0": {
+            "label": "被褻瀆的聖物"
+          }
+        }
+      },
+      "q_aw_hold": {
+        "title": "堅守守墓堡",
+        "text": "說句實話，{playerName}：我們正在節節敗退。那些掠奪者每晚都更加猛烈地進逼白骨原野。我需要再擊碎其中十四個，好為守備隊換來一週的喘息。黎明能指望你嗎？",
+        "completion": "一週。你為我們換來了一週。我不會白白浪費它，也絕不會忘記是誰換來了它。",
+        "objectives": {
+          "0": {
+            "label": "白骨掠奪者已殺"
+          }
+        }
+      },
+      "q_aw_behemoth": {
+        "title": "腐爛巨獸",
+        "text": "有個龐然大物在靜湖上移動，{playerName}，那是一頭由縫合腐爛的屍體拼湊而成的巨獸，大得足以像踏過籬笆般踏穿我們的城牆。帶上一兩名同伴，在它抵達守墓堡之前將它放倒。這條腰甲應能幫你承受牠的打擊。",
+        "completion": "你放倒了那座血肉之山。我在這上頭都感到大地停止了震動。為了這一仗，黎明欠你一份人情。",
+        "objectives": {
+          "0": {
+            "label": "腐爛巨獸已殺"
+          }
+        }
+      },
+      "q_aw_zealots": {
+        "title": "瘟疫散播者",
+        "text": "瘟疫狂信徒在通往蒼白邊境的路上播下一陣陣腐爛，{playerName}，而且他們互相治療的速度比一柄孤刃放倒他們的速度還快。殺掉八個。狠狠地打，齊心地打，別讓他們繞成圈互相療傷。",
+        "completion": "八個狂信徒，他們散播的腐爛也隨之而亡。那條路又能通行了，僅僅是勉強而已。",
+        "objectives": {
+          "0": {
+            "label": "瘟疫狂信徒已殺"
+          }
+        }
+      },
+      "q_aw_deathguard": {
+        "title": "船艦的守衛",
+        "text": "那些納克薩瑪斯死亡守衛是船自己的看守者，{playerName}，是身著黑色重甲的精英死者，駐守在克勞德薩瑪斯懸得最低之處。擊碎其中十個。我需要知道黎明能否在這死靈城的陰影正下方作戰。這頂頭盔曾屬於一名死亡守衛；戴上它去對付他們吧。",
+        "completion": "十名看守者倒下，就在船自己的陰影之中。那麼，這事便辦得到。那麼，總有一天，我們便能將這場戰鬥打上去。是你讓我看見了這一點，{playerName}。",
+        "objectives": {
+          "0": {
+            "label": "納克薩瑪斯死亡守衛已殺"
+          }
+        }
+      },
+      "q_aw_morthax": {
+        "title": "空洞之主",
+        "text": "上個季節，我們的一員倒在了空洞塚地之中，那是一位名叫莫薩克斯的騎士。那艘船將他喚起，{playerName}，如今空洞者莫薩克斯獵殺著他曾經率領的人。找到他。終結他。把他的心臟帶回給我，好讓我確信那披著他面容的東西真的已經消失。",
+        "completion": "冰冷。這心臟冷如磐石，空洞得正如他們給他的那個名字。安息吧，莫薩克斯。你侍奉黎明直到最後一刻，甚至超越了那一刻。",
+        "objectives": {
+          "0": {
+            "label": "空洞之心"
+          }
+        }
+      },
+      "q_aw_pale_reach": {
+        "title": "深入蒼白邊境",
+        "text": "蒼白邊境是其中最糟的地方，{playerName}，那是直接位於那艘錨定之船下方的空曠之地，密布著死亡守衛。我無法獨自將它繪製出來。為我開出一條路：放倒八名納克薩瑪斯死亡守衛，讓我在你身後勾勒地形。",
+        "completion": "我拿到手了，整片邊境，終於繪製完成，每一支巡邏隊、每一座尖塔。檔案官維爾會想要這份的。指揮官也會，等到向那艘船進軍的那一天來臨之時。",
+        "objectives": {
+          "0": {
+            "label": "納克薩瑪斯死亡守衛已殺"
+          }
+        }
+      },
+      "q_aw_ritual": {
+        "title": "破除儀式",
+        "text": "那些狂信徒正在蒼白邊境上施行一場儀式，要將克勞德薩瑪斯再拉低一些，{playerName}。他們每人都攜帶一件用以錨定儀式的儀式法器。奪走其中四件，並在此過程中殺死六名狂信徒，斬斷那些錨點，儀式便會停滯。",
+        "completion": "那些法器一離開邊境便立刻黯滅。四個錨點已斷。那艘船今日不會再懸得更低，這便是一場勝利，無論它多麼渺小。",
+        "objectives": {
+          "0": {
+            "label": "儀式法器"
+          },
+          "1": {
+            "label": "瘟疫狂信徒已殺"
+          }
+        }
+      },
+      "q_aw_attune_1": {
+        "title": "克勞德薩瑪斯的回響",
+        "text": "要突破這座死靈城，我們必須先理解它，{playerName}。它的看守者攜帶著它船殼的碎片，那是仍與船同律共鳴的死亡金屬。從死亡守衛身上給我帶來三片船艦碎片，我便會開始學習納克薩瑪斯的歌謠。",
+        "completion": "它們彼此共鳴，聽。同一首輓歌的三個音符。只要有足夠多這樣的碎片，檔案官，我便能繪製出通往內部的路徑。我們就是要這樣突破它。",
+        "objectives": {
+          "0": {
+            "label": "船艦碎片"
+          }
+        }
+      },
+      "q_aw_gravelord": {
+        "title": "墓主奧斯",
+        "text": "墓主奧斯是船在地面上的手，{playerName}，是將整片枯萎瘟疫錨定於蒼白邊境的副官。召集你最強的同伴；這絕非一人之戰，甚至三人也不足夠。砍倒這位墓主，這片荒野本身或許便會開始癒合。",
+        "completion": "奧斯死了，看哪，邊境上的灰燼已開始褪向灰綠之色。你殺死的不只是一名副官，{playerName}。你向黎明證明了：克勞德薩瑪斯也會流血。",
+        "objectives": {
+          "0": {
+            "label": "墓主奧斯已殺"
+          }
+        }
+      },
+      "q_aw_attunement": {
+        "title": "突破納克薩瑪斯",
+        "text": "奧斯既死，墓主的錨點已斷，那艘船如今懸於脆弱之境，{playerName}。就是此刻。再給我帶來五片船艦碎片，我便會將它們鍛造成一枚黎明印記，那是你對納克薩瑪斯本身的共鳴標記。當克勞德黎明終於攻入那座死靈城時，持有印記者將引領這場突破，而這場攻勢付出的鮮血與鋼鐵，將只需原本的一半。",
+        "completion": "成了。黎明印記歸你所有，{playerName}，這是向這支教團中每一個亡魂證明你已為這座死靈城做好準備的明證。當我們向克勞德薩瑪斯進軍時，你將走在最前。在我們之中受人崇敬，與這場突破共鳴相連。黎明再也尋不到比你更真誠的勇士了。",
+        "objectives": {
+          "0": {
+            "label": "船艦碎片"
           }
         }
       },

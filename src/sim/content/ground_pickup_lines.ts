@@ -81,6 +81,14 @@ export const GROUND_PICKUP_LINES: Record<string, GroundPickupLines> = {
     deny: 'The ritual circle lies cold and dormant.',
     enough: 'The circle has nothing more to give you.',
   },
+  desecrated_relic: {
+    deny: 'The relic will not stir until the Chaplain sends you for it.',
+    enough: 'You already carry enough desecrated relics.',
+  },
+  ritual_focus: {
+    deny: 'The ritual focus is bound to its rite; it ignores your hand.',
+    enough: 'You already have enough ritual foci.',
+  },
 };
 
 export function groundPickupDeny(itemId: string, itemName: string): string {

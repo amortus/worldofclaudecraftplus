@@ -4439,6 +4439,144 @@ export const fr_FR: EnTranslations = {
       "monarch_crown_helm": {
         "name": "Couronne du Monarque"
       },
+      "blight_sample": {
+        "name": "Echantillon souille"
+      },
+      "cult_orders": {
+        "name": "Ordres corrompus"
+      },
+      "desecrated_relic": {
+        "name": "Relique profanee"
+      },
+      "ritual_focus": {
+        "name": "Catalyseur rituel"
+      },
+      "ship_fragment": {
+        "name": "Fragment du vaisseau"
+      },
+      "hollow_heart": {
+        "name": "Coeur creux"
+      },
+      "sigil_of_the_dawn": {
+        "name": "Sceau de l'Aube"
+      },
+      "ashen_warboots": {
+        "name": "Bottes de guerre cendrees"
+      },
+      "ashen_slippers": {
+        "name": "Chaussons cendres"
+      },
+      "ashen_treads": {
+        "name": "Sandales cendrees"
+      },
+      "dawnward_gauntlets": {
+        "name": "Gantelets sentinelles de l'aube"
+      },
+      "dawnward_gloves": {
+        "name": "Gants sentinelles de l'aube"
+      },
+      "dawnward_grips": {
+        "name": "Poignes sentinelles de l'aube"
+      },
+      "behemoth_girdle": {
+        "name": "Ceinturon du behemoth"
+      },
+      "behemoth_sash": {
+        "name": "Echarpe du behemoth"
+      },
+      "behemoth_belt": {
+        "name": "Ceinture du behemoth"
+      },
+      "deathward_helm": {
+        "name": "Heaume garde-mort"
+      },
+      "deathward_hood": {
+        "name": "Capuche garde-mort"
+      },
+      "deathward_cowl": {
+        "name": "Coiffe garde-mort"
+      },
+      "gravelord_pauldrons": {
+        "name": "Spalieres du seigneur des tombes"
+      },
+      "gravelord_amice": {
+        "name": "Amict du seigneur des tombes"
+      },
+      "gravelord_spaulders": {
+        "name": "Epaulieres du seigneur des tombes"
+      },
+      "dawnguard_sabatons": {
+        "name": "Solerets de la garde de l'aube"
+      },
+      "dawnguard_gauntlets": {
+        "name": "Gantelets de la garde de l'aube"
+      },
+      "dawnguard_girdle": {
+        "name": "Ceinturon de la garde de l'aube"
+      },
+      "dawnguard_greathelm": {
+        "name": "Grand-heaume de la garde de l'aube"
+      },
+      "dawnguard_legplates": {
+        "name": "Jambieres de la garde de l'aube"
+      },
+      "dawnguard_pauldrons": {
+        "name": "Spalieres de la garde de l'aube"
+      },
+      "dawnguard_breastplate": {
+        "name": "Plastron de la garde de l'aube"
+      },
+      "dawnguard_blade": {
+        "name": "Lame de la garde de l'aube"
+      },
+      "dawn_slippers": {
+        "name": "Chaussons de l'aube"
+      },
+      "dawn_handwraps": {
+        "name": "Bandelettes de l'aube"
+      },
+      "dawn_cord": {
+        "name": "Cordon de l'aube"
+      },
+      "dawn_cowl": {
+        "name": "Coiffe de l'aube"
+      },
+      "dawn_leggings": {
+        "name": "Jambieres de l'aube"
+      },
+      "dawn_mantle": {
+        "name": "Mantelet de l'aube"
+      },
+      "dawn_robe": {
+        "name": "Robe de l'aube"
+      },
+      "dawn_scepter": {
+        "name": "Sceptre de l'Aube"
+      },
+      "dawnstalker_treads": {
+        "name": "Sandales du traqueur de l'aube"
+      },
+      "dawnstalker_grips": {
+        "name": "Poignes du traqueur de l'aube"
+      },
+      "dawnstalker_belt": {
+        "name": "Ceinture du traqueur de l'aube"
+      },
+      "dawnstalker_mask": {
+        "name": "Masque du traqueur de l'aube"
+      },
+      "dawnstalker_legguards": {
+        "name": "Cuissardes du traqueur de l'aube"
+      },
+      "dawnstalker_spaulders": {
+        "name": "Epaulieres du traqueur de l'aube"
+      },
+      "dawnstalker_tunic": {
+        "name": "Tunique du traqueur de l'aube"
+      },
+      "dawnstalker_dagger": {
+        "name": "Dague du traqueur de l'aube"
+      },
       "bristleback_maul": {
         "name": "Maillet Bristleback"
       },
@@ -5113,6 +5251,39 @@ export const fr_FR: EnTranslations = {
       "acolyte_tessa": {
         "name": "Acolyte Tessa"
       },
+      "blighted_husk": {
+        "name": "Carcasse souillee"
+      },
+      "ashen_ghoul": {
+        "name": "Goule cendreuse"
+      },
+      "plague_crawler": {
+        "name": "Rampant pestilentiel"
+      },
+      "corrupted_acolyte": {
+        "name": "Acolyte corrompu"
+      },
+      "bone_reaver": {
+        "name": "Faucheur d'os"
+      },
+      "wraithling": {
+        "name": "Spectreteau des tertres"
+      },
+      "rotting_behemoth": {
+        "name": "Behemoth putride"
+      },
+      "plaguebringer_zealot": {
+        "name": "Fanatique porte-peste"
+      },
+      "naxx_deathguard": {
+        "name": "Garde-mort de Naxxramas"
+      },
+      "morthax_the_hollow": {
+        "name": "Morthax le Creux"
+      },
+      "gravelord_oss": {
+        "name": "Seigneur des tombes Oss"
+      },
       "ironvein_foreman": {
         "name": "Contremaître Veinefer"
       },
@@ -5327,6 +5498,31 @@ export const fr_FR: EnTranslations = {
         "name": "Frère Halven",
         "title": "Gardien du reliquaire",
         "greeting": "Le reliquaire d'en bas a de nouveau bougé."
+      },
+      "dawn_commander_sera": {
+        "name": "Commandante Sera",
+        "title": "Dawn of Claude",
+        "greeting": "Tenez la ligne, {className}. Ce tombeau flottant, le Claudexxaramas, a saigne toute cette terre jusqu'au gris. La Dawn of Claude la reprendra, ame par ame."
+      },
+      "dawn_chaplain_orin": {
+        "name": "Chapelain Orin",
+        "title": "Dawn of Claude",
+        "greeting": "La Lumiere atteint encore ces lieux, {playerName}, bien que faiblement. Aidez-moi a soigner les mourants et a briser le fleau que le vaisseau deverse sur nous."
+      },
+      "dawn_quartermaster_henning": {
+        "name": "Intendant Henning",
+        "title": "Dawn of Claude",
+        "greeting": "De l'acier et de la foi, {playerName}, c'est tout ce que j'ai a offrir. Gagnez la confiance de l'Aube et le magasin de l'intendant s'ouvrira a vous, piece par piece."
+      },
+      "dawn_scout_irelle": {
+        "name": "Eclaireuse Irelle",
+        "title": "Dawn of Claude",
+        "greeting": "J'ai cartographie les routes mortes aussi loin au nord que j'ose, {className}. Plus on approche de la Marche Bleme, plus le vaisseau murmure fort. Surveillez vos pas."
+      },
+      "dawn_archivist_vael": {
+        "name": "Archiviste Vael",
+        "title": "Dawn of Claude",
+        "greeting": "Chaque eclat de cette necropole que je puis etudier est une faille que nous pourrons un jour forcer, {playerName}. Apportez-moi ce que portent les morts, et nous planifierons la breche ensemble."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6084,6 +6280,212 @@ export const fr_FR: EnTranslations = {
         "objectives": {
           "0": {
             "label": "Mogger tué"
+          }
+        }
+      },
+      "q_aw_arrival": {
+        "title": "Cendres et presages",
+        "text": "Bienvenue a Veillesepulcre, {playerName}, ou ce qu'il en reste apres la souillure. Les carcasses des disparus griffent nos murs chaque nuit. Abattez-en huit pour que mes soldats puissent dormir, et la Dawn of Claude vous comptera comme un ami en devenir.",
+        "completion": "Huit horreurs de moins a la porte. Vous avez la main sure, {playerName}. L'Aube se souvient de ceux qui se dressent a nos cotes.",
+        "objectives": {
+          "0": {
+            "label": "Carcasse souillee tuee"
+          }
+        }
+      },
+      "q_aw_husks": {
+        "title": "La souillure ambulante",
+        "text": "Les carcasses ne sont pas sans esprit, {playerName} : elles se rassemblent, elles sondent nos lignes. Eliminez-en douze de plus avant qu'elles n'apprennent ou nous sommes le plus faibles. Prenez ces sandales pour la marche, les terres desolees usent les bottes.",
+        "completion": "Bien. Chaque carcasse que vous brulez est une de moins qui ne se relevera pas cette nuit.",
+        "objectives": {
+          "0": {
+            "label": "Carcasse souillee tuee"
+          }
+        }
+      },
+      "q_aw_ghouls": {
+        "title": "Faim sauvage",
+        "text": "Les goules cendreuses chassent en meute dans les Champs d'os, rapides et enragees. Elles ont deja emporte deux de mes eclaireurs. Decimez-les, dix devraient briser la meute, avant qu'elles ne deviennent assez hardies pour assaillir la porte.",
+        "completion": "Les meutes sont dispersees. Mes eclaireurs peuvent de nouveau parcourir les Champs d'os, grace a vous.",
+        "objectives": {
+          "0": {
+            "label": "Goule cendreuse tuee"
+          }
+        }
+      },
+      "q_aw_crawlers": {
+        "title": "Mal contagieux",
+        "text": "Les rampants pestilentiels portent la souillure dans leur morsure, {playerName}, et ils se reproduisent dans la boue de Calmemer. Tuez-en dix. La ou ils passent, le mal suit, et j'ai deja bien trop de lits occupes.",
+        "completion": "Les protections sur les lits tiendront un peu plus longtemps a present. La Lumiere vous remercie, meme quand j'oublie de le faire.",
+        "objectives": {
+          "0": {
+            "label": "Rampant pestilentiel tue"
+          }
+        }
+      },
+      "q_aw_samples": {
+        "title": "Echantillons souilles",
+        "text": "Pour guerir la souillure, je dois d'abord la comprendre. Les carcasses et les rampants en sont imbibes : apportez-moi six echantillons souilles de leur chair corrompue, et manipulez-les avec soin. La souillure se moque de savoir quel sang elle gate.",
+        "completion": "Six echantillons, chacun pire que le precedent. La corruption est... ordonnee. Deliberee. Ce n'est pas un fleau naturel, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Echantillon souille"
+          }
+        }
+      },
+      "q_aw_acolytes": {
+        "title": "Les voix du vaisseau",
+        "text": "Des hommes vivants s'agenouillent devant le Claudexxaramas a present, {playerName} : des acolytes corrompus qui psalmodient sa volonte a travers les terres desolees. Ils ne sont plus des notres a sauver. Reduisez-en dix au silence. Prenez ces protege-mains, vous en gagnerez de pires avant la fin.",
+        "completion": "Les chants vacillent. Quoi que le vaisseau batisse, vous lui avez coute dix gorges consentantes.",
+        "objectives": {
+          "0": {
+            "label": "Acolyte corrompu tue"
+          }
+        }
+      },
+      "q_aw_orders": {
+        "title": "Ordres d'en haut",
+        "text": "Les acolytes portent des ordres ecrits, {playerName} : le vaisseau parle et ils transcrivent. Abattez-en huit de plus et rapportez-moi quatre jeux de ces ordres. Je veux savoir ce que le Claudexxaramas commande avant qu'il ne nous soit commande.",
+        "completion": "Cette ecriture rampe quand on la regarde. Mais ce sont bien des ordres : rassembler les morts, preparer la Marche Bleme. Ils preparent quelque chose.",
+        "objectives": {
+          "0": {
+            "label": "Acolyte corrompu tue"
+          },
+          "1": {
+            "label": "Ordres corrompus"
+          }
+        }
+      },
+      "q_aw_reavers": {
+        "title": "Champs d'os",
+        "text": "Les faucheurs d'os sont des arsenaux ambulants, {playerName} : de vieux soldats reforges en lames du vaisseau. Brisez-en douze sur les Champs d'os. Chaque faucheur que vous dispersez est de l'acier qui ne se levera plus jamais contre l'Aube.",
+        "completion": "Douze faucheurs reduits en eclats. Une telle recuperation garde ma forge allumee. Bien joue.",
+        "objectives": {
+          "0": {
+            "label": "Faucheur d'os tue"
+          }
+        }
+      },
+      "q_aw_wraiths": {
+        "title": "Tertres creux",
+        "text": "Les vieux tertres au nord d'ici se sont eveilles, {playerName}. Des spectreteaux derivent des tombes, choses froides qui aspirent la chaleur des vivants. Mettez-en dix au repos. Les morts de ces terres desolees meritent mieux que de servir ce vaisseau.",
+        "completion": "Dix ames rendues a l'obscurite. J'ai prie sur chacune comme vous l'avez decrit. C'est une maigre misericorde, mais elle est notre.",
+        "objectives": {
+          "0": {
+            "label": "Spectreteau des tertres tue"
+          }
+        }
+      },
+      "q_aw_relics": {
+        "title": "Reliques sanctifiees",
+        "text": "Les tertres recelent des reliques de l'ancienne foi, jadis sanctifiees, profanees aujourd'hui par le contact des spectreteaux. Recuperez-en cinq dans les tombes, {playerName}. Purifiees et re-benies, elles protegeront les lits bien mieux que mes prieres defaillantes.",
+        "completion": "Cinq reliques, et chacune se rechauffe dans mes mains a mesure que la souillure se dissipe. La Lumiere n'a pas deserte ce lieu. Il fallait seulement la ramener chez elle.",
+        "objectives": {
+          "0": {
+            "label": "Relique profanee"
+          }
+        }
+      },
+      "q_aw_hold": {
+        "title": "Tenir Veillesepulcre",
+        "text": "La verite toute nue, {playerName} : nous perdons du terrain. Les faucheurs pressent les Champs d'os plus fort chaque nuit. Il m'en faut quatorze de plus brises pour offrir a la garnison une semaine de repit. L'Aube peut-elle compter sur vous ?",
+        "completion": "Une semaine. Vous nous avez achete une semaine. Je ne la gacherai pas, et je n'oublierai pas qui l'a gagnee.",
+        "objectives": {
+          "0": {
+            "label": "Faucheur d'os tue"
+          }
+        }
+      },
+      "q_aw_behemoth": {
+        "title": "Le behemoth putride",
+        "text": "Quelque chose d'enorme se meut sur Calmemer, {playerName} : un behemoth de morts cousus et putrides, assez grand pour traverser notre mur comme une cloture. Prenez un compagnon ou deux et abattez-le avant qu'il n'atteigne Veillesepulcre. Ce ceinturon devrait vous aider a encaisser les coups.",
+        "completion": "Vous avez fait tomber la montagne de chair. J'ai senti le sol cesser de trembler d'ici. L'Aube vous est redevable pour celle-la.",
+        "objectives": {
+          "0": {
+            "label": "Behemoth putride tue"
+          }
+        }
+      },
+      "q_aw_zealots": {
+        "title": "Porte-pestes",
+        "text": "Les fanatiques porte-pestes ensemencent l'approche de la Marche Bleme de leurs eclats de pourriture, {playerName}, et ils se soignent les uns les autres plus vite qu'une lame solitaire ne peut les abattre. Tuez-en huit. Frappez fort, frappez ensemble, et ne les laissez pas s'encercler pour se soigner.",
+        "completion": "Huit fanatiques, et la pourriture qu'ils semaient meurt avec eux. L'approche est de nouveau praticable, tout juste.",
+        "objectives": {
+          "0": {
+            "label": "Fanatique porte-peste tue"
+          }
+        }
+      },
+      "q_aw_deathguard": {
+        "title": "Les gardiens du vaisseau",
+        "text": "Les gardes-morts de Naxxramas sont les gardiens du vaisseau lui-meme, {playerName} : des morts d'elite en plates noires, postes la ou le Claudexxaramas plane au plus bas. Brisez-en dix. J'ai besoin de savoir si l'Aube peut combattre dans l'ombre meme de la necropole. Ce heaume fut jadis celui d'un garde-mort, portez-le contre eux.",
+        "completion": "Dix gardiens a terre, dans l'ombre meme du vaisseau. Alors c'est possible. Alors nous pourrons porter le combat VERS LE HAUT, un jour. Vous me l'avez montre, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Garde-mort de Naxxramas tue"
+          }
+        }
+      },
+      "q_aw_morthax": {
+        "title": "Le seigneur creux",
+        "text": "L'un des notres est tombe dans les Tertres creux la saison passee : un chevalier nomme Morthax. Le vaisseau l'a releve, {playerName}, et Morthax le Creux traque desormais les hommes qu'il menait jadis. Trouvez-le. Achevez-le. Rapportez-moi son coeur que je sache que la chose portant son visage a vraiment disparu.",
+        "completion": "Froid. Le coeur est glace comme la pierre et creux comme le nom qu'on lui a donne. Reposez maintenant, Morthax. Vous avez servi l'Aube jusqu'au bout, et au-dela.",
+        "objectives": {
+          "0": {
+            "label": "Coeur creux"
+          }
+        }
+      },
+      "q_aw_pale_reach": {
+        "title": "Dans la Marche Bleme",
+        "text": "La Marche Bleme est le pire de tout, {playerName} : une terre nue directement sous le vaisseau ancre, grouillante de gardes-morts. Je ne puis la cartographier seule. Ouvrez-moi un chemin : abattez huit gardes-morts de Naxxramas tandis que je dessine le terrain derriere vous.",
+        "completion": "Je l'ai : toute la Marche, cartographiee enfin, chaque patrouille et chaque pylone. L'archiviste Vael voudra ceci. La Commandante aussi, quand viendra le jour de marcher sur le vaisseau.",
+        "objectives": {
+          "0": {
+            "label": "Garde-mort de Naxxramas tue"
+          }
+        }
+      },
+      "q_aw_ritual": {
+        "title": "Briser le rituel",
+        "text": "Les fanatiques accomplissent un rituel sur la Marche Bleme pour attirer le Claudexxaramas plus bas encore, {playerName}. Chacun porte un catalyseur rituel qui ancre le rite. Prenez-en quatre, et tuez six fanatiques dans la manoeuvre : tranchez les ancres et le rituel s'enraye.",
+        "completion": "Les catalyseurs s'eteignent des qu'ils quittent la Marche. Quatre ancres tranchees. Le vaisseau ne plane pas plus bas aujourd'hui, et c'est une victoire, si petite soit-elle.",
+        "objectives": {
+          "0": {
+            "label": "Catalyseur rituel"
+          },
+          "1": {
+            "label": "Fanatique porte-peste tue"
+          }
+        }
+      },
+      "q_aw_attune_1": {
+        "title": "Echos du Claudexxaramas",
+        "text": "Pour percer la necropole, nous devons d'abord la comprendre, {playerName}. Ses gardiens portent des fragments de sa coque : du metal mort qui vibre encore au rythme du vaisseau. Apportez-moi trois fragments du vaisseau preleves sur les gardes-morts, et je commencerai a apprendre le chant de Naxxramas.",
+        "completion": "Ils resonnent ensemble, ecoutez. Trois notes du meme requiem. Avec assez de ceux-ci, archiviste, je pourrais cartographier le chemin de L'INTERIEUR. C'est ainsi que nous le percerons.",
+        "objectives": {
+          "0": {
+            "label": "Fragment du vaisseau"
+          }
+        }
+      },
+      "q_aw_gravelord": {
+        "title": "Le seigneur des tombes Oss",
+        "text": "Le seigneur des tombes Oss est la main du vaisseau sur le terrain, {playerName} : le lieutenant qui ancre toute la souillure a la Marche Bleme. Rassemblez vos plus puissants compagnons : ce n'est pas un combat pour un seul, ni meme pour trois. Abattez le seigneur des tombes et les terres desolees elles-memes pourront commencer a guerir.",
+        "completion": "Oss est mort, et regardez : la cendre de la Marche palit deja vers un vert-de-gris. Vous n'avez pas seulement tue un lieutenant, {playerName}. Vous avez montre a l'Aube que le Claudexxaramas peut saigner.",
+        "objectives": {
+          "0": {
+            "label": "Seigneur des tombes Oss tue"
+          }
+        }
+      },
+      "q_aw_attunement": {
+        "title": "La breche de Naxxramas",
+        "text": "Oss mort et l'ancre du seigneur des tombes brisee, le vaisseau plane, vulnerable, {playerName}. C'est le moment. Apportez-moi cinq fragments du vaisseau de plus et je les forgerai en un Sceau de l'Aube : votre harmonisation a Naxxramas lui-meme. Quand la Dawn of Claude prendra enfin d'assaut cette necropole, les porteurs du sceau meneront la breche, et l'assaut nous coutera la moitie du sang et de l'acier qu'il devrait.",
+        "completion": "C'est fait. Le Sceau de l'Aube est votre, {playerName} : la preuve, pour chaque ame de cet ordre, que vous etes pret pour la necropole. Quand nous marcherons sur le Claudexxaramas, vous marcherez en tete. Venere parmi nous, harmonise a la breche. L'Aube ne saurait reclamer champion plus authentique.",
+        "objectives": {
+          "0": {
+            "label": "Fragment du vaisseau"
           }
         }
       },

@@ -4439,6 +4439,144 @@ export const es_ES: EnTranslations = {
       "monarch_crown_helm": {
         "name": "Corona del Monarca"
       },
+      "blight_sample": {
+        "name": "Muestra Corrompida"
+      },
+      "cult_orders": {
+        "name": "Ordenes Corrompidas"
+      },
+      "desecrated_relic": {
+        "name": "Reliquia Profanada"
+      },
+      "ritual_focus": {
+        "name": "Foco Ritual"
+      },
+      "ship_fragment": {
+        "name": "Fragmento de la Nave"
+      },
+      "hollow_heart": {
+        "name": "Corazon Hueco"
+      },
+      "sigil_of_the_dawn": {
+        "name": "Sigilo del Alba"
+      },
+      "ashen_warboots": {
+        "name": "Botas de Guerra Cenicientas"
+      },
+      "ashen_slippers": {
+        "name": "Escarpines Cenicientos"
+      },
+      "ashen_treads": {
+        "name": "Pisadas Cenicientas"
+      },
+      "dawnward_gauntlets": {
+        "name": "Guanteletes del Guardalba"
+      },
+      "dawnward_gloves": {
+        "name": "Guantes del Guardalba"
+      },
+      "dawnward_grips": {
+        "name": "Asideros del Guardalba"
+      },
+      "behemoth_girdle": {
+        "name": "Faja del Behemot"
+      },
+      "behemoth_sash": {
+        "name": "Fajin del Behemot"
+      },
+      "behemoth_belt": {
+        "name": "Cinturon del Behemot"
+      },
+      "deathward_helm": {
+        "name": "Yelmo del Guardamuerte"
+      },
+      "deathward_hood": {
+        "name": "Capucha del Guardamuerte"
+      },
+      "deathward_cowl": {
+        "name": "Capuchon del Guardamuerte"
+      },
+      "gravelord_pauldrons": {
+        "name": "Hombreras del Señor de las Tumbas"
+      },
+      "gravelord_amice": {
+        "name": "Almucia del Señor de las Tumbas"
+      },
+      "gravelord_spaulders": {
+        "name": "Espaldares del Señor de las Tumbas"
+      },
+      "dawnguard_sabatons": {
+        "name": "Escarpes de la Guardia del Alba"
+      },
+      "dawnguard_gauntlets": {
+        "name": "Guanteletes de la Guardia del Alba"
+      },
+      "dawnguard_girdle": {
+        "name": "Faja de la Guardia del Alba"
+      },
+      "dawnguard_greathelm": {
+        "name": "Gran Yelmo de la Guardia del Alba"
+      },
+      "dawnguard_legplates": {
+        "name": "Quijotes de la Guardia del Alba"
+      },
+      "dawnguard_pauldrons": {
+        "name": "Hombreras de la Guardia del Alba"
+      },
+      "dawnguard_breastplate": {
+        "name": "Peto de la Guardia del Alba"
+      },
+      "dawnguard_blade": {
+        "name": "Hoja de la Guardia del Alba"
+      },
+      "dawn_slippers": {
+        "name": "Escarpines del Alba"
+      },
+      "dawn_handwraps": {
+        "name": "Vendas de Manos del Alba"
+      },
+      "dawn_cord": {
+        "name": "Cordon del Alba"
+      },
+      "dawn_cowl": {
+        "name": "Capuchon del Alba"
+      },
+      "dawn_leggings": {
+        "name": "Calzas del Alba"
+      },
+      "dawn_mantle": {
+        "name": "Manto del Alba"
+      },
+      "dawn_robe": {
+        "name": "Tunica del Alba"
+      },
+      "dawn_scepter": {
+        "name": "Cetro del Alba"
+      },
+      "dawnstalker_treads": {
+        "name": "Pisadas del Acechalba"
+      },
+      "dawnstalker_grips": {
+        "name": "Asideros del Acechalba"
+      },
+      "dawnstalker_belt": {
+        "name": "Cinturon del Acechalba"
+      },
+      "dawnstalker_mask": {
+        "name": "Mascara del Acechalba"
+      },
+      "dawnstalker_legguards": {
+        "name": "Grebas del Acechalba"
+      },
+      "dawnstalker_spaulders": {
+        "name": "Espaldares del Acechalba"
+      },
+      "dawnstalker_tunic": {
+        "name": "Tunica del Acechalba"
+      },
+      "dawnstalker_dagger": {
+        "name": "Daga del Acechalba"
+      },
       "bristleback_maul": {
         "name": "Maza Bristleback"
       },
@@ -5113,6 +5251,39 @@ export const es_ES: EnTranslations = {
       "acolyte_tessa": {
         "name": "Acólita Tessa"
       },
+      "blighted_husk": {
+        "name": "Cascaron Plagado"
+      },
+      "ashen_ghoul": {
+        "name": "Necrofago Ceniciento"
+      },
+      "plague_crawler": {
+        "name": "Reptador de la Plaga"
+      },
+      "corrupted_acolyte": {
+        "name": "Acolito Corrompido"
+      },
+      "bone_reaver": {
+        "name": "Segador de Huesos"
+      },
+      "wraithling": {
+        "name": "Espectrillo del Tumulo"
+      },
+      "rotting_behemoth": {
+        "name": "Behemot Putrefacto"
+      },
+      "plaguebringer_zealot": {
+        "name": "Fanatico Portaplagas"
+      },
+      "naxx_deathguard": {
+        "name": "Guardia Mortal de Naxxramas"
+      },
+      "morthax_the_hollow": {
+        "name": "Morthax el Hueco"
+      },
+      "gravelord_oss": {
+        "name": "Señor de las Tumbas Oss"
+      },
       "ironvein_foreman": {
         "name": "Capataz Vena de Hierro"
       },
@@ -5327,6 +5498,31 @@ export const es_ES: EnTranslations = {
         "name": "Hermano Halven",
         "title": "Guardián del Relicario",
         "greeting": "El relicario de abajo ha vuelto a moverse."
+      },
+      "dawn_commander_sera": {
+        "name": "Comandante Sera",
+        "title": "Dawn of Claude",
+        "greeting": "Mantengan la linea, {className}. Esa tumba flotante, el Claudexxaramas, ha desangrado de gris toda esta tierra. La Dawn of Claude la recuperara, alma por alma."
+      },
+      "dawn_chaplain_orin": {
+        "name": "Capellan Orin",
+        "title": "Dawn of Claude",
+        "greeting": "La Luz aun llega hasta aqui, {playerName}, aunque sea tenue. Ayudame a cuidar a los moribundos y a romper la plaga que la nave vierte sobre nosotros."
+      },
+      "dawn_quartermaster_henning": {
+        "name": "Intendente Henning",
+        "title": "Dawn of Claude",
+        "greeting": "Acero y fe, {playerName}, es cuanto tengo para dar. Gana la confianza del Alba y el almacen del intendente se te abrira, pieza por pieza."
+      },
+      "dawn_scout_irelle": {
+        "name": "Exploradora Irelle",
+        "title": "Dawn of Claude",
+        "greeting": "He cartografiado los caminos muertos tan al norte como me atrevo, {className}. Cuanto mas cerca del Confin Palido, mas alto susurra la nave. Cuida tus pasos."
+      },
+      "dawn_archivist_vael": {
+        "name": "Archivista Vael",
+        "title": "Dawn of Claude",
+        "greeting": "Cada esquirla de esa necropolis que pueda estudiar es una grieta que algun dia podriamos abrir, {playerName}. Traeme lo que cargan los muertos y planearemos juntos la brecha."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6084,6 +6280,212 @@ export const es_ES: EnTranslations = {
         "objectives": {
           "0": {
             "label": "Mogger abatido"
+          }
+        }
+      },
+      "q_aw_arrival": {
+        "title": "Cenizas y Presagios",
+        "text": "Bienvenido a Vigilia Sepulcral, {playerName}, lo poco que la peste nos ha dejado de ella. Los cascarones de los caidos arañan nuestros muros cada noche. Abate a ocho de ellos para que mis soldados puedan dormir, y la Dawn of Claude te contara como un amigo en ciernes.",
+        "completion": "Ocho horrores menos en la puerta. Tienes mano firme, {playerName}. El Alba recuerda a quienes estan con nosotros.",
+        "objectives": {
+          "0": {
+            "label": "Cascaron Plagado abatido"
+          }
+        }
+      },
+      "q_aw_husks": {
+        "title": "La Peste Andante",
+        "text": "Los cascarones no son insensatos, {playerName}, se reunen, tantean nuestras lineas. Diezma a doce mas antes de que descubran donde somos mas debiles. Toma estas pisadas para el camino, los yermos son duros con las botas.",
+        "completion": "Bien. Cada cascaron que quemas es uno que no podra alzarse de nuevo esta noche.",
+        "objectives": {
+          "0": {
+            "label": "Cascaron Plagado abatido"
+          }
+        }
+      },
+      "q_aw_ghouls": {
+        "title": "Hambre Salvaje",
+        "text": "Los necrofagos cenicientos cazan en jaurias por los Campos de Hueso, rapidos y rabiosos. Ya se han llevado a dos de mis exploradores. Mermalos, diez deberian quebrar la jauria, antes de que se envalentonen lo bastante para asaltar la puerta.",
+        "completion": "Las jaurias estan dispersas. Mis exploradores pueden recorrer los Campos de Hueso de nuevo, gracias a ti.",
+        "objectives": {
+          "0": {
+            "label": "Necrofago Ceniciento abatido"
+          }
+        }
+      },
+      "q_aw_crawlers": {
+        "title": "Enfermedad que se Extiende",
+        "text": "Los reptadores de la plaga llevan la peste en su mordedura, {playerName}, y se crian en el lodo de Estanque Quieto. Mata a diez de ellos. Por donde caminan, la enfermedad los sigue, y ya tengo demasiados catres ocupados.",
+        "completion": "Las protecciones de los catres aguantaran un poco mas ahora. La Luz te lo agradece, incluso cuando yo lo olvido.",
+        "objectives": {
+          "0": {
+            "label": "Reptador de la Plaga abatido"
+          }
+        }
+      },
+      "q_aw_samples": {
+        "title": "Muestras Corrompidas",
+        "text": "Para curar la peste primero debo comprenderla. Los cascarones y reptadores estan empapados de ella, traeme seis muestras corrompidas de su carne, y manejalas con cuidado. A la corrupcion no le importa de quien es la sangre que mancha.",
+        "completion": "Seis muestras, cada una peor que la anterior. La corrupcion esta... pautada. Deliberada. Esto no es una plaga natural, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Muestra Corrompida"
+          }
+        }
+      },
+      "q_aw_acolytes": {
+        "title": "Voces de la Nave",
+        "text": "Hombres vivos se arrodillan ahora ante el Claudexxaramas, {playerName}, acolitos corrompidos que entonan su voluntad por los yermos. Ya no son nuestros para salvarlos. Silencia a diez de ellos. Toma estos protectores de manos, ganaras cosas peores antes de que esto termine.",
+        "completion": "El cantico flaquea. Sea lo que sea que la nave este construyendo, le has costado diez gargantas dispuestas.",
+        "objectives": {
+          "0": {
+            "label": "Acolito Corrompido abatido"
+          }
+        }
+      },
+      "q_aw_orders": {
+        "title": "Ordenes de Arriba",
+        "text": "Los acolitos llevan ordenes escritas, {playerName}, la nave habla y ellos transcriben. Abate a ocho mas y traeme cuatro juegos de esas ordenes. Quisiera saber que ordena el Claudexxaramas antes de que se nos ordene a nosotros.",
+        "completion": "Esta escritura se retuerce cuando la miras. Pero son ordenes, sin duda: reunir a los muertos, alistar el Confin Palido. Se estan preparando para algo.",
+        "objectives": {
+          "0": {
+            "label": "Acolito Corrompido abatido"
+          },
+          "1": {
+            "label": "Ordenes Corrompidas"
+          }
+        }
+      },
+      "q_aw_reavers": {
+        "title": "Campos de Hueso",
+        "text": "Los segadores de huesos son arsenales andantes, {playerName}, viejos soldados reforjados en las hojas de la nave. Quiebra a doce de ellos en los Campos de Hueso. Cada segador que dispersas es acero que jamas volvera a alzarse contra el Alba.",
+        "completion": "Doce segadores hechos astillas. Despojos asi mantienen encendida mi fragua. Bien hecho.",
+        "objectives": {
+          "0": {
+            "label": "Segador de Huesos abatido"
+          }
+        }
+      },
+      "q_aw_wraiths": {
+        "title": "Tumulos Huecos",
+        "text": "Los viejos tumulos al norte de aqui han despertado, {playerName}. Los espectrillos vagan desde las tumbas, cosas frias que beben el calor de los vivos. Lleva a diez de ellos al descanso. Los muertos de estos yermos merecen algo mejor que servir a esa nave.",
+        "completion": "Diez almas devueltas con calma a la oscuridad. Rece por cada una como tu lo describiste. Es una pequeña piedad, pero es nuestra.",
+        "objectives": {
+          "0": {
+            "label": "Espectrillo del Tumulo abatido"
+          }
+        }
+      },
+      "q_aw_relics": {
+        "title": "Reliquias Santificadas",
+        "text": "Los tumulos guardan reliquias de la vieja fe, santificadas en otro tiempo, profanadas ahora por el toque de los espectrillos. Recupera cinco de las tumbas, {playerName}. Limpias y bendecidas de nuevo, protegeran los catres mucho mejor que mis oraciones que ya fallan.",
+        "completion": "Cinco reliquias, y cada una se entibia en mis manos a medida que la corrupcion se disipa. La Luz no se ha ido de este lugar. Solo necesitaba que la llevaran a casa.",
+        "objectives": {
+          "0": {
+            "label": "Reliquia Profanada"
+          }
+        }
+      },
+      "q_aw_hold": {
+        "title": "Defendiendo Vigilia Sepulcral",
+        "text": "La pura verdad, {playerName}: estamos perdiendo terreno. Los segadores presionan los Campos de Hueso con mas fuerza cada noche. Necesito que se quiebren a catorce mas para comprar a la guarnicion una semana de respiro. ¿Puede el Alba contar contigo?",
+        "completion": "Una semana. Nos has comprado una semana. No la desperdiciare, y no olvidare quien la gano.",
+        "objectives": {
+          "0": {
+            "label": "Segador de Huesos abatido"
+          }
+        }
+      },
+      "q_aw_behemoth": {
+        "title": "El Behemot Putrefacto",
+        "text": "Algo enorme se mueve por Estanque Quieto, {playerName}, un behemot de muertos cosidos y putrefactos, lo bastante grande para atravesar nuestro muro como si fuera una cerca. Lleva a uno o dos compañeros y abatelo antes de que llegue a Vigilia Sepulcral. Esta faja deberia ayudarte a soportar los golpes.",
+        "completion": "Derribaste la montaña de carne. Senti que el suelo dejaba de temblar desde aqui arriba. El Alba te debe esta.",
+        "objectives": {
+          "0": {
+            "label": "Behemot Putrefacto abatido"
+          }
+        }
+      },
+      "q_aw_zealots": {
+        "title": "Portaplagas",
+        "text": "Los fanaticos portaplagas siembran de estallidos de putrefaccion la aproximacion al Confin Palido, {playerName}, y se curan entre si mas rapido de lo que una hoja solitaria puede derribarlos. Mata a ocho. Golpealos con fuerza, golpealos juntos, y no dejes que se rodeen para sanarse.",
+        "completion": "Ocho fanaticos, y la putrefaccion que sembraban muere con ellos. La aproximacion es transitable de nuevo, apenas.",
+        "objectives": {
+          "0": {
+            "label": "Fanatico Portaplagas abatido"
+          }
+        }
+      },
+      "q_aw_deathguard": {
+        "title": "Los Centinelas de la Nave",
+        "text": "Las guardias mortales de Naxxramas son los propios centinelas de la nave, {playerName}, muertos de elite con placas negras, apostados donde el Claudexxaramas cuelga mas bajo. Quiebra a diez de ellos. Necesito saber si el Alba puede luchar a la sombra misma de la necropolis. Este yelmo fue de una guardia mortal alguna vez; portalo contra ellos.",
+        "completion": "Diez centinelas caidos, a la sombra misma de la nave. Entonces puede hacerse. Entonces podemos llevar la lucha ARRIBA, algun dia. Tu me lo has mostrado, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Guardia Mortal de Naxxramas abatido"
+          }
+        }
+      },
+      "q_aw_morthax": {
+        "title": "El Señor Hueco",
+        "text": "Uno de los nuestros cayo en los Tumulos Huecos la temporada pasada, un caballero llamado Morthax. La nave lo alzo, {playerName}, y ahora Morthax el Hueco da caza a los hombres que una vez lidero. Encuentralo. Acaba con el. Traeme su corazon para que sepa que la cosa que lleva su rostro de verdad ya no esta.",
+        "completion": "Frio. El corazon esta frio como la piedra y hueco como el nombre que le dieron. Descansa ahora, Morthax. Serviste al Alba hasta el final, y mas alla de el.",
+        "objectives": {
+          "0": {
+            "label": "Corazon Hueco"
+          }
+        }
+      },
+      "q_aw_pale_reach": {
+        "title": "Hacia el Confin Palido",
+        "text": "El Confin Palido es lo peor de estas tierras, {playerName}, tierra desnuda justo bajo la nave anclada, plagada de guardias mortales. No puedo cartografiarlo solo. Abreme un camino: abate a ocho guardias mortales de Naxxramas mientras dibujo el terreno tras de ti.",
+        "completion": "Lo tengo, el Confin entero, cartografiado al fin, cada patrulla y cada pilon. La Archivista Vael querra esto. Tambien la Comandante, cuando llegue el dia de marchar sobre la nave.",
+        "objectives": {
+          "0": {
+            "label": "Guardia Mortal de Naxxramas abatido"
+          }
+        }
+      },
+      "q_aw_ritual": {
+        "title": "Romper el Ritual",
+        "text": "Los fanaticos obran un ritual en el Confin Palido para atraer al Claudexxaramas aun mas bajo, {playerName}. Cada uno porta un foco ritual que ancla el rito. Toma cuatro de ellos, y mata a seis fanaticos al hacerlo: corta los anclajes y el ritual se detendra.",
+        "completion": "Los focos se apagan en cuanto abandonan el Confin. Cuatro anclajes cortados. La nave no cuelga mas bajo hoy, y eso es una victoria, por pequeña que sea.",
+        "objectives": {
+          "0": {
+            "label": "Foco Ritual"
+          },
+          "1": {
+            "label": "Fanatico Portaplagas abatido"
+          }
+        }
+      },
+      "q_aw_attune_1": {
+        "title": "Ecos del Claudexxaramas",
+        "text": "Para abrir la necropolis primero debemos comprenderla, {playerName}. Sus centinelas portan fragmentos de su casco, metal muerto que aun vibra con el ritmo de la nave. Traeme tres fragmentos de la nave arrancados a las guardias mortales, y empezare a aprender el canto de Naxxramas.",
+        "completion": "Resuenan al unisono, escucha. Tres notas de la misma endecha. Con suficientes de estos, Archivista, podria cartografiar el camino HACIA ADENTRO. Asi es como la abrimos.",
+        "objectives": {
+          "0": {
+            "label": "Fragmento de la Nave"
+          }
+        }
+      },
+      "q_aw_gravelord": {
+        "title": "El Señor de las Tumbas Oss",
+        "text": "El Señor de las Tumbas Oss es la mano de la nave en tierra, {playerName}, el lugarteniente que ancla toda la peste al Confin Palido. Reune a tus compañeros mas fuertes; esta no es lucha para uno, ni siquiera para tres. Abate al Señor de las Tumbas y los yermos mismos quiza empiecen a sanar.",
+        "completion": "Oss esta muerto, y mira: la ceniza del Confin ya palidece hacia un gris verdoso. No solo mataste a un lugarteniente, {playerName}. Le mostraste al Alba que el Claudexxaramas puede sangrar.",
+        "objectives": {
+          "0": {
+            "label": "Señor de las Tumbas Oss abatido"
+          }
+        }
+      },
+      "q_aw_attunement": {
+        "title": "La Brecha de Naxxramas",
+        "text": "Con Oss muerto y el anclaje del Señor de las Tumbas roto, la nave cuelga vulnerable, {playerName}. Este es el momento. Traeme cinco fragmentos de la nave mas y los forjare en un Sigilo del Alba, tu sintonia con Naxxramas misma. Cuando la Dawn of Claude por fin asalte esa necropolis, los portadores del sigilo encabezaran la brecha, y el asalto nos costara la mitad de la sangre y el acero que deberia.",
+        "completion": "Esta hecho. El Sigilo del Alba es tuyo, {playerName}, prueba ante cada alma de esta orden de que estas listo para la necropolis. Cuando marchemos sobre el Claudexxaramas, marcharas al frente. Exaltado entre nosotros, sintonizado con la brecha. El Alba no podria pedir campeon mas verdadero.",
+        "objectives": {
+          "0": {
+            "label": "Fragmento de la Nave"
           }
         }
       },

@@ -87,6 +87,7 @@ import {
 } from './content/zone3';
 import {
   ZONE4_CAMPS,
+  ZONE4_ITEMS,
   ZONE4_MOBS,
   ZONE4_NPCS,
   ZONE4_OBJECTS,
@@ -148,6 +149,7 @@ export const ITEMS: Record<string, ItemDef> = mergeItems(
   ZONE3_ITEMS,
   TEMPLE_ITEMS,
   DELVE_ITEMS,
+  ZONE4_ITEMS,
 );
 
 export const MOBS: Record<string, MobTemplate> = {

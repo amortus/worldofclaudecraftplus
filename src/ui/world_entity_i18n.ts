@@ -81,6 +81,18 @@ const MOB_IDS = [
   'reliquary_saintless_effigy',
   'deacon_varric',
   'acolyte_tessa',
+  // Zone 4 - The Ashen Wastes (Dawn of Claude)
+  'blighted_husk',
+  'ashen_ghoul',
+  'plague_crawler',
+  'corrupted_acolyte',
+  'bone_reaver',
+  'wraithling',
+  'rotting_behemoth',
+  'plaguebringer_zealot',
+  'naxx_deathguard',
+  'morthax_the_hollow',
+  'gravelord_oss',
 ] as const;
 
 const NPC_IDS = [
@@ -105,6 +117,12 @@ const NPC_IDS = [
   'loremaster_caddis',
   'brother_aldric_raid', // dynamically-spawned raid turn-in NPC (Crypt of Nythraxis)
   'brother_halven', // Collapsed Reliquary delve board NPC
+  // Zone 4 - The Ashen Wastes (Dawn of Claude garrison at Gravewatch)
+  'dawn_commander_sera',
+  'dawn_chaplain_orin',
+  'dawn_quartermaster_henning',
+  'dawn_scout_irelle',
+  'dawn_archivist_vael',
 ] as const;
 
 const QUEST_IDS = [
@@ -179,6 +197,27 @@ const QUEST_IDS = [
   'q_nythraxis_bound_guardian',
   'q_nythraxis_scourges_end',
   'q_mogger',
+  // Zone 4 - The Ashen Wastes (Dawn of Claude)
+  'q_aw_arrival',
+  'q_aw_husks',
+  'q_aw_ghouls',
+  'q_aw_crawlers',
+  'q_aw_samples',
+  'q_aw_acolytes',
+  'q_aw_orders',
+  'q_aw_reavers',
+  'q_aw_wraiths',
+  'q_aw_relics',
+  'q_aw_hold',
+  'q_aw_behemoth',
+  'q_aw_zealots',
+  'q_aw_deathguard',
+  'q_aw_morthax',
+  'q_aw_pale_reach',
+  'q_aw_ritual',
+  'q_aw_attune_1',
+  'q_aw_gravelord',
+  'q_aw_attunement',
 ] as const;
 
 const ZONE_IDS = ['eastbrook_vale', 'mirefen_marsh', 'thornpeak_heights', 'ashen_wastes'] as const;

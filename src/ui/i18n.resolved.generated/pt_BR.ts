@@ -4439,6 +4439,144 @@ export const pt_BR: EnTranslations = {
       "monarch_crown_helm": {
         "name": "Coroa do Monarca"
       },
+      "blight_sample": {
+        "name": "Amostra Corrompida"
+      },
+      "cult_orders": {
+        "name": "Ordens Corrompidas"
+      },
+      "desecrated_relic": {
+        "name": "Relíquia Profanada"
+      },
+      "ritual_focus": {
+        "name": "Foco Ritual"
+      },
+      "ship_fragment": {
+        "name": "Fragmento da Nave"
+      },
+      "hollow_heart": {
+        "name": "Coração Oco"
+      },
+      "sigil_of_the_dawn": {
+        "name": "Sigilo da Alvorada"
+      },
+      "ashen_warboots": {
+        "name": "Botas de Guerra Cinéreas"
+      },
+      "ashen_slippers": {
+        "name": "Sapatilhas Cinéreas"
+      },
+      "ashen_treads": {
+        "name": "Calçados Cinéreos"
+      },
+      "dawnward_gauntlets": {
+        "name": "Manoplas da Alvorada"
+      },
+      "dawnward_gloves": {
+        "name": "Luvas da Alvorada"
+      },
+      "dawnward_grips": {
+        "name": "Empunhaduras da Alvorada"
+      },
+      "behemoth_girdle": {
+        "name": "Cinto do Beemote"
+      },
+      "behemoth_sash": {
+        "name": "Faixa do Beemote"
+      },
+      "behemoth_belt": {
+        "name": "Cinturão do Beemote"
+      },
+      "deathward_helm": {
+        "name": "Elmo Anti-Morte"
+      },
+      "deathward_hood": {
+        "name": "Capuz Anti-Morte"
+      },
+      "deathward_cowl": {
+        "name": "Touca Anti-Morte"
+      },
+      "gravelord_pauldrons": {
+        "name": "Espaldares do Senhor das Sepulturas"
+      },
+      "gravelord_amice": {
+        "name": "Almuça do Senhor das Sepulturas"
+      },
+      "gravelord_spaulders": {
+        "name": "Ombreiras do Senhor das Sepulturas"
+      },
+      "dawnguard_sabatons": {
+        "name": "Escarpas da Guarda da Alvorada"
+      },
+      "dawnguard_gauntlets": {
+        "name": "Manoplas da Guarda da Alvorada"
+      },
+      "dawnguard_girdle": {
+        "name": "Cinto da Guarda da Alvorada"
+      },
+      "dawnguard_greathelm": {
+        "name": "Grande Elmo da Guarda da Alvorada"
+      },
+      "dawnguard_legplates": {
+        "name": "Grevas da Guarda da Alvorada"
+      },
+      "dawnguard_pauldrons": {
+        "name": "Espaldares da Guarda da Alvorada"
+      },
+      "dawnguard_breastplate": {
+        "name": "Peitoral da Guarda da Alvorada"
+      },
+      "dawnguard_blade": {
+        "name": "Lâmina da Guarda da Alvorada"
+      },
+      "dawn_slippers": {
+        "name": "Sapatilhas da Alvorada"
+      },
+      "dawn_handwraps": {
+        "name": "Bandagens de Mão da Alvorada"
+      },
+      "dawn_cord": {
+        "name": "Cordão da Alvorada"
+      },
+      "dawn_cowl": {
+        "name": "Touca da Alvorada"
+      },
+      "dawn_leggings": {
+        "name": "Perneiras da Alvorada"
+      },
+      "dawn_mantle": {
+        "name": "Manto da Alvorada"
+      },
+      "dawn_robe": {
+        "name": "Túnica da Alvorada"
+      },
+      "dawn_scepter": {
+        "name": "Cetro da Alvorada"
+      },
+      "dawnstalker_treads": {
+        "name": "Calçados do Espreitador da Alvorada"
+      },
+      "dawnstalker_grips": {
+        "name": "Empunhaduras do Espreitador da Alvorada"
+      },
+      "dawnstalker_belt": {
+        "name": "Cinturão do Espreitador da Alvorada"
+      },
+      "dawnstalker_mask": {
+        "name": "Máscara do Espreitador da Alvorada"
+      },
+      "dawnstalker_legguards": {
+        "name": "Perneiras do Espreitador da Alvorada"
+      },
+      "dawnstalker_spaulders": {
+        "name": "Ombreiras do Espreitador da Alvorada"
+      },
+      "dawnstalker_tunic": {
+        "name": "Túnica do Espreitador da Alvorada"
+      },
+      "dawnstalker_dagger": {
+        "name": "Adaga do Espreitador da Alvorada"
+      },
       "bristleback_maul": {
         "name": "Malho Bristleback"
       },
@@ -5113,6 +5251,39 @@ export const pt_BR: EnTranslations = {
       "acolyte_tessa": {
         "name": "Acólita Tessa"
       },
+      "blighted_husk": {
+        "name": "Casca Apodrecida"
+      },
+      "ashen_ghoul": {
+        "name": "Carniçal Cinéreo"
+      },
+      "plague_crawler": {
+        "name": "Rastejante da Peste"
+      },
+      "corrupted_acolyte": {
+        "name": "Acólito Corrompido"
+      },
+      "bone_reaver": {
+        "name": "Saqueador de Ossos"
+      },
+      "wraithling": {
+        "name": "Espectrozinho do Túmulo"
+      },
+      "rotting_behemoth": {
+        "name": "Beemote Putrefato"
+      },
+      "plaguebringer_zealot": {
+        "name": "Zelote Pestífero"
+      },
+      "naxx_deathguard": {
+        "name": "Guarda-Mortal de Naxxramas"
+      },
+      "morthax_the_hollow": {
+        "name": "Morthax, o Oco"
+      },
+      "gravelord_oss": {
+        "name": "Senhor das Sepulturas Oss"
+      },
       "ironvein_foreman": {
         "name": "Capataz Veio de Ferro"
       },
@@ -5327,6 +5498,31 @@ export const pt_BR: EnTranslations = {
         "name": "Irmão Halven",
         "title": "Guardião do Relicário",
         "greeting": "O relicário lá embaixo se moveu de novo."
+      },
+      "dawn_commander_sera": {
+        "name": "Comandante Sera",
+        "title": "Dawn of Claude",
+        "greeting": "Segure a linha, {className}. Aquela tumba flutuante, a Claudexxaramas, sangrou toda esta terra até deixá-la cinza. A Dawn of Claude irá retomá-la, alma por alma."
+      },
+      "dawn_chaplain_orin": {
+        "name": "Capelão Orin",
+        "title": "Dawn of Claude",
+        "greeting": "A Luz ainda alcança este lugar, {playerName}, embora tênue. Ajude-me a cuidar dos moribundos e a quebrar a peste que a nave derrama sobre nós."
+      },
+      "dawn_quartermaster_henning": {
+        "name": "Intendente Henning",
+        "title": "Dawn of Claude",
+        "greeting": "Aço e fé, {playerName}, é tudo o que tenho a oferecer. Conquiste a confiança da Alvorada e o estoque do intendente se abrirá para você, peça por peça."
+      },
+      "dawn_scout_irelle": {
+        "name": "Batedora Irelle",
+        "title": "Dawn of Claude",
+        "greeting": "Mapeei as estradas mortas tão ao norte quanto ouso, {className}. Quanto mais perto do Alcance Pálido, mais alto a nave sussurra. Cuidado com os passos."
+      },
+      "dawn_archivist_vael": {
+        "name": "Arquivista Vael",
+        "title": "Dawn of Claude",
+        "greeting": "Cada fragmento daquela necrópole que eu consiga estudar é uma fenda que talvez um dia consigamos abrir, {playerName}. Traga-me o que os mortos carregam, e planejaremos a brecha juntos."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6084,6 +6280,212 @@ export const pt_BR: EnTranslations = {
         "objectives": {
           "0": {
             "label": "Mogger abatido"
+          }
+        }
+      },
+      "q_aw_arrival": {
+        "title": "Cinzas e Presságios",
+        "text": "Bem-vindo a Gravewatch, {playerName}, ao pouco que a corrupção nos deixou. As cascas dos tombados arranham nossos muros toda noite. Derrube oito delas para que meus soldados possam dormir, e a Dawn of Claude o contará como um amigo em formação.",
+        "completion": "Oito horrores a menos no portão. Você tem mão firme, {playerName}. A Alvorada se lembra daqueles que ficam ao nosso lado.",
+        "objectives": {
+          "0": {
+            "label": "Casca Apodrecida abatida"
+          }
+        }
+      },
+      "q_aw_husks": {
+        "title": "A Corrupção Ambulante",
+        "text": "As cascas não são sem juízo, {playerName}: elas se reúnem, sondam nossas linhas. Abata mais doze antes que descubram onde somos mais fracos. Leve estes calçados para a caminhada; as terras devastadas são duras com as botas.",
+        "completion": "Bom. Cada casca que você queima é uma que não poderá se erguer de novo esta noite.",
+        "objectives": {
+          "0": {
+            "label": "Casca Apodrecida abatida"
+          }
+        }
+      },
+      "q_aw_ghouls": {
+        "title": "Fome Feral",
+        "text": "Os carniçais cinéreos caçam em matilhas lá nos Campos de Ossos, rápidos e raivosos. Já arrastaram dois dos meus batedores. Reduza-os, dez devem dispersar a matilha, antes que fiquem ousados o bastante para investir contra o portão.",
+        "completion": "As matilhas estão dispersas. Meus batedores podem percorrer os Campos de Ossos de novo, graças a você.",
+        "objectives": {
+          "0": {
+            "label": "Carniçal Cinéreo abatido"
+          }
+        }
+      },
+      "q_aw_crawlers": {
+        "title": "Doença que se Alastra",
+        "text": "Os rastejantes da peste carregam a corrupção na mordida, {playerName}, e se reproduzem na lama de Stillmere. Mate dez deles. Por onde andam, a doença os segue, e já tenho leitos demais ocupados.",
+        "completion": "As proteções dos leitos vão resistir um pouco mais agora. A Luz lhe agradece, mesmo quando eu me esqueço de fazê-lo.",
+        "objectives": {
+          "0": {
+            "label": "Rastejante da Peste abatido"
+          }
+        }
+      },
+      "q_aw_samples": {
+        "title": "Amostras Corrompidas",
+        "text": "Para curar a corrupção, primeiro preciso compreendê-la. As cascas e os rastejantes estão encharcados dela: traga-me seis amostras corrompidas de sua carne apodrecida, e manuseie-as com cuidado. A mácula não se importa com o sangue que estraga.",
+        "completion": "Seis amostras, cada uma pior que a anterior. A corrupção é... padronizada. Deliberada. Esta não é uma praga natural, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Amostra Corrompida"
+          }
+        }
+      },
+      "q_aw_acolytes": {
+        "title": "Vozes da Nave",
+        "text": "Homens vivos agora se ajoelham à Claudexxaramas, {playerName}: acólitos corrompidos que entoam a vontade dela por todas as terras devastadas. Não cabe mais a nós salvá-los. Silencie dez deles. Leve estas manoplas; você ganhará coisas piores antes que isto termine.",
+        "completion": "O cântico vacila. Seja lá o que a nave está erguendo, você lhe custou dez gargantas dispostas.",
+        "objectives": {
+          "0": {
+            "label": "Acólito Corrompido abatido"
+          }
+        }
+      },
+      "q_aw_orders": {
+        "title": "Ordens das Alturas",
+        "text": "Os acólitos carregam ordens escritas, {playerName}: a nave fala e eles transcrevem. Derrube mais oito e traga-me quatro conjuntos dessas ordens. Quero saber o que a Claudexxaramas comanda antes que isso seja comandado de nós.",
+        "completion": "Esta escrita rasteja quando você a encara. Mas são ordens, sem dúvida: reúnam os mortos, preparem o Alcance Pálido. Eles estão se preparando para algo.",
+        "objectives": {
+          "0": {
+            "label": "Acólito Corrompido abatido"
+          },
+          "1": {
+            "label": "Ordens Corrompidas"
+          }
+        }
+      },
+      "q_aw_reavers": {
+        "title": "Campos de Ossos",
+        "text": "Os saqueadores de ossos são arsenais ambulantes, {playerName}: velhos soldados reforjados nas lâminas da nave. Quebre doze deles nos Campos de Ossos. Cada saqueador que você dispersa é aço que jamais voltará a se erguer contra a Alvorada.",
+        "completion": "Doze saqueadores reduzidos a lascas. Sucata assim mantém minha forja acesa. Muito bem.",
+        "objectives": {
+          "0": {
+            "label": "Saqueador de Ossos abatido"
+          }
+        }
+      },
+      "q_aw_wraiths": {
+        "title": "As Covas Ocas",
+        "text": "As velhas covas ao norte daqui despertaram, {playerName}. Espectrozinhos vagam das sepulturas, coisas frias que bebem o calor dos vivos. Ponha dez deles em descanso. Os mortos destas terras devastadas merecem coisa melhor do que servir àquela nave.",
+        "completion": "Dez almas reconduzidas à escuridão. Rezei sobre cada uma como você descreveu. É uma pequena misericórdia, mas é nossa.",
+        "objectives": {
+          "0": {
+            "label": "Espectrozinho do Túmulo abatido"
+          }
+        }
+      },
+      "q_aw_relics": {
+        "title": "Relíquias Sagradas",
+        "text": "As covas guardam relíquias da fé antiga: outrora sagradas, agora profanadas pelo toque dos espectrozinhos. Recupere cinco das sepulturas, {playerName}. Purificadas e abençoadas de novo, protegerão os leitos muito melhor do que minhas preces falhas.",
+        "completion": "Cinco relíquias, e cada uma aquece em minhas mãos enquanto a mácula se desfaz. A Luz não abandonou este lugar. Só precisava ser trazida de volta para casa.",
+        "objectives": {
+          "0": {
+            "label": "Relíquia Profanada"
+          }
+        }
+      },
+      "q_aw_hold": {
+        "title": "Defendendo Gravewatch",
+        "text": "Verdade pura e simples, {playerName}: estamos perdendo terreno. Os saqueadores pressionam os Campos de Ossos com mais força a cada noite. Preciso que mais catorze deles sejam quebrados para comprar à guarnição uma semana de fôlego. A Alvorada pode contar com você?",
+        "completion": "Uma semana. Você nos comprou uma semana. Não vou desperdiçá-la, e não vou esquecer quem a conquistou.",
+        "objectives": {
+          "0": {
+            "label": "Saqueador de Ossos abatido"
+          }
+        }
+      },
+      "q_aw_behemoth": {
+        "title": "O Beemote Putrefato",
+        "text": "Algo enorme se move em Stillmere, {playerName}: um beemote de mortos costurados e apodrecidos, grande o bastante para atravessar nosso muro como se fosse uma cerca. Leve um companheiro ou dois e o derrube antes que chegue a Gravewatch. Este cinto deve ajudá-lo a suportar os golpes.",
+        "completion": "Você abateu a montanha de carne. Senti o chão parar de tremer lá de cima. A Alvorada lhe deve por essa.",
+        "objectives": {
+          "0": {
+            "label": "Beemote Putrefato abatido"
+          }
+        }
+      },
+      "q_aw_zealots": {
+        "title": "Pestíferos",
+        "text": "Os zelotes pestíferos semeiam a aproximação do Alcance Pálido com seus surtos de podridão, {playerName}, e curam-se uns aos outros mais rápido do que uma lâmina solitária consegue derrubá-los. Mate oito. Acerte com força, acerte em conjunto, e não os deixe rodear para se curar.",
+        "completion": "Oito zelotes, e a podridão que semeavam morre com eles. A aproximação está transitável de novo, por pouco.",
+        "objectives": {
+          "0": {
+            "label": "Zelote Pestífero abatido"
+          }
+        }
+      },
+      "q_aw_deathguard": {
+        "title": "Os Guardiões da Nave",
+        "text": "Os guarda-mortais de Naxxramas são os próprios guardiões da nave, {playerName}: mortos de elite em placas negras, postados onde a Claudexxaramas paira mais baixo. Quebre dez deles. Preciso saber se a Alvorada pode lutar à própria sombra da necrópole. Este elmo já pertenceu a um guarda-mortal; use-o contra eles.",
+        "completion": "Dez guardiões abatidos, à própria sombra da nave. Então pode ser feito. Então podemos levar a luta para CIMA, um dia. Você me mostrou isso, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Guarda-Mortal de Naxxramas abatido"
+          }
+        }
+      },
+      "q_aw_morthax": {
+        "title": "O Senhor Oco",
+        "text": "Um dos nossos tombou nas Covas Ocas na última estação: um cavaleiro chamado Morthax. A nave o ergueu, {playerName}, e agora Morthax, o Oco, caça os homens que outrora liderou. Encontre-o. Acabe com ele. Traga-me seu coração para que eu saiba que a coisa que veste seu rosto realmente se foi.",
+        "completion": "Frio. O coração está gélido como pedra e oco como o nome que lhe deram. Descanse agora, Morthax. Você serviu à Alvorada até o fim, e além dele.",
+        "objectives": {
+          "0": {
+            "label": "Coração Oco"
+          }
+        }
+      },
+      "q_aw_pale_reach": {
+        "title": "Adentrando o Alcance Pálido",
+        "text": "O Alcance Pálido é o pior de tudo, {playerName}: terreno nu logo abaixo da nave ancorada, repleto de guarda-mortais. Não posso mapeá-lo sozinha. Abra-me um caminho: derrube oito guarda-mortais de Naxxramas enquanto eu esboço o terreno atrás de você.",
+        "completion": "Consegui: o Alcance inteiro, enfim mapeado, cada patrulha e cada pilar. A Arquivista Vael vai querer isto. E a Comandante também, quando chegar o dia de marchar contra a nave.",
+        "objectives": {
+          "0": {
+            "label": "Guarda-Mortal de Naxxramas abatido"
+          }
+        }
+      },
+      "q_aw_ritual": {
+        "title": "Quebre o Ritual",
+        "text": "Os zelotes conduzem um ritual no Alcance Pálido para atrair a Claudexxaramas ainda mais para baixo, {playerName}. Cada um carrega um foco ritual que ancora o rito. Tome quatro deles, e mate seis zelotes no processo: corte as âncoras e o ritual se interrompe.",
+        "completion": "Os focos se apagam no instante em que deixam o Alcance. Quatro âncoras cortadas. A nave não paira mais baixo hoje, e isso é uma vitória, por menor que seja.",
+        "objectives": {
+          "0": {
+            "label": "Foco Ritual"
+          },
+          "1": {
+            "label": "Zelote Pestífero abatido"
+          }
+        }
+      },
+      "q_aw_attune_1": {
+        "title": "Ecos da Claudexxaramas",
+        "text": "Para invadir a necrópole, primeiro precisamos compreendê-la, {playerName}. Seus guardiões carregam fragmentos do casco dela: metal morto que ainda vibra com o ritmo da nave. Traga-me três fragmentos da nave dos guarda-mortais, e começarei a aprender o canto de Naxxramas.",
+        "completion": "Eles ressoam juntos, ouça. Três notas do mesmo lamento. Com bastante destes, Arquivista, eu poderia mapear o caminho para DENTRO. É assim que abriremos a brecha.",
+        "objectives": {
+          "0": {
+            "label": "Fragmento da Nave"
+          }
+        }
+      },
+      "q_aw_gravelord": {
+        "title": "Senhor das Sepulturas Oss",
+        "text": "O Senhor das Sepulturas Oss é a mão da nave em terra, {playerName}: o tenente que ancora toda a corrupção ao Alcance Pálido. Reúna seus companheiros mais fortes; este não é combate para um, nem mesmo para três. Derrube o Senhor das Sepulturas e as próprias terras devastadas talvez comecem a sarar.",
+        "completion": "Oss está morto, e olhe: a cinza no Alcance já empalidece rumo a um verde-acinzentado. Você não matou apenas um tenente, {playerName}. Você mostrou à Alvorada que a Claudexxaramas pode sangrar.",
+        "objectives": {
+          "0": {
+            "label": "Senhor das Sepulturas Oss abatido"
+          }
+        }
+      },
+      "q_aw_attunement": {
+        "title": "A Brecha de Naxxramas",
+        "text": "Com Oss morto e a âncora do Senhor das Sepulturas quebrada, a nave paira vulnerável, {playerName}. Este é o momento. Traga-me mais cinco fragmentos da nave e eu os forjarei em um Sigilo da Alvorada: sua sintonia com a própria Naxxramas. Quando a Dawn of Claude finalmente investir contra aquela necrópole, os portadores do sigilo liderarão a brecha, e o assalto nos custará metade do sangue e do aço que deveria.",
+        "completion": "Está feito. O Sigilo da Alvorada é seu, {playerName}: prova para cada alma desta ordem de que você está pronto para a necrópole. Quando marcharmos contra a Claudexxaramas, você marcha à frente. Exaltado entre nós, sintonizado com a brecha. A Alvorada não poderia pedir campeão mais verdadeiro.",
+        "objectives": {
+          "0": {
+            "label": "Fragmento da Nave"
           }
         }
       },

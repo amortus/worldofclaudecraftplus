@@ -4439,6 +4439,144 @@ export const en: EnTranslations = {
       "monarch_crown_helm": {
         "name": "Monarch's Crown"
       },
+      "blight_sample": {
+        "name": "Tainted Sample"
+      },
+      "cult_orders": {
+        "name": "Corrupted Orders"
+      },
+      "desecrated_relic": {
+        "name": "Desecrated Relic"
+      },
+      "ritual_focus": {
+        "name": "Ritual Focus"
+      },
+      "ship_fragment": {
+        "name": "Ship Fragment"
+      },
+      "hollow_heart": {
+        "name": "Hollow Heart"
+      },
+      "sigil_of_the_dawn": {
+        "name": "Sigil of the Dawn"
+      },
+      "ashen_warboots": {
+        "name": "Ashen Warboots"
+      },
+      "ashen_slippers": {
+        "name": "Ashen Slippers"
+      },
+      "ashen_treads": {
+        "name": "Ashen Treads"
+      },
+      "dawnward_gauntlets": {
+        "name": "Dawnward Gauntlets"
+      },
+      "dawnward_gloves": {
+        "name": "Dawnward Gloves"
+      },
+      "dawnward_grips": {
+        "name": "Dawnward Grips"
+      },
+      "behemoth_girdle": {
+        "name": "Behemoth Girdle"
+      },
+      "behemoth_sash": {
+        "name": "Behemoth Sash"
+      },
+      "behemoth_belt": {
+        "name": "Behemoth Belt"
+      },
+      "deathward_helm": {
+        "name": "Deathward Helm"
+      },
+      "deathward_hood": {
+        "name": "Deathward Hood"
+      },
+      "deathward_cowl": {
+        "name": "Deathward Cowl"
+      },
+      "gravelord_pauldrons": {
+        "name": "Gravelord Pauldrons"
+      },
+      "gravelord_amice": {
+        "name": "Gravelord Amice"
+      },
+      "gravelord_spaulders": {
+        "name": "Gravelord Spaulders"
+      },
+      "dawnguard_sabatons": {
+        "name": "Dawnguard Sabatons"
+      },
+      "dawnguard_gauntlets": {
+        "name": "Dawnguard Gauntlets"
+      },
+      "dawnguard_girdle": {
+        "name": "Dawnguard Girdle"
+      },
+      "dawnguard_greathelm": {
+        "name": "Dawnguard Greathelm"
+      },
+      "dawnguard_legplates": {
+        "name": "Dawnguard Legplates"
+      },
+      "dawnguard_pauldrons": {
+        "name": "Dawnguard Pauldrons"
+      },
+      "dawnguard_breastplate": {
+        "name": "Dawnguard Breastplate"
+      },
+      "dawnguard_blade": {
+        "name": "Dawnguard Blade"
+      },
+      "dawn_slippers": {
+        "name": "Dawn Slippers"
+      },
+      "dawn_handwraps": {
+        "name": "Dawn Handwraps"
+      },
+      "dawn_cord": {
+        "name": "Dawn Cord"
+      },
+      "dawn_cowl": {
+        "name": "Dawn Cowl"
+      },
+      "dawn_leggings": {
+        "name": "Dawn Leggings"
+      },
+      "dawn_mantle": {
+        "name": "Dawn Mantle"
+      },
+      "dawn_robe": {
+        "name": "Dawn Robe"
+      },
+      "dawn_scepter": {
+        "name": "Scepter of the Dawn"
+      },
+      "dawnstalker_treads": {
+        "name": "Dawnstalker Treads"
+      },
+      "dawnstalker_grips": {
+        "name": "Dawnstalker Grips"
+      },
+      "dawnstalker_belt": {
+        "name": "Dawnstalker Belt"
+      },
+      "dawnstalker_mask": {
+        "name": "Dawnstalker Mask"
+      },
+      "dawnstalker_legguards": {
+        "name": "Dawnstalker Legguards"
+      },
+      "dawnstalker_spaulders": {
+        "name": "Dawnstalker Spaulders"
+      },
+      "dawnstalker_tunic": {
+        "name": "Dawnstalker Tunic"
+      },
+      "dawnstalker_dagger": {
+        "name": "Dawnstalker Dagger"
+      },
       "bristleback_maul": {
         "name": "Bristleback Maul"
       },
@@ -5113,6 +5251,39 @@ export const en: EnTranslations = {
       "acolyte_tessa": {
         "name": "Acolyte Tessa"
       },
+      "blighted_husk": {
+        "name": "Blighted Husk"
+      },
+      "ashen_ghoul": {
+        "name": "Ashen Ghoul"
+      },
+      "plague_crawler": {
+        "name": "Plague Crawler"
+      },
+      "corrupted_acolyte": {
+        "name": "Corrupted Acolyte"
+      },
+      "bone_reaver": {
+        "name": "Bone Reaver"
+      },
+      "wraithling": {
+        "name": "Barrow Wraithling"
+      },
+      "rotting_behemoth": {
+        "name": "Rotting Behemoth"
+      },
+      "plaguebringer_zealot": {
+        "name": "Plaguebringer Zealot"
+      },
+      "naxx_deathguard": {
+        "name": "Naxxramas Deathguard"
+      },
+      "morthax_the_hollow": {
+        "name": "Morthax the Hollow"
+      },
+      "gravelord_oss": {
+        "name": "Gravelord Oss"
+      },
       "ironvein_foreman": {
         "name": "Ironvein Foreman"
       },
@@ -5327,6 +5498,31 @@ export const en: EnTranslations = {
         "name": "Brother Halven",
         "title": "Reliquary Keeper",
         "greeting": "The reliquary below has shifted again."
+      },
+      "dawn_commander_sera": {
+        "name": "Commander Sera",
+        "title": "Dawn of Claude",
+        "greeting": "Hold the line, {className}. That floating tomb, the Claudexxaramas, has bled this whole land grey. The Dawn of Claude will take it back, soul by soul."
+      },
+      "dawn_chaplain_orin": {
+        "name": "Chaplain Orin",
+        "title": "Dawn of Claude",
+        "greeting": "The Light still reaches here, {playerName}, though it is thin. Help me tend the dying and break the plague the ship pours down on us."
+      },
+      "dawn_quartermaster_henning": {
+        "name": "Quartermaster Henning",
+        "title": "Dawn of Claude",
+        "greeting": "Steel and faith, {playerName}, that is all I have to give. Earn the Dawn's trust and the quartermaster's store opens to you, piece by piece."
+      },
+      "dawn_scout_irelle": {
+        "name": "Scout Irelle",
+        "title": "Dawn of Claude",
+        "greeting": "I have mapped the dead roads as far north as I dare, {className}. The closer to the Pale Reach, the louder the ship whispers. Watch your step."
+      },
+      "dawn_archivist_vael": {
+        "name": "Archivist Vael",
+        "title": "Dawn of Claude",
+        "greeting": "Every shard of that necropolis I can study is a crack we might one day pry open, {playerName}. Bring me what the dead carry, and we will plan the breach together."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6084,6 +6280,212 @@ export const en: EnTranslations = {
         "objectives": {
           "0": {
             "label": "Mogger slain"
+          }
+        }
+      },
+      "q_aw_arrival": {
+        "title": "Ashes and Omens",
+        "text": "Welcome to Gravewatch, {playerName} - what little of it the blight has left us. The husks of the fallen claw at our walls every night. Put eight of them down so my soldiers can sleep, and the Dawn of Claude will count you a friend in the making.",
+        "completion": "Eight fewer horrors at the gate. You have a steady hand, {playerName}. The Dawn remembers those who stand with us.",
+        "objectives": {
+          "0": {
+            "label": "Blighted Husk slain"
+          }
+        }
+      },
+      "q_aw_husks": {
+        "title": "The Walking Blight",
+        "text": "The husks are not mindless, {playerName} - they gather, they probe our lines. Cull twelve more before they learn where we are weakest. Take these treads for the walking; the wastes are hard on boots.",
+        "completion": "Good. Every husk you burn is one that cannot rise again tonight.",
+        "objectives": {
+          "0": {
+            "label": "Blighted Husk slain"
+          }
+        }
+      },
+      "q_aw_ghouls": {
+        "title": "Feral Hunger",
+        "text": "The ashen ghouls hunt in packs out on the Bonefields, fast and rabid. They have dragged off two of my scouts already. Thin them - ten should break the pack - before they grow bold enough to rush the gate.",
+        "completion": "The packs are scattered. My scouts can range the Bonefields again, thanks to you.",
+        "objectives": {
+          "0": {
+            "label": "Ashen Ghoul slain"
+          }
+        }
+      },
+      "q_aw_crawlers": {
+        "title": "Spreading Sickness",
+        "text": "The plague crawlers carry the blight in their bite, {playerName}, and they breed in the Stillmere mud. Kill ten of them. Where they walk, the sickness follows, and I have too many cots filled already.",
+        "completion": "The wards on the cots will hold a little longer now. The Light thanks you, even when I forget to.",
+        "objectives": {
+          "0": {
+            "label": "Plague Crawler slain"
+          }
+        }
+      },
+      "q_aw_samples": {
+        "title": "Tainted Samples",
+        "text": "To cure the blight I must first understand it. The husks and crawlers are soaked through with it - bring me six tainted samples of their corrupted flesh, and handle them carefully. The taint does not care whose blood it spoils.",
+        "completion": "Six samples, each worse than the last. The corruption is... patterned. Deliberate. This is no natural plague, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Tainted Sample"
+          }
+        }
+      },
+      "q_aw_acolytes": {
+        "title": "Voices of the Ship",
+        "text": "Living men kneel to the Claudexxaramas now, {playerName} - corrupted acolytes who chant its will across the wastes. They are no longer ours to save. Silence ten of them. Take these handguards; you will earn worse before this is done.",
+        "completion": "The chanting falters. Whatever the ship is building, you have cost it ten willing throats.",
+        "objectives": {
+          "0": {
+            "label": "Corrupted Acolyte slain"
+          }
+        }
+      },
+      "q_aw_orders": {
+        "title": "Orders from Above",
+        "text": "The acolytes carry written orders, {playerName} - the ship speaks and they transcribe. Cut down eight more and bring me four sets of those orders. I would know what the Claudexxaramas commands before it is commanded of us.",
+        "completion": "This script crawls when you look at it. But it is orders, true enough: gather the dead, ready the Pale Reach. They are preparing for something.",
+        "objectives": {
+          "0": {
+            "label": "Corrupted Acolyte slain"
+          },
+          "1": {
+            "label": "Corrupted Orders"
+          }
+        }
+      },
+      "q_aw_reavers": {
+        "title": "Bonefields",
+        "text": "The bone reavers are walking armories, {playerName} - old soldiers reforged into the ship's blades. Break twelve of them on the Bonefields. Every reaver you scatter is steel that will never swing at the Dawn again.",
+        "completion": "Twelve reavers down to splinters. Salvage like that keeps my forge lit. Well done.",
+        "objectives": {
+          "0": {
+            "label": "Bone Reaver slain"
+          }
+        }
+      },
+      "q_aw_wraiths": {
+        "title": "Hollow Barrows",
+        "text": "The old barrows north of here have woken, {playerName}. Wraithlings drift from the graves, cold things that drink the warmth out of the living. Put ten of them to rest. The dead of these wastes deserve better than to serve that ship.",
+        "completion": "Ten souls eased back into the dark. I prayed over each as you described it. It is a small mercy, but it is ours.",
+        "objectives": {
+          "0": {
+            "label": "Barrow Wraithling slain"
+          }
+        }
+      },
+      "q_aw_relics": {
+        "title": "Sanctified Relics",
+        "text": "The barrows hold relics of the old faith - sanctified once, desecrated now by the wraithlings' touch. Recover five from the graves, {playerName}. Cleansed and re-blessed, they will ward the cots far better than my failing prayers.",
+        "completion": "Five relics, and each one warms in my hands as the taint lifts. The Light is not gone from this place. It only needed carrying home.",
+        "objectives": {
+          "0": {
+            "label": "Desecrated Relic"
+          }
+        }
+      },
+      "q_aw_hold": {
+        "title": "Holding Gravewatch",
+        "text": "Plain truth, {playerName}: we are losing ground. The reavers press the Bonefields harder each night. I need fourteen more of them broken to buy the garrison a week of breathing room. Can the Dawn count on you?",
+        "completion": "A week. You have bought us a week. I will not waste it - and I will not forget who earned it.",
+        "objectives": {
+          "0": {
+            "label": "Bone Reaver slain"
+          }
+        }
+      },
+      "q_aw_behemoth": {
+        "title": "The Rotting Behemoth",
+        "text": "Something huge moves on the Stillmere, {playerName} - a behemoth of stitched and rotting dead, big enough to walk through our wall like a fence. Take a companion or two and put it down before it reaches Gravewatch. This girdle should help you bear the blows.",
+        "completion": "You felled the mountain of meat. I felt the ground stop shaking from up here. The Dawn owes you for that one.",
+        "objectives": {
+          "0": {
+            "label": "Rotting Behemoth slain"
+          }
+        }
+      },
+      "q_aw_zealots": {
+        "title": "Plaguebringers",
+        "text": "The plaguebringer zealots seed the Pale Reach approach with their bursts of rot, {playerName}, and they mend each other faster than a lone blade can drop them. Kill eight. Hit them hard, hit them together, and do not let them circle to heal.",
+        "completion": "Eight zealots, and the rot they were sowing dies with them. The approach is passable again - barely.",
+        "objectives": {
+          "0": {
+            "label": "Plaguebringer Zealot slain"
+          }
+        }
+      },
+      "q_aw_deathguard": {
+        "title": "The Ship's Wardens",
+        "text": "The Naxxramas deathguards are the ship's own wardens, {playerName} - elite dead in black plate, posted where the Claudexxaramas hangs lowest. Break ten of them. I need to know if the Dawn can fight in the necropolis's very shadow. This helm was a deathguard's once; wear it against them.",
+        "completion": "Ten wardens down, in the ship's own shadow. Then it can be done. Then we can take the fight UP, one day. You have shown me that, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Naxxramas Deathguard slain"
+          }
+        }
+      },
+      "q_aw_morthax": {
+        "title": "The Hollow Lord",
+        "text": "One of ours fell in the Hollow Barrows last season - a knight named Morthax. The ship raised him, {playerName}, and now Morthax the Hollow hunts the men he once led. Find him. End him. Bring me his heart so I know the thing wearing his face is truly gone.",
+        "completion": "Cold. The heart is stone-cold and hollow as the name they gave him. Rest now, Morthax. You served the Dawn to the last, and past it.",
+        "objectives": {
+          "0": {
+            "label": "Hollow Heart"
+          }
+        }
+      },
+      "q_aw_pale_reach": {
+        "title": "Into the Pale Reach",
+        "text": "The Pale Reach is the worst of it, {playerName} - bare ground directly beneath the anchored ship, thick with deathguards. I cannot map it alone. Carve me a path: drop eight Naxxramas deathguards while I sketch the ground behind you.",
+        "completion": "I have it - the whole Reach, mapped at last, every patrol and pylon. Archivist Vael will want this. So will the Commander, when the day comes to march on the ship.",
+        "objectives": {
+          "0": {
+            "label": "Naxxramas Deathguard slain"
+          }
+        }
+      },
+      "q_aw_ritual": {
+        "title": "Break the Ritual",
+        "text": "The zealots are working a ritual on the Pale Reach to draw the Claudexxaramas lower still, {playerName}. Each carries a ritual focus that anchors the rite. Take four of them, and kill six zealots in the doing - sever the anchors and the ritual stalls.",
+        "completion": "The foci go dark the moment they leave the Reach. Four anchors cut. The ship hangs no lower today, and that is a victory, however small.",
+        "objectives": {
+          "0": {
+            "label": "Ritual Focus"
+          },
+          "1": {
+            "label": "Plaguebringer Zealot slain"
+          }
+        }
+      },
+      "q_aw_attune_1": {
+        "title": "Echoes of the Claudexxaramas",
+        "text": "To breach the necropolis we must first understand it, {playerName}. Its wardens carry fragments of its hull - dead metal that still hums with the ship's rhythm. Bring me three ship fragments off the deathguards, and I will start to learn the song of Naxxramas.",
+        "completion": "They resonate together - listen. Three notes of the same dirge. Given enough of these, Archivist, I could map the way INSIDE. This is how we breach it.",
+        "objectives": {
+          "0": {
+            "label": "Ship Fragment"
+          }
+        }
+      },
+      "q_aw_gravelord": {
+        "title": "Gravelord Oss",
+        "text": "Gravelord Oss is the ship's hand on the ground, {playerName} - the lieutenant who anchors the whole blight to the Pale Reach. Gather your strongest companions; this is no fight for one, or even three. Cut down the Gravelord and the wastes themselves may start to heal.",
+        "completion": "Oss is dead, and look - the ash at the Reach is already paling toward grey-green. You did not just kill a lieutenant, {playerName}. You showed the Dawn that the Claudexxaramas can bleed.",
+        "objectives": {
+          "0": {
+            "label": "Gravelord Oss slain"
+          }
+        }
+      },
+      "q_aw_attunement": {
+        "title": "The Breach of Naxxramas",
+        "text": "With Oss dead and the Gravelord's anchor broken, the ship hangs vulnerable, {playerName}. This is the moment. Bring me five more ship fragments and I will forge them into a Sigil of the Dawn - your attunement to Naxxramas itself. When the Dawn of Claude finally storms that necropolis, the sigil-bearers lead the breach, and the assault will cost us half the blood and steel it should.",
+        "completion": "It is done. The Sigil of the Dawn is yours, {playerName} - proof to every soul in this order that you are ready for the necropolis. When we march on the Claudexxaramas, you march at the front. Exalted among us, attuned to the breach. The Dawn could ask for no truer champion.",
+        "objectives": {
+          "0": {
+            "label": "Ship Fragment"
           }
         }
       },
