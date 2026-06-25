@@ -1177,6 +1177,8 @@ function buildGrassRing(parent: THREE.Group, seed: number): GrassRing {
         const z = j * step + (hashAt(i, j, 2) - 0.5) * step * 1.4;
         if (x < minX || x >= maxX || z < minZ || z >= maxZ) continue;
         if (Math.abs(x) > WORLD_MAX_X - 16 || z < WORLD_MIN_Z + 16 || z > WORLD_MAX_Z - 16) continue;
+        // The blight is a dead wasteland: no living grass blades, just bare ash.
+        if (zoneBiomeAt(z) === 'blight') continue;
         const h = terrainHeight(x, z, seed);
         if (h < WATER_LEVEL + 1.6) continue;
         // no blades pasted onto cliff faces
@@ -1445,8 +1447,12 @@ export function buildFoliage(seed: number): FoliageView {
           ? 0.94 + hashAt(b.x, b.z, 109) * 0.06
           : 1;
         const maxDist = b.maxDist === undefined ? Infinity : b.maxDist * distanceScale * revealScale;
+        // Cull on the bucket CENTRE (not near edge): a 240u-deep bucket kept by its
+        // near edge shows trees ~2*radius past the fog wall, where the chunked
+        // terrain has already dropped out, so they appear to float. Centre-culling
+        // pulls the far trees back in line with the terrain's draw extent.
         b.mesh.visible = d >= minDist && d < maxDist
-          && d - b.radius < fogLimit;
+          && d < fogLimit;
         if (b.mesh.visible) {
           modelVisibleBuckets++;
           modelVisibleDraws += b.draws;

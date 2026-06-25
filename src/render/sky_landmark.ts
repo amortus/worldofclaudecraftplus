@@ -18,6 +18,10 @@ export interface SkyLandmarkOpts {
   /** Keep scene fog on the model so it sits in the zone's atmosphere (LOW mode);
    *  default off so a HIGH skybox landmark stays crisp at any distance. */
   fog?: boolean;
+  /** Pin the model to a FIXED world x/z (a thing that floats over one spot of the
+   *  map) instead of riding the camera. With `clearance` set, the altitude is that
+   *  anchor's groundHeight + clearance, so it hovers high over a fixed location. */
+  anchor?: { x: number; z: number };
 }
 
 // A large structure that follows the camera in X/Z. Two modes:
@@ -31,6 +35,7 @@ export class SkyLandmark {
   private readonly offset: THREE.Vector3;
   private readonly spin: number;
   private readonly clearance: number | null;
+  private readonly anchor: { x: number; z: number } | null;
   private angle = 0;
   private ready = false;
 
@@ -38,6 +43,7 @@ export class SkyLandmark {
     this.offset = opts.offset.clone();
     this.spin = opts.spin ?? 0;
     this.clearance = opts.clearance ?? null;
+    this.anchor = opts.anchor ?? null;
     this.group.visible = false;
     this.group.frustumCulled = false;
     scene.add(this.group);
@@ -78,8 +84,10 @@ export class SkyLandmark {
     if (!this.ready) return;
     this.group.visible = visible;
     if (!visible) return;
-    const x = camera.position.x + this.offset.x;
-    const z = camera.position.z + this.offset.z;
+    // Anchored: pinned over a fixed world spot (floats in place, parallax as you
+    // move). Otherwise it rides the camera like a distant skybox landmark.
+    const x = this.anchor ? this.anchor.x : camera.position.x + this.offset.x;
+    const z = this.anchor ? this.anchor.z : camera.position.z + this.offset.z;
     const y = this.clearance !== null ? groundHeight(x, z, seed) + this.clearance : this.offset.y;
     this.group.position.set(x, y, z);
     if (this.spin) {

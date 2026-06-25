@@ -290,6 +290,29 @@ export class Vfx {
   // High-level effects
   // ---------------------------------------------------------------------
 
+  // A lingering sickly-green corruption smoke wisping up off a blighted creature
+  // (the dead of the Ashen Wastes, afflicted by the Claudexxaramas). Call each
+  // frame at the creature's position; it self-throttles by emit rate + quality.
+  blightAura(x: number, y: number, z: number, dt: number): void {
+    if (!this.emitChance(8, dt)) return;
+    const green = new THREE.Color(0x5fbf3a).multiplyScalar(hdr(1.25));
+    const a = Math.random() * Math.PI * 2;
+    const r = 0.2 + Math.random() * 0.45;
+    this.spawn(
+      x + Math.cos(a) * r,
+      y + 0.15 + Math.random() * 0.35,
+      z + Math.sin(a) * r,
+      (Math.random() - 0.5) * 0.15,
+      0.45 + Math.random() * 0.4,
+      (Math.random() - 0.5) * 0.15,
+      green,
+      0.4 + Math.random() * 0.35,
+      1.1 + Math.random() * 0.8,
+      -0.12,
+      Math.random() < 0.5 ? SPR.smoke : SPR.magicWisp,
+    );
+  }
+
   projectile(sourceId: number, targetId: number, school: string): void {
     const from = this.anchor(sourceId, 0.62);
     if (!from) return;

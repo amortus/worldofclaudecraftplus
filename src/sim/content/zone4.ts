@@ -935,18 +935,37 @@ export const ZONE4_ITEMS: Record<string, ItemDef> = {
   dawnstalker_dagger: { id: 'dawnstalker_dagger', name: 'Dawnstalker Dagger', kind: 'weapon', slot: 'mainhand', quality: 'rare', weapon: { min: 31, max: 47, speed: 1.8 }, stats: { agi: 10, sta: 5 }, sellValue: 5000, buyValue: 18000, requiredClass: [...LEATHER] },
 };
 
+// Gravewatch: the Dawn of Claude's fortified outpost at the hub (x0, z1020),
+// holding the line against the blight. Buildings ring the NPC posts (Sera ~3,1024;
+// Orin ~-9,1018; Henning ~-4,1028; Irelle ~8,1030; Vael ~12,1016) without sitting
+// on them. A palisade faces south toward the pass; graveyards and dead campfires
+// give it the besieged, ashen feel.
 export const ZONE4_PROPS: ZonePropsDef = {
-  buildings: [],
-  wells: [],
-  stalls: [],
+  buildings: [
+    { kind: 'chapel', x: -18, z: 1014, w: 5, d: 7, rot: 0.5 }, // Chaplain Orin's
+    { kind: 'house', x: 16, z: 1018, w: 6, d: 5, rot: -0.6 }, // the command post
+    { kind: 'inn', x: -15, z: 1036, w: 7, d: 7, rot: 0.3 }, // barracks
+    { kind: 'house', x: 0, z: 1046, w: 5, d: 5, rot: 0 }, // the watch house
+  ],
+  wells: [{ x: 7, z: 1038, r: 1.5 }],
+  stalls: [{ x: -7, z: 1036, rot: 0, r: 1.7 }], // the quartermaster's stall by Henning
   mines: [],
   docks: [],
-  tents: [],
-  crates: [],
-  campfires: [],
+  tents: [
+    { x: 19, z: 1006, rot: 0.5, scale: 1.2 },
+    { x: -21, z: 1005, rot: -0.4, scale: 1.2 },
+    { x: 13, z: 1040, rot: 1.1, scale: 1.0 },
+  ],
+  crates: [[10, 1034], [-11, 1024], [5, 1012]],
+  campfires: [[0, 1009], [-18, 1028], [17, 1030]],
   mudHuts: [],
   ruinRings: [],
-  fences: [],
-  graveyards: [],
+  fences: [
+    { x1: -26, z1: 1000, x2: -8, z2: 1000 },
+    { x1: 8, z1: 1000, x2: 26, z2: 1000 },
+    { x1: -26, z1: 1000, x2: -26, z2: 1018 },
+    { x1: 26, z1: 1000, x2: 26, z2: 1018 },
+  ],
+  graveyards: [{ x: 22, z: 1012 }, { x: -24, z: 1024 }],
   delveMarkers: [],
 };

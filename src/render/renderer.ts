@@ -93,6 +93,7 @@ import { downscaleDims } from './screenshot';
 import { drapeRingLocalY } from './selection_ring';
 import { buildClouds, buildSky, type SkyView } from './sky';
 import { SkyLandmark } from './sky_landmark';
+import { BLIGHT_AURA_MOBS } from './mob_auras';
 import { shouldRenderStealthGhost } from './stealth';
 import { buildFlaredConeFan, buildRingXZ, drapeConeWorld } from './target_cone_debug';
 import { buildTerrain, type TerrainView } from './terrain';
@@ -951,16 +952,18 @@ export class Renderer {
     setRenderCategory(this.sky, 'sky');
     this.scene.add(this.sky);
 
-    // Naxx: a flying necropolis that drifts LOW over the Ashen Wastes (the dead
-    // zone), riding the camera so it looms nearby anywhere in that zone. Gated to
-    // that zone in sync(). Size/offset/clearance/spin are visual tuning.
+    // Naxx: a flying necropolis pinned HIGH over a FIXED spot of the Ashen Wastes,
+    // looming in the sky above the dead land (not riding the camera). Anchored over
+    // the zone's north-central ground at ~90u altitude so it floats clearly overhead
+    // with real parallax as you move. Gated to the zone (and outdoors) in sync().
     this.naxx = new SkyLandmark(this.scene, {
       url: '/models/props/Naxx.glb',
-      size: 64,
-      offset: new THREE.Vector3(58, 0, 34),
-      spin: 0.02,
-      clearance: 12, // base hovers a little above the dead ground
-      fog: true,
+      size: 110,
+      offset: new THREE.Vector3(0, 0, 0), // unused while anchored
+      anchor: { x: 0, z: 1150 },
+      spin: 0.01,
+      clearance: 90, // hovers high above the fixed anchor's ground
+      fog: false, // crisp so the necropolis reads clearly up in the sky
     });
 
     // IBL: prefilter the real per-biome HDRI equirects so PBR materials get
@@ -3674,6 +3677,10 @@ export class Renderer {
       const y = isSelf ? selfPos.y : e.prevPos.y + (e.pos.y - e.prevPos.y) * ea;
       const z = isSelf ? selfPos.z : e.prevPos.z + (e.pos.z - e.prevPos.z) * ea;
       v.group.position.set(x, y, z);
+      // Blighted dead of the Ashen Wastes wisp green corruption smoke (nearby only).
+      if (e.kind === 'mob' && d2 < 48 * 48 && BLIGHT_AURA_MOBS.has(e.templateId)) {
+        this.vfx.blightAura(x, y, z, dt);
+      }
       let facing = e.prevFacing + shortestAngle(e.prevFacing, e.facing) * ea;
       if (id === p.id && renderFacingOverride !== null) {
         // Rate-limit the camera-driven heading so engaging mouselook (or starting
