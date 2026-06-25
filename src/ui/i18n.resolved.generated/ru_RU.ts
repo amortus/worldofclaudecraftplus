@@ -199,7 +199,12 @@ export const ru_RU: EnTranslations = {
     "questTracker": {
       "count": "({count})",
       "collapseHint": "Свернуть трекер заданий",
-      "expandHint": "Развернуть трекер заданий"
+      "expandHint": "Развернуть трекер заданий",
+      "trackHint": "Отслеживать задание: отметить цели на карте и показать стрелку-указатель",
+      "untrackHint": "Перестать отслеживать это задание"
+    },
+    "questArrow": {
+      "distance": "{n} м"
     },
     "chatTimestamps": {
       "show": "Показывать время в чате",

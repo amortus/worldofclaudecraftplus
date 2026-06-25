@@ -25,7 +25,10 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.donate.pixLabel",
     "hudChrome.donate.qrAlt",
     "hudChrome.donate.thanks",
-    "hudChrome.donate.title"
+    "hudChrome.donate.title",
+    "hudChrome.questArrow.distance",
+    "hudChrome.questTracker.trackHint",
+    "hudChrome.questTracker.untrackHint"
   ],
   "es_ES": [
     "hudChrome.ads.adNotAvailable",
@@ -43,7 +46,10 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.donate.pixLabel",
     "hudChrome.donate.qrAlt",
     "hudChrome.donate.thanks",
-    "hudChrome.donate.title"
+    "hudChrome.donate.title",
+    "hudChrome.questArrow.distance",
+    "hudChrome.questTracker.trackHint",
+    "hudChrome.questTracker.untrackHint"
   ],
   "fr_FR": [
     "hudChrome.ads.adNotAvailable",
@@ -61,7 +67,10 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.donate.pixLabel",
     "hudChrome.donate.qrAlt",
     "hudChrome.donate.thanks",
-    "hudChrome.donate.title"
+    "hudChrome.donate.title",
+    "hudChrome.questArrow.distance",
+    "hudChrome.questTracker.trackHint",
+    "hudChrome.questTracker.untrackHint"
   ],
   "fr_CA": [
     "hudChrome.ads.adNotAvailable",
@@ -79,7 +88,10 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.donate.pixLabel",
     "hudChrome.donate.qrAlt",
     "hudChrome.donate.thanks",
-    "hudChrome.donate.title"
+    "hudChrome.donate.title",
+    "hudChrome.questArrow.distance",
+    "hudChrome.questTracker.trackHint",
+    "hudChrome.questTracker.untrackHint"
   ],
   "en_CA": [],
   "it_IT": [
@@ -98,7 +110,10 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.donate.pixLabel",
     "hudChrome.donate.qrAlt",
     "hudChrome.donate.thanks",
-    "hudChrome.donate.title"
+    "hudChrome.donate.title",
+    "hudChrome.questArrow.distance",
+    "hudChrome.questTracker.trackHint",
+    "hudChrome.questTracker.untrackHint"
   ],
   "de_DE": [
     "hudChrome.ads.adNotAvailable",
@@ -116,7 +131,10 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.donate.pixLabel",
     "hudChrome.donate.qrAlt",
     "hudChrome.donate.thanks",
-    "hudChrome.donate.title"
+    "hudChrome.donate.title",
+    "hudChrome.questArrow.distance",
+    "hudChrome.questTracker.trackHint",
+    "hudChrome.questTracker.untrackHint"
   ],
   "zh_CN": [
     "hudChrome.donate.close",

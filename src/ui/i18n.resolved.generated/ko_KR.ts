@@ -199,7 +199,12 @@ export const ko_KR: EnTranslations = {
     "questTracker": {
       "count": "({count})",
       "collapseHint": "퀘스트 추적기 접기",
-      "expandHint": "퀘스트 추적기 펼치기"
+      "expandHint": "퀘스트 추적기 펼치기",
+      "trackHint": "퀘스트 추적: 목표를 지도에 표시하고 방향 화살표를 표시합니다",
+      "untrackHint": "이 퀘스트 추적 중지"
+    },
+    "questArrow": {
+      "distance": "{n} m"
     },
     "chatTimestamps": {
       "show": "채팅 시각 표시",

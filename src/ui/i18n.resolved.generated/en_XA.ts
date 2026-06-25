@@ -199,7 +199,12 @@ export const en_XA: EnTranslations = {
     "questTracker": {
       "count": "[({count})]",
       "collapseHint": "[Çóļļáþšé ɋúéšţ ţŕáçķéŕ]",
-      "expandHint": "[Éẋþáñð ɋúéšţ ţŕáçķéŕ]"
+      "expandHint": "[Éẋþáñð ɋúéšţ ţŕáçķéŕ]",
+      "trackHint": "[Ţŕáçķ ɋúéšţ: ɱáŕķ íţš óƀĵéçţíʋéš óñ ţĥé ɱáþ áñð šĥóŵ á ŵáýþóíñţ áŕŕóŵ]",
+      "untrackHint": "[Šţóþ ţŕáçķíñĝ ţĥíš ɋúéšţ]"
+    },
+    "questArrow": {
+      "distance": "[{n} ɱ]"
     },
     "chatTimestamps": {
       "show": "[Šĥóŵ Çĥáţ Ţíɱéšţáɱþš]",

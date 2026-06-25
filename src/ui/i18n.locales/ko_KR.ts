@@ -3402,6 +3402,9 @@ export const ko_KR: Partial<Record<TranslationKey, string>> = {
   'hudChrome.questTracker.count': '({count})',
   'hudChrome.questTracker.collapseHint': '퀘스트 추적기 접기',
   'hudChrome.questTracker.expandHint': '퀘스트 추적기 펼치기',
+  'hudChrome.questTracker.trackHint': '퀘스트 추적: 목표를 지도에 표시하고 방향 화살표를 표시합니다',
+  'hudChrome.questTracker.untrackHint': '이 퀘스트 추적 중지',
+  'hudChrome.questArrow.distance': '{n} m',
   // Modular bag filtering controls (hudChrome.bags.*).
   'hudChrome.bags.filterGroupAria': '가방을 분류별로 필터링',
   'hudChrome.bags.filterAll': '전체',

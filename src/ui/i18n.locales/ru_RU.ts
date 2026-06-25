@@ -3450,6 +3450,9 @@ export const ru_RU: Partial<Record<TranslationKey, string>> = {
   'hudChrome.questTracker.count': '({count})',
   'hudChrome.questTracker.collapseHint': 'Свернуть трекер заданий',
   'hudChrome.questTracker.expandHint': 'Развернуть трекер заданий',
+  'hudChrome.questTracker.trackHint': 'Отслеживать задание: отметить цели на карте и показать стрелку-указатель',
+  'hudChrome.questTracker.untrackHint': 'Перестать отслеживать это задание',
+  'hudChrome.questArrow.distance': '{n} м',
   // Modular bag filtering controls (hudChrome.bags.*).
   'hudChrome.bags.filterGroupAria': 'Фильтровать сумки по категории',
   'hudChrome.bags.filterAll': 'Все',

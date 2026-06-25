@@ -199,7 +199,12 @@ export const en_CA: EnTranslations = {
     "questTracker": {
       "count": "({count})",
       "collapseHint": "Collapse quest tracker",
-      "expandHint": "Expand quest tracker"
+      "expandHint": "Expand quest tracker",
+      "trackHint": "Track quest: mark its objectives on the map and show a waypoint arrow",
+      "untrackHint": "Stop tracking this quest"
+    },
+    "questArrow": {
+      "distance": "{n} m"
     },
     "chatTimestamps": {
       "show": "Show Chat Timestamps",

@@ -3252,6 +3252,9 @@ export const zh_TW: Partial<Record<TranslationKey, string>> = {
   'hudChrome.questTracker.count': '（{count}）',
   'hudChrome.questTracker.collapseHint': '收合任務追蹤器',
   'hudChrome.questTracker.expandHint': '展開任務追蹤器',
+  'hudChrome.questTracker.trackHint': '追蹤任務：在地圖上標記目標並顯示路標箭頭',
+  'hudChrome.questTracker.untrackHint': '停止追蹤此任務',
+  'hudChrome.questArrow.distance': '{n} 公尺',
   // Modular bag filtering controls (hudChrome.bags.*).
   'hudChrome.bags.filterGroupAria': '依類別篩選背包',
   'hudChrome.bags.filterAll': '全部',

@@ -199,7 +199,12 @@ export const zh_TW: EnTranslations = {
     "questTracker": {
       "count": "（{count}）",
       "collapseHint": "收合任務追蹤器",
-      "expandHint": "展開任務追蹤器"
+      "expandHint": "展開任務追蹤器",
+      "trackHint": "追蹤任務：在地圖上標記目標並顯示路標箭頭",
+      "untrackHint": "停止追蹤此任務"
+    },
+    "questArrow": {
+      "distance": "{n} 公尺"
     },
     "chatTimestamps": {
       "show": "顯示聊天時間戳記",

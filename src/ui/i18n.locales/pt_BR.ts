@@ -3369,6 +3369,9 @@ export const pt_BR: Partial<Record<TranslationKey, string>> = {
   'hudChrome.questTracker.count': '({count})',
   'hudChrome.questTracker.collapseHint': 'Recolher missões',
   'hudChrome.questTracker.expandHint': 'Expandir missões',
+  'hudChrome.questTracker.trackHint': 'Rastrear missão: marca os objetivos no mapa e mostra uma seta de orientação',
+  'hudChrome.questTracker.untrackHint': 'Parar de rastrear esta missão',
+  'hudChrome.questArrow.distance': '{n} m',
   // Modular bag filtering controls (hudChrome.bags.*).
   'hudChrome.bags.filterGroupAria': 'Filtrar bolsas por categoria',
   'hudChrome.bags.filterAll': 'Todos',

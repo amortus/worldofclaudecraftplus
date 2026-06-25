@@ -199,7 +199,12 @@ export const ja_JP: EnTranslations = {
     "questTracker": {
       "count": "（{count}）",
       "collapseHint": "クエストトラッカーを折りたたむ",
-      "expandHint": "クエストトラッカーを展開する"
+      "expandHint": "クエストトラッカーを展開する",
+      "trackHint": "クエストを追跡：目標を地図に表示し、方向矢印を表示します",
+      "untrackHint": "このクエストの追跡を解除する"
+    },
+    "questArrow": {
+      "distance": "{n} m"
     },
     "chatTimestamps": {
       "show": "チャットに時刻を表示",

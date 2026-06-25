@@ -264,6 +264,8 @@ import { hydratePortraits, portraitChipHtml } from './portrait_chip';
 import { maskProfanity } from './profanity';
 import { encodeQuestLink, parseChatSegments } from './quest_link';
 import { type QuestTrackerView, questTrackerView, type TrackedQuest } from './quest_tracker';
+import { pickNearest, type QuestMarker, questMarkers } from './quest_targets';
+import { QuestTracking } from './quest_tracking';
 import { lockoutParts, lockoutShape } from './raid_lockout';
 import { type RaidLockoutI18n, raidLockoutPanelHtml } from './raid_lockout_view';
 import { restView } from './rest_indicator';
@@ -885,6 +887,10 @@ export class Hud {
   private openGossipNpcId: number | null = null;
   private openQuestDetailId: string | null = null;
   private selectedQuestLogId: string | null = null;
+  // Tracked-quest state (client-local) + the per-frame objective markers it
+  // resolves, shared by the map/minimap draw and the on-screen waypoint arrow.
+  private readonly questTracking = new QuestTracking();
+  private questMarkerCache: QuestMarker[] = [];
   private pendingChatLinks = new Map<string, string>(); // display "[Name]" -> questId
   private questDialogReturnFocus: HTMLElement | null = null;
   private questDialogOpenedAtMs = 0;
@@ -1239,7 +1245,13 @@ export class Hud {
     // overlay is click-through (pointer-events:none) except the header button, so
     // delegate on the stable container (the header is rebuilt on each render).
     $('#quest-tracker').addEventListener('click', (e) => {
-      if ((e.target as HTMLElement).closest('.qt-header')) this.toggleQuestTrackerCollapsed();
+      const el = e.target as HTMLElement;
+      if (el.closest('.qt-header')) {
+        this.toggleQuestTrackerCollapsed();
+        return;
+      }
+      const title = el.closest('.qt-title') as HTMLElement | null;
+      if (title?.dataset.questId) this.toggleQuestTrack(title.dataset.questId);
     });
     // Keyboard activation: handle Enter/Space here and stop the event before it
     // bubbles to the window-level game keybinds (Enter is bound to Open Chat,
@@ -1248,11 +1260,15 @@ export class Hud {
     // overlay, so canUseGameKeys() stays true and those binds fire while it has
     // focus; stopping propagation here keeps the toggle reachable by keyboard.
     $('#quest-tracker').addEventListener('keydown', (e) => {
-      if (!(e.target as HTMLElement).closest('.qt-header')) return;
+      const el = e.target as HTMLElement;
+      const header = el.closest('.qt-header');
+      const title = el.closest('.qt-title') as HTMLElement | null;
+      if (!header && !title) return;
       if (e.key === 'Enter' || e.key === ' ' || e.code === 'Space') {
         e.preventDefault();
         e.stopPropagation();
-        this.toggleQuestTrackerCollapsed();
+        if (header) this.toggleQuestTrackerCollapsed();
+        else if (title?.dataset.questId) this.toggleQuestTrack(title.dataset.questId);
       }
     });
     // The delve board and lockpick panel are non-modal .window.panel overlays, so
@@ -4138,6 +4154,7 @@ export class Hud {
     }
     this.arenaMatchSeen = inArenaMatch;
     if (fastHud) {
+      this.updateQuestWaypoint();
       this.updateMinimap();
       this.updateClock();
       this.updateMinimapCoords();
@@ -4303,6 +4320,32 @@ export class Hud {
     }
   }
 
+  /** Toggle whether a quest is tracked (shows map markers + the waypoint arrow). */
+  private toggleQuestTrack(questId: string): void {
+    this.questTracking.toggle(questId);
+    this.updateQuestTracker();
+  }
+
+  // Rebuild the tracked-quest objective markers (consumed by the map/minimap)
+  // and aim the on-screen arrow at the nearest one. Stale tracked ids (turned
+  // in / abandoned) are pruned first. Called each fast-HUD frame.
+  private updateQuestWaypoint(): void {
+    this.questTracking.retain(this.sim.questLog.keys());
+    const markers: QuestMarker[] = [];
+    for (const id of this.questTracking.trackedIds()) {
+      const qp = this.sim.questLog.get(id);
+      if (qp) markers.push(...questMarkers(id, qp.counts));
+    }
+    this.questMarkerCache = markers;
+    const p = this.sim.player;
+    const nearest = p ? pickNearest(markers, p.pos.x, p.pos.z) : null;
+    // Hide the arrow once the player is essentially on the objective (inside a
+    // camp radius reads as distance 0); else point at the nearest marker.
+    this.renderer.setQuestWaypoint(
+      nearest && nearest.dist > 4 ? { x: nearest.marker.x, z: nearest.marker.z } : null,
+    );
+  }
+
   private updateQuestTracker(): void {
     const el = $('#quest-tracker');
     const settings = this.optionsHooks?.settings;
@@ -4363,7 +4406,9 @@ export class Hud {
       `<span class="qt-h-label">${esc(t('questUi.tracker.title'))}</span>${count}</button>`;
     let rows = '';
     for (const q of view.quests) {
-      rows += `<div class="qt-title">${esc(q.title)}${q.complete ? ` <span class="quest-complete">(${esc(t('questUi.tracker.complete'))})</span>` : ''}</div>`;
+      const tracked = this.questTracking.isTracked(q.id);
+      const trackHint = esc(t(tracked ? 'hudChrome.questTracker.untrackHint' : 'hudChrome.questTracker.trackHint'));
+      rows += `<button type="button" class="qt-title${tracked ? ' tracked' : ''}" data-quest-id="${esc(q.id)}" aria-pressed="${tracked}" title="${trackHint}">${esc(q.title)}${q.complete ? ` <span class="quest-complete">(${esc(t('questUi.tracker.complete'))})</span>` : ''}</button>`;
       for (const o of q.objectives) {
         rows += `<div class="qt-obj${o.done ? ' done' : ''}">- ${esc(this.questProgressText(o.label, o.current, o.total))}</div>`;
       }
@@ -5192,6 +5237,52 @@ export class Hud {
     const sy = (WORLD_MAX_Z - p.pos.z) * bgPxPerYard - sw / 2;
     ctx.drawImage(bg, sx, sy, sw, sw, 0, 0, S, S);
 
+    // Tracked-quest objective markers: shaded spawn regions (or a pin for a point
+    // objective), plus a rim arrowhead when the objective is off the minimap.
+    // Drawn under the entity/party/player dots so live markers stay on top.
+    const questRimR = S / 2 - 7;
+    for (const m of this.questMarkerCache) {
+      const dx = -(m.x - p.pos.x) * pxPerYard; // +X is map-left
+      const dz = -(m.z - p.pos.z) * pxPerYard;
+      if (Math.hypot(dx, dz) > questRimR) {
+        const ang = Math.atan2(dz, dx);
+        ctx.save();
+        ctx.translate(S / 2 + Math.cos(ang) * questRimR, S / 2 + Math.sin(ang) * questRimR);
+        ctx.rotate(ang);
+        ctx.fillStyle = '#ffd100';
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(6, 0);
+        ctx.lineTo(-4, 4.5);
+        ctx.lineTo(-4, -4.5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+        continue;
+      }
+      const mx = S / 2 + dx;
+      const my = S / 2 + dz;
+      if (m.radius > 0) {
+        ctx.beginPath();
+        ctx.arc(mx, my, Math.max(3, m.radius * pxPerYard), 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,209,0,0.16)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,209,0,0.6)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.arc(mx, my, 3, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffd100';
+        ctx.fill();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+
     // friend/guild lookup for colouring nearby allies (party markers are drawn
     // separately below, so skip party members here to avoid double dots)
     const social = this.sim.socialInfo;
@@ -5822,6 +5913,29 @@ export class Hud {
         ctx.font = 'bold 15px Georgia';
         ctx.strokeText(hasReady ? '?' : '!', mx, my);
         ctx.fillText(hasReady ? '?' : '!', mx, my);
+      }
+    }
+    // tracked-quest objective markers in this zone: shaded spawn regions + pins,
+    // under the player arrow so the player stays readable on top of them.
+    for (const m of this.questMarkerCache) {
+      if (m.z < zone.zMin || m.z >= zone.zMax) continue;
+      const { mx, my } = toMap(m.x, m.z);
+      if (m.radius > 0) {
+        ctx.beginPath();
+        ctx.arc(mx, my, Math.max(4, (m.radius / spanX) * S), 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,209,0,0.14)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,209,0,0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = '#ffd100';
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(mx, my, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
       }
     }
     // player

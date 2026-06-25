@@ -42,7 +42,7 @@ import {
   holderTierByIndex,
   holderTierDisplayName,
 } from '../ui/holder_tier';
-import { t } from '../ui/i18n';
+import { formatNumber, t } from '../ui/i18n';
 import { raidMarkerDataUrl } from '../ui/icons';
 import { type IWorld, OVERHEAD_EMOTES } from '../world_api';
 import { isVisuallyDead } from './anim_state';
@@ -735,6 +735,11 @@ export class Renderer {
   camYaw = Math.PI;
   camPitch = 0.32;
   camDist = 12;
+
+  // Quest waypoint: the world (x,z) the on-screen tracker arrow points at, or
+  // null to hide it. The HUD sets it each frame to the nearest tracked objective.
+  private questWaypoint: { x: number; z: number } | null = null;
+  private questArrowEl: HTMLDivElement | null = null;
   // Smoothed chase-cam occlusion (1 = no pull-in); see updateCamera.
   private camOcclusion: CameraOcclusionState = { pullT: 1, lensT: 1, fov: CAMERA_BASE_FOV };
   showNameplates = true;
@@ -3946,6 +3951,7 @@ export class Renderer {
       this.selectionRing.visible = false;
     }
     this.updateClickMarkers(dt);
+    this.updateQuestArrow();
     // dev-only Tab-target cone overlay: re-drape the front cone on the terrain
     // under the local player, oriented to the model's rendered facing.
     if (this.targetCone) {
@@ -4850,6 +4856,59 @@ export class Renderer {
     }
   }
 
+  /** Point the on-screen quest arrow at a world (x,z), or null to hide it. */
+  setQuestWaypoint(target: { x: number; z: number } | null): void {
+    this.questWaypoint = target;
+  }
+
+  // On-screen "crazy arrow": a triangle anchored above the local player that
+  // rotates to point at the quest waypoint and colors by how well the player is
+  // heading toward it (red running away -> amber sideways -> green dead-on),
+  // with a live distance readout. Hidden when there is no waypoint, the player
+  // is dead, or the anchor is behind the camera. The on-screen direction is
+  // derived by projecting a point a few yards toward the target and taking the
+  // screen-space delta, so it stays correct under any camera yaw/pitch.
+  private updateQuestArrow(): void {
+    const wp = this.questWaypoint;
+    const p = this.sim.player;
+    if (!wp || !p || p.dead) {
+      if (this.questArrowEl) this.questArrowEl.style.display = 'none';
+      return;
+    }
+    if (!this.questArrowEl) {
+      const el = document.createElement('div');
+      el.className = 'quest-arrow';
+      el.innerHTML = '<div class="quest-arrow-tip" aria-hidden="true"></div><div class="quest-arrow-dist"></div>';
+      this.nameplateLayer.appendChild(el);
+      this.questArrowEl = el;
+    }
+    const el = this.questArrowEl;
+    const head = this.worldToScreen(p.pos.x, p.pos.y + 2.4, p.pos.z);
+    if (head.behind) {
+      el.style.display = 'none';
+      return;
+    }
+    const dirx = wp.x - p.pos.x;
+    const dirz = wp.z - p.pos.z;
+    const dist = Math.hypot(dirx, dirz);
+    const inv = 1 / (dist || 1);
+    const foot = this.worldToScreen(p.pos.x, p.pos.y, p.pos.z);
+    const ahead = this.worldToScreen(p.pos.x + dirx * inv * 4, p.pos.y, p.pos.z + dirz * inv * 4);
+    const screenAngle = Math.atan2(ahead.y - foot.y, ahead.x - foot.x);
+    // Alignment of the target bearing to the player's heading (facing = atan2(dx,dz)).
+    let rel = Math.atan2(dirx, dirz) - p.facing;
+    rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+    const align = 1 - Math.abs(rel) / Math.PI; // 1 = heading straight at it, 0 = away
+    el.style.display = '';
+    el.style.transform = `translate3d(${head.x}px, ${head.y}px, 0) translate(-50%, -50%)`;
+    // The CSS triangle points up; +90deg maps screenAngle (0 = +x) onto it.
+    (el.firstElementChild as HTMLElement).style.transform = `rotate(${screenAngle + Math.PI / 2}rad)`;
+    (el.firstElementChild as HTMLElement).style.borderBottomColor = questArrowColor(align);
+    (el.lastElementChild as HTMLElement).textContent = t('hudChrome.questArrow.distance', {
+      n: formatNumber(Math.round(dist)),
+    });
+  }
+
   worldToScreen(x: number, y: number, z: number): { x: number; y: number; behind: boolean } {
     this.tmpV.set(x, y, z).project(this.camera);
     return {
@@ -4858,6 +4917,17 @@ export class Renderer {
       behind: this.tmpV.z > 1,
     };
   }
+}
+
+// Quest-arrow heading feedback: red (running away) -> amber (sideways) ->
+// green (dead-on), snapping to bright green once essentially aligned. `align`
+// is 1 when the player heads straight at the target, 0 when straight away.
+function questArrowColor(align: number): string {
+  if (align > 0.97) return '#39e639';
+  const a = Math.max(0, Math.min(1, align));
+  const r = a < 0.5 ? 230 : Math.round(230 - (a - 0.5) * 2 * 170); // 230 -> 60
+  const g = a < 0.5 ? Math.round(60 + a * 2 * 170) : 230; // 60 -> 230
+  return `rgb(${r}, ${g}, 55)`;
 }
 
 function shortestAngle(from: number, to: number): number {

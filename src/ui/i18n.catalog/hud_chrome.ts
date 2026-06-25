@@ -63,6 +63,12 @@ export const hudChromeStrings = {
     count: '({count})',
     collapseHint: 'Collapse quest tracker',
     expandHint: 'Expand quest tracker',
+    trackHint: 'Track quest: mark its objectives on the map and show a waypoint arrow',
+    untrackHint: 'Stop tracking this quest',
+  },
+  // Distance readout under the on-screen quest waypoint arrow ({n} = whole units).
+  questArrow: {
+    distance: '{n} m',
   },
   chatTimestamps: {
     show: 'Show Chat Timestamps',
