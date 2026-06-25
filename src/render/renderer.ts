@@ -952,17 +952,17 @@ export class Renderer {
     setRenderCategory(this.sky, 'sky');
     this.scene.add(this.sky);
 
-    // Naxx: a flying necropolis pinned HIGH over a FIXED spot of the Ashen Wastes,
+    // Naxx: a flying necropolis pinned over a FIXED spot of the Ashen Wastes,
     // looming in the sky above the dead land (not riding the camera). Anchored over
-    // the zone's north-central ground at ~90u altitude so it floats clearly overhead
-    // with real parallax as you move. Gated to the zone (and outdoors) in sync().
+    // the zone's north-central ground at ~45u altitude so it floats overhead with
+    // real parallax as you move. Gated to the zone (and outdoors) in sync().
     this.naxx = new SkyLandmark(this.scene, {
       url: '/models/props/Naxx.glb',
       size: 110,
       offset: new THREE.Vector3(0, 0, 0), // unused while anchored
       anchor: { x: 0, z: 1150 },
       spin: 0.01,
-      clearance: 90, // hovers high above the fixed anchor's ground
+      clearance: 45, // hovers above the fixed anchor's ground (lowered from 90)
       fog: false, // crisp so the necropolis reads clearly up in the sky
     });
 
