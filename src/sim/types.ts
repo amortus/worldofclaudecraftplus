@@ -967,6 +967,10 @@ export interface CampDef {
   center: { x: number; z: number };
   radius: number;
   count: number;
+  // Optional exact spawn spots. When present, world-gen places one mob per position
+  // with NO rng draws (deterministic facing/level), so adding such a camp does not
+  // shift the post-worldgen rng cursor (keeps seed-sensitive fixtures stable).
+  positions?: { x: number; z: number }[];
 }
 
 // Ground interactables (sparkle objects)

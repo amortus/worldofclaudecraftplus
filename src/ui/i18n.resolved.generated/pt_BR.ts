@@ -4444,6 +4444,9 @@ export const pt_BR: EnTranslations = {
       "blight_sample": {
         "name": "Amostra Corrompida"
       },
+      "tainted_antler": {
+        "name": "Chifre Maculado"
+      },
       "cult_orders": {
         "name": "Ordens Corrompidas"
       },
@@ -5487,6 +5490,12 @@ export const pt_BR: EnTranslations = {
       "gravelord_oss": {
         "name": "Senhor das Sepulturas Oss"
       },
+      "blighted_stag": {
+        "name": "Cervo Corrompido"
+      },
+      "rotting_fox": {
+        "name": "Raposa Putrefata"
+      },
       "claudeholme_husk": {
         "name": "Casca de Claudeholme"
       },
@@ -5845,6 +5854,11 @@ export const pt_BR: EnTranslations = {
         "name": "Buscadora de Saber Miren",
         "title": "Alvorada de Claude",
         "greeting": "Há uma relíquia na necrópole mais antiga que seu mestre, {playerName}: um bastão partido em lascas e espalhado entre os mortos. Reúna-as, e juntos reacenderemos a Mournlight."
+      },
+      "dawn_huntsman_varik": {
+        "name": "Caçador Varik",
+        "title": "Alvorada de Claude",
+        "greeting": "A podridão alcançou as feras, {playerName}. Os cervos do ermo do sul se erguem com fogo verde nos olhos, e as raposas se alimentam do que eles deixam para trás. Eu os caço para que a corrupção não se espalhe ainda mais. Empreste-me seu arco, ou sua lâmina."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6808,6 +6822,36 @@ export const pt_BR: EnTranslations = {
         "objectives": {
           "0": {
             "label": "Fragmento da Nave"
+          }
+        }
+      },
+      "q_aw_rotting_herd": {
+        "title": "A Manada Putrefata",
+        "text": "Os cervos do ermo do sul não são mais cervos, {playerName}. A praga tomou a manada inteira, e agora eles investem contra qualquer coisa que respire, com os chifres pingando verde. Reduza o número deles, oito devem quebrar a manada, antes que vaguem para o norte rumo a Gravewatch.",
+        "completion": "Oito feras putrefatas a menos no ermo. A manada não vai alcançar o acampamento esta noite. Você caça bem, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Cervo Corrompido abatido"
+          }
+        }
+      },
+      "q_aw_ash_scavengers": {
+        "title": "Saqueadoras das Cinzas",
+        "text": "Onde os cervos caem, as raposas chegam, {playerName}. Pequenas saqueadoras putrefatas que espalham a praga cada vez mais longe a cada carcaça que arrastam. Acabe com oito delas e impeça a corrupção de se alastrar.",
+        "completion": "As saqueadoras estão dispersas. Ótimo. Cada uma que você mata é mais um quilômetro de ermo que fica limpo por um pouco mais de tempo.",
+        "objectives": {
+          "0": {
+            "label": "Raposa Putrefata abatida"
+          }
+        }
+      },
+      "q_aw_corrupt_sample": {
+        "title": "Sementes da Podridão",
+        "text": "Quero saber quão fundo a praga corre nessas feras, {playerName}. Traga-me seis chifres maculados dos cervos, o verde apodrece pior no osso, e eu vou interpretar a velocidade com que se espalha. Se a manada já está perdida, a Alvorada precisa saber.",
+        "completion": "Seis chifres, cada um podre até o âmago. A praga já está na medula deles, {playerName}. Não há como salvar a manada, apenas dar fim a ela. Mas a Alvorada sabe o que enfrenta, e isso vale mais do que um abate limpo.",
+        "objectives": {
+          "0": {
+            "label": "Chifre Maculado"
           }
         }
       },

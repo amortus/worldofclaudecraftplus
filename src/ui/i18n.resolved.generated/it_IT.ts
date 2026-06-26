@@ -4444,6 +4444,9 @@ export const it_IT: EnTranslations = {
       "blight_sample": {
         "name": "Campione Contaminato"
       },
+      "tainted_antler": {
+        "name": "Corno Infetto"
+      },
       "cult_orders": {
         "name": "Ordini Corrotti"
       },
@@ -5487,6 +5490,12 @@ export const it_IT: EnTranslations = {
       "gravelord_oss": {
         "name": "Signore delle Tombe Oss"
       },
+      "blighted_stag": {
+        "name": "Cervo Corrotto"
+      },
+      "rotting_fox": {
+        "name": "Volpe Putrescente"
+      },
       "claudeholme_husk": {
         "name": "Spoglia di Claudeholme"
       },
@@ -5845,6 +5854,11 @@ export const it_IT: EnTranslations = {
         "name": "Cercatrice del Sapere Miren",
         "title": "Alba di Claude",
         "greeting": "C'e una reliquia nella necropoli piu antica del suo padrone, {playerName}: un bastone spezzato in schegge e disperso tra i morti. Raccoglile, e insieme ravviveremo il Luttoluce."
+      },
+      "dawn_huntsman_varik": {
+        "name": "Cacciatore Varik",
+        "title": "Dawn of Claude",
+        "greeting": "La putredine ha raggiunto le bestie, {playerName}. I cervi della desolazione meridionale si rialzano con fuoco verde negli occhi, e le volpi si nutrono di cio che lasciano dietro di se. Li caccio perche la corruzione non si spinga oltre. Prestami il tuo arco, o la tua lama."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6808,6 +6822,36 @@ export const it_IT: EnTranslations = {
         "objectives": {
           "0": {
             "label": "Frammento di Nave"
+          }
+        }
+      },
+      "q_aw_rotting_herd": {
+        "title": "La Mandria Putrescente",
+        "text": "I cervi della desolazione meridionale non sono piu cervi, {playerName}. Il marciume ha preso l'intera mandria, e ora caricano tutto cio che respira, le corna grondanti di verde. Diradali, otto dovrebbero bastare a spezzare la mandria, prima che vaghino a nord verso Gravewatch.",
+        "completion": "Otto bestie putrescenti in meno sulla desolazione. La mandria non raggiungera il campo stanotte. Cacci bene, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Cervo Corrotto ucciso"
+          }
+        }
+      },
+      "q_aw_ash_scavengers": {
+        "title": "Saprofagi della Cenere",
+        "text": "Dove cadono i cervi, arrivano le volpi, {playerName}. Piccoli saprofagi putrescenti che diffondono il marciume sempre piu lontano con ogni carcassa che trascinano via. Abbattine otto e impedisci alla corruzione di insinuarsi.",
+        "completion": "I saprofagi sono dispersi. Bene. Ognuno che uccidi e un miglio di desolazione che resta pulito ancora un po'.",
+        "objectives": {
+          "0": {
+            "label": "Volpe Putrescente uccisa"
+          }
+        }
+      },
+      "q_aw_corrupt_sample": {
+        "title": "Semi del Marciume",
+        "text": "Voglio sapere quanto a fondo corra il marciume in queste bestie, {playerName}. Portami sei corna infette dai cervi, il verde si incancrenisce peggio nell'osso, e leggero quanto in fretta si stia diffondendo. Se la mandria e gia perduta, la Dawn deve saperlo.",
+        "completion": "Sei corna, ognuna marcia fino al midollo. Il marciume e ormai nelle loro ossa, {playerName}. Non c'e modo di salvare la mandria, solo di porvi fine. Ma la Dawn sa cio che affronta, e questo vale piu di un'uccisione pulita.",
+        "objectives": {
+          "0": {
+            "label": "Corno Infetto"
           }
         }
       },

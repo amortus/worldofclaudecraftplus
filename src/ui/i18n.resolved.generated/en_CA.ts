@@ -4444,6 +4444,9 @@ export const en_CA: EnTranslations = {
       "blight_sample": {
         "name": "Tainted Sample"
       },
+      "tainted_antler": {
+        "name": "Tainted Antler"
+      },
       "cult_orders": {
         "name": "Corrupted Orders"
       },
@@ -5487,6 +5490,12 @@ export const en_CA: EnTranslations = {
       "gravelord_oss": {
         "name": "Gravelord Oss"
       },
+      "blighted_stag": {
+        "name": "Blighted Stag"
+      },
+      "rotting_fox": {
+        "name": "Rotting Fox"
+      },
       "claudeholme_husk": {
         "name": "Claudeholme Husk"
       },
@@ -5845,6 +5854,11 @@ export const en_CA: EnTranslations = {
         "name": "Loreseeker Miren",
         "title": "Dawn of Claude",
         "greeting": "There is a relic in the necropolis older than its master, {playerName}: a staff broken into splinters and scattered among the dead. Gather them, and we will rekindle the Mournlight together."
+      },
+      "dawn_huntsman_varik": {
+        "name": "Huntsman Varik",
+        "title": "Dawn of Claude",
+        "greeting": "The rot reached the beasts, {playerName}. The stags of the southern waste rise with green fire in their eyes, and the foxes feed on what they leave behind. I hunt them so the corruption spreads no further. Lend me your bow, or your blade."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6808,6 +6822,36 @@ export const en_CA: EnTranslations = {
         "objectives": {
           "0": {
             "label": "Ship Fragment"
+          }
+        }
+      },
+      "q_aw_rotting_herd": {
+        "title": "The Rotting Herd",
+        "text": "The stags of the southern waste are not stags anymore, {playerName}. The blight took the whole herd, and now they charge anything that breathes, antlers dripping green. Thin them out, eight should break the herd, before they wander north toward Gravewatch.",
+        "completion": "Eight fewer rotting beasts on the waste. The herd will not reach the camp tonight. You hunt well, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Blighted Stag slain"
+          }
+        }
+      },
+      "q_aw_ash_scavengers": {
+        "title": "Scavengers of the Ash",
+        "text": "Where the stags fall, the foxes come, {playerName}. Rotting little scavengers that spread the blight wider with every carcass they drag off. Put down eight of them and keep the corruption from creeping.",
+        "completion": "The scavengers are scattered. Good. Every one you kill is a mile of waste that stays clean a little longer.",
+        "objectives": {
+          "0": {
+            "label": "Rotting Fox slain"
+          }
+        }
+      },
+      "q_aw_corrupt_sample": {
+        "title": "Seeds of the Rot",
+        "text": "I want to know how deep the blight runs in these beasts, {playerName}. Bring me six tainted antlers from the stags, the green festers worst in the bone, and I will read how fast it is spreading. If the herd is already lost, the Dawn needs to know.",
+        "completion": "Six antlers, every one rotten to the core. The blight is in their marrow now, {playerName}. There is no saving the herd, only ending it. But the Dawn knows what it faces, and that is worth more than a clean kill.",
+        "objectives": {
+          "0": {
+            "label": "Tainted Antler"
           }
         }
       },

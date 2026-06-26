@@ -4444,6 +4444,9 @@ export const ko_KR: EnTranslations = {
       "blight_sample": {
         "name": "오염된 표본"
       },
+      "tainted_antler": {
+        "name": "오염된 뿔"
+      },
       "cult_orders": {
         "name": "타락한 명령서"
       },
@@ -5487,6 +5490,12 @@ export const ko_KR: EnTranslations = {
       "gravelord_oss": {
         "name": "무덤군주 오스"
       },
+      "blighted_stag": {
+        "name": "역병 걸린 수사슴"
+      },
+      "rotting_fox": {
+        "name": "썩어가는 여우"
+      },
       "claudeholme_husk": {
         "name": "클로드홀름 잔해"
       },
@@ -5845,6 +5854,11 @@ export const ko_KR: EnTranslations = {
         "name": "비전탐구자 미렌",
         "title": "클로드의 여명",
         "greeting": "그 시체 도시에는 그 주인보다 더 오래된 유물이 있다네, {playerName}: 산산이 부서져 죽은 자들 사이에 흩어진 지팡이지. 그것들을 모아 오면, 우리가 함께 모언라이트를 다시 밝힐 수 있을 걸세."
+      },
+      "dawn_huntsman_varik": {
+        "name": "사냥꾼 바리크",
+        "title": "클로드의 여명",
+        "greeting": "역병이 짐승들에게까지 퍼졌소, {playerName}. 남쪽 황무지의 수사슴들이 눈에 녹색 불길을 담고 일어서고, 여우들은 그놈들이 남긴 것을 먹어 치우지. 부패가 더 번지지 않도록 내가 그것들을 사냥하고 있소. 그대의 활이든, 그대의 칼날이든 빌려주시오."
       },
       "tidewatcher_ondrel": {
         "name": "온드렐 베인",
@@ -6808,6 +6822,36 @@ export const ko_KR: EnTranslations = {
         "objectives": {
           "0": {
             "label": "함선 파편"
+          }
+        }
+      },
+      "q_aw_rotting_herd": {
+        "title": "썩어가는 무리",
+        "text": "남쪽 황무지의 수사슴들은 더 이상 수사슴이 아니오, {playerName}. 역병이 무리 전체를 집어삼켰고, 이제 그놈들은 숨 쉬는 것이라면 무엇이든 들이받으며 뿔에서 녹색 진액을 떨어뜨리지. 그것들이 북쪽 그레이브워치로 향하기 전에 수를 줄여 주시오. 여덟 마리면 무리가 흩어질 것이오.",
+        "completion": "황무지에 썩어가는 짐승이 여덟 마리 줄었구려. 오늘 밤에는 무리가 야영지까지 닿지 못할 것이오. 그대는 사냥을 잘하는군, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "역병 걸린 수사슴 처치"
+          }
+        }
+      },
+      "q_aw_ash_scavengers": {
+        "title": "잿더미의 청소부",
+        "text": "수사슴이 쓰러진 곳에는 여우들이 모여드오, {playerName}. 사체를 끌고 다닐 때마다 역병을 더 넓게 퍼뜨리는 썩어가는 작은 청소부들이지. 여덟 마리를 처치해 부패가 기어들지 못하게 막아 주시오.",
+        "completion": "청소부들이 흩어졌구려. 좋소. 그대가 한 마리를 죽일 때마다 황무지 한 마장이 조금 더 오래 깨끗하게 남는 것이오.",
+        "objectives": {
+          "0": {
+            "label": "썩어가는 여우 처치"
+          }
+        }
+      },
+      "q_aw_corrupt_sample": {
+        "title": "부패의 씨앗",
+        "text": "이 짐승들 속에 역병이 얼마나 깊이 파고들었는지 알고 싶소, {playerName}. 수사슴들에게서 오염된 뿔 여섯 개를 가져다주시오. 녹색 부패는 뼈 속에서 가장 심하게 곪으니, 그것이 얼마나 빨리 퍼지고 있는지 읽어내겠소. 무리가 이미 가망 없는 지경이라면, 여명단이 그것을 알아야 하오.",
+        "completion": "뿔 여섯 개, 하나같이 속까지 썩어 있구려. 역병이 이제 그것들의 골수에까지 미쳤소, {playerName}. 무리를 구할 길은 없고, 오직 끝내는 길뿐이오. 허나 여명단은 무엇과 맞서고 있는지 알게 되었고, 그것은 깔끔한 처치 하나보다 더 값진 일이오.",
+        "objectives": {
+          "0": {
+            "label": "오염된 뿔"
           }
         }
       },

@@ -830,6 +830,8 @@ const MOB_KEYS: Record<string, string> = {
   // beasts that would otherwise fall back to the wolf model (FAMILY_KEYS.beast)
   old_cragmaw: 'mob_bear',
   bog_bloat: 'mob_murloc',
+  blighted_stag: 'mob_stag',
+  rotting_fox: 'mob_fox',
   // gravecaller cult + necromancers: dark-robed casters
   gravecaller_cultist: 'mob_dark_caster',
   gravecaller_summoner: 'mob_dark_caster',
@@ -909,6 +911,7 @@ const NPC_KEYS: Record<string, string> = {
   dawn_reclaimer_sela: 'npc_aldric',
   dawn_warbringer_torv: 'npc_smith',
   dawn_loreseeker_miren: 'npc_mage',
+  dawn_huntsman_varik: 'npc_scout',
 };
 
 export function visualKeyFor(e: Entity): string {

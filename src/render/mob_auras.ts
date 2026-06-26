@@ -13,4 +13,6 @@ export const BLIGHT_AURA_MOBS = new Set<string>([
   'naxx_deathguard',
   'morthax_the_hollow',
   'gravelord_oss',
+  'blighted_stag',
+  'rotting_fox',
 ]);

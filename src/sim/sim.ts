@@ -1176,6 +1176,19 @@ export class Sim {
       // Aquatic/flagged swimmers may wade in the shallows; everyone else
       // still spawns on dry land even though combat movement can enter water.
       const minHeight = this.mobCanSpawnInWater(template) ? WATER_LEVEL - 0.5 : WATER_LEVEL + 0.4;
+      // Fixed-position camps place one mob per exact spot with NO rng draws, so adding
+      // one does not shift the post-worldgen rng cursor (seed-sensitive fixtures stay put).
+      if (camp.positions) {
+        for (let i = 0; i < camp.positions.length; i++) {
+          const p = camp.positions[i];
+          const mob = createMob(this.nextId++, template, template.maxLevel, this.groundPos(p.x, p.z));
+          mob.facing = (i * 2.39996) % (Math.PI * 2);
+          mob.prevFacing = mob.facing;
+          mob.wanderTimer = 3 + (i % 5);
+          this.addEntity(mob);
+        }
+        continue;
+      }
       for (let i = 0; i < camp.count; i++) {
         const ang = this.rng.range(0, Math.PI * 2);
         const r = Math.sqrt(this.rng.next()) * camp.radius;

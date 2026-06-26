@@ -4444,6 +4444,9 @@ export const fr_CA: EnTranslations = {
       "blight_sample": {
         "name": "Echantillon souille"
       },
+      "tainted_antler": {
+        "name": "Bois corrompu"
+      },
       "cult_orders": {
         "name": "Ordres corrompus"
       },
@@ -5487,6 +5490,12 @@ export const fr_CA: EnTranslations = {
       "gravelord_oss": {
         "name": "Seigneur des tombes Oss"
       },
+      "blighted_stag": {
+        "name": "Cerf souille"
+      },
+      "rotting_fox": {
+        "name": "Renard putride"
+      },
       "claudeholme_husk": {
         "name": "Carcasse de Claudeholme"
       },
@@ -5845,6 +5854,11 @@ export const fr_CA: EnTranslations = {
         "name": "Quete-savoir Miren",
         "title": "Aube de Claude",
         "greeting": "Il y a dans la necropole une relique plus ancienne que son maitre, {playerName}: un baton brise en eclats, disperses parmi les morts. Rassemblez-les, et nous raviverons ensemble le Mournlight."
+      },
+      "dawn_huntsman_varik": {
+        "name": "Chasseur Varik",
+        "title": "Dawn of Claude",
+        "greeting": "La pourriture a gagne les betes, {playerName}. Les cerfs des terres desolees du sud se relevent, un feu vert dans les yeux, et les renards se repaissent de ce qu'ils laissent derriere eux. Je les chasse pour que la corruption ne s'etende pas davantage. Pretez-moi votre arc, ou votre lame."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6808,6 +6822,36 @@ export const fr_CA: EnTranslations = {
         "objectives": {
           "0": {
             "label": "Fragment du vaisseau"
+          }
+        }
+      },
+      "q_aw_rotting_herd": {
+        "title": "La harde putride",
+        "text": "Les cerfs des terres desolees du sud ne sont plus des cerfs, {playerName}. La souillure a pris la harde entiere, et voila qu'ils chargent tout ce qui respire, les bois ruisselants de vert. Eclaircissez leurs rangs, huit devraient briser la harde, avant qu'ils ne derivent vers le nord, vers Veillesepulcre.",
+        "completion": "Huit betes putrides de moins sur les terres desolees. La harde n'atteindra pas le camp cette nuit. Vous chassez bien, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Cerf souille tue"
+          }
+        }
+      },
+      "q_aw_ash_scavengers": {
+        "title": "Charognards de la cendre",
+        "text": "La ou les cerfs tombent, les renards arrivent, {playerName}. De petits charognards putrides qui propagent la souillure plus loin a chaque carcasse qu'ils trainent. Abattez-en huit et empechez la corruption de ramper.",
+        "completion": "Les charognards sont disperses. Bien. Chacun que vous tuez est un mille de terres desolees qui reste un peu plus longtemps propre.",
+        "objectives": {
+          "0": {
+            "label": "Renard putride tue"
+          }
+        }
+      },
+      "q_aw_corrupt_sample": {
+        "title": "Les graines de la pourriture",
+        "text": "Je veux savoir jusqu'ou la souillure court dans ces betes, {playerName}. Apportez-moi six bois corrompus preleves sur les cerfs, le vert s'envenime le plus dans l'os, et je lirai a quelle vitesse elle se propage. Si la harde est deja perdue, la Dawn of Claude doit le savoir.",
+        "completion": "Six bois, chacun pourri jusqu'au coeur. La souillure est dans leur moelle a present, {playerName}. On ne peut plus sauver la harde, seulement y mettre fin. Mais la Dawn of Claude sait ce a quoi elle fait face, et cela vaut plus qu'une mise a mort propre.",
+        "objectives": {
+          "0": {
+            "label": "Bois corrompu"
           }
         }
       },

@@ -4444,6 +4444,9 @@ export const es_ES: EnTranslations = {
       "blight_sample": {
         "name": "Muestra Corrompida"
       },
+      "tainted_antler": {
+        "name": "Asta Corrompida"
+      },
       "cult_orders": {
         "name": "Ordenes Corrompidas"
       },
@@ -5487,6 +5490,12 @@ export const es_ES: EnTranslations = {
       "gravelord_oss": {
         "name": "Señor de las Tumbas Oss"
       },
+      "blighted_stag": {
+        "name": "Ciervo Plagado"
+      },
+      "rotting_fox": {
+        "name": "Zorro Putrefacto"
+      },
       "claudeholme_husk": {
         "name": "Cascaron de Claudeholme"
       },
@@ -5845,6 +5854,11 @@ export const es_ES: EnTranslations = {
         "name": "Buscadora de Saber Miren",
         "title": "Alba de Claude",
         "greeting": "Hay una reliquia en la necrópolis más antigua que su amo, {playerName}: un báculo roto en astillas y disperso entre los muertos. Reúnelas y reavivaremos juntos la Mournlight."
+      },
+      "dawn_huntsman_varik": {
+        "name": "Cazador Varik",
+        "title": "Alba de Claude",
+        "greeting": "La putrefaccion alcanzo a las bestias, {playerName}. Los ciervos del paramo del sur se alzan con fuego verde en los ojos, y los zorros se alimentan de lo que dejan atras. Los cazo para que la corrupcion no se extienda mas. Prestame tu arco, o tu hoja."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6808,6 +6822,36 @@ export const es_ES: EnTranslations = {
         "objectives": {
           "0": {
             "label": "Fragmento de la Nave"
+          }
+        }
+      },
+      "q_aw_rotting_herd": {
+        "title": "La Manada Putrefacta",
+        "text": "Los ciervos del paramo del sur ya no son ciervos, {playerName}. La plaga se llevo a la manada entera, y ahora embisten cualquier cosa que respire, con las astas chorreando verde. Reduce su numero, ocho deberian quebrar a la manada, antes de que vaguen al norte hacia Gravewatch.",
+        "completion": "Ocho bestias putrefactas menos en el paramo. La manada no llegara al campamento esta noche. Cazas bien, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Ciervo Plagado abatido"
+          }
+        }
+      },
+      "q_aw_ash_scavengers": {
+        "title": "Carroneros de la Ceniza",
+        "text": "Donde caen los ciervos, llegan los zorros, {playerName}. Pequenos carroneros putrefactos que esparcen la plaga mas lejos con cada cadaver que arrastran. Acaba con ocho de ellos y evita que la corrupcion siga avanzando.",
+        "completion": "Los carroneros estan dispersos. Bien. Por cada uno que matas, una milla de paramo permanece limpia un poco mas de tiempo.",
+        "objectives": {
+          "0": {
+            "label": "Zorro Putrefacto abatido"
+          }
+        }
+      },
+      "q_aw_corrupt_sample": {
+        "title": "Semillas de la Putrefaccion",
+        "text": "Quiero saber cuan profunda corre la plaga en estas bestias, {playerName}. Traeme seis astas corrompidas de los ciervos, el verde se encona peor en el hueso, y leere cuan rapido se esta extendiendo. Si la manada ya esta perdida, el Alba debe saberlo.",
+        "completion": "Seis astas, cada una podrida hasta el tuetano. La plaga esta ya en su medula, {playerName}. No hay manera de salvar a la manada, solo de acabar con ella. Pero el Alba sabe a que se enfrenta, y eso vale mas que una muerte limpia.",
+        "objectives": {
+          "0": {
+            "label": "Asta Corrompida"
           }
         }
       },

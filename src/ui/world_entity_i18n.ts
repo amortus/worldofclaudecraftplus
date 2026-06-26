@@ -93,6 +93,8 @@ const MOB_IDS = [
   'naxx_deathguard',
   'morthax_the_hollow',
   'gravelord_oss',
+  'blighted_stag',
+  'rotting_fox',
   // Claudeholme dungeon (trash + 8 wing bosses)
   'claudeholme_husk',
   'claudeholme_reaver',
@@ -146,6 +148,7 @@ const NPC_IDS = [
   'dawn_reclaimer_sela',
   'dawn_warbringer_torv',
   'dawn_loreseeker_miren',
+  'dawn_huntsman_varik',
 ] as const;
 
 const QUEST_IDS = [
@@ -241,6 +244,9 @@ const QUEST_IDS = [
   'q_aw_attune_1',
   'q_aw_gravelord',
   'q_aw_attunement',
+  'q_aw_rotting_herd',
+  'q_aw_ash_scavengers',
+  'q_aw_corrupt_sample',
   // Claudeholme dungeon quests + the Breachkey (raid attunement) chain
   'q_ch_breach',
   'q_ch_vats',

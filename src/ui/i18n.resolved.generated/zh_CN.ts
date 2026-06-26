@@ -4444,6 +4444,9 @@ export const zh_CN: EnTranslations = {
       "blight_sample": {
         "name": "污秽样本"
       },
+      "tainted_antler": {
+        "name": "染疫鹿角"
+      },
       "cult_orders": {
         "name": "腐化的命令"
       },
@@ -5487,6 +5490,12 @@ export const zh_CN: EnTranslations = {
       "gravelord_oss": {
         "name": "墓主奥斯"
       },
+      "blighted_stag": {
+        "name": "枯疫雄鹿"
+      },
+      "rotting_fox": {
+        "name": "腐烂狐狸"
+      },
       "claudeholme_husk": {
         "name": "克劳德霍姆空壳"
       },
@@ -5845,6 +5854,11 @@ export const zh_CN: EnTranslations = {
         "name": "求知者米伦",
         "title": "克劳德黎明",
         "greeting": "亡城中有一件遗物比它的主宰更为古老，{playerName}：一柄碎成无数残片、散落于亡者之间的法杖。把它们收集起来，我们便能一同重燃哀光。"
+      },
+      "dawn_huntsman_varik": {
+        "name": "猎人瓦里克",
+        "title": "克劳德黎明",
+        "greeting": "腐疫已经侵染了野兽，{playerName}。南境荒野的雄鹿眼中燃着绿火复活了，狐狸则啃食它们留下的残骸。我猎杀它们，好让腐化不再蔓延。把你的弓借给我吧，或是你的利刃。"
       },
       "tidewatcher_ondrel": {
         "name": "翁德雷尔·凡恩",
@@ -6808,6 +6822,36 @@ export const zh_CN: EnTranslations = {
         "objectives": {
           "0": {
             "label": "船骸碎片"
+          }
+        }
+      },
+      "q_aw_rotting_herd": {
+        "title": "腐烂的鹿群",
+        "text": "南境荒野的雄鹿已不再是雄鹿了，{playerName}。枯疫吞没了整群鹿，如今它们见到任何活物便冲锋，鹿角滴淌着绿脓。削减它们的数目吧，杀掉八头便能瓦解这群鹿，免得它们北上漫游到坟守营地。",
+        "completion": "荒野上又少了八头腐烂的野兽。今夜这群鹿到不了营地了。你猎得很好，{playerName}。",
+        "objectives": {
+          "0": {
+            "label": "已杀枯疫雄鹿"
+          }
+        }
+      },
+      "q_aw_ash_scavengers": {
+        "title": "灰烬中的食腐者",
+        "text": "雄鹿倒下之处，狐狸便会来到，{playerName}。这些腐烂的小食腐者每拖走一具尸体，就把枯疫散播得更广。解决掉它们八只，遏止腐化的蔓延。",
+        "completion": "食腐者被驱散了。很好。你每杀一只，就有一里的荒野能多保持洁净一阵子。",
+        "objectives": {
+          "0": {
+            "label": "已杀腐烂狐狸"
+          }
+        }
+      },
+      "q_aw_corrupt_sample": {
+        "title": "腐疫之种",
+        "text": "我想知道枯疫在这些野兽体内究竟侵蚀得有多深，{playerName}。从雄鹿身上给我带来六支染疫的鹿角，那绿疫在骨中溃烂得最厉害，我便能读出它扩散的速度。倘若这群鹿已无可挽救，克劳德黎明必须知晓。",
+        "completion": "六支鹿角，每一支都已腐烂入骨。枯疫如今已深入它们的骨髓，{playerName}。这群鹿已无从拯救，只能将其了结。但克劳德黎明已经明白自己所面对的是什么，这远比一次干净利落的猎杀更有价值。",
+        "objectives": {
+          "0": {
+            "label": "染疫鹿角"
           }
         }
       },

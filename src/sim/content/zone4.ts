@@ -344,6 +344,36 @@ export const ZONE4_MOBS: Record<string, MobTemplate> = {
     scale: 1.4,
     color: 0x7a8088,
   },
+
+  // Blighted wildlife of the southern waste: a corrupted herd and the scavengers
+  // that feed on it, both wreathed in the necropolis's green rot.
+  blighted_stag: {
+    id: 'blighted_stag',
+    name: 'Blighted Stag',
+    minLevel: 20, maxLevel: 20, family: 'beast',
+    hpBase: 96, hpPerLevel: 26, dmgBase: 14, dmgPerLevel: 3.0, attackSpeed: 2.2, armorPerLevel: 18,
+    moveSpeed: 8, aggroRadius: 10,
+    // Goring Charge: lowers its rotting antlers and gores, throwing the target back.
+    knockback: { chance: 0.25, distance: 5, name: 'Goring Charge' },
+    loot: [
+      { copper: 135, chance: 1 },
+      { itemId: 'tainted_antler', chance: 0.5, questId: 'q_aw_corrupt_sample' },
+    ],
+    repOnKill: { faction: 'dawn_of_claude', amount: 13 },
+    scale: 1.15, color: 0x6e7a48,
+  },
+  rotting_fox: {
+    id: 'rotting_fox',
+    name: 'Rotting Fox',
+    minLevel: 20, maxLevel: 20, family: 'beast',
+    hpBase: 60, hpPerLevel: 21, dmgBase: 12, dmgPerLevel: 2.7, attackSpeed: 1.7, armorPerLevel: 15,
+    moveSpeed: 9, aggroRadius: 11,
+    // Festering Nip: a quick, diseased bite from the carrion-eaters of the waste.
+    bleed: { chance: 0.3, perTick: 6, interval: 3, duration: 9, name: 'Festering Nip', school: 'nature' },
+    loot: [{ copper: 110, chance: 1 }],
+    repOnKill: { faction: 'dawn_of_claude', amount: 11 },
+    scale: 0.85, color: 0x7c6a3e,
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -521,6 +551,17 @@ export const ZONE4_NPCS: Record<string, NpcDef> = {
     questIds: ['q_cx_legend_1', 'q_cx_legend_2', 'q_cx_legend_3'],
     greeting:
       'There is a relic in the necropolis older than its master, $N: a staff broken into splinters and scattered among the dead. Gather them, and we will rekindle the Mournlight together.',
+  },
+  dawn_huntsman_varik: {
+    id: 'dawn_huntsman_varik',
+    name: 'Huntsman Varik',
+    title: 'Dawn of Claude',
+    pos: { x: -126, z: 984 },
+    facing: 0.0,
+    color: 0x6b7a4a,
+    questIds: ['q_aw_rotting_herd', 'q_aw_ash_scavengers', 'q_aw_corrupt_sample'],
+    greeting:
+      'The rot reached the beasts, $N. The stags of the southern waste rise with green fire in their eyes, and the foxes feed on what they leave behind. I hunt them so the corruption spreads no further. Lend me your bow, or your blade.',
   },
 };
 
@@ -1112,6 +1153,48 @@ export const ZONE4_QUESTS: Record<string, QuestDef> = {
     repReward: { faction: 'dawn_of_claude', amount: 4000 },
     requiresQuest: 'q_cx_legend_2', minLevel: 20, suggestedPlayers: 10,
   },
+
+  // === Huntsman Varik: blighted wildlife of the southern waste ===
+  q_aw_rotting_herd: {
+    id: 'q_aw_rotting_herd',
+    name: 'The Rotting Herd',
+    giverNpcId: 'dawn_huntsman_varik',
+    turnInNpcId: 'dawn_huntsman_varik',
+    text: "The stags of the southern waste are not stags anymore, $N. The blight took the whole herd, and now they charge anything that breathes, antlers dripping green. Thin them out, eight should break the herd, before they wander north toward Gravewatch.",
+    completionText: "Eight fewer rotting beasts on the waste. The herd will not reach the camp tonight. You hunt well, $N.",
+    objectives: [{ type: 'kill', targetMobId: 'blighted_stag', count: 8, label: 'Blighted Stag slain' }],
+    xpReward: 4600, copperReward: 1600,
+    itemRewards: {},
+    repReward: { faction: 'dawn_of_claude', amount: 300 },
+    minLevel: 20,
+  },
+  q_aw_ash_scavengers: {
+    id: 'q_aw_ash_scavengers',
+    name: 'Scavengers of the Ash',
+    giverNpcId: 'dawn_huntsman_varik',
+    turnInNpcId: 'dawn_huntsman_varik',
+    text: "Where the stags fall, the foxes come, $N. Rotting little scavengers that spread the blight wider with every carcass they drag off. Put down eight of them and keep the corruption from creeping.",
+    completionText: "The scavengers are scattered. Good. Every one you kill is a mile of waste that stays clean a little longer.",
+    objectives: [{ type: 'kill', targetMobId: 'rotting_fox', count: 8, label: 'Rotting Fox slain' }],
+    xpReward: 4600, copperReward: 1600,
+    itemRewards: {},
+    repReward: { faction: 'dawn_of_claude', amount: 300 },
+    minLevel: 20,
+  },
+  q_aw_corrupt_sample: {
+    id: 'q_aw_corrupt_sample',
+    name: 'Seeds of the Rot',
+    giverNpcId: 'dawn_huntsman_varik',
+    turnInNpcId: 'dawn_huntsman_varik',
+    text: "I want to know how deep the blight runs in these beasts, $N. Bring me six tainted antlers from the stags, the green festers worst in the bone, and I will read how fast it is spreading. If the herd is already lost, the Dawn needs to know.",
+    completionText: "Six antlers, every one rotten to the core. The blight is in their marrow now, $N. There is no saving the herd, only ending it. But the Dawn knows what it faces, and that is worth more than a clean kill.",
+    objectives: [{ type: 'collect', itemId: 'tainted_antler', count: 6, label: 'Tainted Antler' }],
+    xpReward: 5200, copperReward: 2200,
+    itemRewards: {},
+    repReward: { faction: 'dawn_of_claude', amount: 450 },
+    requiresQuest: 'q_aw_rotting_herd',
+    minLevel: 20,
+  },
 };
 
 export const ZONE4_QUEST_ORDER: string[] = [
@@ -1135,6 +1218,10 @@ export const ZONE4_QUEST_ORDER: string[] = [
   'q_aw_attune_1',
   'q_aw_gravelord',
   'q_aw_attunement',
+  // Blighted wildlife of the southern waste (Huntsman Varik)
+  'q_aw_rotting_herd',
+  'q_aw_ash_scavengers',
+  'q_aw_corrupt_sample',
   // Claudeholme dungeon + the Breachkey (Claudexxaramas raid) attunement chain
   'q_ch_breach',
   'q_ch_streets',
@@ -1196,6 +1283,21 @@ export const ZONE4_CAMPS: CampDef[] = [
   { mobId: 'naxx_deathguard', center: { x: 25, z: 1230 }, radius: 16, count: 6 },
   // Gravelord Oss: the heart of the Pale Reach
   { mobId: 'gravelord_oss', center: { x: 48, z: 1235 }, radius: 3, count: 1 },
+  // Blighted wildlife at the southern waste (-126, 997). Fixed positions => zero rng
+  // draws, so this camp does not shift the seed-sensitive world fixtures.
+  {
+    mobId: 'blighted_stag', center: { x: -126, z: 997 }, radius: 0, count: 0,
+    positions: [
+      { x: -126, z: 997 }, { x: -134, z: 1002 }, { x: -119, z: 1001 },
+      { x: -131, z: 991 }, { x: -116, z: 993 },
+    ],
+  },
+  {
+    mobId: 'rotting_fox', center: { x: -126, z: 997 }, radius: 0, count: 0,
+    positions: [
+      { x: -123, z: 989 }, { x: -137, z: 995 }, { x: -113, z: 1000 }, { x: -129, z: 1008 },
+    ],
+  },
 ];
 
 export const ZONE4_OBJECTS: GroundObjectDef[] = [
@@ -1235,6 +1337,7 @@ const LEATHER = ['rogue', 'hunter'] as const;
 export const ZONE4_ITEMS: Record<string, ItemDef> = {
   // --- quest items ---
   blight_sample: { id: 'blight_sample', name: 'Tainted Sample', kind: 'quest', sellValue: 0, questId: 'q_aw_samples' },
+  tainted_antler: { id: 'tainted_antler', name: 'Tainted Antler', kind: 'quest', sellValue: 0, questId: 'q_aw_corrupt_sample' },
   cult_orders: { id: 'cult_orders', name: 'Corrupted Orders', kind: 'quest', sellValue: 0, questId: 'q_aw_orders' },
   desecrated_relic: { id: 'desecrated_relic', name: 'Desecrated Relic', kind: 'quest', sellValue: 0, questId: 'q_aw_relics' },
   ritual_focus: { id: 'ritual_focus', name: 'Ritual Focus', kind: 'quest', sellValue: 0, questId: 'q_aw_ritual' },

@@ -4444,6 +4444,9 @@ export const de_DE: EnTranslations = {
       "blight_sample": {
         "name": "Verseuchte Probe"
       },
+      "tainted_antler": {
+        "name": "Verdorbenes Geweih"
+      },
       "cult_orders": {
         "name": "Verderbte Befehle"
       },
@@ -5487,6 +5490,12 @@ export const de_DE: EnTranslations = {
       "gravelord_oss": {
         "name": "Gräberfürst Oss"
       },
+      "blighted_stag": {
+        "name": "Verseuchter Hirsch"
+      },
+      "rotting_fox": {
+        "name": "Verrottender Fuchs"
+      },
       "claudeholme_husk": {
         "name": "Hülle von Claudeholme"
       },
@@ -5845,6 +5854,11 @@ export const de_DE: EnTranslations = {
         "name": "Sagensucherin Miren",
         "title": "Dawn of Claude",
         "greeting": "In der Nekropole ruht ein Relikt, älter als ihr Herr, {playerName}: ein Stab, in Splitter zerbrochen und unter den Toten verstreut. Sammle sie ein, und wir entzünden das Mournlight gemeinsam aufs Neue."
+      },
+      "dawn_huntsman_varik": {
+        "name": "Jägermeister Varik",
+        "title": "Dawn of Claude",
+        "greeting": "Die Fäulnis hat die Tiere erreicht, {playerName}. Die Hirsche der südlichen Ödnis erheben sich mit grünem Feuer in den Augen, und die Füchse fressen, was sie zurücklassen. Ich jage sie, damit sich die Verseuchung nicht weiter ausbreitet. Leih mir deinen Bogen oder deine Klinge."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6808,6 +6822,36 @@ export const de_DE: EnTranslations = {
         "objectives": {
           "0": {
             "label": "Schiffsfragment"
+          }
+        }
+      },
+      "q_aw_rotting_herd": {
+        "title": "Die verrottende Herde",
+        "text": "Die Hirsche der südlichen Ödnis sind keine Hirsche mehr, {playerName}. Die Verseuchung hat die ganze Herde befallen, und nun stürmen sie auf alles los, was atmet, das Geweih von grünem Schleim triefend. Lichte sie, acht sollten die Herde zerbrechen, ehe sie nach Norden zur Grabwacht ziehen.",
+        "completion": "Acht verrottende Bestien weniger auf der Ödnis. Die Herde wird das Lager heute Nacht nicht erreichen. Du jagst gut, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Verseuchter Hirsch erschlagen"
+          }
+        }
+      },
+      "q_aw_ash_scavengers": {
+        "title": "Aasfresser der Asche",
+        "text": "Wo die Hirsche fallen, kommen die Füchse, {playerName}. Verrottende kleine Aasfresser, die die Verseuchung mit jedem Kadaver, den sie fortschleppen, weiter verbreiten. Strecke acht von ihnen nieder und hindere die Verderbnis daran, weiterzukriechen.",
+        "completion": "Die Aasfresser sind zerstreut. Gut. Jeder, den du tötest, ist eine Meile Ödnis, die ein wenig länger rein bleibt.",
+        "objectives": {
+          "0": {
+            "label": "Verrottender Fuchs erschlagen"
+          }
+        }
+      },
+      "q_aw_corrupt_sample": {
+        "title": "Samen der Fäulnis",
+        "text": "Ich will wissen, wie tief die Verseuchung in diesen Bestien sitzt, {playerName}. Bring mir sechs verdorbene Geweihe von den Hirschen, das Grün eitert im Knochen am schlimmsten, und ich werde ablesen, wie schnell es sich ausbreitet. Wenn die Herde bereits verloren ist, muss die Dawn of Claude es wissen.",
+        "completion": "Sechs Geweihe, jedes bis ins Mark verfault. Die Verseuchung steckt nun in ihrem Knochenmark, {playerName}. Es gibt keine Rettung für die Herde, nur ihr Ende. Doch die Morgendämmerung weiß, was ihr bevorsteht, und das ist mehr wert als ein sauberer Abschuss.",
+        "objectives": {
+          "0": {
+            "label": "Verdorbenes Geweih"
           }
         }
       },
