@@ -3230,13 +3230,21 @@ export class Renderer {
     vale: { color: 0xa6c6e0, near: 130, far: 470 },
     marsh: { color: 0xa3b294, near: 80, far: 330 },
     peaks: { color: 0xbdd3ec, near: 160, far: 560 },
-    // blight: heavy, dark, close fog - choked dead air
-    blight: { color: 0x3a372f, near: 45, far: 195 },
+    // blight: heavy, close, sickly-GREEN fog - the corruption hanging in the dead
+    // air of the Ashen Wastes (toxic green over the whole zone)
+    blight: { color: 0x4a6e3a, near: 45, far: 200 },
   };
   private static LOW_FOG = { color: 0xa6c6e0, near: 70, far: 260 };
+  // low-gfx fog is a single global preset; in the blight zone swap it for the same
+  // toxic green so the corruption haze still covers the map on low tiers
+  private static LOW_FOG_BLIGHT = { color: 0x4a6e3a, near: 60, far: 230 };
 
   private outdoorFogPreset(): { color: number; near: number; far: number } {
-    if (this.lowGfx) return Renderer.LOW_FOG;
+    if (this.lowGfx) {
+      return zoneBiomeAt(this.sim.player.pos.z) === 'blight'
+        ? Renderer.LOW_FOG_BLIGHT
+        : Renderer.LOW_FOG;
+    }
     return Renderer.BIOME_FOG[zoneBiomeAt(this.sim.player.pos.z)];
   }
 
