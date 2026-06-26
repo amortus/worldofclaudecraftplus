@@ -4678,6 +4678,108 @@ export const en_CA: EnTranslations = {
       "breachkey_dawn": {
         "name": "Breachkey of the Dawn"
       },
+      "mp_feet": {
+        "name": "Mortplate Sabatons"
+      },
+      "mp_gloves": {
+        "name": "Mortplate Gauntlets"
+      },
+      "mp_waist": {
+        "name": "Mortplate Girdle"
+      },
+      "mp_helmet": {
+        "name": "Mortplate Greathelm"
+      },
+      "mp_legs": {
+        "name": "Mortplate Legplates"
+      },
+      "mp_shoulder": {
+        "name": "Mortplate Pauldrons"
+      },
+      "mp_chest": {
+        "name": "Mortplate Breastplate"
+      },
+      "mp_mh": {
+        "name": "Mortplate Reaver"
+      },
+      "vw_feet": {
+        "name": "Voidweave Slippers"
+      },
+      "vw_gloves": {
+        "name": "Voidweave Handwraps"
+      },
+      "vw_waist": {
+        "name": "Voidweave Cord"
+      },
+      "vw_helmet": {
+        "name": "Voidweave Cowl"
+      },
+      "vw_legs": {
+        "name": "Voidweave Leggings"
+      },
+      "vw_shoulder": {
+        "name": "Voidweave Mantle"
+      },
+      "vw_chest": {
+        "name": "Voidweave Robe"
+      },
+      "vw_mh": {
+        "name": "Voidweave Scepter"
+      },
+      "ng_feet": {
+        "name": "Nightshroud Treads"
+      },
+      "ng_gloves": {
+        "name": "Nightshroud Grips"
+      },
+      "ng_waist": {
+        "name": "Nightshroud Belt"
+      },
+      "ng_helmet": {
+        "name": "Nightshroud Mask"
+      },
+      "ng_legs": {
+        "name": "Nightshroud Legguards"
+      },
+      "ng_shoulder": {
+        "name": "Nightshroud Spaulders"
+      },
+      "ng_chest": {
+        "name": "Nightshroud Tunic"
+      },
+      "ng_mh": {
+        "name": "Nightshroud Dagger"
+      },
+      "cx_ep_war": {
+        "name": "Necropole Warblade"
+      },
+      "cx_ep_mag": {
+        "name": "Necropole Wand"
+      },
+      "cx_ep_rog": {
+        "name": "Necropole Shiv"
+      },
+      "cx_ep_helm": {
+        "name": "Crown of the Hollow Throne"
+      },
+      "cx_ep_robe": {
+        "name": "Shroud of the Archlich"
+      },
+      "cx_ep_legs": {
+        "name": "Spinning Dark Legguards"
+      },
+      "mournlight_splinter": {
+        "name": "Splinter of Mournlight"
+      },
+      "mournlight_unlit": {
+        "name": "Unlit Staff of Mournlight"
+      },
+      "hollow_star": {
+        "name": "The Hollow Star"
+      },
+      "mournlight": {
+        "name": "Mournlight, Staff of the Hollow Dawn"
+      },
       "bristleback_maul": {
         "name": "Bristleback Maul"
       },
@@ -5424,6 +5526,66 @@ export const en_CA: EnTranslations = {
       "ch_veholt": {
         "name": "Lord Veholt the Hollow"
       },
+      "cx_husk": {
+        "name": "Necropolis Husk"
+      },
+      "cx_revenant": {
+        "name": "Necropolis Revenant"
+      },
+      "cx_flesh_thrall": {
+        "name": "Flesh Thrall"
+      },
+      "cx_plague_swarm": {
+        "name": "Plague Swarm"
+      },
+      "cx_spiderling": {
+        "name": "Crypt Spiderling"
+      },
+      "cx_gutpile": {
+        "name": "Gutpile"
+      },
+      "cx_fleshwright": {
+        "name": "The Fleshwright"
+      },
+      "cx_grosh": {
+        "name": "Grosh the Unmade"
+      },
+      "cx_vexil": {
+        "name": "Vexil the Festering"
+      },
+      "cx_apothecary": {
+        "name": "The Apothecary Trine"
+      },
+      "cx_maggath": {
+        "name": "Maggath the Plaguelord"
+      },
+      "cx_vanguard": {
+        "name": "The Bone Vanguard"
+      },
+      "cx_korreth": {
+        "name": "Marshal Korreth"
+      },
+      "cx_triad": {
+        "name": "The Deathward Triad"
+      },
+      "cx_vrallka": {
+        "name": "Vrall'ka the Broodmother"
+      },
+      "cx_silkbound": {
+        "name": "The Silkbound"
+      },
+      "cx_sethelle": {
+        "name": "Matron Sethelle"
+      },
+      "cx_rimecore": {
+        "name": "Rimecore the Hollow"
+      },
+      "cx_wardens": {
+        "name": "The Frostward Wardens"
+      },
+      "cx_vorothne": {
+        "name": "Archlich Vorothne"
+      },
       "ironvein_foreman": {
         "name": "Ironvein Foreman"
       },
@@ -5673,6 +5835,16 @@ export const en_CA: EnTranslations = {
         "name": "Reclaimer Sela",
         "title": "Dawn of Claude",
         "greeting": "The dead of Claudeholme cannot be saved, {playerName}, only freed. Recover what the town lost, and help me forge the key that opens the Claudexxaramas itself."
+      },
+      "dawn_warbringer_torv": {
+        "name": "Warbringer Torv",
+        "title": "Dawn of Claude",
+        "greeting": "The breach is open at last, {playerName}, and the necropolis spills its dead onto the Pale Reach. Lead the Dawn into the Claudexxaramas, quarter by quarter, and bring its masters down."
+      },
+      "dawn_loreseeker_miren": {
+        "name": "Loreseeker Miren",
+        "title": "Dawn of Claude",
+        "greeting": "There is a relic in the necropolis older than its master, {playerName}: a staff broken into splinters and scattered among the dead. Gather them, and we will rekindle the Mournlight together."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6789,6 +6961,86 @@ export const en_CA: EnTranslations = {
           }
         }
       },
+      "q_cx_breach": {
+        "title": "The Breach Opens",
+        "text": "The Breachkey turned, {playerName}, and the Claudexxaramas stands open above us. Its first quarter, the Carrion Halls, is a charnel pit of stitched dead. Carve through to Grosh the Unmade and put the abomination down, so the Dawn can hold a foothold inside.",
+        "completion": "The Carrion Halls are ours. One quarter breached, four to go. The necropolis will not give up the rest so easily.",
+        "objectives": {
+          "0": {
+            "label": "Grosh the Unmade slain"
+          }
+        }
+      },
+      "q_cx_plague": {
+        "title": "The Plagueworks",
+        "text": "The second quarter, the Plagueworks, brews the rot the Claudexxaramas rains on our lands. Maggath the Plaguelord tends its vats. End him, {playerName}, and choke the plague at its source.",
+        "completion": "The vats run dry. The Plagueworks will poison no more fields. The Dawn breathes easier for it.",
+        "objectives": {
+          "0": {
+            "label": "Maggath the Plaguelord slain"
+          }
+        }
+      },
+      "q_cx_barracks": {
+        "title": "The Deathwatch Barracks",
+        "text": "The necropolis keeps a garrison, {playerName}: the Deathwatch Barracks, where fallen soldiers drill for a war that never ends. The Deathward Triad lead them. Break the Triad and the garrison breaks with them.",
+        "completion": "The Triad have fallen and their ranks scatter. The barracks will muster no counterattack. Forward, into the dark.",
+        "objectives": {
+          "0": {
+            "label": "The Deathward Triad slain"
+          }
+        }
+      },
+      "q_cx_spinning": {
+        "title": "The Spinning Dark",
+        "text": "The fourth quarter is webbed wall to wall, {playerName}: the Spinning Dark, where Matron Sethelle broods over her crawling children. Burn the webs and end the Matron before her brood overruns the breach.",
+        "completion": "Sethelle's brood is ash and the Spinning Dark goes still. Only the throne stands above you now.",
+        "objectives": {
+          "0": {
+            "label": "Matron Sethelle slain"
+          }
+        }
+      },
+      "q_cx_throne": {
+        "title": "The Hollow Throne",
+        "text": "This is the end of it, {playerName}. The Hollow Throne sits at the necropolis's heart, and on it the Archlich Vorothne, the will that drives the Claudexxaramas. Take the whole raid. Cast him down, and the necropolis dies with its master.",
+        "completion": "Vorothne is unmade, and the Claudexxaramas falls dark above the Pale Reach. You led the Dawn to the heart of the necropolis and tore it out, {playerName}. This victory is yours, and the order will sing of it.",
+        "objectives": {
+          "0": {
+            "label": "Archlich Vorothne slain"
+          }
+        }
+      },
+      "q_cx_legend_1": {
+        "title": "Splinters of the Mournlight",
+        "text": "Before the necropolis had a master, {playerName}, it held a staff of true light, the Mournlight, and when it fell the staff shattered. Five splinters lie with the quarter-lords of the Claudexxaramas. They surrender them rarely, so you will walk the necropolis many times over. Bring me all five.",
+        "completion": "Five splinters, each torn from a different lord of the dead. I can feel the Mournlight stir between them. Take this unlit frame; it will hold them while we work.",
+        "objectives": {
+          "0": {
+            "label": "Splinter of Mournlight"
+          }
+        }
+      },
+      "q_cx_legend_2": {
+        "title": "The Unlit Staff",
+        "text": "The frame holds the five splinters, but it will not wake, {playerName}. The Mournlight needs a heart to burn around, and only one is left cold enough and bright enough to serve: the Hollow Star, set in Vorothne's own chest. Bring me the unlit staff, and steel yourself for what comes next.",
+        "completion": "The frame is bound and balanced, every splinter seated true. All it lacks now is the Star. You know where it lies.",
+        "objectives": {
+          "0": {
+            "label": "Unlit Staff of Mournlight"
+          }
+        }
+      },
+      "q_cx_legend_3": {
+        "title": "The Hollow Star",
+        "text": "The Hollow Star burns in Vorothne's chest, and he does not give it up while he stands, {playerName}. Return to the throne, end the Archlich again, and tear the Star from the wreck of him. Bring it to me, and the Mournlight will burn for the Dawn at last.",
+        "completion": "It is done. The Hollow Star sits at the staff's crown and the Mournlight blazes white for the first time in an age. Take it, {playerName}: Mournlight, Staff of the Hollow Dawn. No hand has earned it as yours has. Let its light be the last thing the dark of the Claudexxaramas ever sees.",
+        "objectives": {
+          "0": {
+            "label": "The Hollow Star"
+          }
+        }
+      },
       "q_drowned_choir": {
         "title": "The Drowned Choir",
         "text": "The waders do not act alone. Among them walk the Drowned Votaries — the cult that sank with the temple, still in their rotted vestments, still singing the prayer from the shore-rocks. Silence eight of them, and bring me six of the offerings they carry. I would know what they mean to give their goddess.",
@@ -7011,6 +7263,11 @@ export const en_CA: EnTranslations = {
         "name": "Claudeholme",
         "enterText": "You step through the breach into Claudeholme, and the dead town stirs.",
         "leaveText": "You climb back out of Claudeholme into the ashen light."
+      },
+      "claudexxaramas": {
+        "name": "Claudexxaramas",
+        "enterText": "You breach the necropolis of Claudexxaramas. The dead are waiting.",
+        "leaveText": "You withdraw from Claudexxaramas into the ashen wind."
       },
       "drowned_temple": {
         "name": "The Drowned Temple",

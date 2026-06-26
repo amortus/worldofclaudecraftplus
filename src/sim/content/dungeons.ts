@@ -436,6 +436,161 @@ export const DUNGEON_MOBS: Record<string, MobTemplate> = {
     ],
     scale: 1.7, color: 0x5a5060,
   },
+
+  // === Claudexxaramas raid: the necropolis itself (15 bosses, 5 quarters) ===
+  // Trash + summoned adds
+  cx_husk: {
+    id: 'cx_husk', name: 'Necropolis Husk', minLevel: 20, maxLevel: 21, family: 'undead',
+    hpBase: 140, hpPerLevel: 28, dmgBase: 17, dmgPerLevel: 3.4, attackSpeed: 2.3, armorPerLevel: 24,
+    moveSpeed: 6.5, aggroRadius: 11, loot: [{ copper: 200, chance: 1 }], scale: 1.0, color: 0x6b6f5c,
+  },
+  cx_revenant: {
+    id: 'cx_revenant', name: 'Necropolis Revenant', minLevel: 20, maxLevel: 21, family: 'undead',
+    hpBase: 160, hpPerLevel: 30, dmgBase: 18, dmgPerLevel: 3.6, attackSpeed: 2.4, armorPerLevel: 30,
+    moveSpeed: 7, aggroRadius: 11, cleave: { radius: 6, mult: 0.6, name: 'Grave Cleave' },
+    loot: [{ copper: 210, chance: 1 }], scale: 1.1, color: 0xcac3b0,
+  },
+  cx_flesh_thrall: {
+    id: 'cx_flesh_thrall', name: 'Flesh Thrall', minLevel: 20, maxLevel: 21, family: 'undead',
+    hpBase: 110, hpPerLevel: 22, dmgBase: 16, dmgPerLevel: 3.2, attackSpeed: 2.2, armorPerLevel: 20,
+    moveSpeed: 7, aggroRadius: 10, loot: [], scale: 1.0, color: 0x7d8a4f,
+  },
+  cx_plague_swarm: {
+    id: 'cx_plague_swarm', name: 'Plague Swarm', minLevel: 20, maxLevel: 21, family: 'beast',
+    hpBase: 70, hpPerLevel: 16, dmgBase: 14, dmgPerLevel: 2.8, attackSpeed: 1.6, armorPerLevel: 14,
+    moveSpeed: 8.5, aggroRadius: 11, bleed: { chance: 0.3, perTick: 6, interval: 3, duration: 9, name: 'Plague Bite', school: 'nature' },
+    loot: [], scale: 0.8, color: 0x6a8a4f,
+  },
+  cx_spiderling: {
+    id: 'cx_spiderling', name: 'Crypt Spiderling', minLevel: 20, maxLevel: 21, family: 'beast',
+    hpBase: 80, hpPerLevel: 18, dmgBase: 15, dmgPerLevel: 3.0, attackSpeed: 1.8, armorPerLevel: 16,
+    moveSpeed: 8.5, aggroRadius: 11, loot: [], scale: 0.7, color: 0x533566,
+  },
+  // Quarter 1 - The Carrion Halls
+  cx_gutpile: {
+    id: 'cx_gutpile', name: 'Gutpile', minLevel: 21, maxLevel: 21, family: 'undead', elite: true, boss: true, ccImmune: true,
+    hpBase: 620, hpPerLevel: 70, dmgBase: 24, dmgPerLevel: 4.2, attackSpeed: 2.7, armorPerLevel: 36, moveSpeed: 6.2, aggroRadius: 16,
+    aoePulse: { min: 30, max: 44, radius: 11, every: 9, name: 'Bile Eruption', school: 'nature', fx: 'nova' },
+    knockback: { chance: 0.3, distance: 7, name: 'Heaving Slam' },
+    enrage: { belowHpPct: 0.3, dmgMult: 1.4, hasteMult: 1.3 },
+    loot: [{ copper: 1500, chance: 1 }, { itemId: "mp_feet", chance: 0.34, rollGroup: "cx_feet_g" }, { itemId: "vw_feet", chance: 0.33, rollGroup: "cx_feet_g" }, { itemId: "ng_feet", chance: 0.33, rollGroup: "cx_feet_g" }], scale: 1.6, color: 0x7d8a4f,
+  },
+  cx_fleshwright: {
+    id: 'cx_fleshwright', name: 'The Fleshwright', minLevel: 21, maxLevel: 21, family: 'humanoid', elite: true, boss: true, ccImmune: true,
+    hpBase: 640, hpPerLevel: 72, dmgBase: 24, dmgPerLevel: 4.2, attackSpeed: 2.4, armorPerLevel: 34, moveSpeed: 7, aggroRadius: 16,
+    summonAdds: { mobId: 'cx_flesh_thrall', count: 2, atHpPct: [0.66, 0.33] },
+    cleave: { radius: 8, mult: 0.7, name: 'Flaying Cleave' },
+    mortalStrike: { chance: 0.35, healReduction: 0.5, duration: 10, name: 'Suture', school: 'physical' },
+    loot: [{ copper: 1500, chance: 1 }, { itemId: "mp_gloves", chance: 0.34, rollGroup: "cx_gloves_g" }, { itemId: "vw_gloves", chance: 0.33, rollGroup: "cx_gloves_g" }, { itemId: "ng_gloves", chance: 0.33, rollGroup: "cx_gloves_g" }], scale: 1.3, color: 0x9a7a5a,
+  },
+  cx_grosh: {
+    id: 'cx_grosh', name: 'Grosh the Unmade', minLevel: 21, maxLevel: 22, family: 'undead', elite: true, boss: true, ccImmune: true,
+    hpBase: 760, hpPerLevel: 84, dmgBase: 26, dmgPerLevel: 4.5, attackSpeed: 2.8, armorPerLevel: 38, moveSpeed: 6, aggroRadius: 16,
+    stomp: { radius: 11, every: 12, duration: 1.5, min: 28, max: 40, name: 'Unmaking Stomp' },
+    aoePulse: { min: 32, max: 46, radius: 11, every: 10, name: 'Putrid Wave', school: 'nature', fx: 'nova' },
+    enrage: { belowHpPct: 0.3, dmgMult: 1.45, hasteMult: 1.3 },
+    loot: [{ copper: 1800, chance: 1 }, { itemId: "mp_waist", chance: 0.34, rollGroup: "cx_waist_g" }, { itemId: "vw_waist", chance: 0.33, rollGroup: "cx_waist_g" }, { itemId: "ng_waist", chance: 0.33, rollGroup: "cx_waist_g" }, { itemId: "cx_ep_helm", chance: 0.15, rollGroup: "cx_grosh_bonus" }, { itemId: "mournlight_splinter", chance: 0.08, questId: "q_cx_legend_1" }], scale: 1.8, color: 0x6f7a55,
+  },
+  // Quarter 2 - The Plagueworks
+  cx_vexil: {
+    id: 'cx_vexil', name: 'Vexil the Festering', minLevel: 21, maxLevel: 21, family: 'undead', elite: true, boss: true, ccImmune: true,
+    hpBase: 660, hpPerLevel: 74, dmgBase: 25, dmgPerLevel: 4.3, attackSpeed: 2.3, armorPerLevel: 32, moveSpeed: 6.8, aggroRadius: 16,
+    aoePulse: { min: 30, max: 44, radius: 12, every: 9, name: 'Festering Cloud', school: 'nature', fx: 'nova' },
+    spellVuln: { chance: 0.3, amp: 0.2, duration: 10, name: 'Rotting Gas', school: 'nature' },
+    loot: [{ copper: 1600, chance: 1 }, { itemId: "mp_helmet", chance: 0.34, rollGroup: "cx_helm_g" }, { itemId: "vw_helmet", chance: 0.33, rollGroup: "cx_helm_g" }, { itemId: "ng_helmet", chance: 0.33, rollGroup: "cx_helm_g" }], scale: 1.4, color: 0x6a8a4f,
+  },
+  cx_apothecary: {
+    id: 'cx_apothecary', name: 'The Apothecary Trine', minLevel: 21, maxLevel: 21, family: 'humanoid', elite: true, boss: true, ccImmune: true,
+    hpBase: 680, hpPerLevel: 76, dmgBase: 24, dmgPerLevel: 4.2, attackSpeed: 2.2, armorPerLevel: 28, moveSpeed: 7, aggroRadius: 16,
+    mendAlly: { healMin: 60, healMax: 86, radius: 16, every: 7, name: 'Twinned Salve', school: 'shadow' },
+    manaBurn: { chance: 0.35, amount: 150, name: 'Caustic Draught', school: 'shadow' },
+    summonAdds: { mobId: 'cx_plague_swarm', count: 3, atHpPct: [0.7, 0.4] },
+    loot: [{ copper: 1600, chance: 1 }, { itemId: "mp_legs", chance: 0.34, rollGroup: "cx_legs_g" }, { itemId: "vw_legs", chance: 0.33, rollGroup: "cx_legs_g" }, { itemId: "ng_legs", chance: 0.33, rollGroup: "cx_legs_g" }, { itemId: "cx_ep_mag", chance: 0.15, rollGroup: "cx_apo_bonus" }], scale: 1.25, color: 0x8fa05a,
+  },
+  cx_maggath: {
+    id: 'cx_maggath', name: 'Maggath the Plaguelord', minLevel: 22, maxLevel: 22, family: 'undead', elite: true, boss: true, ccImmune: true,
+    hpBase: 820, hpPerLevel: 90, dmgBase: 27, dmgPerLevel: 4.6, attackSpeed: 2.4, armorPerLevel: 36, moveSpeed: 6.5, aggroRadius: 16,
+    aoePulse: { min: 34, max: 48, radius: 12, every: 9, name: 'Pestilence', school: 'nature', fx: 'nova' },
+    summonAdds: { mobId: 'cx_plague_swarm', count: 4, atHpPct: [0.66, 0.33] },
+    mortalStrike: { chance: 0.4, healReduction: 0.5, duration: 10, name: 'Plague Rot', school: 'nature' },
+    loot: [{ copper: 1900, chance: 1 }, { itemId: "mp_shoulder", chance: 0.34, rollGroup: "cx_shoulder_g" }, { itemId: "vw_shoulder", chance: 0.33, rollGroup: "cx_shoulder_g" }, { itemId: "ng_shoulder", chance: 0.33, rollGroup: "cx_shoulder_g" }, { itemId: "mournlight_splinter", chance: 0.08, questId: "q_cx_legend_1" }], scale: 1.5, color: 0x5f7a3a,
+  },
+  // Quarter 3 - The Deathwatch Barracks
+  cx_vanguard: {
+    id: 'cx_vanguard', name: 'The Bone Vanguard', minLevel: 21, maxLevel: 21, family: 'undead', elite: true, boss: true, ccImmune: true,
+    hpBase: 700, hpPerLevel: 78, dmgBase: 25, dmgPerLevel: 4.3, attackSpeed: 2.3, armorPerLevel: 42, moveSpeed: 7, aggroRadius: 16,
+    rally: { radius: 16, every: 12, ap: 50, duration: 10, name: 'Vanguard Banner' },
+    cleave: { radius: 8, mult: 0.75, name: 'Phalanx Sweep' },
+    loot: [{ copper: 1700, chance: 1 }, { itemId: "mp_chest", chance: 0.34, rollGroup: "cx_chest_g" }, { itemId: "vw_chest", chance: 0.33, rollGroup: "cx_chest_g" }, { itemId: "ng_chest", chance: 0.33, rollGroup: "cx_chest_g" }], scale: 1.4, color: 0xc7c0b2,
+  },
+  cx_korreth: {
+    id: 'cx_korreth', name: 'Marshal Korreth', minLevel: 22, maxLevel: 22, family: 'undead', elite: true, boss: true, ccImmune: true,
+    hpBase: 780, hpPerLevel: 86, dmgBase: 27, dmgPerLevel: 4.6, attackSpeed: 2.3, armorPerLevel: 44, moveSpeed: 7.2, aggroRadius: 16,
+    mortalStrike: { chance: 0.4, healReduction: 0.5, duration: 10, name: 'Marshal\'s Edict', school: 'physical' },
+    rally: { radius: 16, every: 12, ap: 54, duration: 10, name: 'Iron Discipline' },
+    cleave: { radius: 8, mult: 0.75, name: 'Sundering Sweep' },
+    loot: [{ copper: 1900, chance: 1 }, { itemId: "mp_feet", chance: 0.34, rollGroup: "cx_feet_g" }, { itemId: "vw_feet", chance: 0.33, rollGroup: "cx_feet_g" }, { itemId: "ng_feet", chance: 0.33, rollGroup: "cx_feet_g" }, { itemId: "cx_ep_war", chance: 0.15, rollGroup: "cx_korreth_bonus" }], scale: 1.45, color: 0x8b94a0,
+  },
+  cx_triad: {
+    id: 'cx_triad', name: 'The Deathward Triad', minLevel: 22, maxLevel: 22, family: 'undead', elite: true, boss: true, ccImmune: true,
+    hpBase: 900, hpPerLevel: 96, dmgBase: 28, dmgPerLevel: 4.8, attackSpeed: 2.4, armorPerLevel: 44, moveSpeed: 7.2, aggroRadius: 18,
+    cleave: { radius: 9, mult: 0.7, name: 'Three-Blade Sweep' },
+    mortalStrike: { chance: 0.4, healReduction: 0.5, duration: 10, name: 'Rider\'s Mark', school: 'physical' },
+    summonAdds: { mobId: 'cx_revenant', count: 2, atHpPct: [0.5] },
+    enrage: { belowHpPct: 0.25, dmgMult: 1.5, hasteMult: 1.3 },
+    loot: [{ copper: 2100, chance: 1 }, { itemId: "mp_mh", chance: 0.34, rollGroup: "cx_mh_g" }, { itemId: "vw_mh", chance: 0.33, rollGroup: "cx_mh_g" }, { itemId: "ng_mh", chance: 0.33, rollGroup: "cx_mh_g" }, { itemId: "mournlight_splinter", chance: 0.08, questId: "q_cx_legend_1" }], scale: 1.5, color: 0x7a8088,
+  },
+  // Quarter 4 - The Spinning Dark
+  cx_vrallka: {
+    id: 'cx_vrallka', name: "Vrall'ka the Broodmother", minLevel: 21, maxLevel: 22, family: 'beast', elite: true, boss: true, ccImmune: true,
+    hpBase: 720, hpPerLevel: 80, dmgBase: 26, dmgPerLevel: 4.4, attackSpeed: 2.0, armorPerLevel: 34, moveSpeed: 7.5, aggroRadius: 16,
+    summonAdds: { mobId: 'cx_spiderling', count: 4, atHpPct: [0.7, 0.45, 0.2] },
+    aoePulse: { min: 30, max: 44, radius: 11, every: 9, name: 'Venom Spray', school: 'nature', fx: 'nova' },
+    knockback: { chance: 0.3, distance: 8, name: 'Web Fling' },
+    loot: [{ copper: 1800, chance: 1 }, { itemId: "mp_gloves", chance: 0.34, rollGroup: "cx_gloves_g" }, { itemId: "vw_gloves", chance: 0.33, rollGroup: "cx_gloves_g" }, { itemId: "ng_gloves", chance: 0.33, rollGroup: "cx_gloves_g" }, { itemId: "cx_ep_rog", chance: 0.15, rollGroup: "cx_vrallka_bonus" }], scale: 1.7, color: 0x4a3a5a,
+  },
+  cx_silkbound: {
+    id: 'cx_silkbound', name: 'The Silkbound', minLevel: 22, maxLevel: 22, family: 'undead', elite: true, boss: true, ccImmune: true,
+    hpBase: 760, hpPerLevel: 84, dmgBase: 27, dmgPerLevel: 4.6, attackSpeed: 2.2, armorPerLevel: 30, moveSpeed: 7, aggroRadius: 16,
+    manaBurn: { chance: 0.4, amount: 160, name: 'Silken Drain', school: 'shadow' },
+    enervate: { chance: 0.4, sta: 22, duration: 12, name: 'Cocoon Chill', school: 'shadow' },
+    lockout: { chance: 0.25, duration: 6, name: 'Silk Seal', school: 'shadow' },
+    loot: [{ copper: 1900, chance: 1 }, { itemId: "mp_waist", chance: 0.34, rollGroup: "cx_waist_g" }, { itemId: "vw_waist", chance: 0.33, rollGroup: "cx_waist_g" }, { itemId: "ng_waist", chance: 0.33, rollGroup: "cx_waist_g" }], scale: 1.3, color: 0x6b5b7a,
+  },
+  cx_sethelle: {
+    id: 'cx_sethelle', name: 'Matron Sethelle', minLevel: 22, maxLevel: 22, family: 'undead', elite: true, boss: true, ccImmune: true,
+    hpBase: 880, hpPerLevel: 94, dmgBase: 28, dmgPerLevel: 4.8, attackSpeed: 2.1, armorPerLevel: 34, moveSpeed: 7.4, aggroRadius: 18,
+    aoePulse: { min: 32, max: 46, radius: 12, every: 9, name: 'Widow\'s Venom', school: 'nature', fx: 'nova' },
+    summonAdds: { mobId: 'cx_spiderling', count: 5, atHpPct: [0.66, 0.33] },
+    enrage: { belowHpPct: 0.25, dmgMult: 1.5, hasteMult: 1.3 },
+    loot: [{ copper: 2100, chance: 1 }, { itemId: "mp_helmet", chance: 0.34, rollGroup: "cx_helm_g" }, { itemId: "vw_helmet", chance: 0.33, rollGroup: "cx_helm_g" }, { itemId: "ng_helmet", chance: 0.33, rollGroup: "cx_helm_g" }, { itemId: "cx_ep_legs", chance: 0.15, rollGroup: "cx_sethelle_bonus" }, { itemId: "mournlight_splinter", chance: 0.08, questId: "q_cx_legend_1" }], scale: 1.75, color: 0x3a2d4a,
+  },
+  // Quarter 5 - The Hollow Throne
+  cx_rimecore: {
+    id: 'cx_rimecore', name: 'Rimecore the Hollow', minLevel: 22, maxLevel: 22, family: 'undead', elite: true, boss: true, ccImmune: true,
+    hpBase: 940, hpPerLevel: 100, dmgBase: 29, dmgPerLevel: 4.9, attackSpeed: 2.5, armorPerLevel: 42, moveSpeed: 6.8, aggroRadius: 18,
+    aoePulse: { min: 34, max: 50, radius: 12, every: 9, name: 'Rimebreath', school: 'frost', fx: 'nova' },
+    chillOnHit: { chance: 0.4, mult: 0.5, duration: 6, name: 'Hollow Chill' },
+    frostbite: { chance: 0.35, perTick: 8, interval: 3, duration: 12, name: 'Rime Burn', school: 'frost' },
+    loot: [{ copper: 2300, chance: 1 }, { itemId: "mp_legs", chance: 0.34, rollGroup: "cx_legs_g" }, { itemId: "vw_legs", chance: 0.33, rollGroup: "cx_legs_g" }, { itemId: "ng_legs", chance: 0.33, rollGroup: "cx_legs_g" }], scale: 2.0, color: 0xaed6f1,
+  },
+  cx_wardens: {
+    id: 'cx_wardens', name: 'The Frostward Wardens', minLevel: 22, maxLevel: 22, family: 'undead', elite: true, boss: true, ccImmune: true,
+    hpBase: 980, hpPerLevel: 104, dmgBase: 29, dmgPerLevel: 5.0, attackSpeed: 2.5, armorPerLevel: 46, moveSpeed: 6.5, aggroRadius: 18,
+    stoneskin: { amount: 320, every: 14, duration: 8, name: 'Frostward Aegis', school: 'frost' },
+    aoePulse: { min: 34, max: 48, radius: 11, every: 10, name: 'Glacial Pulse', school: 'frost', fx: 'nova' },
+    loot: [{ copper: 2300, chance: 1 }, { itemId: "mp_shoulder", chance: 0.34, rollGroup: "cx_shoulder_g" }, { itemId: "vw_shoulder", chance: 0.33, rollGroup: "cx_shoulder_g" }, { itemId: "ng_shoulder", chance: 0.33, rollGroup: "cx_shoulder_g" }], scale: 1.6, color: 0xc6e2f5,
+  },
+  cx_vorothne: {
+    id: 'cx_vorothne', name: 'Archlich Vorothne', minLevel: 22, maxLevel: 22, family: 'undead', elite: true, boss: true, ccImmune: true,
+    hpBase: 1600, hpPerLevel: 140, dmgBase: 30, dmgPerLevel: 5.2, attackSpeed: 2.4, armorPerLevel: 50, moveSpeed: 6.8, aggroRadius: 20,
+    aoePulse: { min: 38, max: 56, radius: 13, every: 8, name: 'Hollow Cataclysm', school: 'shadow', fx: 'nova' },
+    summonAdds: { mobId: 'cx_revenant', count: 3, atHpPct: [0.75, 0.5, 0.25] },
+    petSpell: { name: 'Soulfrost Bolt', school: 'frost', min: 48, max: 70, range: 30, every: 2.6 },
+    stomp: { radius: 13, every: 13, duration: 1.5, min: 30, max: 44, name: 'Deathknell' },
+    enrage: { belowHpPct: 0.2, dmgMult: 1.5, hasteMult: 1.35 },
+    loot: [{ copper: 5000, chance: 1 }, { itemId: "mp_mh", chance: 0.34, rollGroup: "cx_mh_g" }, { itemId: "vw_mh", chance: 0.33, rollGroup: "cx_mh_g" }, { itemId: "ng_mh", chance: 0.33, rollGroup: "cx_mh_g" }, { itemId: "mp_chest", chance: 0.34, rollGroup: "cx_chest2_g" }, { itemId: "vw_chest", chance: 0.33, rollGroup: "cx_chest2_g" }, { itemId: "ng_chest", chance: 0.33, rollGroup: "cx_chest2_g" }, { itemId: "cx_ep_robe", chance: 0.2, rollGroup: "cx_voro_bonus" }, { itemId: "cx_ep_helm", chance: 0.2, rollGroup: "cx_voro_bonus2" }, { itemId: "mournlight_splinter", chance: 0.1, questId: "q_cx_legend_1" }, { itemId: "hollow_star", chance: 0.1, questId: "q_cx_legend_3" }], scale: 2.2, color: 0x5a3d7a,
+  },
 };
 
 // Trash packs of 2 elites (spaced beyond social-aggro range so groups can
@@ -553,6 +708,25 @@ const CLAUDEHOLME_SPAWN_LIST: DungeonSpawn[] = [
   { mobId: 'claudeholme_husk', x: 5, z: 220 },
 ];
 
+// Claudexxaramas raid: 15 boss chambers (z 18..410, every 28), each fronted by a
+// 2-mob trash pack, the Archlich on the throne dais at z 410. 5 quarters x 3 bosses.
+const CLAUDEXX_RAID_SPAWN_LIST: DungeonSpawn[] = (() => {
+  const bosses = [
+    'cx_gutpile', 'cx_fleshwright', 'cx_grosh', 'cx_vexil', 'cx_apothecary',
+    'cx_maggath', 'cx_vanguard', 'cx_korreth', 'cx_triad', 'cx_vrallka',
+    'cx_silkbound', 'cx_sethelle', 'cx_rimecore', 'cx_wardens', 'cx_vorothne',
+  ];
+  const trash = ['cx_husk', 'cx_revenant'];
+  const out: DungeonSpawn[] = [];
+  for (let i = 0; i < bosses.length; i++) {
+    const bz = 18 + i * 28;
+    out.push({ mobId: trash[i % 2], x: -6, z: bz - 12 });
+    out.push({ mobId: trash[(i + 1) % 2], x: 6, z: bz - 10 });
+    out.push({ mobId: bosses[i], x: 0, z: bz });
+  }
+  return out;
+})();
+
 export const DUNGEON_DEFS: Record<string, DungeonDef> = {
   hollow_crypt: {
     id: 'hollow_crypt',
@@ -658,6 +832,19 @@ export const DUNGEON_DEFS: Record<string, DungeonDef> = {
     enterText: 'You step through the breach into Claudeholme, and the dead town stirs.',
     leaveText: 'You climb back out of Claudeholme into the ashen light.',
   },
+  claudexxaramas: {
+    id: 'claudexxaramas',
+    name: 'Claudexxaramas',
+    index: 7, // instance origin x = 900 + 7*600 = 5100 (clear, below the relocated arena at 5400)
+    doorPos: { x: 0, z: 1252 }, // the breach portal at the Pale Reach, beneath the hanging necropolis
+    entry: { x: 0, z: 4 },
+    exitOffset: { x: 0, z: -6 },
+    spawns: CLAUDEXX_RAID_SPAWN_LIST,
+    interior: 'claudexxaramas',
+    suggestedPlayers: 10,
+    enterText: 'You breach the necropolis of Claudexxaramas. The dead are waiting.',
+    leaveText: 'You withdraw from Claudexxaramas into the ashen wind.',
+  },
 };
 
 const PLATE = ['warrior', 'paladin', 'shaman'] as const;
@@ -706,4 +893,49 @@ export const CLAUDEHOLME_ITEMS: Record<string, ItemDef> = {
   ash_iron: { id: 'ash_iron', name: 'Ash-Iron Ingot', kind: 'quest', sellValue: 0, questId: 'q_ch_attune_4' },
   hollow_crown: { id: 'hollow_crown', name: "Veholt's Hollow Crown", kind: 'quest', sellValue: 0, questId: 'q_ch_attune_5' },
   breachkey_dawn: { id: 'breachkey_dawn', name: 'Breachkey of the Dawn', kind: 'quest', sellValue: 0, questId: 'q_ch_attune_5' },
+};
+
+// Tier 1 sets (epic, the strongest in the game): Mortplate (plate) / Voidweave (cloth) /
+// Nightshroud (leather), 8 slots each, dropped across the 15 Claudexxaramas bosses. Plus
+// diversity epics and the legendary staff chain items.
+export const CLAUDEXX_ITEMS: Record<string, ItemDef> = {
+  // Mortplate (plate)
+  mp_feet: { id: 'mp_feet', name: 'Mortplate Sabatons', kind: 'armor', slot: 'feet', quality: 'epic', stats: { armor: 190, sta: 11, str: 7 }, sellValue: 4200, requiredClass: [...PLATE] },
+  mp_gloves: { id: 'mp_gloves', name: 'Mortplate Gauntlets', kind: 'armor', slot: 'gloves', quality: 'epic', stats: { armor: 178, sta: 10, str: 8 }, sellValue: 4200, requiredClass: [...PLATE] },
+  mp_waist: { id: 'mp_waist', name: 'Mortplate Girdle', kind: 'armor', slot: 'waist', quality: 'epic', stats: { armor: 184, sta: 11, str: 7 }, sellValue: 4200, requiredClass: [...PLATE] },
+  mp_helmet: { id: 'mp_helmet', name: 'Mortplate Greathelm', kind: 'armor', slot: 'helmet', quality: 'epic', stats: { armor: 240, sta: 14, str: 9 }, sellValue: 5200, requiredClass: [...PLATE] },
+  mp_legs: { id: 'mp_legs', name: 'Mortplate Legplates', kind: 'armor', slot: 'legs', quality: 'epic', stats: { armor: 265, sta: 15, str: 10 }, sellValue: 5200, requiredClass: [...PLATE] },
+  mp_shoulder: { id: 'mp_shoulder', name: 'Mortplate Pauldrons', kind: 'armor', slot: 'shoulder', quality: 'epic', stats: { armor: 224, sta: 13, str: 9 }, sellValue: 5200, requiredClass: [...PLATE] },
+  mp_chest: { id: 'mp_chest', name: 'Mortplate Breastplate', kind: 'armor', slot: 'chest', quality: 'epic', stats: { armor: 300, sta: 19, str: 13 }, sellValue: 6500, requiredClass: [...PLATE] },
+  mp_mh: { id: 'mp_mh', name: 'Mortplate Reaver', kind: 'weapon', slot: 'mainhand', quality: 'epic', weapon: { min: 44, max: 66, speed: 2.6 }, stats: { str: 14, sta: 7 }, sellValue: 9000, requiredClass: [...PLATE] },
+  // Voidweave (cloth)
+  vw_feet: { id: 'vw_feet', name: 'Voidweave Slippers', kind: 'armor', slot: 'feet', quality: 'epic', stats: { armor: 52, int: 11, spi: 7 }, sellValue: 4200, requiredClass: [...CLOTH] },
+  vw_gloves: { id: 'vw_gloves', name: 'Voidweave Handwraps', kind: 'armor', slot: 'gloves', quality: 'epic', stats: { armor: 48, int: 11, spi: 6 }, sellValue: 4200, requiredClass: [...CLOTH] },
+  vw_waist: { id: 'vw_waist', name: 'Voidweave Cord', kind: 'armor', slot: 'waist', quality: 'epic', stats: { armor: 50, int: 11, spi: 6 }, sellValue: 4200, requiredClass: [...CLOTH] },
+  vw_helmet: { id: 'vw_helmet', name: 'Voidweave Cowl', kind: 'armor', slot: 'helmet', quality: 'epic', stats: { armor: 66, int: 14, spi: 8 }, sellValue: 5200, requiredClass: [...CLOTH] },
+  vw_legs: { id: 'vw_legs', name: 'Voidweave Leggings', kind: 'armor', slot: 'legs', quality: 'epic', stats: { armor: 74, int: 15, spi: 9 }, sellValue: 5200, requiredClass: [...CLOTH] },
+  vw_shoulder: { id: 'vw_shoulder', name: 'Voidweave Mantle', kind: 'armor', slot: 'shoulder', quality: 'epic', stats: { armor: 62, int: 13, spi: 8 }, sellValue: 5200, requiredClass: [...CLOTH] },
+  vw_chest: { id: 'vw_chest', name: 'Voidweave Robe', kind: 'armor', slot: 'chest', quality: 'epic', stats: { armor: 84, int: 19, spi: 11 }, sellValue: 6500, requiredClass: [...CLOTH] },
+  vw_mh: { id: 'vw_mh', name: 'Voidweave Scepter', kind: 'weapon', slot: 'mainhand', quality: 'epic', weapon: { min: 36, max: 54, speed: 2.6 }, stats: { int: 14, spi: 7 }, sellValue: 9000, requiredClass: [...CLOTH] },
+  // Nightshroud (leather)
+  ng_feet: { id: 'ng_feet', name: 'Nightshroud Treads', kind: 'armor', slot: 'feet', quality: 'epic', stats: { armor: 115, agi: 11, sta: 6 }, sellValue: 4200, requiredClass: [...LEATHER] },
+  ng_gloves: { id: 'ng_gloves', name: 'Nightshroud Grips', kind: 'armor', slot: 'gloves', quality: 'epic', stats: { armor: 108, agi: 11, sta: 5 }, sellValue: 4200, requiredClass: [...LEATHER] },
+  ng_waist: { id: 'ng_waist', name: 'Nightshroud Belt', kind: 'armor', slot: 'waist', quality: 'epic', stats: { armor: 112, agi: 11, sta: 6 }, sellValue: 4200, requiredClass: [...LEATHER] },
+  ng_helmet: { id: 'ng_helmet', name: 'Nightshroud Mask', kind: 'armor', slot: 'helmet', quality: 'epic', stats: { armor: 148, agi: 14, sta: 7 }, sellValue: 5200, requiredClass: [...LEATHER] },
+  ng_legs: { id: 'ng_legs', name: 'Nightshroud Legguards', kind: 'armor', slot: 'legs', quality: 'epic', stats: { armor: 160, agi: 15, sta: 8 }, sellValue: 5200, requiredClass: [...LEATHER] },
+  ng_shoulder: { id: 'ng_shoulder', name: 'Nightshroud Spaulders', kind: 'armor', slot: 'shoulder', quality: 'epic', stats: { armor: 134, agi: 13, sta: 7 }, sellValue: 5200, requiredClass: [...LEATHER] },
+  ng_chest: { id: 'ng_chest', name: 'Nightshroud Tunic', kind: 'armor', slot: 'chest', quality: 'epic', stats: { armor: 172, agi: 19, sta: 9 }, sellValue: 6500, requiredClass: [...LEATHER] },
+  ng_mh: { id: 'ng_mh', name: 'Nightshroud Dagger', kind: 'weapon', slot: 'mainhand', quality: 'epic', weapon: { min: 40, max: 60, speed: 1.8 }, stats: { agi: 14, sta: 7 }, sellValue: 9000, requiredClass: [...LEATHER] },
+  // Diversity epics (off-set boss drops)
+  cx_ep_war: { id: 'cx_ep_war', name: 'Necropole Warblade', kind: 'weapon', slot: 'mainhand', quality: 'epic', weapon: { min: 48, max: 72, speed: 2.8 }, stats: { str: 16, sta: 8 }, sellValue: 9500, requiredClass: [...PLATE] },
+  cx_ep_mag: { id: 'cx_ep_mag', name: 'Necropole Wand', kind: 'weapon', slot: 'mainhand', quality: 'epic', weapon: { min: 38, max: 57, speed: 2.4 }, stats: { int: 16, spi: 8 }, sellValue: 9500, requiredClass: [...CLOTH] },
+  cx_ep_rog: { id: 'cx_ep_rog', name: 'Necropole Shiv', kind: 'weapon', slot: 'mainhand', quality: 'epic', weapon: { min: 42, max: 63, speed: 1.7 }, stats: { agi: 16, sta: 8 }, sellValue: 9500, requiredClass: [...LEATHER] },
+  cx_ep_helm: { id: 'cx_ep_helm', name: 'Crown of the Hollow Throne', kind: 'armor', slot: 'helmet', quality: 'epic', stats: { armor: 250, sta: 16, str: 10 }, sellValue: 6000, requiredClass: [...PLATE] },
+  cx_ep_robe: { id: 'cx_ep_robe', name: 'Shroud of the Archlich', kind: 'armor', slot: 'chest', quality: 'epic', stats: { armor: 90, int: 21, spi: 12 }, sellValue: 6800, requiredClass: [...CLOTH] },
+  cx_ep_legs: { id: 'cx_ep_legs', name: 'Spinning Dark Legguards', kind: 'armor', slot: 'legs', quality: 'epic', stats: { armor: 168, agi: 16, sta: 9 }, sellValue: 5400, requiredClass: [...LEATHER] },
+  // Legendary staff chain (Mournlight)
+  mournlight_splinter: { id: 'mournlight_splinter', name: 'Splinter of Mournlight', kind: 'quest', sellValue: 0, questId: 'q_cx_legend_1' },
+  mournlight_unlit: { id: 'mournlight_unlit', name: 'Unlit Staff of Mournlight', kind: 'quest', sellValue: 0, questId: 'q_cx_legend_2' },
+  hollow_star: { id: 'hollow_star', name: 'The Hollow Star', kind: 'quest', sellValue: 0, questId: 'q_cx_legend_3' },
+  mournlight: { id: 'mournlight', name: 'Mournlight, Staff of the Hollow Dawn', kind: 'weapon', slot: 'mainhand', quality: 'epic', weapon: { min: 50, max: 75, speed: 2.7 }, stats: { int: 22, spi: 12, sta: 8 }, sellValue: 20000, requiredClass: [...CLOTH] },
 };

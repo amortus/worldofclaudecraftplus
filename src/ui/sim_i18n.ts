@@ -3518,7 +3518,8 @@ type RaidExtraKey =
   | 'royalDoorSealed'
   | 'locked'
   | 'engagedSealed'
-  | 'mustFall';
+  | 'mustFall'
+  | 'breachSealed';
 
 const RAID_EXTRA: Record<SupportedLanguage, Record<RaidExtraKey, string>> = {
   en: {
@@ -3539,6 +3540,7 @@ const RAID_EXTRA: Record<SupportedLanguage, Record<RaidExtraKey, string>> = {
     locked: 'You are locked to Nythraxis Raid Arena.',
     engagedSealed: 'Nythraxis is engaged - the royal door has sealed shut.',
     mustFall: 'The royal door is sealed - Nythraxis must fall first.',
+    breachSealed: 'The breach will not open for you. Forge the Breachkey of the Dawn first.',
   },
   en_CA: {
     converted: 'Your party has converted to a raid group.',
@@ -3558,6 +3560,7 @@ const RAID_EXTRA: Record<SupportedLanguage, Record<RaidExtraKey, string>> = {
     locked: 'You are locked to Nythraxis Raid Arena.',
     engagedSealed: 'Nythraxis is engaged - the royal door has sealed shut.',
     mustFall: 'The royal door is sealed - Nythraxis must fall first.',
+    breachSealed: 'The breach will not open for you. Forge the Breachkey of the Dawn first.',
   },
   es: {
     converted: 'Tu grupo se ha convertido en una banda.',
@@ -3577,6 +3580,7 @@ const RAID_EXTRA: Record<SupportedLanguage, Record<RaidExtraKey, string>> = {
     locked: 'Estas vinculado a la Arena de banda de Nythraxis.',
     engagedSealed: 'Nythraxis esta en combate; la puerta real se ha sellado.',
     mustFall: 'La puerta real esta sellada; Nythraxis debe caer primero.',
+    breachSealed: 'La brecha no se abrira para ti. Forja primero la Llave de la Brecha del Alba.',
   },
   es_ES: {
     converted: 'Tu grupo se ha convertido en una banda.',
@@ -3596,6 +3600,7 @@ const RAID_EXTRA: Record<SupportedLanguage, Record<RaidExtraKey, string>> = {
     locked: 'Estas vinculado a la Arena de banda de Nythraxis.',
     engagedSealed: 'Nythraxis esta en combate; la puerta real se ha sellado.',
     mustFall: 'La puerta real esta sellada; Nythraxis debe caer primero.',
+    breachSealed: 'La brecha no se abrira para ti. Forja primero la Llave de la Brecha del Alba.',
   },
   fr_FR: {
     converted: 'Votre groupe est devenu un raid.',
@@ -3615,6 +3620,7 @@ const RAID_EXTRA: Record<SupportedLanguage, Record<RaidExtraKey, string>> = {
     locked: 'Vous etes lie a larene de raid de Nythraxis.',
     engagedSealed: 'Nythraxis est engage; la porte royale sest scellee.',
     mustFall: 'La porte royale est scellee; Nythraxis doit tomber dabord.',
+    breachSealed: 'La breche ne s’ouvrira pas pour vous. Forgez d’abord la Cle de Breche de l’Aube.',
   },
   fr_CA: {
     converted: 'Votre groupe est devenu un raid.',
@@ -3634,6 +3640,7 @@ const RAID_EXTRA: Record<SupportedLanguage, Record<RaidExtraKey, string>> = {
     locked: 'Vous etes lie a larene de raid de Nythraxis.',
     engagedSealed: 'Nythraxis est engage; la porte royale sest scellee.',
     mustFall: 'La porte royale est scellee; Nythraxis doit tomber dabord.',
+    breachSealed: 'La breche ne s’ouvrira pas pour vous. Forgez d’abord la Cle de Breche de l’Aube.',
   },
   it_IT: {
     converted: 'Il tuo gruppo e diventato un raid.',
@@ -3653,6 +3660,7 @@ const RAID_EXTRA: Record<SupportedLanguage, Record<RaidExtraKey, string>> = {
     locked: 'Sei vincolato all Arena raid di Nythraxis.',
     engagedSealed: 'Nythraxis e in combattimento; la porta reale si e sigillata.',
     mustFall: 'La porta reale e sigillata; Nythraxis deve cadere prima.',
+    breachSealed: 'La breccia non si aprira per te. Forgia prima la Chiave di Breccia dell’Alba.',
   },
   de_DE: {
     converted: 'Eure Gruppe wurde in einen Schlachtzug umgewandelt.',
@@ -3673,6 +3681,7 @@ const RAID_EXTRA: Record<SupportedLanguage, Record<RaidExtraKey, string>> = {
     locked: 'Ihr seid an die Nythraxis-Schlachtzugsarena gebunden.',
     engagedSealed: 'Nythraxis ist im Kampf; die koenigliche Tuer hat sich versiegelt.',
     mustFall: 'Die koenigliche Tuer ist versiegelt; Nythraxis muss zuerst fallen.',
+    breachSealed: 'Die Bresche oeffnet sich Euch nicht. Schmiedet zuerst den Breschenschluessel der Morgenroete.',
   },
   zh_CN: {
     converted: '你的队伍已转换为团队。',
@@ -3692,6 +3701,7 @@ const RAID_EXTRA: Record<SupportedLanguage, Record<RaidExtraKey, string>> = {
     locked: '你已锁定到尼瑟拉克斯团队竞技场。',
     engagedSealed: '尼瑟拉克斯已进入战斗；王室之门已经封闭。',
     mustFall: '王室之门已封闭；必须先击败尼瑟拉克斯。',
+    breachSealed: '裂隙不会为你开启。先锻造黎明破隙之钥。',
   },
   zh_TW: {
     converted: '你的隊伍已轉換為團隊。',
@@ -3711,6 +3721,7 @@ const RAID_EXTRA: Record<SupportedLanguage, Record<RaidExtraKey, string>> = {
     locked: '你已鎖定到尼瑟拉克斯團隊競技場。',
     engagedSealed: '尼瑟拉克斯已進入戰鬥；王室之門已經封閉。',
     mustFall: '王室之門已封閉；必須先擊敗尼瑟拉克斯。',
+    breachSealed: '裂隙不會為你開啟。先鍛造黎明破隙之鑰。',
   },
   ko_KR: {
     converted: '파티가 공격대 그룹으로 전환되었습니다.',
@@ -3730,6 +3741,7 @@ const RAID_EXTRA: Record<SupportedLanguage, Record<RaidExtraKey, string>> = {
     locked: '니트락시스 공격대 투기장에 귀속되어 있습니다.',
     engagedSealed: '니트락시스가 전투 중입니다. 왕실 문이 봉인되었습니다.',
     mustFall: '왕실 문이 봉인되었습니다. 먼저 니트락시스를 쓰러뜨려야 합니다.',
+    breachSealed: '균열은 당신에게 열리지 않는다. 먼저 여명의 균열 열쇠를 벼려라.',
   },
   ja_JP: {
     converted: 'パーティがレイドグループに変換されました。',
@@ -3749,6 +3761,7 @@ const RAID_EXTRA: Record<SupportedLanguage, Record<RaidExtraKey, string>> = {
     locked: 'ナイスラクシスのレイドアリーナにロックされています。',
     engagedSealed: 'ナイスラクシスが戦闘中です。王家の扉は封印されました。',
     mustFall: '王家の扉は封印されています。先にナイスラクシスを倒さねばなりません。',
+    breachSealed: '亀裂はあなたのために開かない。まず暁の亀裂の鍵を鍛えよ。',
   },
   pt_BR: {
     converted: 'Seu grupo foi convertido em raide.',
@@ -3768,6 +3781,7 @@ const RAID_EXTRA: Record<SupportedLanguage, Record<RaidExtraKey, string>> = {
     locked: 'Voce esta salvo na Arena de Raide de Nythraxis.',
     engagedSealed: 'Nythraxis esta em combate; a porta real se selou.',
     mustFall: 'A porta real esta selada; Nythraxis deve cair primeiro.',
+    breachSealed: 'A brecha nao se abrira para voce. Forje primeiro a Chave da Brecha da Alvorada.',
   },
   ru_RU: {
     converted: 'Ваша группа преобразована в рейд.',
@@ -3787,6 +3801,7 @@ const RAID_EXTRA: Record<SupportedLanguage, Record<RaidExtraKey, string>> = {
     locked: 'Вы привязаны к рейдовой арене Нитраксиса.',
     engagedSealed: 'Нитраксис уже в бою; королевская дверь запечаталась.',
     mustFall: 'Королевская дверь запечатана; сначала должен пасть Нитраксис.',
+    breachSealed: 'Пролом не откроется для вас. Сначала выкуйте Ключ Пролома Рассвета.',
   },
 };
 
@@ -4129,6 +4144,7 @@ const RULES: Rule[] = [
     build: () => tRaidExtra('mustConvert'),
   },
   { re: /^The royal door is sealed to you\.$/, build: () => tRaidExtra('royalDoorSealed') },
+  { re: /^The breach will not open for you\. Forge the Breachkey of the Dawn first\.$/, build: () => tRaidExtra('breachSealed') },
   { re: /^You are locked to Nythraxis Raid Arena\.$/, build: () => tRaidExtra('locked') },
   {
     re: /^Nythraxis is engaged — the royal door has sealed shut\.$/,

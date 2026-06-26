@@ -4678,6 +4678,108 @@ export const fr_CA: EnTranslations = {
       "breachkey_dawn": {
         "name": "Clé de brèche de la Dawn"
       },
+      "mp_feet": {
+        "name": "Solerets de mortplaque"
+      },
+      "mp_gloves": {
+        "name": "Gantelets de mortplaque"
+      },
+      "mp_waist": {
+        "name": "Ceinturon de mortplaque"
+      },
+      "mp_helmet": {
+        "name": "Heaume de mortplaque"
+      },
+      "mp_legs": {
+        "name": "Jambieres de mortplaque"
+      },
+      "mp_shoulder": {
+        "name": "Spallieres de mortplaque"
+      },
+      "mp_chest": {
+        "name": "Plastron de mortplaque"
+      },
+      "mp_mh": {
+        "name": "Pilleur de mortplaque"
+      },
+      "vw_feet": {
+        "name": "Chaussons de voiletenebre"
+      },
+      "vw_gloves": {
+        "name": "Bandes de voiletenebre"
+      },
+      "vw_waist": {
+        "name": "Cordon de voiletenebre"
+      },
+      "vw_helmet": {
+        "name": "Capuche de voiletenebre"
+      },
+      "vw_legs": {
+        "name": "Jambieres de voiletenebre"
+      },
+      "vw_shoulder": {
+        "name": "Mantelet de voiletenebre"
+      },
+      "vw_chest": {
+        "name": "Robe de voiletenebre"
+      },
+      "vw_mh": {
+        "name": "Sceptre de voiletenebre"
+      },
+      "ng_feet": {
+        "name": "Foulees de linceuxnocturne"
+      },
+      "ng_gloves": {
+        "name": "Prises de linceuxnocturne"
+      },
+      "ng_waist": {
+        "name": "Ceinture de linceuxnocturne"
+      },
+      "ng_helmet": {
+        "name": "Masque de linceuxnocturne"
+      },
+      "ng_legs": {
+        "name": "Jambardes de linceuxnocturne"
+      },
+      "ng_shoulder": {
+        "name": "Epaulieres de linceuxnocturne"
+      },
+      "ng_chest": {
+        "name": "Tunique de linceuxnocturne"
+      },
+      "ng_mh": {
+        "name": "Dague de linceuxnocturne"
+      },
+      "cx_ep_war": {
+        "name": "Lame de guerre necropole"
+      },
+      "cx_ep_mag": {
+        "name": "Baguette necropole"
+      },
+      "cx_ep_rog": {
+        "name": "Surin necropole"
+      },
+      "cx_ep_helm": {
+        "name": "Couronne du Trone creux"
+      },
+      "cx_ep_robe": {
+        "name": "Linceul de l'Archiliche"
+      },
+      "cx_ep_legs": {
+        "name": "Jambardes des Tenebres filantes"
+      },
+      "mournlight_splinter": {
+        "name": "Eclat du Mournlight"
+      },
+      "mournlight_unlit": {
+        "name": "Baton eteint du Mournlight"
+      },
+      "hollow_star": {
+        "name": "L'Etoile creuse"
+      },
+      "mournlight": {
+        "name": "Mournlight, Baton de l'Aube creuse"
+      },
       "bristleback_maul": {
         "name": "Maillet Bristleback"
       },
@@ -5424,6 +5526,66 @@ export const fr_CA: EnTranslations = {
       "ch_veholt": {
         "name": "Seigneur Veholt le Creux"
       },
+      "cx_husk": {
+        "name": "Carcasse de la Necropole"
+      },
+      "cx_revenant": {
+        "name": "Revenant de la Necropole"
+      },
+      "cx_flesh_thrall": {
+        "name": "Esclave de chair"
+      },
+      "cx_plague_swarm": {
+        "name": "Nuee pestilentielle"
+      },
+      "cx_spiderling": {
+        "name": "Aragnaute des cryptes"
+      },
+      "cx_gutpile": {
+        "name": "Gutpile"
+      },
+      "cx_fleshwright": {
+        "name": "Le Faconneur de chair"
+      },
+      "cx_grosh": {
+        "name": "Grosh le Defait"
+      },
+      "cx_vexil": {
+        "name": "Vexil le Purulent"
+      },
+      "cx_apothecary": {
+        "name": "La Trine des apothicaires"
+      },
+      "cx_maggath": {
+        "name": "Maggath le Seigneur des fleaux"
+      },
+      "cx_vanguard": {
+        "name": "L'Avant-garde d'os"
+      },
+      "cx_korreth": {
+        "name": "Marechal Korreth"
+      },
+      "cx_triad": {
+        "name": "La Triade gardemort"
+      },
+      "cx_vrallka": {
+        "name": "Vrall'ka la Mere couveuse"
+      },
+      "cx_silkbound": {
+        "name": "La Liee de soie"
+      },
+      "cx_sethelle": {
+        "name": "Matrone Sethelle"
+      },
+      "cx_rimecore": {
+        "name": "Rimecore le Creux"
+      },
+      "cx_wardens": {
+        "name": "Les Gardiens du givre"
+      },
+      "cx_vorothne": {
+        "name": "Archiliche Vorothne"
+      },
       "ironvein_foreman": {
         "name": "Contremaître Veinefer"
       },
@@ -5673,6 +5835,16 @@ export const fr_CA: EnTranslations = {
         "name": "Récupératrice Sela",
         "title": "Dawn of Claude",
         "greeting": "Les morts de Claudeholme ne peuvent être sauvés, {playerName}, seulement libérés. Récupère ce que la ville a perdu, et aide-moi à forger la clé qui ouvre le Claudexxaramas lui-même."
+      },
+      "dawn_warbringer_torv": {
+        "name": "Porteguerre Torv",
+        "title": "Aube de Claude",
+        "greeting": "La breche est enfin ouverte, {playerName}, et la necropole deverse ses morts sur la Marche pale. Menez l'Aube dans la Claudexxaramas, quartier par quartier, et abattez ses maitres."
+      },
+      "dawn_loreseeker_miren": {
+        "name": "Quete-savoir Miren",
+        "title": "Aube de Claude",
+        "greeting": "Il y a dans la necropole une relique plus ancienne que son maitre, {playerName}: un baton brise en eclats, disperses parmi les morts. Rassemblez-les, et nous raviverons ensemble le Mournlight."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6789,6 +6961,86 @@ export const fr_CA: EnTranslations = {
           }
         }
       },
+      "q_cx_breach": {
+        "title": "La breche s'ouvre",
+        "text": "La Cle de breche a tourne, {playerName}, et la Claudexxaramas se dresse ouverte au-dessus de nous. Son premier quartier, les Halls de charogne, est une fosse macabre de morts recousus. Frayez-vous un chemin jusqu'a Grosh le Defait et abattez l'abomination, afin que l'Aube puisse tenir un point d'appui a l'interieur.",
+        "completion": "Les Halls de charogne sont a nous. Un quartier perce, quatre encore. La necropole ne cedera pas le reste aussi aisement.",
+        "objectives": {
+          "0": {
+            "label": "Grosh le Defait tue"
+          }
+        }
+      },
+      "q_cx_plague": {
+        "title": "Les Forges de peste",
+        "text": "Le deuxieme quartier, les Forges de peste, brasse la pourriture que la Claudexxaramas deverse sur nos terres. Maggath le Seigneur des fleaux veille sur ses cuves. Mettez fin a ses jours, {playerName}, et etouffez le fleau a sa source.",
+        "completion": "Les cuves se sont taries. Les Forges de peste n'empoisonneront plus aucun champ. L'Aube en respire plus librement.",
+        "objectives": {
+          "0": {
+            "label": "Maggath le Seigneur des fleaux tue"
+          }
+        }
+      },
+      "q_cx_barracks": {
+        "title": "La Caserne de la veille mortelle",
+        "text": "La necropole entretient une garnison, {playerName}: la Caserne de la veille mortelle, ou des soldats tombes s'exercent pour une guerre sans fin. La Triade gardemort les commande. Brisez la Triade et la garnison se brisera avec elle.",
+        "completion": "La Triade est tombee et ses rangs se dispersent. La caserne ne montera aucune contre-attaque. En avant, dans les tenebres.",
+        "objectives": {
+          "0": {
+            "label": "La Triade gardemort tuee"
+          }
+        }
+      },
+      "q_cx_spinning": {
+        "title": "Les Tenebres filantes",
+        "text": "Le quatrieme quartier est tisse d'un mur a l'autre, {playerName}: les Tenebres filantes, ou la Matrone Sethelle couve ses enfants rampants. Brulez les toiles et mettez fin a la Matrone avant que sa couvee ne submerge la breche.",
+        "completion": "La couvee de Sethelle n'est plus que cendres et les Tenebres filantes se figent. Seul le trone se dresse desormais au-dessus de vous.",
+        "objectives": {
+          "0": {
+            "label": "Matrone Sethelle tuee"
+          }
+        }
+      },
+      "q_cx_throne": {
+        "title": "Le Trone creux",
+        "text": "C'en est la fin, {playerName}. Le Trone creux siege au coeur de la necropole, et sur lui l'Archiliche Vorothne, la volonte qui anime la Claudexxaramas. Emmenez tout le raid. Renversez-le, et la necropole mourra avec son maitre.",
+        "completion": "Vorothne est defait, et la Claudexxaramas s'eteint au-dessus de la Marche pale. Vous avez mene l'Aube jusqu'au coeur de la necropole et l'avez arrache, {playerName}. Cette victoire est la votre, et l'ordre la chantera.",
+        "objectives": {
+          "0": {
+            "label": "Archiliche Vorothne tue"
+          }
+        }
+      },
+      "q_cx_legend_1": {
+        "title": "Eclats du Mournlight",
+        "text": "Avant que la necropole n'ait un maitre, {playerName}, elle abritait un baton de vraie lumiere, le Mournlight, et lorsqu'il tomba, le baton vola en eclats. Cinq eclats reposent aupres des seigneurs des quartiers de la Claudexxaramas. Ils ne les cedent que rarement, aussi vous arpenterez la necropole maintes et maintes fois. Rapportez-moi les cinq.",
+        "completion": "Cinq eclats, chacun arrache a un seigneur des morts different. Je sens le Mournlight fremir entre eux. Prenez cette monture eteinte; elle les maintiendra pendant que nous oeuvrerons.",
+        "objectives": {
+          "0": {
+            "label": "Eclat du Mournlight"
+          }
+        }
+      },
+      "q_cx_legend_2": {
+        "title": "Le baton eteint",
+        "text": "La monture tient les cinq eclats, mais elle ne s'eveillera pas, {playerName}. Le Mournlight a besoin d'un coeur autour duquel bruler, et un seul demeure assez froid et assez eclatant pour servir: l'Etoile creuse, sertie dans la poitrine meme de Vorothne. Rapportez-moi le baton eteint, et preparez-vous a ce qui vient.",
+        "completion": "La monture est liee et equilibree, chaque eclat parfaitement serti. Il ne lui manque plus que l'Etoile. Vous savez ou elle repose.",
+        "objectives": {
+          "0": {
+            "label": "Baton eteint du Mournlight"
+          }
+        }
+      },
+      "q_cx_legend_3": {
+        "title": "L'Etoile creuse",
+        "text": "L'Etoile creuse brule dans la poitrine de Vorothne, et il ne la cede pas tant qu'il se tient debout, {playerName}. Retournez au trone, mettez fin de nouveau a l'Archiliche, et arrachez l'Etoile a sa depouille. Apportez-la-moi, et le Mournlight brulera enfin pour l'Aube.",
+        "completion": "C'est accompli. L'Etoile creuse siege au sommet du baton et le Mournlight flamboie blanc pour la premiere fois depuis un age. Prenez-le, {playerName}: Mournlight, Baton de l'Aube creuse. Aucune main ne l'a merite comme la votre. Que sa lumiere soit la derniere chose que les tenebres de la Claudexxaramas verront jamais.",
+        "objectives": {
+          "0": {
+            "label": "L'Etoile creuse"
+          }
+        }
+      },
       "q_drowned_choir": {
         "title": "Le Chœur noyé",
         "text": "Les pataugeurs n'agissent pas seuls. Parmi eux marchent les Dévots noyés — la secte qui a sombré avec le temple, encore vêtue de ses ornements putréfiés, chantant toujours la prière depuis les rochers du rivage. Réduis-en huit au silence et rapporte-moi six des offrandes qu'ils portent. Je veux savoir ce qu'ils comptent donner à leur déesse.",
@@ -7011,6 +7263,11 @@ export const fr_CA: EnTranslations = {
         "name": "Claudeholme",
         "enterText": "Vous franchissez la breche vers Claudeholme, et la ville morte s'eveille.",
         "leaveText": "Vous remontez de Claudeholme vers la lumiere cendreuse."
+      },
+      "claudexxaramas": {
+        "name": "Claudexxaramas",
+        "enterText": "Vous percez la necropole de Claudexxaramas. Les morts vous attendent.",
+        "leaveText": "Vous vous retirez de Claudexxaramas dans le vent de cendres."
       },
       "drowned_temple": {
         "name": "Le Temple noyé",

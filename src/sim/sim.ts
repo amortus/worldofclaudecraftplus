@@ -314,8 +314,8 @@ const RAID_MAX = 10;
 const RAID_GROUP_MAX = 5;
 const DAMAGE_IDLE_DESPAWN_SECONDS = 60;
 const DAMAGE_IDLE_DESPAWN_MOB_IDS = new Set(['varkas_boneguard', 'bound_guardian']);
-const RAID_ALLOWED_DUNGEON_IDS = new Set(['nythraxis_crypt', 'nythraxis_boss_arena']);
-const RAID_REQUIRED_DUNGEON_IDS = new Set(['nythraxis_boss_arena']);
+const RAID_ALLOWED_DUNGEON_IDS = new Set(['nythraxis_crypt', 'nythraxis_boss_arena', 'claudexxaramas']);
+const RAID_REQUIRED_DUNGEON_IDS = new Set(['nythraxis_boss_arena', 'claudexxaramas']);
 const PARTY_XP_RANGE = 80; // yards: members this close share kill xp/credit
 // Rested XP (classic inn-rested bonus). Resting inside an inn footprint accrues a
 // pool that doubles KILL xp (200%) until spent — vanilla's signature casual-pacing
@@ -14745,6 +14745,10 @@ export class Sim {
       this.error(r.meta.entityId, 'The royal door is sealed to you.');
       return;
     }
+    if (dungeonId === 'claudexxaramas' && !this.canEnterClaudexxRaid(r.meta)) {
+      this.error(r.meta.entityId, 'The breach will not open for you. Forge the Breachkey of the Dawn first.');
+      return;
+    }
     if (dungeonId === 'nythraxis_boss_arena' && this.isRaidLocked(r.meta, dungeonId)) {
       this.error(r.meta.entityId, 'You are locked to Nythraxis Raid Arena.');
       return;
@@ -14790,6 +14794,10 @@ export class Sim {
 
   private canEnterNythraxisRaid(meta: PlayerMeta): boolean {
     return meta.questsDone.has('q_nythraxis_bound_guardian');
+  }
+
+  private canEnterClaudexxRaid(meta: PlayerMeta): boolean {
+    return meta.questsDone.has('q_ch_attune_5');
   }
 
   private isRaidLocked(meta: PlayerMeta, dungeonId: string): boolean {

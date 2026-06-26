@@ -4678,6 +4678,108 @@ export const pt_BR: EnTranslations = {
       "breachkey_dawn": {
         "name": "Chave de Invasao da Dawn"
       },
+      "mp_feet": {
+        "name": "Soleretes de Mortoplaca"
+      },
+      "mp_gloves": {
+        "name": "Manoplas de Mortoplaca"
+      },
+      "mp_waist": {
+        "name": "Cinta de Mortoplaca"
+      },
+      "mp_helmet": {
+        "name": "Elmo Grande de Mortoplaca"
+      },
+      "mp_legs": {
+        "name": "Perneiras de Mortoplaca"
+      },
+      "mp_shoulder": {
+        "name": "Espaldares de Mortoplaca"
+      },
+      "mp_chest": {
+        "name": "Peitoral de Mortoplaca"
+      },
+      "mp_mh": {
+        "name": "Devastador de Mortoplaca"
+      },
+      "vw_feet": {
+        "name": "Sapatilhas de Teia do Vazio"
+      },
+      "vw_gloves": {
+        "name": "Envoltórios de Teia do Vazio"
+      },
+      "vw_waist": {
+        "name": "Cordão de Teia do Vazio"
+      },
+      "vw_helmet": {
+        "name": "Capuz de Teia do Vazio"
+      },
+      "vw_legs": {
+        "name": "Calças de Teia do Vazio"
+      },
+      "vw_shoulder": {
+        "name": "Manto de Teia do Vazio"
+      },
+      "vw_chest": {
+        "name": "Túnica de Teia do Vazio"
+      },
+      "vw_mh": {
+        "name": "Cetro de Teia do Vazio"
+      },
+      "ng_feet": {
+        "name": "Passos do Sudário Noturno"
+      },
+      "ng_gloves": {
+        "name": "Empunhaduras do Sudário Noturno"
+      },
+      "ng_waist": {
+        "name": "Cinto do Sudário Noturno"
+      },
+      "ng_helmet": {
+        "name": "Máscara do Sudário Noturno"
+      },
+      "ng_legs": {
+        "name": "Grevas do Sudário Noturno"
+      },
+      "ng_shoulder": {
+        "name": "Espaldeiras do Sudário Noturno"
+      },
+      "ng_chest": {
+        "name": "Gibão do Sudário Noturno"
+      },
+      "ng_mh": {
+        "name": "Adaga do Sudário Noturno"
+      },
+      "cx_ep_war": {
+        "name": "Espada de Guerra da Necrópole"
+      },
+      "cx_ep_mag": {
+        "name": "Varinha da Necrópole"
+      },
+      "cx_ep_rog": {
+        "name": "Punhal da Necrópole"
+      },
+      "cx_ep_helm": {
+        "name": "Coroa do Trono Oco"
+      },
+      "cx_ep_robe": {
+        "name": "Sudário do Arquilich"
+      },
+      "cx_ep_legs": {
+        "name": "Grevas da Escuridão Tecida"
+      },
+      "mournlight_splinter": {
+        "name": "Lasca da Mournlight"
+      },
+      "mournlight_unlit": {
+        "name": "Bastão Apagado da Mournlight"
+      },
+      "hollow_star": {
+        "name": "A Estrela Oca"
+      },
+      "mournlight": {
+        "name": "Mournlight, Bastão da Alvorada Oca"
+      },
       "bristleback_maul": {
         "name": "Malho Bristleback"
       },
@@ -5424,6 +5526,66 @@ export const pt_BR: EnTranslations = {
       "ch_veholt": {
         "name": "Lorde Veholt, o Oco"
       },
+      "cx_husk": {
+        "name": "Casca da Necrópole"
+      },
+      "cx_revenant": {
+        "name": "Espectro da Necrópole"
+      },
+      "cx_flesh_thrall": {
+        "name": "Servo de Carne"
+      },
+      "cx_plague_swarm": {
+        "name": "Enxame da Peste"
+      },
+      "cx_spiderling": {
+        "name": "Aranhiço da Cripta"
+      },
+      "cx_gutpile": {
+        "name": "Gutpile"
+      },
+      "cx_fleshwright": {
+        "name": "O Forjador de Carne"
+      },
+      "cx_grosh": {
+        "name": "Grosh, o Desfeito"
+      },
+      "cx_vexil": {
+        "name": "Vexil, o Purulento"
+      },
+      "cx_apothecary": {
+        "name": "A Trine dos Boticários"
+      },
+      "cx_maggath": {
+        "name": "Maggath, o Senhor da Peste"
+      },
+      "cx_vanguard": {
+        "name": "A Vanguarda de Ossos"
+      },
+      "cx_korreth": {
+        "name": "Marechal Korreth"
+      },
+      "cx_triad": {
+        "name": "A Tríade da Guarda da Morte"
+      },
+      "cx_vrallka": {
+        "name": "Vrall'ka, a Mãe da Ninhada"
+      },
+      "cx_silkbound": {
+        "name": "A Atada de Seda"
+      },
+      "cx_sethelle": {
+        "name": "Matrona Sethelle"
+      },
+      "cx_rimecore": {
+        "name": "Rimecore, o Oco"
+      },
+      "cx_wardens": {
+        "name": "Os Guardiões do Gelo"
+      },
+      "cx_vorothne": {
+        "name": "Arquilich Vorothne"
+      },
       "ironvein_foreman": {
         "name": "Capataz Veio de Ferro"
       },
@@ -5673,6 +5835,16 @@ export const pt_BR: EnTranslations = {
         "name": "Reclamadora Sela",
         "title": "Dawn of Claude",
         "greeting": "Os mortos de Claudeholme nao podem ser salvos, {playerName}, apenas libertados. Recupere o que a cidade perdeu, e me ajude a forjar a chave que abre a propria Claudexxaramas."
+      },
+      "dawn_warbringer_torv": {
+        "name": "Portador de Guerra Torv",
+        "title": "Alvorada de Claude",
+        "greeting": "A brecha enfim se abriu, {playerName}, e a necrópole derrama seus mortos sobre o Alcance Pálido. Conduza a Alvorada para dentro de Claudexxaramas, distrito por distrito, e derrube seus senhores."
+      },
+      "dawn_loreseeker_miren": {
+        "name": "Buscadora de Saber Miren",
+        "title": "Alvorada de Claude",
+        "greeting": "Há uma relíquia na necrópole mais antiga que seu mestre, {playerName}: um bastão partido em lascas e espalhado entre os mortos. Reúna-as, e juntos reacenderemos a Mournlight."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6789,6 +6961,86 @@ export const pt_BR: EnTranslations = {
           }
         }
       },
+      "q_cx_breach": {
+        "title": "A Brecha Se Abre",
+        "text": "A Chave da Brecha girou, {playerName}, e Claudexxaramas ergue-se aberta acima de nós. Seu primeiro distrito, os Salões da Carniça, é uma cova fétida de mortos costurados. Abra caminho até Grosh, o Desfeito, e ponha fim à abominação, para que a Alvorada possa firmar uma posição lá dentro.",
+        "completion": "Os Salões da Carniça são nossos. Um distrito rompido, faltam quatro. A necrópole não cederá o restante tão facilmente.",
+        "objectives": {
+          "0": {
+            "label": "Grosh, o Desfeito, abatido"
+          }
+        }
+      },
+      "q_cx_plague": {
+        "title": "As Forjas da Peste",
+        "text": "O segundo distrito, as Forjas da Peste, fermenta a podridão que Claudexxaramas faz chover sobre nossas terras. Maggath, o Senhor da Peste, cuida de suas tinas. Acabe com ele, {playerName}, e estrangule a peste em sua nascente.",
+        "completion": "As tinas secaram. As Forjas da Peste não envenenarão mais nenhum campo. A Alvorada respira mais aliviada por isso.",
+        "objectives": {
+          "0": {
+            "label": "Maggath, o Senhor da Peste, abatido"
+          }
+        }
+      },
+      "q_cx_barracks": {
+        "title": "Os Quartéis da Vigília da Morte",
+        "text": "A necrópole mantém uma guarnição, {playerName}: os Quartéis da Vigília da Morte, onde soldados tombados treinam para uma guerra que nunca termina. A Tríade da Guarda da Morte os comanda. Quebre a Tríade e a guarnição se quebra com ela.",
+        "completion": "A Tríade tombou e suas fileiras se dispersam. Os quartéis não reunirão nenhum contra-ataque. Adiante, rumo às trevas.",
+        "objectives": {
+          "0": {
+            "label": "A Tríade da Guarda da Morte abatida"
+          }
+        }
+      },
+      "q_cx_spinning": {
+        "title": "A Escuridão Tecida",
+        "text": "O quarto distrito está coberto de teias de parede a parede, {playerName}: a Escuridão Tecida, onde a Matrona Sethelle choca seus filhos rastejantes. Queime as teias e dê fim à Matrona antes que sua prole tome a brecha.",
+        "completion": "A prole de Sethelle virou cinzas e a Escuridão Tecida silencia. Apenas o trono permanece acima de você agora.",
+        "objectives": {
+          "0": {
+            "label": "Matrona Sethelle abatida"
+          }
+        }
+      },
+      "q_cx_throne": {
+        "title": "O Trono Oco",
+        "text": "Este é o fim de tudo, {playerName}. O Trono Oco repousa no coração da necrópole, e sobre ele o Arquilich Vorothne, a vontade que move Claudexxaramas. Leve a incursão inteira. Derrube-o, e a necrópole morre com seu mestre.",
+        "completion": "Vorothne foi desfeito, e Claudexxaramas mergulha nas trevas acima do Alcance Pálido. Você conduziu a Alvorada ao coração da necrópole e o arrancou de raiz, {playerName}. Esta vitória é sua, e a ordem a cantará por gerações.",
+        "objectives": {
+          "0": {
+            "label": "Arquilich Vorothne abatido"
+          }
+        }
+      },
+      "q_cx_legend_1": {
+        "title": "Lascas da Mournlight",
+        "text": "Antes que a necrópole tivesse um mestre, {playerName}, ela guardava um bastão de luz verdadeira, a Mournlight, e quando ela caiu o bastão se estilhaçou. Cinco lascas jazem com os senhores dos distritos de Claudexxaramas. Eles raramente as entregam, então você percorrerá a necrópole muitas e muitas vezes. Traga-me as cinco.",
+        "completion": "Cinco lascas, cada uma arrancada de um senhor dos mortos diferente. Posso sentir a Mournlight agitar-se entre elas. Pegue esta estrutura apagada; ela as guardará enquanto trabalhamos.",
+        "objectives": {
+          "0": {
+            "label": "Lasca da Mournlight"
+          }
+        }
+      },
+      "q_cx_legend_2": {
+        "title": "O Bastão Apagado",
+        "text": "A estrutura contém as cinco lascas, mas não despertará, {playerName}. A Mournlight precisa de um coração ao redor do qual arder, e só resta um frio e brilhante o bastante para servir: a Estrela Oca, encravada no próprio peito de Vorothne. Traga-me o bastão apagado, e prepare-se para o que vem a seguir.",
+        "completion": "A estrutura está atada e equilibrada, cada lasca assentada com precisão. Tudo o que lhe falta agora é a Estrela. Você sabe onde ela jaz.",
+        "objectives": {
+          "0": {
+            "label": "Bastão Apagado da Mournlight"
+          }
+        }
+      },
+      "q_cx_legend_3": {
+        "title": "A Estrela Oca",
+        "text": "A Estrela Oca arde no peito de Vorothne, e ele não a entrega enquanto estiver de pé, {playerName}. Volte ao trono, derrube o Arquilich mais uma vez, e arranque a Estrela dos destroços dele. Traga-a a mim, e a Mournlight enfim arderá pela Alvorada.",
+        "completion": "Está consumado. A Estrela Oca repousa no topo do bastão e a Mournlight reluz branca pela primeira vez em uma era. Pegue-a, {playerName}: Mournlight, Bastão da Alvorada Oca. Mão alguma a mereceu como a sua. Que sua luz seja a última coisa que as trevas de Claudexxaramas verão.",
+        "objectives": {
+          "0": {
+            "label": "A Estrela Oca"
+          }
+        }
+      },
       "q_drowned_choir": {
         "title": "O Coro Afogado",
         "text": "Os vadeadores não agem sozinhos. Entre eles caminham os Devotos Afogados — o culto que afundou com o templo, ainda em suas vestes apodrecidas, ainda cantando a prece desde as rochas da costa. Silencie oito deles e traga-me seis das oferendas que carregam. Eu gostaria de saber o que pretendem dar à sua deusa.",
@@ -7011,6 +7263,11 @@ export const pt_BR: EnTranslations = {
         "name": "Claudeholme",
         "enterText": "Voce cruza a brecha para Claudeholme, e a cidade morta se agita.",
         "leaveText": "Voce sobe de volta de Claudeholme para a luz cinzenta."
+      },
+      "claudexxaramas": {
+        "name": "Claudexxaramas",
+        "enterText": "Você rompe a necrópole de Claudexxaramas. Os mortos aguardam.",
+        "leaveText": "Você se retira de Claudexxaramas para o vento de cinzas."
       },
       "drowned_temple": {
         "name": "O Templo Afogado",

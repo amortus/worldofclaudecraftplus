@@ -162,6 +162,37 @@ export const CLAUDEHOLME_LAYOUT: DungeonLayout = (() => {
   };
 })();
 
+// Claudexxaramas raid (interior 'claudexxaramas'): the necropolis itself, a vast
+// descent of FIFTEEN boss chambers (5 quarters x 3) along z -19..422, waists every
+// chamber, the Archlich's throne on the great dais at z 410. The widest, longest
+// interior; reuses the shared wall-width contract so the KayKit modules fit.
+export const CLAUDEXX_LAYOUT: DungeonLayout = (() => {
+  const bossZ: number[] = [];
+  for (let i = 0; i < 15; i++) bossZ.push(18 + i * 28);
+  const pillars: GridPoint[] = [];
+  for (const bz of bossZ) for (const x of [-14, 14]) pillars.push({ x, z: bz - 8 });
+  const tombs: GridPoint[] = [];
+  for (let z = 12; z <= 404; z += 28) {
+    tombs.push({ x: -19, z });
+    tombs.push({ x: 19, z });
+  }
+  const stubs: WallStub[] = [];
+  for (let i = 0; i < 14; i++) {
+    const wz = 32 + i * 28;
+    for (const sx of [-14, 14]) stubs.push({ x: sx, z: wz, hw: 9, hd: 4 });
+  }
+  return {
+    zMin: -19,
+    zMax: 422,
+    sideWallZ: 201.5,
+    sideWallHd: 221,
+    pillars,
+    tombs,
+    stubs,
+    dais: { x: 0, z: 410, r: 12 },
+  };
+})();
+
 // The Drowned Temple (interior 'temple'): a two-part flooded temple — a long
 // antechamber, a single chamber-waist arch at z 66 (10u centre passage), then
 // the moon-sanctum with Ysolei's great altar dais. Side walls at |x|=23 like

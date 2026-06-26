@@ -4678,6 +4678,108 @@ export const de_DE: EnTranslations = {
       "breachkey_dawn": {
         "name": "Einbruchsschlüssel der Dawn"
       },
+      "mp_feet": {
+        "name": "Mortplate-Panzerstiefel"
+      },
+      "mp_gloves": {
+        "name": "Mortplate-Panzerhandschuhe"
+      },
+      "mp_waist": {
+        "name": "Mortplate-Gürtel"
+      },
+      "mp_helmet": {
+        "name": "Mortplate-Großhelm"
+      },
+      "mp_legs": {
+        "name": "Mortplate-Beinplatten"
+      },
+      "mp_shoulder": {
+        "name": "Mortplate-Schulterplatten"
+      },
+      "mp_chest": {
+        "name": "Mortplate-Brustplatte"
+      },
+      "mp_mh": {
+        "name": "Mortplate-Räuber"
+      },
+      "vw_feet": {
+        "name": "Leerengewebe-Schläppchen"
+      },
+      "vw_gloves": {
+        "name": "Leerengewebe-Handwickel"
+      },
+      "vw_waist": {
+        "name": "Leerengewebe-Schnur"
+      },
+      "vw_helmet": {
+        "name": "Leerengewebe-Gugel"
+      },
+      "vw_legs": {
+        "name": "Leerengewebe-Beinkleider"
+      },
+      "vw_shoulder": {
+        "name": "Leerengewebe-Umhang"
+      },
+      "vw_chest": {
+        "name": "Leerengewebe-Robe"
+      },
+      "vw_mh": {
+        "name": "Leerengewebe-Zepter"
+      },
+      "ng_feet": {
+        "name": "Nachthülle-Trittstiefel"
+      },
+      "ng_gloves": {
+        "name": "Nachthülle-Griffe"
+      },
+      "ng_waist": {
+        "name": "Nachthülle-Gürtel"
+      },
+      "ng_helmet": {
+        "name": "Nachthülle-Maske"
+      },
+      "ng_legs": {
+        "name": "Nachthülle-Beinschützer"
+      },
+      "ng_shoulder": {
+        "name": "Nachthülle-Schulterstücke"
+      },
+      "ng_chest": {
+        "name": "Nachthülle-Wams"
+      },
+      "ng_mh": {
+        "name": "Nachthülle-Dolch"
+      },
+      "cx_ep_war": {
+        "name": "Nekropolen-Kriegsklinge"
+      },
+      "cx_ep_mag": {
+        "name": "Nekropolen-Zauberstab"
+      },
+      "cx_ep_rog": {
+        "name": "Nekropolen-Stichklinge"
+      },
+      "cx_ep_helm": {
+        "name": "Krone des Hohlen Throns"
+      },
+      "cx_ep_robe": {
+        "name": "Hülle des Erzlich"
+      },
+      "cx_ep_legs": {
+        "name": "Beinschützer des Spinnenden Dunkels"
+      },
+      "mournlight_splinter": {
+        "name": "Splitter des Mournlight"
+      },
+      "mournlight_unlit": {
+        "name": "Unentzündeter Stab des Mournlight"
+      },
+      "hollow_star": {
+        "name": "Der Hohle Stern"
+      },
+      "mournlight": {
+        "name": "Mournlight, Stab der Hohlen Dawn"
+      },
       "bristleback_maul": {
         "name": "Bristleback-Schlägel"
       },
@@ -5424,6 +5526,66 @@ export const de_DE: EnTranslations = {
       "ch_veholt": {
         "name": "Fürst Veholt der Hohle"
       },
+      "cx_husk": {
+        "name": "Nekropolen-Hülle"
+      },
+      "cx_revenant": {
+        "name": "Nekropolen-Wiedergänger"
+      },
+      "cx_flesh_thrall": {
+        "name": "Fleischknecht"
+      },
+      "cx_plague_swarm": {
+        "name": "Seuchenschwarm"
+      },
+      "cx_spiderling": {
+        "name": "Gruftspinnling"
+      },
+      "cx_gutpile": {
+        "name": "Gutpile"
+      },
+      "cx_fleshwright": {
+        "name": "Der Fleischmacher"
+      },
+      "cx_grosh": {
+        "name": "Grosh der Ungemachte"
+      },
+      "cx_vexil": {
+        "name": "Vexil der Schwärende"
+      },
+      "cx_apothecary": {
+        "name": "Die Apotheker-Trine"
+      },
+      "cx_maggath": {
+        "name": "Maggath der Seuchenfürst"
+      },
+      "cx_vanguard": {
+        "name": "Die Knochen-Vorhut"
+      },
+      "cx_korreth": {
+        "name": "Marschall Korreth"
+      },
+      "cx_triad": {
+        "name": "Die Todeswart-Triade"
+      },
+      "cx_vrallka": {
+        "name": "Vrall'ka die Brutmutter"
+      },
+      "cx_silkbound": {
+        "name": "Die Seidengebundene"
+      },
+      "cx_sethelle": {
+        "name": "Matrone Sethelle"
+      },
+      "cx_rimecore": {
+        "name": "Rimecore der Hohle"
+      },
+      "cx_wardens": {
+        "name": "Die Frostwart-Wächter"
+      },
+      "cx_vorothne": {
+        "name": "Erzlich Vorothne"
+      },
       "ironvein_foreman": {
         "name": "Eisenader-Vorarbeiter"
       },
@@ -5673,6 +5835,16 @@ export const de_DE: EnTranslations = {
         "name": "Rückgewinnerin Sela",
         "title": "Dawn of Claude",
         "greeting": "Die Toten von Claudeholme lassen sich nicht retten, {playerName}, nur befreien. Hole zurück, was die Stadt verlor, und hilf mir, den Schlüssel zu schmieden, der das Claudexxaramas selbst öffnet."
+      },
+      "dawn_warbringer_torv": {
+        "name": "Kriegsbringer Torv",
+        "title": "Dawn of Claude",
+        "greeting": "Die Bresche steht endlich offen, {playerName}, und die Nekropole speit ihre Toten über die Bleiche Weite. Führe die Dawn in die Claudexxaramas, Flügel um Flügel, und strecke ihre Herren nieder."
+      },
+      "dawn_loreseeker_miren": {
+        "name": "Sagensucherin Miren",
+        "title": "Dawn of Claude",
+        "greeting": "In der Nekropole ruht ein Relikt, älter als ihr Herr, {playerName}: ein Stab, in Splitter zerbrochen und unter den Toten verstreut. Sammle sie ein, und wir entzünden das Mournlight gemeinsam aufs Neue."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6789,6 +6961,86 @@ export const de_DE: EnTranslations = {
           }
         }
       },
+      "q_cx_breach": {
+        "title": "Die Bresche öffnet sich",
+        "text": "Der Breschschlüssel drehte sich, {playerName}, und die Claudexxaramas steht offen über uns. Ihr erster Flügel, die Aashallen, ist eine Schlachtgrube aus zusammengeflicktem Totenfleisch. Schlag dir einen Weg bis zu Grosh dem Ungemachten und strecke den Greuel nieder, damit die Dawn einen Halt im Inneren gewinnt.",
+        "completion": "Die Aashallen gehören uns. Ein Flügel durchbrochen, vier noch vor uns. Die Nekropole wird den Rest nicht so leicht hergeben.",
+        "objectives": {
+          "0": {
+            "label": "Grosh der Ungemachte erschlagen"
+          }
+        }
+      },
+      "q_cx_plague": {
+        "title": "Die Seuchenwerke",
+        "text": "Der zweite Flügel, die Seuchenwerke, braut die Fäulnis, die die Claudexxaramas auf unsere Lande regnen lässt. Maggath der Seuchenfürst hütet ihre Bottiche. Mach ihm ein Ende, {playerName}, und ersticke die Seuche an ihrem Ursprung.",
+        "completion": "Die Bottiche laufen trocken. Die Seuchenwerke vergiften keine Felder mehr. Die Dawn atmet leichter dafür.",
+        "objectives": {
+          "0": {
+            "label": "Maggath der Seuchenfürst erschlagen"
+          }
+        }
+      },
+      "q_cx_barracks": {
+        "title": "Die Todeswacht-Kaserne",
+        "text": "Die Nekropole hält eine Garnison, {playerName}: die Todeswacht-Kaserne, wo gefallene Soldaten für einen Krieg drillen, der niemals endet. Die Todeswart-Triade führt sie an. Zerbrich die Triade, und die Garnison zerbricht mit ihr.",
+        "completion": "Die Triade ist gefallen und ihre Reihen zerstreuen sich. Die Kaserne wird keinen Gegenangriff aufstellen. Vorwärts, hinein ins Dunkel.",
+        "objectives": {
+          "0": {
+            "label": "Die Todeswart-Triade erschlagen"
+          }
+        }
+      },
+      "q_cx_spinning": {
+        "title": "Das Spinnende Dunkel",
+        "text": "Der vierte Flügel ist von Wand zu Wand mit Netzen überzogen, {playerName}: das Spinnende Dunkel, wo Matrone Sethelle über ihren kriechenden Kindern brütet. Verbrenne die Netze und mach der Matrone ein Ende, ehe ihre Brut die Bresche überrennt.",
+        "completion": "Sethelles Brut ist Asche und das Spinnende Dunkel wird still. Nur der Thron steht jetzt noch über dir.",
+        "objectives": {
+          "0": {
+            "label": "Matrone Sethelle erschlagen"
+          }
+        }
+      },
+      "q_cx_throne": {
+        "title": "Der Hohle Thron",
+        "text": "Dies ist das Ende, {playerName}. Der Hohle Thron sitzt im Herzen der Nekropole, und auf ihm der Erzlich Vorothne, der Wille, der die Claudexxaramas treibt. Nimm den ganzen Schlachtzug. Stürze ihn herab, und die Nekropole stirbt mit ihrem Herrn.",
+        "completion": "Vorothne ist ungemacht, und die Claudexxaramas erlischt über der Bleichen Weite. Du hast die Dawn ins Herz der Nekropole geführt und es herausgerissen, {playerName}. Dieser Sieg ist dein, und der Orden wird ihn besingen.",
+        "objectives": {
+          "0": {
+            "label": "Erzlich Vorothne erschlagen"
+          }
+        }
+      },
+      "q_cx_legend_1": {
+        "title": "Splitter des Mournlight",
+        "text": "Ehe die Nekropole einen Herrn hatte, {playerName}, barg sie einen Stab wahren Lichts, das Mournlight, und als sie fiel, zerbarst der Stab. Fünf Splitter ruhen bei den Flügelherren der Claudexxaramas. Sie geben sie nur selten her, also wirst du die Nekropole viele Male durchschreiten. Bring mir alle fünf.",
+        "completion": "Fünf Splitter, jeder einem anderen Herrn der Toten entrissen. Ich spüre das Mournlight zwischen ihnen erwachen. Nimm dieses unentzündete Gestell; es wird sie verwahren, während wir arbeiten.",
+        "objectives": {
+          "0": {
+            "label": "Splitter des Mournlight"
+          }
+        }
+      },
+      "q_cx_legend_2": {
+        "title": "Der unentzündete Stab",
+        "text": "Das Gestell hält die fünf Splitter, doch es will nicht erwachen, {playerName}. Das Mournlight braucht ein Herz, um das es brennen kann, und nur eines blieb kalt genug und hell genug, um zu dienen: der Hohle Stern, eingelassen in Vorothnes eigene Brust. Bring mir den unentzündeten Stab, und wappne dich für das, was als Nächstes kommt.",
+        "completion": "Das Gestell ist gebunden und ausgewogen, jeder Splitter sitzt fest. Nun fehlt ihm nur noch der Stern. Du weißt, wo er liegt.",
+        "objectives": {
+          "0": {
+            "label": "Unentzündeter Stab des Mournlight"
+          }
+        }
+      },
+      "q_cx_legend_3": {
+        "title": "Der Hohle Stern",
+        "text": "Der Hohle Stern brennt in Vorothnes Brust, und er gibt ihn nicht her, solange er steht, {playerName}. Kehre zum Thron zurück, mach dem Erzlich abermals ein Ende und reiß den Stern aus seinem Wrack. Bring ihn mir, und das Mournlight wird endlich für die Dawn brennen.",
+        "completion": "Es ist vollbracht. Der Hohle Stern sitzt in der Krone des Stabes und das Mournlight lodert weiß zum ersten Mal seit einem Zeitalter. Nimm es, {playerName}: Mournlight, Stab der Hohlen Dawn. Keine Hand hat es so verdient wie die deine. Lass sein Licht das Letzte sein, was das Dunkel der Claudexxaramas je erblickt.",
+        "objectives": {
+          "0": {
+            "label": "Der Hohle Stern"
+          }
+        }
+      },
       "q_drowned_choir": {
         "title": "Der Ertränkte Chor",
         "text": "Die Wäter handeln nicht allein. Unter ihnen wandeln die Ertränkten Andächtigen — der Kult, der mit dem Tempel versank, noch immer in seinen verfaulten Gewändern, noch immer das Gebet von den Uferfelsen singend. Bringe acht von ihnen zum Schweigen und bring mir sechs der Opfergaben, die sie bei sich tragen. Ich will wissen, was sie ihrer Göttin darbringen wollen.",
@@ -7011,6 +7263,11 @@ export const de_DE: EnTranslations = {
         "name": "Claudeholme",
         "enterText": "Du trittst durch die Bresche nach Claudeholme, und die tote Stadt regt sich.",
         "leaveText": "Du steigst aus Claudeholme zuruck ins aschgraue Licht."
+      },
+      "claudexxaramas": {
+        "name": "Claudexxaramas",
+        "enterText": "Du durchbrichst die Nekropole Claudexxaramas. Die Toten warten.",
+        "leaveText": "Du ziehst dich aus Claudexxaramas in den aschgrauen Wind zurück."
       },
       "drowned_temple": {
         "name": "Der Ertränkte Tempel",

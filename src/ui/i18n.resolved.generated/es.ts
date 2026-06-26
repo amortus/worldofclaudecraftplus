@@ -4678,6 +4678,108 @@ export const es: EnTranslations = {
       "breachkey_dawn": {
         "name": "Llave de la Brecha de la Dawn"
       },
+      "mp_feet": {
+        "name": "Escarpes de Mortplaca"
+      },
+      "mp_gloves": {
+        "name": "Guanteletes de Mortplaca"
+      },
+      "mp_waist": {
+        "name": "Cíngulo de Mortplaca"
+      },
+      "mp_helmet": {
+        "name": "Gran Yelmo de Mortplaca"
+      },
+      "mp_legs": {
+        "name": "Quijotes de Mortplaca"
+      },
+      "mp_shoulder": {
+        "name": "Hombreras de Mortplaca"
+      },
+      "mp_chest": {
+        "name": "Peto de Mortplaca"
+      },
+      "mp_mh": {
+        "name": "Devastador de Mortplaca"
+      },
+      "vw_feet": {
+        "name": "Zapatillas de Tejevacío"
+      },
+      "vw_gloves": {
+        "name": "Vendas de Tejevacío"
+      },
+      "vw_waist": {
+        "name": "Cordón de Tejevacío"
+      },
+      "vw_helmet": {
+        "name": "Capirote de Tejevacío"
+      },
+      "vw_legs": {
+        "name": "Calzas de Tejevacío"
+      },
+      "vw_shoulder": {
+        "name": "Manto de Tejevacío"
+      },
+      "vw_chest": {
+        "name": "Túnica de Tejevacío"
+      },
+      "vw_mh": {
+        "name": "Cetro de Tejevacío"
+      },
+      "ng_feet": {
+        "name": "Pisadas de Sudario Nocturno"
+      },
+      "ng_gloves": {
+        "name": "Asideros de Sudario Nocturno"
+      },
+      "ng_waist": {
+        "name": "Cinturón de Sudario Nocturno"
+      },
+      "ng_helmet": {
+        "name": "Máscara de Sudario Nocturno"
+      },
+      "ng_legs": {
+        "name": "Guardapiernas de Sudario Nocturno"
+      },
+      "ng_shoulder": {
+        "name": "Espaldares de Sudario Nocturno"
+      },
+      "ng_chest": {
+        "name": "Casaca de Sudario Nocturno"
+      },
+      "ng_mh": {
+        "name": "Daga de Sudario Nocturno"
+      },
+      "cx_ep_war": {
+        "name": "Espada de Guerra Necrópola"
+      },
+      "cx_ep_mag": {
+        "name": "Varita Necrópola"
+      },
+      "cx_ep_rog": {
+        "name": "Punzón Necrópolo"
+      },
+      "cx_ep_helm": {
+        "name": "Corona del Trono Hueco"
+      },
+      "cx_ep_robe": {
+        "name": "Sudario del Archilich"
+      },
+      "cx_ep_legs": {
+        "name": "Guardapiernas de la Oscuridad Tejedora"
+      },
+      "mournlight_splinter": {
+        "name": "Astilla de Mournlight"
+      },
+      "mournlight_unlit": {
+        "name": "Báculo Apagado de Mournlight"
+      },
+      "hollow_star": {
+        "name": "La Estrella Hueca"
+      },
+      "mournlight": {
+        "name": "Mournlight, Báculo del Alba Hueca"
+      },
       "bristleback_maul": {
         "name": "Maza Bristleback"
       },
@@ -5424,6 +5526,66 @@ export const es: EnTranslations = {
       "ch_veholt": {
         "name": "Lord Veholt el Hueco"
       },
+      "cx_husk": {
+        "name": "Cascarón de la Necrópolis"
+      },
+      "cx_revenant": {
+        "name": "Renacido de la Necrópolis"
+      },
+      "cx_flesh_thrall": {
+        "name": "Esclavo de Carne"
+      },
+      "cx_plague_swarm": {
+        "name": "Enjambre de Peste"
+      },
+      "cx_spiderling": {
+        "name": "Cría de Araña de la Cripta"
+      },
+      "cx_gutpile": {
+        "name": "Gutpile"
+      },
+      "cx_fleshwright": {
+        "name": "El Forjacarne"
+      },
+      "cx_grosh": {
+        "name": "Grosh el Deshecho"
+      },
+      "cx_vexil": {
+        "name": "Vexil el Purulento"
+      },
+      "cx_apothecary": {
+        "name": "La Trina Boticaria"
+      },
+      "cx_maggath": {
+        "name": "Maggath el Señor de la Peste"
+      },
+      "cx_vanguard": {
+        "name": "La Vanguardia de Hueso"
+      },
+      "cx_korreth": {
+        "name": "Mariscal Korreth"
+      },
+      "cx_triad": {
+        "name": "La Tríada de Custodia Mortal"
+      },
+      "cx_vrallka": {
+        "name": "Vrall'ka la Madre de la Prole"
+      },
+      "cx_silkbound": {
+        "name": "La Atada en Seda"
+      },
+      "cx_sethelle": {
+        "name": "Matrona Sethelle"
+      },
+      "cx_rimecore": {
+        "name": "Rimecore la Hueca"
+      },
+      "cx_wardens": {
+        "name": "Los Guardianes de la Escarcha"
+      },
+      "cx_vorothne": {
+        "name": "Archilich Vorothne"
+      },
       "ironvein_foreman": {
         "name": "Capataz Vena de Hierro"
       },
@@ -5673,6 +5835,16 @@ export const es: EnTranslations = {
         "name": "Recuperadora Sela",
         "title": "Dawn of Claude",
         "greeting": "Los muertos de Claudeholme no pueden salvarse, {playerName}, solo liberarse. Recupera lo que el pueblo perdio, y ayudame a forjar la llave que abre el propio Claudexxaramas."
+      },
+      "dawn_warbringer_torv": {
+        "name": "Heraldo de Guerra Torv",
+        "title": "Alba de Claude",
+        "greeting": "La brecha está abierta por fin, {playerName}, y la necrópolis derrama sus muertos sobre el Confín Pálido. Guía al Alba al interior de Claudexxaramas, sección por sección, y derriba a sus amos."
+      },
+      "dawn_loreseeker_miren": {
+        "name": "Buscadora de Saber Miren",
+        "title": "Alba de Claude",
+        "greeting": "Hay una reliquia en la necrópolis más antigua que su amo, {playerName}: un báculo roto en astillas y disperso entre los muertos. Reúnelas y reavivaremos juntos la Mournlight."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6789,6 +6961,86 @@ export const es: EnTranslations = {
           }
         }
       },
+      "q_cx_breach": {
+        "title": "La Brecha se Abre",
+        "text": "La Llave de Brecha giró, {playerName}, y Claudexxaramas se alza abierta sobre nosotros. Su primera sección, las Salas de Carroña, es una fosa mortuoria de muertos cosidos. Ábrete paso hasta Grosh el Deshecho y abate a la abominación, para que el Alba pueda afianzar un punto de apoyo dentro.",
+        "completion": "Las Salas de Carroña son nuestras. Una sección tomada, faltan cuatro. La necrópolis no cederá el resto tan fácilmente.",
+        "objectives": {
+          "0": {
+            "label": "Grosh el Deshecho abatido"
+          }
+        }
+      },
+      "q_cx_plague": {
+        "title": "Las Pestiforjas",
+        "text": "La segunda sección, las Pestiforjas, prepara la podredumbre que Claudexxaramas vierte sobre nuestras tierras. Maggath el Señor de la Peste atiende sus cubas. Acaba con él, {playerName}, y ahoga la peste en su origen.",
+        "completion": "Las cubas quedan secas. Las Pestiforjas no envenenarán más campos. El Alba respira mejor por ello.",
+        "objectives": {
+          "0": {
+            "label": "Maggath el Señor de la Peste abatido"
+          }
+        }
+      },
+      "q_cx_barracks": {
+        "title": "Los Barracones de la Vigilia Mortal",
+        "text": "La necrópolis mantiene una guarnición, {playerName}: los Barracones de la Vigilia Mortal, donde soldados caídos se adiestran para una guerra que jamás termina. La Tríada de Custodia Mortal los comanda. Quiebra a la Tríada y la guarnición se quebrará con ella.",
+        "completion": "La Tríada ha caído y sus filas se dispersan. Los barracones no reunirán contraataque alguno. Adelante, hacia la oscuridad.",
+        "objectives": {
+          "0": {
+            "label": "La Tríada de Custodia Mortal abatida"
+          }
+        }
+      },
+      "q_cx_spinning": {
+        "title": "La Oscuridad Tejedora",
+        "text": "La cuarta sección está cubierta de telarañas de pared a pared, {playerName}: la Oscuridad Tejedora, donde la Matrona Sethelle empolla sobre sus hijos reptantes. Quema las telarañas y acaba con la Matrona antes de que su prole arrolle la brecha.",
+        "completion": "La prole de Sethelle es ceniza y la Oscuridad Tejedora queda en calma. Solo el trono se alza ya por encima de ti.",
+        "objectives": {
+          "0": {
+            "label": "Matrona Sethelle abatida"
+          }
+        }
+      },
+      "q_cx_throne": {
+        "title": "El Trono Hueco",
+        "text": "Este es el final, {playerName}. El Trono Hueco se halla en el corazón de la necrópolis, y en él el Archilich Vorothne, la voluntad que mueve a Claudexxaramas. Lleva a la banda entera. Derríbalo, y la necrópolis morirá con su amo.",
+        "completion": "Vorothne queda deshecho, y Claudexxaramas se apaga sobre el Confín Pálido. Guiaste al Alba hasta el corazón de la necrópolis y lo arrancaste de cuajo, {playerName}. Esta victoria es tuya, y la orden la cantará por siempre.",
+        "objectives": {
+          "0": {
+            "label": "Archilich Vorothne abatido"
+          }
+        }
+      },
+      "q_cx_legend_1": {
+        "title": "Astillas de la Mournlight",
+        "text": "Antes de que la necrópolis tuviera amo, {playerName}, albergaba un báculo de luz verdadera, la Mournlight, y cuando cayó el báculo se hizo añicos. Cinco astillas yacen con los señores de las secciones de Claudexxaramas. Rara vez las entregan, así que recorrerás la necrópolis muchas veces. Tráeme las cinco.",
+        "completion": "Cinco astillas, cada una arrancada a un señor distinto de los muertos. Puedo sentir cómo la Mournlight se agita entre ellas. Toma este armazón apagado; las sostendrá mientras trabajamos.",
+        "objectives": {
+          "0": {
+            "label": "Astilla de Mournlight"
+          }
+        }
+      },
+      "q_cx_legend_2": {
+        "title": "El Báculo Apagado",
+        "text": "El armazón sostiene las cinco astillas, pero no despertará, {playerName}. La Mournlight necesita un corazón en torno al cual arder, y solo queda uno lo bastante frío y lo bastante brillante para servir: la Estrella Hueca, engastada en el pecho mismo de Vorothne. Tráeme el báculo apagado, y prepárate para lo que viene después.",
+        "completion": "El armazón está ligado y equilibrado, cada astilla asentada con firmeza. Solo le falta ya la Estrella. Sabes dónde reposa.",
+        "objectives": {
+          "0": {
+            "label": "Báculo Apagado de Mournlight"
+          }
+        }
+      },
+      "q_cx_legend_3": {
+        "title": "La Estrella Hueca",
+        "text": "La Estrella Hueca arde en el pecho de Vorothne, y no la suelta mientras sigue en pie, {playerName}. Regresa al trono, acaba de nuevo con el Archilich y arranca la Estrella de sus despojos. Tráemela, y la Mournlight arderá por fin para el Alba.",
+        "completion": "Está hecho. La Estrella Hueca reposa en la corona del báculo y la Mournlight arde blanca por primera vez en una era. Tómala, {playerName}: Mournlight, Báculo del Alba Hueca. Ninguna mano la ha ganado como la tuya. Que su luz sea lo último que la oscuridad de Claudexxaramas llegue a contemplar.",
+        "objectives": {
+          "0": {
+            "label": "La Estrella Hueca"
+          }
+        }
+      },
       "q_drowned_choir": {
         "title": "El Coro Ahogado",
         "text": "Los vadeadores no actúan solos. Entre ellos caminan los Devotos Ahogados: la secta que se hundió con el templo, aún con sus vestiduras putrefactas, aún entonando la plegaria desde las rocas de la orilla. Silencia a ocho de ellos y tráeme seis de las ofrendas que portan. Quiero saber qué pretenden entregar a su diosa.",
@@ -7011,6 +7263,11 @@ export const es: EnTranslations = {
         "name": "Claudeholme",
         "enterText": "Cruzas la brecha hacia Claudeholme, y el pueblo muerto se agita.",
         "leaveText": "Sales de Claudeholme de vuelta a la luz cenicienta."
+      },
+      "claudexxaramas": {
+        "name": "Claudexxaramas",
+        "enterText": "Irrumpes en la necrópolis de Claudexxaramas. Los muertos te esperan.",
+        "leaveText": "Te retiras de Claudexxaramas hacia el viento de ceniza."
       },
       "drowned_temple": {
         "name": "El Templo Ahogado",

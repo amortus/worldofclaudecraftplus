@@ -13,7 +13,9 @@ import { canEquipItem } from '../src/sim/equipment_rules';
 import { terrainHeight, WATER_LEVEL } from '../src/sim/world';
 
 const WORLD_SEED = 20061; // production seed (main.ts / server/game.ts)
-const SCRIPTED_COLLECT_ITEMS = new Set(['the_codfather']);
+// the_codfather: fishing rare. mournlight_unlit: the bound-but-unlit Mournlight frame,
+// granted as q_cx_legend_1's reward (not a drop), then collected by q_cx_legend_2.
+const SCRIPTED_COLLECT_ITEMS = new Set(['the_codfather', 'mournlight_unlit']);
 
 describe('content referential integrity', () => {
   it('every quest reference resolves (NPCs, mobs, items, chains)', () => {

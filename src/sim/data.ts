@@ -30,7 +30,7 @@ import {
   COLLAPSED_RELIQUARY_MODULES,
   DELVE_MOBS,
 } from './content/delves';
-import { CLAUDEHOLME_ITEMS, DUNGEON_DEFS, DUNGEON_MOBS } from './content/dungeons';
+import { CLAUDEHOLME_ITEMS, CLAUDEXX_ITEMS, DUNGEON_DEFS, DUNGEON_MOBS } from './content/dungeons';
 import { GROUND_PICKUP_LINES } from './content/ground_pickup_lines';
 import {
   TEMPLE_CAMPS,
@@ -151,6 +151,7 @@ export const ITEMS: Record<string, ItemDef> = mergeItems(
   DELVE_ITEMS,
   ZONE4_ITEMS,
   CLAUDEHOLME_ITEMS,
+  CLAUDEXX_ITEMS,
 );
 
 export const MOBS: Record<string, MobTemplate> = {

@@ -107,6 +107,11 @@ const MOB_IDS = [
   'ch_ashmarshal',
   'ch_bonesmith',
   'ch_veholt',
+  // Claudexxaramas raid (15 bosses + adds + trash)
+  'cx_husk', 'cx_revenant', 'cx_flesh_thrall', 'cx_plague_swarm', 'cx_spiderling',
+  'cx_gutpile', 'cx_fleshwright', 'cx_grosh', 'cx_vexil', 'cx_apothecary', 'cx_maggath',
+  'cx_vanguard', 'cx_korreth', 'cx_triad', 'cx_vrallka', 'cx_silkbound', 'cx_sethelle',
+  'cx_rimecore', 'cx_wardens', 'cx_vorothne',
 ] as const;
 
 const NPC_IDS = [
@@ -139,6 +144,8 @@ const NPC_IDS = [
   'dawn_archivist_vael',
   'dawn_vanguard_kael',
   'dawn_reclaimer_sela',
+  'dawn_warbringer_torv',
+  'dawn_loreseeker_miren',
 ] as const;
 
 const QUEST_IDS = [
@@ -250,6 +257,9 @@ const QUEST_IDS = [
   'q_ch_attune_3',
   'q_ch_attune_4',
   'q_ch_attune_5',
+  // Claudexxaramas raid
+  'q_cx_breach', 'q_cx_plague', 'q_cx_barracks', 'q_cx_spinning', 'q_cx_throne',
+  'q_cx_legend_1', 'q_cx_legend_2', 'q_cx_legend_3',
 ] as const;
 
 const ZONE_IDS = ['eastbrook_vale', 'mirefen_marsh', 'thornpeak_heights', 'ashen_wastes'] as const;
@@ -260,6 +270,7 @@ const DUNGEON_IDS = [
   'nythraxis_crypt',
   'nythraxis_boss_arena',
   'claudeholme',
+  'claudexxaramas',
 ] as const;
 const DELVE_IDS = ['collapsed_reliquary'] as const;
 

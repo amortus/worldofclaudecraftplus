@@ -18,6 +18,7 @@ import { instanceOrigin } from '../sim/data';
 import {
   ARENA_LAYOUT,
   CLAUDEHOLME_LAYOUT,
+  CLAUDEXX_LAYOUT,
   CRYPT_LAYOUT,
   DUNGEON_END_WALL_HW,
   DUNGEON_WALL_HEIGHT,
@@ -565,7 +566,9 @@ export class DungeonInteriors {
               ? NYTHRAXIS_LAYOUT
               : interior === 'claudeholme'
                 ? CLAUDEHOLME_LAYOUT
-                : CRYPT_LAYOUT);
+                : interior === 'claudexxaramas'
+                  ? CLAUDEXX_LAYOUT
+                  : CRYPT_LAYOUT);
     const variant = opts?.variant ?? this.variantFor(interior, ox);
     const group = new THREE.Group();
     const p = new Placements();

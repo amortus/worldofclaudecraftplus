@@ -4678,6 +4678,108 @@ export const it_IT: EnTranslations = {
       "breachkey_dawn": {
         "name": "Chiave della Breccia della Dawn"
       },
+      "mp_feet": {
+        "name": "Sabatoni di Piastramorte"
+      },
+      "mp_gloves": {
+        "name": "Guanti d'Arme di Piastramorte"
+      },
+      "mp_waist": {
+        "name": "Cintura di Piastramorte"
+      },
+      "mp_helmet": {
+        "name": "Grand'Elmo di Piastramorte"
+      },
+      "mp_legs": {
+        "name": "Gambali di Piastramorte"
+      },
+      "mp_shoulder": {
+        "name": "Spallacci di Piastramorte"
+      },
+      "mp_chest": {
+        "name": "Corazza di Piastramorte"
+      },
+      "mp_mh": {
+        "name": "Devastatore di Piastramorte"
+      },
+      "vw_feet": {
+        "name": "Pantofole di Trama del Vuoto"
+      },
+      "vw_gloves": {
+        "name": "Fasce da Mano di Trama del Vuoto"
+      },
+      "vw_waist": {
+        "name": "Cordone di Trama del Vuoto"
+      },
+      "vw_helmet": {
+        "name": "Cappuccio di Trama del Vuoto"
+      },
+      "vw_legs": {
+        "name": "Calzari di Trama del Vuoto"
+      },
+      "vw_shoulder": {
+        "name": "Mantellina di Trama del Vuoto"
+      },
+      "vw_chest": {
+        "name": "Veste di Trama del Vuoto"
+      },
+      "vw_mh": {
+        "name": "Scettro di Trama del Vuoto"
+      },
+      "ng_feet": {
+        "name": "Calzature del Sudario Notturno"
+      },
+      "ng_gloves": {
+        "name": "Manopole del Sudario Notturno"
+      },
+      "ng_waist": {
+        "name": "Cintura del Sudario Notturno"
+      },
+      "ng_helmet": {
+        "name": "Maschera del Sudario Notturno"
+      },
+      "ng_legs": {
+        "name": "Gambiere del Sudario Notturno"
+      },
+      "ng_shoulder": {
+        "name": "Spalline del Sudario Notturno"
+      },
+      "ng_chest": {
+        "name": "Tunica del Sudario Notturno"
+      },
+      "ng_mh": {
+        "name": "Pugnale del Sudario Notturno"
+      },
+      "cx_ep_war": {
+        "name": "Lama da Guerra della Necropoli"
+      },
+      "cx_ep_mag": {
+        "name": "Bacchetta della Necropoli"
+      },
+      "cx_ep_rog": {
+        "name": "Stiletto della Necropoli"
+      },
+      "cx_ep_helm": {
+        "name": "Corona del Trono Vuoto"
+      },
+      "cx_ep_robe": {
+        "name": "Sudario dell'Arcilich"
+      },
+      "cx_ep_legs": {
+        "name": "Gambiere dell'Oscurita Tessente"
+      },
+      "mournlight_splinter": {
+        "name": "Scheggia del Luttoluce"
+      },
+      "mournlight_unlit": {
+        "name": "Bastone Spento del Luttoluce"
+      },
+      "hollow_star": {
+        "name": "La Stella Vuota"
+      },
+      "mournlight": {
+        "name": "Luttoluce, Bastone dell'Alba Vuota"
+      },
       "bristleback_maul": {
         "name": "Maglio Bristleback"
       },
@@ -5424,6 +5526,66 @@ export const it_IT: EnTranslations = {
       "ch_veholt": {
         "name": "Lord Veholt il Vuoto"
       },
+      "cx_husk": {
+        "name": "Scorza della Necropoli"
+      },
+      "cx_revenant": {
+        "name": "Spettro della Necropoli"
+      },
+      "cx_flesh_thrall": {
+        "name": "Schiavo di Carne"
+      },
+      "cx_plague_swarm": {
+        "name": "Sciame della Peste"
+      },
+      "cx_spiderling": {
+        "name": "Ragnetto della Cripta"
+      },
+      "cx_gutpile": {
+        "name": "Gutpile"
+      },
+      "cx_fleshwright": {
+        "name": "Il Plasmacarne"
+      },
+      "cx_grosh": {
+        "name": "Grosh il Disfatto"
+      },
+      "cx_vexil": {
+        "name": "Vexil il Putrescente"
+      },
+      "cx_apothecary": {
+        "name": "La Trina dell'Apotecario"
+      },
+      "cx_maggath": {
+        "name": "Maggath il Signore della Peste"
+      },
+      "cx_vanguard": {
+        "name": "L'Avanguardia d'Ossa"
+      },
+      "cx_korreth": {
+        "name": "Maresciallo Korreth"
+      },
+      "cx_triad": {
+        "name": "La Triade Vegliamorte"
+      },
+      "cx_vrallka": {
+        "name": "Vrall'ka la Madre di Covata"
+      },
+      "cx_silkbound": {
+        "name": "La Vincolata di Seta"
+      },
+      "cx_sethelle": {
+        "name": "Matrona Sethelle"
+      },
+      "cx_rimecore": {
+        "name": "Rimecore il Vuoto"
+      },
+      "cx_wardens": {
+        "name": "I Guardiani del Gelo"
+      },
+      "cx_vorothne": {
+        "name": "Arcilich Vorothne"
+      },
       "ironvein_foreman": {
         "name": "Caposquadra Venaferrata"
       },
@@ -5673,6 +5835,16 @@ export const it_IT: EnTranslations = {
         "name": "Sela la Reclamatrice",
         "title": "Dawn of Claude",
         "greeting": "I morti di Claudeholme non possono essere salvati, {playerName}, solo liberati. Recupera ciò che la cittadina ha perduto, e aiutami a forgiare la chiave che apre la stessa Claudexxaramas."
+      },
+      "dawn_warbringer_torv": {
+        "name": "Portaguerra Torv",
+        "title": "Alba di Claude",
+        "greeting": "La breccia e finalmente aperta, {playerName}, e la necropoli riversa i suoi morti sulla Distesa Pallida. Guida l'Alba dentro la Claudexxaramas, quartiere dopo quartiere, e abbatti i suoi padroni."
+      },
+      "dawn_loreseeker_miren": {
+        "name": "Cercatrice del Sapere Miren",
+        "title": "Alba di Claude",
+        "greeting": "C'e una reliquia nella necropoli piu antica del suo padrone, {playerName}: un bastone spezzato in schegge e disperso tra i morti. Raccoglile, e insieme ravviveremo il Luttoluce."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6789,6 +6961,86 @@ export const it_IT: EnTranslations = {
           }
         }
       },
+      "q_cx_breach": {
+        "title": "La Breccia si Apre",
+        "text": "La Chiavebreccia ha girato, {playerName}, e la Claudexxaramas si erge aperta sopra di noi. Il suo primo quartiere, le Sale della Carogna, e una fossa di carname fatto di morti ricuciti. Apriti la strada fino a Grosh il Disfatto e abbatti l'abominio, cosi che l'Alba possa tenere un appiglio all'interno.",
+        "completion": "Le Sale della Carogna sono nostre. Un quartiere violato, ne restano quattro. La necropoli non cedera il resto cosi facilmente.",
+        "objectives": {
+          "0": {
+            "label": "Grosh il Disfatto ucciso"
+          }
+        }
+      },
+      "q_cx_plague": {
+        "title": "Le Officine della Peste",
+        "text": "Il secondo quartiere, le Officine della Peste, distilla il marciume che la Claudexxaramas fa piovere sulle nostre terre. Maggath il Signore della Peste cura i suoi tini. Mettigli fine, {playerName}, e soffoca la peste alla fonte.",
+        "completion": "I tini si sono prosciugati. Le Officine della Peste non avveleneranno piu i campi. L'Alba respira piu serena per questo.",
+        "objectives": {
+          "0": {
+            "label": "Maggath il Signore della Peste ucciso"
+          }
+        }
+      },
+      "q_cx_barracks": {
+        "title": "Le Caserme della Veglia Mortale",
+        "text": "La necropoli mantiene una guarnigione, {playerName}: le Caserme della Veglia Mortale, dove soldati caduti si addestrano per una guerra che non finisce mai. La Triade Vegliamorte li comanda. Spezza la Triade e la guarnigione si spezzera con loro.",
+        "completion": "La Triade e caduta e le sue file si disperdono. Le caserme non raduneranno alcun contrattacco. Avanti, nell'oscurita.",
+        "objectives": {
+          "0": {
+            "label": "La Triade Vegliamorte uccisa"
+          }
+        }
+      },
+      "q_cx_spinning": {
+        "title": "L'Oscurita Tessente",
+        "text": "Il quarto quartiere e coperto di ragnatele da parete a parete, {playerName}: l'Oscurita Tessente, dove la Matrona Sethelle cova sui suoi figli striscianti. Brucia le ragnatele e poni fine alla Matrona prima che la sua covata travolga la breccia.",
+        "completion": "La covata di Sethelle e cenere e l'Oscurita Tessente si acquieta. Solo il trono si erge ancora sopra di te.",
+        "objectives": {
+          "0": {
+            "label": "Matrona Sethelle uccisa"
+          }
+        }
+      },
+      "q_cx_throne": {
+        "title": "Il Trono Vuoto",
+        "text": "Questa e la fine, {playerName}. Il Trono Vuoto sorge nel cuore della necropoli, e su di esso siede l'Arcilich Vorothne, la volonta che muove la Claudexxaramas. Porta con te l'intero raid. Abbattilo, e la necropoli morira con il suo padrone.",
+        "completion": "Vorothne e disfatto, e la Claudexxaramas si spegne sopra la Distesa Pallida. Hai guidato l'Alba fino al cuore della necropoli e lo hai strappato via, {playerName}. Questa vittoria e tua, e l'ordine la cantera.",
+        "objectives": {
+          "0": {
+            "label": "Arcilich Vorothne ucciso"
+          }
+        }
+      },
+      "q_cx_legend_1": {
+        "title": "Schegge del Luttoluce",
+        "text": "Prima che la necropoli avesse un padrone, {playerName}, custodiva un bastone di vera luce, il Luttoluce, e quando cadde il bastone si frantumo. Cinque schegge giacciono presso i signori dei quartieri della Claudexxaramas. Le cedono di rado, percio percorrerai la necropoli molte volte. Portami tutte e cinque.",
+        "completion": "Cinque schegge, ognuna strappata a un diverso signore dei morti. Sento il Luttoluce fremere tra di esse. Prendi questa montatura spenta: le terra insieme mentre lavoriamo.",
+        "objectives": {
+          "0": {
+            "label": "Scheggia del Luttoluce"
+          }
+        }
+      },
+      "q_cx_legend_2": {
+        "title": "Il Bastone Spento",
+        "text": "La montatura regge le cinque schegge, ma non si ridestera, {playerName}. Il Luttoluce ha bisogno di un cuore attorno a cui ardere, e ne resta uno solo abbastanza freddo e abbastanza splendente da servire: la Stella Vuota, incastonata nel petto stesso di Vorothne. Portami il bastone spento, e preparati a cio che verra.",
+        "completion": "La montatura e legata e bilanciata, ogni scheggia al suo posto. Ora non le manca che la Stella. Sai dove si trova.",
+        "objectives": {
+          "0": {
+            "label": "Bastone Spento del Luttoluce"
+          }
+        }
+      },
+      "q_cx_legend_3": {
+        "title": "La Stella Vuota",
+        "text": "La Stella Vuota arde nel petto di Vorothne, ed egli non la cede finche resta in piedi, {playerName}. Torna al trono, poni di nuovo fine all'Arcilich e strappa la Stella dai suoi resti. Portamela, e il Luttoluce ardera finalmente per l'Alba.",
+        "completion": "E fatto. La Stella Vuota siede sulla corona del bastone e il Luttoluce risplende bianco per la prima volta da un'era. Prendilo, {playerName}: Luttoluce, Bastone dell'Alba Vuota. Nessuna mano lo ha meritato come la tua. Che la sua luce sia l'ultima cosa che l'oscurita della Claudexxaramas vedra mai.",
+        "objectives": {
+          "0": {
+            "label": "La Stella Vuota"
+          }
+        }
+      },
       "q_drowned_choir": {
         "title": "Il Coro Annegato",
         "text": "I guadatori non agiscono da soli. Tra loro camminano i Devoti Annegati — la setta che affondò col tempio, ancora nelle loro vesti marcite, ancora intenti a cantare la preghiera dalle rocce della riva. Riducine otto al silenzio e portami sei delle offerte che recano. Voglio sapere cosa intendono donare alla loro dea.",
@@ -7011,6 +7263,11 @@ export const it_IT: EnTranslations = {
         "name": "Claudeholme",
         "enterText": "Attraversi la breccia verso Claudeholme, e la citta morta si desta.",
         "leaveText": "Risali da Claudeholme nella luce di cenere."
+      },
+      "claudexxaramas": {
+        "name": "Claudexxaramas",
+        "enterText": "Apri una breccia nella necropoli di Claudexxaramas. I morti ti aspettano.",
+        "leaveText": "Ti ritiri da Claudexxaramas nel vento di cenere."
       },
       "drowned_temple": {
         "name": "Il Tempio Annegato",

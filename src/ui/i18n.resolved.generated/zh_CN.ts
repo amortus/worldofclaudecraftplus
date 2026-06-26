@@ -4678,6 +4678,108 @@ export const zh_CN: EnTranslations = {
       "breachkey_dawn": {
         "name": "黎明的破界钥匙"
       },
+      "mp_feet": {
+        "name": "亡铠战靴"
+      },
+      "mp_gloves": {
+        "name": "亡铠护手"
+      },
+      "mp_waist": {
+        "name": "亡铠腰甲"
+      },
+      "mp_helmet": {
+        "name": "亡铠巨盔"
+      },
+      "mp_legs": {
+        "name": "亡铠腿铠"
+      },
+      "mp_shoulder": {
+        "name": "亡铠肩铠"
+      },
+      "mp_chest": {
+        "name": "亡铠胸甲"
+      },
+      "mp_mh": {
+        "name": "亡铠掠夺者之刃"
+      },
+      "vw_feet": {
+        "name": "虚空织软鞋"
+      },
+      "vw_gloves": {
+        "name": "虚空织缠手"
+      },
+      "vw_waist": {
+        "name": "虚空织束带"
+      },
+      "vw_helmet": {
+        "name": "虚空织兜帽"
+      },
+      "vw_legs": {
+        "name": "虚空织护腿"
+      },
+      "vw_shoulder": {
+        "name": "虚空织披肩"
+      },
+      "vw_chest": {
+        "name": "虚空织长袍"
+      },
+      "vw_mh": {
+        "name": "虚空织权杖"
+      },
+      "ng_feet": {
+        "name": "夜幕胫甲"
+      },
+      "ng_gloves": {
+        "name": "夜幕握甲"
+      },
+      "ng_waist": {
+        "name": "夜幕腰带"
+      },
+      "ng_helmet": {
+        "name": "夜幕面具"
+      },
+      "ng_legs": {
+        "name": "夜幕护腿"
+      },
+      "ng_shoulder": {
+        "name": "夜幕肩甲"
+      },
+      "ng_chest": {
+        "name": "夜幕外衣"
+      },
+      "ng_mh": {
+        "name": "夜幕匕首"
+      },
+      "cx_ep_war": {
+        "name": "亡城战刃"
+      },
+      "cx_ep_mag": {
+        "name": "亡城邪杖"
+      },
+      "cx_ep_rog": {
+        "name": "亡城利刺"
+      },
+      "cx_ep_helm": {
+        "name": "空心王座之冠"
+      },
+      "cx_ep_robe": {
+        "name": "大巫妖之裹尸衣"
+      },
+      "cx_ep_legs": {
+        "name": "纺转黑暗护腿"
+      },
+      "mournlight_splinter": {
+        "name": "哀光残片"
+      },
+      "mournlight_unlit": {
+        "name": "未燃的哀光之杖"
+      },
+      "hollow_star": {
+        "name": "空心之星"
+      },
+      "mournlight": {
+        "name": "哀光，空心黎明之杖"
+      },
       "bristleback_maul": {
         "name": "硬鬃重槌"
       },
@@ -5424,6 +5526,66 @@ export const zh_CN: EnTranslations = {
       "ch_veholt": {
         "name": "空洞领主维霍特"
       },
+      "cx_husk": {
+        "name": "亡城空壳"
+      },
+      "cx_revenant": {
+        "name": "亡城亡魂"
+      },
+      "cx_flesh_thrall": {
+        "name": "血肉奴仆"
+      },
+      "cx_plague_swarm": {
+        "name": "瘟疫虫群"
+      },
+      "cx_spiderling": {
+        "name": "墓穴幼蛛"
+      },
+      "cx_gutpile": {
+        "name": "肠堆"
+      },
+      "cx_fleshwright": {
+        "name": "血肉匠师"
+      },
+      "cx_grosh": {
+        "name": "未成者格罗什"
+      },
+      "cx_vexil": {
+        "name": "脓溃者维克西尔"
+      },
+      "cx_apothecary": {
+        "name": "三联药剂师"
+      },
+      "cx_maggath": {
+        "name": "瘟疫之主玛加斯"
+      },
+      "cx_vanguard": {
+        "name": "白骨先锋"
+      },
+      "cx_korreth": {
+        "name": "司令科雷斯"
+      },
+      "cx_triad": {
+        "name": "守死三人组"
+      },
+      "cx_vrallka": {
+        "name": "蛛母弗拉尔卡"
+      },
+      "cx_silkbound": {
+        "name": "缚丝者"
+      },
+      "cx_sethelle": {
+        "name": "蛛后赛瑟勒"
+      },
+      "cx_rimecore": {
+        "name": "空心者霜核"
+      },
+      "cx_wardens": {
+        "name": "护霜守卫"
+      },
+      "cx_vorothne": {
+        "name": "大巫妖沃罗斯涅"
+      },
       "ironvein_foreman": {
         "name": "铁脉工头"
       },
@@ -5673,6 +5835,16 @@ export const zh_CN: EnTranslations = {
         "name": "回收者塞拉",
         "title": "克劳德黎明",
         "greeting": "克劳德霍姆的亡者已无法拯救，{playerName}，只能将他们解脱。夺回这座城镇失去的东西，并助我锻造那把能开启克劳德萨拉玛斯本身的钥匙。"
+      },
+      "dawn_warbringer_torv": {
+        "name": "战导者托尔夫",
+        "title": "克劳德黎明",
+        "greeting": "裂隙终于洞开了，{playerName}，亡城正将它的亡者倾泻到苍白边境之上。率领黎明攻入克劳德萨拉玛斯，一区接着一区，将它的主宰们一一击倒。"
+      },
+      "dawn_loreseeker_miren": {
+        "name": "求知者米伦",
+        "title": "克劳德黎明",
+        "greeting": "亡城中有一件遗物比它的主宰更为古老，{playerName}：一柄碎成无数残片、散落于亡者之间的法杖。把它们收集起来，我们便能一同重燃哀光。"
       },
       "tidewatcher_ondrel": {
         "name": "翁德雷尔·凡恩",
@@ -6789,6 +6961,86 @@ export const zh_CN: EnTranslations = {
           }
         }
       },
+      "q_cx_breach": {
+        "title": "裂隙洞开",
+        "text": "破隙钥已经转动，{playerName}，克劳德萨拉玛斯就矗立在我们头顶，门户敞开。它的第一区，腐肉大厅，是一处缝合亡者堆叠而成的尸坑。一路杀向未成者格罗什，将那头憎恶击杀，好让黎明在城内站稳脚跟。",
+        "completion": "腐肉大厅已归我们所有。攻破一区，还剩四区。亡城绝不会如此轻易交出余下的部分。",
+        "objectives": {
+          "0": {
+            "label": "击杀未成者格罗什"
+          }
+        }
+      },
+      "q_cx_plague": {
+        "title": "瘟疫工坊",
+        "text": "第二区，瘟疫工坊，正酝酿着克劳德萨拉玛斯倾泻到我们土地上的腐烂之物。瘟疫之主玛加斯看守着它的酿桶。终结他，{playerName}，从源头扼住这场瘟疫。",
+        "completion": "酿桶已枯。瘟疫工坊再也无法荼毒任何田野了。黎明因此得以喘息。",
+        "objectives": {
+          "0": {
+            "label": "击杀瘟疫之主玛加斯"
+          }
+        }
+      },
+      "q_cx_barracks": {
+        "title": "守死兵营",
+        "text": "亡城驻有一支卫戍部队，{playerName}：守死兵营，倒下的士兵在那里为一场永无止境的战争操练不休。守死三人组统领着他们。击破三人组，卫戍部队也将随之瓦解。",
+        "completion": "三人组已经倒下，他们的军列也四散溃逃。兵营再也无法组织起任何反击。前进，深入黑暗。",
+        "objectives": {
+          "0": {
+            "label": "击杀守死三人组"
+          }
+        }
+      },
+      "q_cx_spinning": {
+        "title": "纺转黑暗",
+        "text": "第四区从墙到墙都结满了蛛网，{playerName}：纺转黑暗，蛛后赛瑟勒在那里孵育着她爬行的子嗣。烧尽蛛网，在她的虫群淹没裂隙之前终结蛛后。",
+        "completion": "赛瑟勒的虫群已化为灰烬，纺转黑暗归于沉寂。如今唯有那座王座仍矗立在你之上。",
+        "objectives": {
+          "0": {
+            "label": "击杀蛛后赛瑟勒"
+          }
+        }
+      },
+      "q_cx_throne": {
+        "title": "空心王座",
+        "text": "这便是终局了，{playerName}。空心王座坐落于亡城的心脏，其上端坐着大巫妖沃罗斯涅，那驱动着克劳德萨拉玛斯的意志。集结整支团队。将他击落，亡城便会随它的主宰一同消亡。",
+        "completion": "沃罗斯涅已被消解，克劳德萨拉玛斯在苍白边境之上黯然陨落。你率领黎明直入亡城的心脏，将它撕裂，{playerName}。这场胜利属于你，教团将世代传颂它。",
+        "objectives": {
+          "0": {
+            "label": "击杀大巫妖沃罗斯涅"
+          }
+        }
+      },
+      "q_cx_legend_1": {
+        "title": "哀光的残片",
+        "text": "在亡城拥有主宰之前，{playerName}，它曾持有一柄真光之杖，哀光，而当它陨落时，那杖也随之碎裂。五枚残片落在克劳德萨拉玛斯各区之主的手中。他们极少交出残片，因此你将一次次踏遍亡城。把五枚都带给我。",
+        "completion": "五枚残片，每一枚都从一位不同的亡者之主身上夺来。我能感觉到哀光在它们之间苏醒。拿上这具未燃的杖架，在我们着手之时，它将容纳这些残片。",
+        "objectives": {
+          "0": {
+            "label": "哀光残片"
+          }
+        }
+      },
+      "q_cx_legend_2": {
+        "title": "未燃之杖",
+        "text": "杖架已容纳五枚残片，但它无法苏醒，{playerName}。哀光需要一颗可供焚绕的核心，而如今只剩唯一一颗足够冰冷、足够明亮、堪当此任：空心之星，嵌在沃罗斯涅自己的胸膛之中。把未燃之杖带给我，并为接下来之事振作起来。",
+        "completion": "杖架已被牢牢绑定、调校平衡，每一枚残片都嵌得端正。它如今唯独缺一颗星。你知道它在何处。",
+        "objectives": {
+          "0": {
+            "label": "未燃的哀光之杖"
+          }
+        }
+      },
+      "q_cx_legend_3": {
+        "title": "空心之星",
+        "text": "空心之星在沃罗斯涅的胸中燃烧，只要他还站立，他便绝不交出它，{playerName}。重返王座，再次终结大巫妖，从他的残骸中夺出那颗星。把它带给我，哀光便终将为黎明而燃。",
+        "completion": "成了。空心之星已嵌于杖冠之上，哀光自一个时代以来第一次绽放出洁白之光。拿去吧，{playerName}：哀光，空心黎明之杖。从无一人像你这般配得上它。让它的光，成为克劳德萨拉玛斯的黑暗所见的最后一物。",
+        "objectives": {
+          "0": {
+            "label": "空心之星"
+          }
+        }
+      },
       "q_drowned_choir": {
         "title": "溺亡唱诗班",
         "text": "那些涉行者并非孤身行动。它们之中游走着溺亡信徒——随神殿一同沉没的邪教徒，至今仍披着腐烂的法衣，仍在岸边礁石上吟唱祷词。让其中八名永远噤声，再为我带回它们随身携带的六件祭品。我想知道它们打算献给女神什么。",
@@ -7011,6 +7263,11 @@ export const zh_CN: EnTranslations = {
         "name": "克劳德霍姆",
         "enterText": "你穿过裂隙进入克劳德霍姆，死寂的城镇开始骚动。",
         "leaveText": "你从克劳德霍姆爬回灰烬般的天光之下。"
+      },
+      "claudexxaramas": {
+        "name": "克劳德萨拉玛斯",
+        "enterText": "你突入了克劳德萨拉玛斯亡城。亡者正在等候。",
+        "leaveText": "你从克劳德萨拉玛斯撤离，遁入灰烬般的长风之中。"
       },
       "drowned_temple": {
         "name": "溺亡神殿",
