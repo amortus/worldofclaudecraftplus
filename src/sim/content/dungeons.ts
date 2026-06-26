@@ -663,9 +663,8 @@ const NYTHRAXIS_RAID_SPAWN_LIST: DungeonSpawn[] = [
 // Claudeholme: a long descent of 8 wings, each a trash pack then a wing boss, the
 // deathlord Veholt on the great dais at z 214. (Boss z: 18/46/74/102/130/158/186/214.)
 const CLAUDEHOLME_SPAWN_LIST: DungeonSpawn[] = [
-  // Wing 1 - the broken gate
-  { mobId: 'claudeholme_husk', x: -3, z: 6 },
-  { mobId: 'claudeholme_husk', x: 3, z: 8 },
+  // Wing 1 - the broken gate. The entry chamber (z < ~12) is kept mob-free as a
+  // safe staging room where the group can gather; the first pull starts at the reaver.
   { mobId: 'claudeholme_reaver', x: -8, z: 14 },
   { mobId: 'ch_gatewarden', x: 0, z: 18 },
   { mobId: 'claudeholme_husk', x: -5, z: 24 },
@@ -824,7 +823,7 @@ export const DUNGEON_DEFS: Record<string, DungeonDef> = {
     name: 'Claudeholme',
     index: 6, // instance origin x = 900 + 6*600 = 4500 (clear, below the relocated arena at 5400)
     doorPos: { x: 99, z: 1191 }, // the ruined-town portal in the Ashen Wastes
-    entry: { x: 0, z: 4 },
+    entry: { x: 0, z: -12 }, // back of the first chamber: a mob-free safe staging room to regroup
     exitOffset: { x: 0, z: -6 },
     spawns: CLAUDEHOLME_SPAWN_LIST,
     interior: 'claudeholme',

@@ -898,6 +898,17 @@ const NPC_KEYS: Record<string, string> = {
   provisioner_hale: 'npc_villager',
   quartermaster_bree: 'npc_villager',
   brother_halven: 'npc_reliquary_keeper',
+  // Dawn of Claude NPCs in the Ashen Wastes: distinct, role-fitting silhouettes so the
+  // Gravewatch camp and the Claudeholme/Pale Reach outposts are not all one villager.
+  dawn_commander_sera: 'npc_knight',
+  dawn_chaplain_orin: 'npc_reliquary_keeper',
+  dawn_quartermaster_henning: 'npc_smith',
+  dawn_scout_irelle: 'npc_scout',
+  dawn_archivist_vael: 'npc_mage',
+  dawn_vanguard_kael: 'npc_knight',
+  dawn_reclaimer_sela: 'npc_aldric',
+  dawn_warbringer_torv: 'npc_smith',
+  dawn_loreseeker_miren: 'npc_mage',
 };
 
 export function visualKeyFor(e: Entity): string {
