@@ -132,6 +132,36 @@ export const NYTHRAXIS_LAYOUT: DungeonLayout = (() => {
   };
 })();
 
+// Claudeholme (interior 'claudeholme'): the plague-fallen town's deep ossuary —
+// a long descent of EIGHT wings (z -19..226), each capped by a boss, separated by
+// narrowed waists (10u centre passage) at z 32/60/88/116/144/172/200. Ruined
+// sarcophagi hug the walls; the final deathlord holds the great dais at z 214.
+export const CLAUDEHOLME_LAYOUT: DungeonLayout = (() => {
+  const pillars: GridPoint[] = [];
+  for (const z of [6, 38, 66, 94, 122, 150, 178, 206]) {
+    for (const x of [-14, 14]) pillars.push({ x, z });
+  }
+  const tombs: GridPoint[] = [];
+  for (const z of [12, 50, 78, 106, 134, 162, 190, 210]) {
+    tombs.push({ x: -19, z });
+    tombs.push({ x: 19, z });
+  }
+  const stubs: WallStub[] = [];
+  for (const wz of [32, 60, 88, 116, 144, 172, 200]) {
+    for (const sx of [-14, 14]) stubs.push({ x: sx, z: wz, hw: 9, hd: 4 });
+  }
+  return {
+    zMin: -19,
+    zMax: 226,
+    sideWallZ: 103.5,
+    sideWallHd: 123,
+    pillars,
+    tombs,
+    stubs,
+    dais: { x: 0, z: 214, r: 11.5 },
+  };
+})();
+
 // The Drowned Temple (interior 'temple'): a two-part flooded temple — a long
 // antechamber, a single chamber-waist arch at z 66 (10u centre passage), then
 // the moon-sanctum with Ysolei's great altar dais. Side walls at |x|=23 like

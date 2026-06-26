@@ -4579,6 +4579,105 @@ export const pt_BR: EnTranslations = {
       "dawnstalker_dagger": {
         "name": "Adaga do Espreitador da Alvorada"
       },
+      "pw_feet": {
+        "name": "Sabatoes do Guardiao da Praga"
+      },
+      "pw_gloves": {
+        "name": "Manoplas do Guardiao da Praga"
+      },
+      "pw_waist": {
+        "name": "Cinturao do Guardiao da Praga"
+      },
+      "pw_helmet": {
+        "name": "Elmo do Guardiao da Praga"
+      },
+      "pw_legs": {
+        "name": "Perneiras do Guardiao da Praga"
+      },
+      "pw_shoulder": {
+        "name": "Espaldeiras do Guardiao da Praga"
+      },
+      "pw_chest": {
+        "name": "Peitoral do Guardiao da Praga"
+      },
+      "pw_mh": {
+        "name": "Cutelo do Guardiao da Praga"
+      },
+      "hm_feet": {
+        "name": "Sapatilhas do Mago do Oco"
+      },
+      "hm_gloves": {
+        "name": "Envoltorios do Mago do Oco"
+      },
+      "hm_waist": {
+        "name": "Corda do Mago do Oco"
+      },
+      "hm_helmet": {
+        "name": "Capuz do Mago do Oco"
+      },
+      "hm_legs": {
+        "name": "Calcas do Mago do Oco"
+      },
+      "hm_shoulder": {
+        "name": "Manto do Mago do Oco"
+      },
+      "hm_chest": {
+        "name": "Tunica do Mago do Oco"
+      },
+      "hm_mh": {
+        "name": "Cetro do Mago do Oco"
+      },
+      "as_feet": {
+        "name": "Botas do Espreitador de Cinzas"
+      },
+      "as_gloves": {
+        "name": "Garras do Espreitador de Cinzas"
+      },
+      "as_waist": {
+        "name": "Cinto do Espreitador de Cinzas"
+      },
+      "as_helmet": {
+        "name": "Mascara do Espreitador de Cinzas"
+      },
+      "as_legs": {
+        "name": "Grevas do Espreitador de Cinzas"
+      },
+      "as_shoulder": {
+        "name": "Espaldares do Espreitador de Cinzas"
+      },
+      "as_chest": {
+        "name": "Tunica do Espreitador de Cinzas"
+      },
+      "as_mh": {
+        "name": "Adaga do Espreitador de Cinzas"
+      },
+      "veholt_war": {
+        "name": "Lamina Oca de Veholt"
+      },
+      "veholt_mag": {
+        "name": "Sussurro da Morte de Veholt"
+      },
+      "veholt_rog": {
+        "name": "Presa Oca de Veholt"
+      },
+      "claudeholme_relic": {
+        "name": "Reliquia Reclamada"
+      },
+      "veholt_sigil": {
+        "name": "Sinete Oco"
+      },
+      "breach_core": {
+        "name": "Nucleo de Invasao"
+      },
+      "ash_iron": {
+        "name": "Lingote de Ferro-Cinza"
+      },
+      "hollow_crown": {
+        "name": "Coroa Oca de Veholt"
+      },
+      "breachkey_dawn": {
+        "name": "Chave de Invasao da Dawn"
+      },
       "bristleback_maul": {
         "name": "Malho Bristleback"
       },
@@ -5286,6 +5385,45 @@ export const pt_BR: EnTranslations = {
       "gravelord_oss": {
         "name": "Senhor das Sepulturas Oss"
       },
+      "claudeholme_husk": {
+        "name": "Casca de Claudeholme"
+      },
+      "claudeholme_reaver": {
+        "name": "Saqueador de Claudeholme"
+      },
+      "claudeholme_wraith": {
+        "name": "Espectro Oco"
+      },
+      "plague_acolyte": {
+        "name": "Acolito da Praga"
+      },
+      "bone_construct": {
+        "name": "Constructo de Ossos"
+      },
+      "ch_gatewarden": {
+        "name": "O Guardiao do Portao"
+      },
+      "ch_plaguewright": {
+        "name": "Forjadora da Praga Sevra"
+      },
+      "ch_tollkeeper": {
+        "name": "O Guarda do Pedagio"
+      },
+      "ch_maggotlord": {
+        "name": "Senhor dos Vermes Brulk"
+      },
+      "ch_cantor": {
+        "name": "Cantor Mowl"
+      },
+      "ch_ashmarshal": {
+        "name": "O Marechal de Cinzas"
+      },
+      "ch_bonesmith": {
+        "name": "O Ossoferreiro"
+      },
+      "ch_veholt": {
+        "name": "Lorde Veholt, o Oco"
+      },
       "ironvein_foreman": {
         "name": "Capataz Veio de Ferro"
       },
@@ -5525,6 +5663,16 @@ export const pt_BR: EnTranslations = {
         "name": "Arquivista Vael",
         "title": "Dawn of Claude",
         "greeting": "Cada fragmento daquela necrópole que eu consiga estudar é uma fenda que talvez um dia consigamos abrir, {playerName}. Traga-me o que os mortos carregam, e planejaremos a brecha juntos."
+      },
+      "dawn_vanguard_kael": {
+        "name": "Capitao da Vanguarda Kael",
+        "title": "Dawn of Claude",
+        "greeting": "Claudeholme foi uma cidade viva outrora, {playerName}, antes que a sombra do navio caisse sobre ela. Agora seus mortos dominam as ruas. Hoje nos a invadimos."
+      },
+      "dawn_reclaimer_sela": {
+        "name": "Reclamadora Sela",
+        "title": "Dawn of Claude",
+        "greeting": "Os mortos de Claudeholme nao podem ser salvos, {playerName}, apenas libertados. Recupere o que a cidade perdeu, e me ajude a forjar a chave que abre a propria Claudexxaramas."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6491,6 +6639,156 @@ export const pt_BR: EnTranslations = {
           }
         }
       },
+      "q_ch_breach": {
+        "title": "A Invasao de Claudeholme",
+        "text": "O portal nas ruinas se abre para a propria Claudeholme, {playerName}, uma cidade inteira que o navio matou em uma unica noite. Um Guardiao do Portao defende a primeira ala. Quebre-o, e a Dawn tera seu apoio la dentro.",
+        "completion": "O portao e nosso. Avance, {playerName}. As ruas so pioram daqui em diante.",
+        "objectives": {
+          "0": {
+            "label": "O Guardiao do Portao morto"
+          }
+        }
+      },
+      "q_ch_vats": {
+        "title": "Os Tanques de Praga",
+        "text": "A Forjadora da Praga Sevra fermenta a podridao que mantem Claudeholme morta, {playerName}, em tanques nas profundezas da segunda ala. Acabe com ela, e os pocos de sua praga secarao.",
+        "completion": "Sevra cai e seus tanques esfriam. O ar na segunda ala quase pode ser respirado agora.",
+        "objectives": {
+          "0": {
+            "label": "Forjadora da Praga Sevra morta"
+          }
+        }
+      },
+      "q_ch_toll": {
+        "title": "O Pedagio das Almas",
+        "text": "O Guarda do Pedagio acumula as almas da cidade na terceira ala, {playerName}, alimentando-as ao navio peca por peca. Derrube-o e deixe essas almas livres.",
+        "completion": "O Guarda do Pedagio esta despedacado, e as almas que ele retinha se espalham como cinzas ao vento. Livres, enfim.",
+        "objectives": {
+          "0": {
+            "label": "O Guarda do Pedagio morto"
+          }
+        }
+      },
+      "q_ch_pit": {
+        "title": "A Cova de Carnica",
+        "text": "A quarta ala e uma cova de carnica, {playerName}, e o Senhor dos Vermes Brulk e a montanha de mortos costurados no fundo dela. Leve o seu grupo inteiro. Abata a coisa.",
+        "completion": "Brulk se desfaz em pedacos, enfim. A cova pode ser atravessada agora, {playerName}, embora eu nao respirasse fundo enquanto a cruzasse.",
+        "objectives": {
+          "0": {
+            "label": "Senhor dos Vermes Brulk morto"
+          }
+        }
+      },
+      "q_ch_chapel": {
+        "title": "Ritos Profanos",
+        "text": "O Cantor Mowl conduz os mortos em ritos profanos na velha capela, {playerName}, a quinta ala. Ele foi um sacerdote da Luz outrora. Silencie seu hino e deixe a capela descansar.",
+        "completion": "O hino esta em silencio. Seja la o que Mowl foi antes do navio tomar-lhe, ele esta livre disso agora. Que a Luz o guarde.",
+        "objectives": {
+          "0": {
+            "label": "Cantor Mowl morto"
+          }
+        }
+      },
+      "q_ch_muster": {
+        "title": "Quebre a Convocacao",
+        "text": "O Marechal de Cinzas treina a milicia morta da cidade na sexta ala, {playerName}, reunindo-a em fileiras. Um exercito de mortos e a ultima coisa de que estas terras devastadas precisam. Quebre o comandante deles.",
+        "completion": "O Marechal de Cinzas esta abatido e suas fileiras se reduzem a ossos sem ele. Nenhum exercito marcha para fora de Claudeholme hoje.",
+        "objectives": {
+          "0": {
+            "label": "O Marechal de Cinzas morto"
+          }
+        }
+      },
+      "q_ch_forge": {
+        "title": "Silencie o Ossoferreiro",
+        "text": "O Ossoferreiro forja os mortos em constructos na setima ala, {playerName}, uma fila interminavel de soldados de osso para o navio. Despedace sua forja e silencie seu martelo.",
+        "completion": "O martelo esta em silencio e a forja esta fria. A fila de soldados de osso termina aqui, {playerName}. So resta o senhor da morte.",
+        "objectives": {
+          "0": {
+            "label": "O Ossoferreiro morto"
+          }
+        }
+      },
+      "q_ch_deathlord": {
+        "title": "O Lorde Oco",
+        "text": "Lorde Veholt, o Oco, governa Claudeholme a partir da ala mais profunda, {playerName}, o senhor da morte do navio feito carne. Ele e a razao pela qual a cidade nunca descansa. Reuna os mais fortes que puder e acabe com ele. Liberte Claudeholme de vez.",
+        "completion": "Veholt esta morto, e uma quietude desce sobre Claudeholme que a cidade nao conhecia desde que o navio chegou. Voce libertou um lugar que a Dawn ja havia dado por perdido, {playerName}. Nao esqueceremos isso.",
+        "objectives": {
+          "0": {
+            "label": "Lorde Veholt, o Oco, morto"
+          }
+        }
+      },
+      "q_ch_streets": {
+        "title": "Ruas dos Mortos",
+        "text": "Antes de cacar os senhores das alas, {playerName}, reduza as cascas que sufocam as ruas de Claudeholme. Quinze delas, para abrir caminho para a vanguarda atras de voce.",
+        "completion": "Quinze cascas abatidas, e as ruas estao transitaveis. A vanguarda pode avancar agora, gracas a voce.",
+        "objectives": {
+          "0": {
+            "label": "Casca de Claudeholme morta"
+          }
+        }
+      },
+      "q_ch_relics": {
+        "title": "Reliquias Reclamadas",
+        "text": "Claudeholme foi uma cidade fiel outrora, {playerName}, e suas reliquias ainda jazem entre os mortos que um dia as guardaram. Recupere seis. Reabencoadas, farao mais bem em maos da Dawn do que apodrecendo na escuridao.",
+        "completion": "Seis reliquias, cada uma aquecendo conforme a mancha se desfaz. A cidade entrega sua fe um pouco de cada vez, {playerName}, e estamos mais bem armados por isso.",
+        "objectives": {
+          "0": {
+            "label": "Reliquia Reclamada"
+          }
+        }
+      },
+      "q_ch_attune_1": {
+        "title": "Ecos no Oco",
+        "text": "Voce esta sintonizado com Naxxramas, {playerName}, mas a propria Claudexxaramas e uma porta mais profunda, e a chave para ela jaz em Claudeholme. Comeca com Veholt: derrube-o e traga-me o Sinete Oco que ele carrega. A primeira de tres pecas.",
+        "completion": "O Sinete Oco vibra em minha mao como um sino golpeado. Uma peca de tres, {playerName}. A chave de invasao e real, e nos a comecamos.",
+        "objectives": {
+          "0": {
+            "label": "Sinete Oco"
+          }
+        }
+      },
+      "q_ch_attune_2": {
+        "title": "As Reliquias Manchadas",
+        "text": "O Sinete Oco esta manchado pela praga, {playerName}, e apenas as proprias reliquias abencoadas da cidade o purificarao. Traga-me cinco reliquias reclamadas dos mortos de Claudeholme, e eu purificarei o sinete para a forja.",
+        "completion": "Cinco reliquias, dispostas ao redor do sinete, e a mancha se desprende dele como pele velha. Esta limpo agora, {playerName}, e pronto para a forja.",
+        "objectives": {
+          "0": {
+            "label": "Reliquia Reclamada"
+          }
+        }
+      },
+      "q_ch_attune_3": {
+        "title": "Forjando a Chave de Invasao",
+        "text": "O sinete precisa de um nucleo que o ancore, {playerName}, e apenas o senhor da morte carrega um. Volte a Claudeholme, derrube Veholt novamente, e traga-me o Nucleo de Invasao de seu cadaver. A segunda peca.",
+        "completion": "O Nucleo de Invasao, ainda frio do peito de Veholt. Duas pecas de tres, {playerName}. A chave de invasao toma forma em minhas maos.",
+        "objectives": {
+          "0": {
+            "label": "Nucleo de Invasao"
+          }
+        }
+      },
+      "q_ch_attune_4": {
+        "title": "Ferro-Cinza e Osso",
+        "text": "A chave de invasao deve ser revestida de ferro-cinza, {playerName}, o metal amaldicoado que o Ossoferreiro trabalha. Traga-me um lingote de ferro-cinza de sua forja em Claudeholme, e o revestimento estara feito.",
+        "completion": "Ferro-cinza, ainda quente do fogo do Ossoferreiro. O revestimento esta fundido, {playerName}. So resta a coroa do senhor da morte para coroar a chave.",
+        "objectives": {
+          "0": {
+            "label": "Lingote de Ferro-Cinza"
+          }
+        }
+      },
+      "q_ch_attune_5": {
+        "title": "A Chave para a Claudexxaramas",
+        "text": "Uma peca resta, {playerName}: a Coroa Oca da propria fronte de Veholt. Volte a Claudeholme uma ultima vez, tome a coroa, e eu a assentarei sobre a chave de invasao. Com ela, a propria Claudexxaramas se abrira para a Dawn, e voce nos guiara atraves dela.",
+        "completion": "Esta concluida. A Chave de Invasao da Dawn e sua, {playerName}, sinete e nucleo e coroa, todos revestidos de ferro-cinza. Quando a Dawn of Claude invadir a Claudexxaramas, voce carregara a chave que a abre. Nao ha campeao maior desta ordem. Mantenha-se pronto. A invasao se aproxima.",
+        "objectives": {
+          "0": {
+            "label": "Coroa Oca de Veholt"
+          }
+        }
+      },
       "q_drowned_choir": {
         "title": "O Coro Afogado",
         "text": "Os vadeadores não agem sozinhos. Entre eles caminham os Devotos Afogados — o culto que afundou com o templo, ainda em suas vestes apodrecidas, ainda cantando a prece desde as rochas da costa. Silencie oito deles e traga-me seis das oferendas que carregam. Eu gostaria de saber o que pretendem dar à sua deusa.",
@@ -6708,6 +7006,11 @@ export const pt_BR: EnTranslations = {
         "name": "Arena de raide de Nythraxis",
         "enterText": "Você atravessa a porta real selada.",
         "leaveText": "Você retorna ao ar frio de Thornpeak."
+      },
+      "claudeholme": {
+        "name": "Claudeholme",
+        "enterText": "Voce cruza a brecha para Claudeholme, e a cidade morta se agita.",
+        "leaveText": "Voce sobe de volta de Claudeholme para a luz cinzenta."
       },
       "drowned_temple": {
         "name": "O Templo Afogado",

@@ -1,7 +1,7 @@
 // Dungeon content: mob templates that only spawn inside instances, spawn
 // lists, and the DungeonDef registry merged by sim/data.ts.
 
-import type { DungeonDef, DungeonSpawn, MobTemplate } from '../types';
+import type { DungeonDef, DungeonSpawn, ItemDef, MobTemplate } from '../types';
 
 export const DUNGEON_MOBS: Record<string, MobTemplate> = {
   // ---- The Hollow Crypt (5-player elite instance) ----
@@ -257,6 +257,185 @@ export const DUNGEON_MOBS: Record<string, MobTemplate> = {
     ],
     scale: 3.1, color: 0x221b2d,
   },
+
+  // === Claudeholme: the plague-fallen town's deep ossuary (8 wing bosses) ===
+  // Trash
+  claudeholme_husk: {
+    id: 'claudeholme_husk', name: 'Claudeholme Husk', minLevel: 20, maxLevel: 21, family: 'undead',
+    hpBase: 120, hpPerLevel: 26, dmgBase: 15, dmgPerLevel: 3.0, attackSpeed: 2.3, armorPerLevel: 22,
+    moveSpeed: 6.5, aggroRadius: 11,
+    loot: [
+      { copper: 160, chance: 1 },
+      { itemId: 'claudeholme_relic', chance: 0.4 },
+    ],
+    scale: 1.0, color: 0x6b6f5c,
+  },
+  claudeholme_reaver: {
+    id: 'claudeholme_reaver', name: 'Claudeholme Reaver', minLevel: 20, maxLevel: 21, family: 'undead',
+    hpBase: 130, hpPerLevel: 28, dmgBase: 16, dmgPerLevel: 3.2, attackSpeed: 2.2, armorPerLevel: 26,
+    moveSpeed: 7, aggroRadius: 11,
+    cleave: { radius: 6, mult: 0.6, name: 'Rusted Cleave' },
+    loot: [
+      { copper: 170, chance: 1 },
+      { itemId: 'claudeholme_relic', chance: 0.4 },
+    ],
+    scale: 1.05, color: 0xcac3b0,
+  },
+  claudeholme_wraith: {
+    id: 'claudeholme_wraith', name: 'Hollow Wraith', minLevel: 20, maxLevel: 21, family: 'undead',
+    hpBase: 115, hpPerLevel: 25, dmgBase: 16, dmgPerLevel: 3.3, attackSpeed: 2.1, armorPerLevel: 18,
+    moveSpeed: 7.5, aggroRadius: 12,
+    enervate: { chance: 0.3, sta: 16, duration: 12, name: 'Withering Touch', school: 'shadow' },
+    loot: [{ copper: 165, chance: 1 }],
+    scale: 1.0, color: 0x9fb6c4,
+  },
+  plague_acolyte: {
+    id: 'plague_acolyte', name: 'Plague Acolyte', minLevel: 20, maxLevel: 21, family: 'humanoid',
+    hpBase: 110, hpPerLevel: 24, dmgBase: 15, dmgPerLevel: 3.1, attackSpeed: 2.0, armorPerLevel: 18,
+    moveSpeed: 7, aggroRadius: 12,
+    manaBurn: { chance: 0.25, amount: 110, name: 'Plague Sermon', school: 'shadow' },
+    loot: [{ copper: 175, chance: 1 }],
+    scale: 1.0, color: 0x6a8a4f,
+  },
+  bone_construct: {
+    id: 'bone_construct', name: 'Bone Construct', minLevel: 20, maxLevel: 21, family: 'undead',
+    hpBase: 150, hpPerLevel: 30, dmgBase: 17, dmgPerLevel: 3.4, attackSpeed: 2.6, armorPerLevel: 30,
+    moveSpeed: 6, aggroRadius: 10,
+    loot: [],
+    scale: 1.2, color: 0xd8d0bd,
+  },
+  // Wing 1 boss
+  ch_gatewarden: {
+    id: 'ch_gatewarden', name: 'The Gatewarden', minLevel: 21, maxLevel: 21, family: 'undead', elite: true, boss: true, ccImmune: true,
+    hpBase: 320, hpPerLevel: 40, dmgBase: 20, dmgPerLevel: 3.8, attackSpeed: 2.5, armorPerLevel: 36,
+    moveSpeed: 7, aggroRadius: 16,
+    cleave: { radius: 8, mult: 0.7, name: 'Gate-Breaker' },
+    knockback: { chance: 0.3, distance: 6, name: 'Warding Slam' },
+    loot: [
+      { copper: 1200, chance: 1 },
+      { itemId: 'pw_feet', chance: 0.34, rollGroup: 'ch_gatewarden_set' },
+      { itemId: 'hm_feet', chance: 0.33, rollGroup: 'ch_gatewarden_set' },
+      { itemId: 'as_feet', chance: 0.33, rollGroup: 'ch_gatewarden_set' },
+    ],
+    scale: 1.4, color: 0x7a7060,
+  },
+  // Wing 2 boss
+  ch_plaguewright: {
+    id: 'ch_plaguewright', name: 'Plaguewright Sevra', minLevel: 21, maxLevel: 21, family: 'humanoid', elite: true, boss: true, ccImmune: true,
+    hpBase: 280, hpPerLevel: 36, dmgBase: 19, dmgPerLevel: 3.6, attackSpeed: 2.2, armorPerLevel: 28,
+    moveSpeed: 7, aggroRadius: 16,
+    aoePulse: { min: 28, max: 40, radius: 11, every: 9, name: 'Plague Vat Burst', school: 'nature', fx: 'nova' },
+    mendAlly: { healMin: 50, healMax: 72, radius: 14, every: 8, name: 'Foul Poultice', school: 'shadow' },
+    loot: [
+      { copper: 1300, chance: 1 },
+      { itemId: 'pw_gloves', chance: 0.34, rollGroup: 'ch_plaguewright_set' },
+      { itemId: 'hm_gloves', chance: 0.33, rollGroup: 'ch_plaguewright_set' },
+      { itemId: 'as_gloves', chance: 0.33, rollGroup: 'ch_plaguewright_set' },
+    ],
+    scale: 1.2, color: 0x6a8a4f,
+  },
+  // Wing 3 boss
+  ch_tollkeeper: {
+    id: 'ch_tollkeeper', name: 'The Tollkeeper', minLevel: 21, maxLevel: 21, family: 'undead', elite: true, boss: true, ccImmune: true,
+    hpBase: 290, hpPerLevel: 38, dmgBase: 20, dmgPerLevel: 3.7, attackSpeed: 2.1, armorPerLevel: 26,
+    moveSpeed: 7.2, aggroRadius: 16,
+    enervate: { chance: 0.4, sta: 20, duration: 12, name: 'Soul Toll', school: 'shadow' },
+    summonAdds: { mobId: 'claudeholme_wraith', count: 2, atHpPct: [0.66, 0.33] },
+    loot: [
+      { copper: 1300, chance: 1 },
+      { itemId: 'pw_waist', chance: 0.34, rollGroup: 'ch_tollkeeper_set' },
+      { itemId: 'hm_waist', chance: 0.33, rollGroup: 'ch_tollkeeper_set' },
+      { itemId: 'as_waist', chance: 0.33, rollGroup: 'ch_tollkeeper_set' },
+    ],
+    scale: 1.3, color: 0xa9c0cf,
+  },
+  // Wing 4 boss
+  ch_maggotlord: {
+    id: 'ch_maggotlord', name: 'Maggot-Lord Brulk', minLevel: 21, maxLevel: 22, family: 'undead', elite: true, boss: true, ccImmune: true,
+    hpBase: 380, hpPerLevel: 46, dmgBase: 21, dmgPerLevel: 3.9, attackSpeed: 2.8, armorPerLevel: 34,
+    moveSpeed: 6.2, aggroRadius: 16,
+    aoePulse: { min: 30, max: 44, radius: 11, every: 10, name: 'Bilge Eruption', school: 'nature', fx: 'nova' },
+    enrage: { belowHpPct: 0.3, dmgMult: 1.45, hasteMult: 1.3 },
+    knockback: { chance: 0.3, distance: 7, name: 'Heaving Maw' },
+    loot: [
+      { copper: 1500, chance: 1 },
+      { itemId: 'pw_helmet', chance: 0.34, rollGroup: 'ch_maggotlord_set' },
+      { itemId: 'hm_helmet', chance: 0.33, rollGroup: 'ch_maggotlord_set' },
+      { itemId: 'as_helmet', chance: 0.33, rollGroup: 'ch_maggotlord_set' },
+    ],
+    scale: 1.6, color: 0x7d8a4f,
+  },
+  // Wing 5 boss
+  ch_cantor: {
+    id: 'ch_cantor', name: 'Cantor Mowl', minLevel: 21, maxLevel: 22, family: 'humanoid', elite: true, boss: true, ccImmune: true,
+    hpBase: 290, hpPerLevel: 38, dmgBase: 20, dmgPerLevel: 3.7, attackSpeed: 2.2, armorPerLevel: 26,
+    moveSpeed: 7, aggroRadius: 16,
+    mendAlly: { healMin: 56, healMax: 80, radius: 16, every: 7, name: 'Unhallowed Rite', school: 'shadow' },
+    petSpell: { name: 'Dirge of Ash', school: 'shadow', min: 40, max: 58, range: 28, every: 2.8 },
+    manaBurn: { chance: 0.35, amount: 140, name: 'Silencing Verse', school: 'shadow' },
+    loot: [
+      { copper: 1500, chance: 1 },
+      { itemId: 'pw_legs', chance: 0.34, rollGroup: 'ch_cantor_set' },
+      { itemId: 'hm_legs', chance: 0.33, rollGroup: 'ch_cantor_set' },
+      { itemId: 'as_legs', chance: 0.33, rollGroup: 'ch_cantor_set' },
+    ],
+    scale: 1.25, color: 0xc9b6e0,
+  },
+  // Wing 6 boss
+  ch_ashmarshal: {
+    id: 'ch_ashmarshal', name: 'The Ash-Marshal', minLevel: 22, maxLevel: 22, family: 'undead', elite: true, boss: true, ccImmune: true,
+    hpBase: 360, hpPerLevel: 44, dmgBase: 23, dmgPerLevel: 4.1, attackSpeed: 2.3, armorPerLevel: 40,
+    moveSpeed: 7.2, aggroRadius: 16,
+    cleave: { radius: 8, mult: 0.75, name: 'Ash-Sweep' },
+    mortalStrike: { chance: 0.4, healReduction: 0.5, duration: 10, name: 'Sundering Edict', school: 'physical' },
+    rally: { radius: 16, every: 12, ap: 48, duration: 10, name: 'Dead Muster' },
+    loot: [
+      { copper: 1700, chance: 1 },
+      { itemId: 'pw_shoulder', chance: 0.34, rollGroup: 'ch_ashmarshal_set' },
+      { itemId: 'hm_shoulder', chance: 0.33, rollGroup: 'ch_ashmarshal_set' },
+      { itemId: 'as_shoulder', chance: 0.33, rollGroup: 'ch_ashmarshal_set' },
+    ],
+    scale: 1.4, color: 0x8b94a0,
+  },
+  // Wing 7 boss
+  ch_bonesmith: {
+    id: 'ch_bonesmith', name: 'The Bonesmith', minLevel: 22, maxLevel: 22, family: 'undead', elite: true, boss: true, ccImmune: true,
+    hpBase: 370, hpPerLevel: 45, dmgBase: 23, dmgPerLevel: 4.2, attackSpeed: 2.5, armorPerLevel: 42,
+    moveSpeed: 6.5, aggroRadius: 16,
+    summonAdds: { mobId: 'bone_construct', count: 2, atHpPct: [0.66, 0.33] },
+    stoneskin: { amount: 280, every: 14, duration: 8, name: 'Ash-Iron Plating', school: 'shadow' },
+    loot: [
+      { copper: 1700, chance: 1 },
+      { itemId: 'pw_chest', chance: 0.34, rollGroup: 'ch_bonesmith_set' },
+      { itemId: 'hm_chest', chance: 0.33, rollGroup: 'ch_bonesmith_set' },
+      { itemId: 'as_chest', chance: 0.33, rollGroup: 'ch_bonesmith_set' },
+      { itemId: 'ash_iron', chance: 1, questId: 'q_ch_attune_4' },
+    ],
+    scale: 1.45, color: 0xd0c8b4,
+  },
+  // Wing 8 boss (final deathlord)
+  ch_veholt: {
+    id: 'ch_veholt', name: 'Lord Veholt the Hollow', minLevel: 22, maxLevel: 22, family: 'undead', elite: true, boss: true, ccImmune: true,
+    hpBase: 520, hpPerLevel: 64, dmgBase: 24, dmgPerLevel: 4.4, attackSpeed: 2.4, armorPerLevel: 46,
+    moveSpeed: 6.8, aggroRadius: 18,
+    aoePulse: { min: 34, max: 50, radius: 12, every: 9, name: 'Hollow Reckoning', school: 'shadow', fx: 'nova' },
+    summonAdds: { mobId: 'claudeholme_husk', count: 3, atHpPct: [0.7, 0.45, 0.2] },
+    stomp: { radius: 11, every: 13, duration: 1.5, min: 26, max: 38, name: 'Deathknell Stomp' },
+    enrage: { belowHpPct: 0.25, dmgMult: 1.5, hasteMult: 1.3 },
+    loot: [
+      { copper: 3000, chance: 1 },
+      { itemId: 'pw_mh', chance: 0.34, rollGroup: 'ch_veholt_set' },
+      { itemId: 'hm_mh', chance: 0.33, rollGroup: 'ch_veholt_set' },
+      { itemId: 'as_mh', chance: 0.33, rollGroup: 'ch_veholt_set' },
+      { itemId: 'veholt_war', chance: 0.2, rollGroup: 'ch_veholt_chase' },
+      { itemId: 'veholt_mag', chance: 0.2, rollGroup: 'ch_veholt_chase' },
+      { itemId: 'veholt_rog', chance: 0.2, rollGroup: 'ch_veholt_chase' },
+      { itemId: 'veholt_sigil', chance: 1, questId: 'q_ch_attune_1' },
+      { itemId: 'breach_core', chance: 1, questId: 'q_ch_attune_3' },
+      { itemId: 'hollow_crown', chance: 1, questId: 'q_ch_attune_5' },
+    ],
+    scale: 1.7, color: 0x5a5060,
+  },
 };
 
 // Trash packs of 2 elites (spaced beyond social-aggro range so groups can
@@ -324,6 +503,54 @@ const SANCTUM_SPAWN_LIST: DungeonSpawn[] = [
 
 const NYTHRAXIS_RAID_SPAWN_LIST: DungeonSpawn[] = [
   { mobId: 'nythraxis_scourge_of_thornpeak', x: 0, z: 96 },
+];
+
+// Claudeholme: a long descent of 8 wings, each a trash pack then a wing boss, the
+// deathlord Veholt on the great dais at z 214. (Boss z: 18/46/74/102/130/158/186/214.)
+const CLAUDEHOLME_SPAWN_LIST: DungeonSpawn[] = [
+  // Wing 1 - the broken gate
+  { mobId: 'claudeholme_husk', x: -3, z: 6 },
+  { mobId: 'claudeholme_husk', x: 3, z: 8 },
+  { mobId: 'claudeholme_reaver', x: -8, z: 14 },
+  { mobId: 'ch_gatewarden', x: 0, z: 18 },
+  { mobId: 'claudeholme_husk', x: -5, z: 24 },
+  { mobId: 'claudeholme_husk', x: 5, z: 25 },
+  // Wing 2 - the plague-vats
+  { mobId: 'plague_acolyte', x: -6, z: 40 },
+  { mobId: 'claudeholme_husk', x: 6, z: 41 },
+  { mobId: 'ch_plaguewright', x: 0, z: 46 },
+  { mobId: 'plague_acolyte', x: 0, z: 54 },
+  // Wing 3 - the toll of souls
+  { mobId: 'claudeholme_wraith', x: -7, z: 66 },
+  { mobId: 'claudeholme_wraith', x: 7, z: 68 },
+  { mobId: 'ch_tollkeeper', x: 0, z: 74 },
+  { mobId: 'claudeholme_wraith', x: -4, z: 82 },
+  // Wing 4 - the carrion pit
+  { mobId: 'claudeholme_husk', x: -8, z: 94 },
+  { mobId: 'claudeholme_reaver', x: 8, z: 95 },
+  { mobId: 'ch_maggotlord', x: 0, z: 102 },
+  { mobId: 'claudeholme_husk', x: 0, z: 110 },
+  // Wing 5 - the unhallowed chapel
+  { mobId: 'plague_acolyte', x: -6, z: 122 },
+  { mobId: 'claudeholme_wraith', x: 6, z: 124 },
+  { mobId: 'ch_cantor', x: 0, z: 130 },
+  { mobId: 'plague_acolyte', x: 4, z: 138 },
+  // Wing 6 - the muster yard
+  { mobId: 'claudeholme_reaver', x: -8, z: 150 },
+  { mobId: 'claudeholme_reaver', x: 8, z: 151 },
+  { mobId: 'ch_ashmarshal', x: 0, z: 158 },
+  { mobId: 'claudeholme_husk', x: 0, z: 166 },
+  // Wing 7 - the bonesmithy
+  { mobId: 'bone_construct', x: -7, z: 178 },
+  { mobId: 'bone_construct', x: 7, z: 178 },
+  { mobId: 'ch_bonesmith', x: 0, z: 186 },
+  { mobId: 'claudeholme_husk', x: -4, z: 194 },
+  // Wing 8 - the deathlord's hold
+  { mobId: 'claudeholme_wraith', x: -6, z: 206 },
+  { mobId: 'claudeholme_reaver', x: 6, z: 206 },
+  { mobId: 'ch_veholt', x: 0, z: 214 },
+  { mobId: 'claudeholme_husk', x: -5, z: 220 },
+  { mobId: 'claudeholme_husk', x: 5, z: 220 },
 ];
 
 export const DUNGEON_DEFS: Record<string, DungeonDef> = {
@@ -418,4 +645,65 @@ export const DUNGEON_DEFS: Record<string, DungeonDef> = {
     enterText: 'You pass through the sealed royal door.',
     leaveText: 'You return to the cold air of Thornpeak.',
   },
+  claudeholme: {
+    id: 'claudeholme',
+    name: 'Claudeholme',
+    index: 6, // instance origin x = 900 + 6*600 = 4500 (clear, below the relocated arena at 5400)
+    doorPos: { x: 99, z: 1191 }, // the ruined-town portal in the Ashen Wastes
+    entry: { x: 0, z: 4 },
+    exitOffset: { x: 0, z: -6 },
+    spawns: CLAUDEHOLME_SPAWN_LIST,
+    interior: 'claudeholme',
+    suggestedPlayers: 5,
+    enterText: 'You step through the breach into Claudeholme, and the dead town stirs.',
+    leaveText: 'You climb back out of Claudeholme into the ashen light.',
+  },
+};
+
+const PLATE = ['warrior', 'paladin', 'shaman'] as const;
+const CLOTH = ['mage', 'priest', 'warlock', 'druid'] as const;
+const LEATHER = ['rogue', 'hunter'] as const;
+
+// Tier 0.55 sets (epic, a notch above the Dawn of Claude tier 0.5): one slot drops
+// per Claudeholme wing boss; the deathlord Veholt drops the weapons + chase epics.
+// Plate = Plaguewarden's, Cloth = Hollowmancer's, Leather = Ashstalker's.
+export const CLAUDEHOLME_ITEMS: Record<string, ItemDef> = {
+  // Plate (warrior/paladin/shaman)
+  pw_feet: { id: 'pw_feet', name: "Plaguewarden's Sabatons", kind: 'armor', slot: 'feet', quality: 'epic', stats: { armor: 165, sta: 9, str: 6 }, sellValue: 2400, requiredClass: [...PLATE] },
+  pw_gloves: { id: 'pw_gloves', name: "Plaguewarden's Gauntlets", kind: 'armor', slot: 'gloves', quality: 'epic', stats: { armor: 155, sta: 8, str: 7 }, sellValue: 2400, requiredClass: [...PLATE] },
+  pw_waist: { id: 'pw_waist', name: "Plaguewarden's Girdle", kind: 'armor', slot: 'waist', quality: 'epic', stats: { armor: 160, sta: 9, str: 6 }, sellValue: 2400, requiredClass: [...PLATE] },
+  pw_helmet: { id: 'pw_helmet', name: "Plaguewarden's Greathelm", kind: 'armor', slot: 'helmet', quality: 'epic', stats: { armor: 210, sta: 12, str: 8 }, sellValue: 3200, requiredClass: [...PLATE] },
+  pw_legs: { id: 'pw_legs', name: "Plaguewarden's Legplates", kind: 'armor', slot: 'legs', quality: 'epic', stats: { armor: 230, sta: 13, str: 9 }, sellValue: 3200, requiredClass: [...PLATE] },
+  pw_shoulder: { id: 'pw_shoulder', name: "Plaguewarden's Pauldrons", kind: 'armor', slot: 'shoulder', quality: 'epic', stats: { armor: 195, sta: 11, str: 8 }, sellValue: 3200, requiredClass: [...PLATE] },
+  pw_chest: { id: 'pw_chest', name: "Plaguewarden's Breastplate", kind: 'armor', slot: 'chest', quality: 'epic', stats: { armor: 260, sta: 16, str: 11 }, sellValue: 4000, requiredClass: [...PLATE] },
+  pw_mh: { id: 'pw_mh', name: "Plaguewarden's Cleaver", kind: 'weapon', slot: 'mainhand', quality: 'epic', weapon: { min: 38, max: 58, speed: 2.6 }, stats: { str: 12, sta: 6 }, sellValue: 6000, requiredClass: [...PLATE] },
+  // Cloth (mage/priest/warlock/druid)
+  hm_feet: { id: 'hm_feet', name: "Hollowmancer's Slippers", kind: 'armor', slot: 'feet', quality: 'epic', stats: { armor: 46, int: 9, spi: 6 }, sellValue: 2400, requiredClass: [...CLOTH] },
+  hm_gloves: { id: 'hm_gloves', name: "Hollowmancer's Handwraps", kind: 'armor', slot: 'gloves', quality: 'epic', stats: { armor: 42, int: 9, spi: 5 }, sellValue: 2400, requiredClass: [...CLOTH] },
+  hm_waist: { id: 'hm_waist', name: "Hollowmancer's Cord", kind: 'armor', slot: 'waist', quality: 'epic', stats: { armor: 44, int: 9, spi: 5 }, sellValue: 2400, requiredClass: [...CLOTH] },
+  hm_helmet: { id: 'hm_helmet', name: "Hollowmancer's Cowl", kind: 'armor', slot: 'helmet', quality: 'epic', stats: { armor: 58, int: 12, spi: 7 }, sellValue: 3200, requiredClass: [...CLOTH] },
+  hm_legs: { id: 'hm_legs', name: "Hollowmancer's Leggings", kind: 'armor', slot: 'legs', quality: 'epic', stats: { armor: 64, int: 13, spi: 8 }, sellValue: 3200, requiredClass: [...CLOTH] },
+  hm_shoulder: { id: 'hm_shoulder', name: "Hollowmancer's Mantle", kind: 'armor', slot: 'shoulder', quality: 'epic', stats: { armor: 54, int: 11, spi: 7 }, sellValue: 3200, requiredClass: [...CLOTH] },
+  hm_chest: { id: 'hm_chest', name: "Hollowmancer's Robe", kind: 'armor', slot: 'chest', quality: 'epic', stats: { armor: 74, int: 16, spi: 9 }, sellValue: 4000, requiredClass: [...CLOTH] },
+  hm_mh: { id: 'hm_mh', name: "Hollowmancer's Scepter", kind: 'weapon', slot: 'mainhand', quality: 'epic', weapon: { min: 31, max: 47, speed: 2.6 }, stats: { int: 12, spi: 6 }, sellValue: 6000, requiredClass: [...CLOTH] },
+  // Leather (rogue/hunter)
+  as_feet: { id: 'as_feet', name: "Ashstalker's Treads", kind: 'armor', slot: 'feet', quality: 'epic', stats: { armor: 100, agi: 9, sta: 5 }, sellValue: 2400, requiredClass: [...LEATHER] },
+  as_gloves: { id: 'as_gloves', name: "Ashstalker's Grips", kind: 'armor', slot: 'gloves', quality: 'epic', stats: { armor: 94, agi: 9, sta: 4 }, sellValue: 2400, requiredClass: [...LEATHER] },
+  as_waist: { id: 'as_waist', name: "Ashstalker's Belt", kind: 'armor', slot: 'waist', quality: 'epic', stats: { armor: 97, agi: 9, sta: 5 }, sellValue: 2400, requiredClass: [...LEATHER] },
+  as_helmet: { id: 'as_helmet', name: "Ashstalker's Mask", kind: 'armor', slot: 'helmet', quality: 'epic', stats: { armor: 128, agi: 12, sta: 6 }, sellValue: 3200, requiredClass: [...LEATHER] },
+  as_legs: { id: 'as_legs', name: "Ashstalker's Legguards", kind: 'armor', slot: 'legs', quality: 'epic', stats: { armor: 138, agi: 13, sta: 7 }, sellValue: 3200, requiredClass: [...LEATHER] },
+  as_shoulder: { id: 'as_shoulder', name: "Ashstalker's Spaulders", kind: 'armor', slot: 'shoulder', quality: 'epic', stats: { armor: 116, agi: 11, sta: 6 }, sellValue: 3200, requiredClass: [...LEATHER] },
+  as_chest: { id: 'as_chest', name: "Ashstalker's Tunic", kind: 'armor', slot: 'chest', quality: 'epic', stats: { armor: 150, agi: 16, sta: 8 }, sellValue: 4000, requiredClass: [...LEATHER] },
+  as_mh: { id: 'as_mh', name: "Ashstalker's Dagger", kind: 'weapon', slot: 'mainhand', quality: 'epic', weapon: { min: 34, max: 52, speed: 1.8 }, stats: { agi: 12, sta: 6 }, sellValue: 6000, requiredClass: [...LEATHER] },
+  // Veholt's chase epics (off-set signature weapons)
+  veholt_war: { id: 'veholt_war', name: 'Hollowblade of Veholt', kind: 'weapon', slot: 'mainhand', quality: 'epic', weapon: { min: 45, max: 67, speed: 2.7 }, stats: { str: 14, sta: 7 }, sellValue: 8000, requiredClass: [...PLATE] },
+  veholt_mag: { id: 'veholt_mag', name: "Veholt's Deathwhisper", kind: 'weapon', slot: 'mainhand', quality: 'epic', weapon: { min: 35, max: 53, speed: 2.5 }, stats: { int: 14, spi: 7 }, sellValue: 8000, requiredClass: [...CLOTH] },
+  veholt_rog: { id: 'veholt_rog', name: "Veholt's Hollowfang", kind: 'weapon', slot: 'mainhand', quality: 'epic', weapon: { min: 39, max: 59, speed: 1.8 }, stats: { agi: 14, sta: 7 }, sellValue: 8000, requiredClass: [...LEATHER] },
+  // Quest + Claudexxaramas raid-attunement chain items
+  claudeholme_relic: { id: 'claudeholme_relic', name: 'Reclaimed Relic', kind: 'quest', sellValue: 0, questId: 'q_ch_relics' },
+  veholt_sigil: { id: 'veholt_sigil', name: 'Hollow Sigil', kind: 'quest', sellValue: 0, questId: 'q_ch_attune_1' },
+  breach_core: { id: 'breach_core', name: 'Breach Core', kind: 'quest', sellValue: 0, questId: 'q_ch_attune_3' },
+  ash_iron: { id: 'ash_iron', name: 'Ash-Iron Ingot', kind: 'quest', sellValue: 0, questId: 'q_ch_attune_4' },
+  hollow_crown: { id: 'hollow_crown', name: "Veholt's Hollow Crown", kind: 'quest', sellValue: 0, questId: 'q_ch_attune_5' },
+  breachkey_dawn: { id: 'breachkey_dawn', name: 'Breachkey of the Dawn', kind: 'quest', sellValue: 0, questId: 'q_ch_attune_5' },
 };

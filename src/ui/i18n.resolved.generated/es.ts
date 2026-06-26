@@ -4579,6 +4579,105 @@ export const es: EnTranslations = {
       "dawnstalker_dagger": {
         "name": "Daga del Acechalba"
       },
+      "pw_feet": {
+        "name": "Escarpes del Guardaplagas"
+      },
+      "pw_gloves": {
+        "name": "Guanteletes del Guardaplagas"
+      },
+      "pw_waist": {
+        "name": "Cinto del Guardaplagas"
+      },
+      "pw_helmet": {
+        "name": "Gran Yelmo del Guardaplagas"
+      },
+      "pw_legs": {
+        "name": "Quijotes del Guardaplagas"
+      },
+      "pw_shoulder": {
+        "name": "Hombreras del Guardaplagas"
+      },
+      "pw_chest": {
+        "name": "Peto del Guardaplagas"
+      },
+      "pw_mh": {
+        "name": "Hendedora del Guardaplagas"
+      },
+      "hm_feet": {
+        "name": "Zapatillas del Nigromante Hueco"
+      },
+      "hm_gloves": {
+        "name": "Vendas del Nigromante Hueco"
+      },
+      "hm_waist": {
+        "name": "Cordon del Nigromante Hueco"
+      },
+      "hm_helmet": {
+        "name": "Capucha del Nigromante Hueco"
+      },
+      "hm_legs": {
+        "name": "Calzas del Nigromante Hueco"
+      },
+      "hm_shoulder": {
+        "name": "Manto del Nigromante Hueco"
+      },
+      "hm_chest": {
+        "name": "Tunica del Nigromante Hueco"
+      },
+      "hm_mh": {
+        "name": "Cetro del Nigromante Hueco"
+      },
+      "as_feet": {
+        "name": "Pisadas del Acechacenizas"
+      },
+      "as_gloves": {
+        "name": "Asideros del Acechacenizas"
+      },
+      "as_waist": {
+        "name": "Cinturon del Acechacenizas"
+      },
+      "as_helmet": {
+        "name": "Mascara del Acechacenizas"
+      },
+      "as_legs": {
+        "name": "Guardapiernas del Acechacenizas"
+      },
+      "as_shoulder": {
+        "name": "Espaldares del Acechacenizas"
+      },
+      "as_chest": {
+        "name": "Tunica del Acechacenizas"
+      },
+      "as_mh": {
+        "name": "Daga del Acechacenizas"
+      },
+      "veholt_war": {
+        "name": "Hoja Hueca de Veholt"
+      },
+      "veholt_mag": {
+        "name": "Susurro de Muerte de Veholt"
+      },
+      "veholt_rog": {
+        "name": "Colmillo Hueco de Veholt"
+      },
+      "claudeholme_relic": {
+        "name": "Reliquia Recuperada"
+      },
+      "veholt_sigil": {
+        "name": "Sello Hueco"
+      },
+      "breach_core": {
+        "name": "Nucleo de la Brecha"
+      },
+      "ash_iron": {
+        "name": "Lingote de Hierro de Ceniza"
+      },
+      "hollow_crown": {
+        "name": "Corona Hueca de Veholt"
+      },
+      "breachkey_dawn": {
+        "name": "Llave de la Brecha de la Dawn"
+      },
       "bristleback_maul": {
         "name": "Maza Bristleback"
       },
@@ -5286,6 +5385,45 @@ export const es: EnTranslations = {
       "gravelord_oss": {
         "name": "Señor de las Tumbas Oss"
       },
+      "claudeholme_husk": {
+        "name": "Cascaron de Claudeholme"
+      },
+      "claudeholme_reaver": {
+        "name": "Saqueador de Claudeholme"
+      },
+      "claudeholme_wraith": {
+        "name": "Espectro Hueco"
+      },
+      "plague_acolyte": {
+        "name": "Acolito de la Plaga"
+      },
+      "bone_construct": {
+        "name": "Constructo de Hueso"
+      },
+      "ch_gatewarden": {
+        "name": "El Guardian del Porton"
+      },
+      "ch_plaguewright": {
+        "name": "Sevra la Pestifera"
+      },
+      "ch_tollkeeper": {
+        "name": "El Recaudador"
+      },
+      "ch_maggotlord": {
+        "name": "Brulk el Senor de los Gusanos"
+      },
+      "ch_cantor": {
+        "name": "Mowl el Cantor"
+      },
+      "ch_ashmarshal": {
+        "name": "El Mariscal de Cenizas"
+      },
+      "ch_bonesmith": {
+        "name": "El Herrero de Huesos"
+      },
+      "ch_veholt": {
+        "name": "Lord Veholt el Hueco"
+      },
       "ironvein_foreman": {
         "name": "Capataz Vena de Hierro"
       },
@@ -5525,6 +5663,16 @@ export const es: EnTranslations = {
         "name": "Archivista Vael",
         "title": "Dawn of Claude",
         "greeting": "Cada esquirla de esa necropolis que pueda estudiar es una grieta que algun dia podriamos abrir, {playerName}. Traeme lo que cargan los muertos y planearemos juntos la brecha."
+      },
+      "dawn_vanguard_kael": {
+        "name": "Capitan de Vanguardia Kael",
+        "title": "Dawn of Claude",
+        "greeting": "Claudeholme fue un pueblo vivo en otro tiempo, {playerName}, antes de que la sombra de la nave cayera sobre el. Ahora sus muertos dominan las calles. Hoy la asaltamos."
+      },
+      "dawn_reclaimer_sela": {
+        "name": "Recuperadora Sela",
+        "title": "Dawn of Claude",
+        "greeting": "Los muertos de Claudeholme no pueden salvarse, {playerName}, solo liberarse. Recupera lo que el pueblo perdio, y ayudame a forjar la llave que abre el propio Claudexxaramas."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6491,6 +6639,156 @@ export const es: EnTranslations = {
           }
         }
       },
+      "q_ch_breach": {
+        "title": "La Brecha de Claudeholme",
+        "text": "El portal de las ruinas se abre sobre el propio Claudeholme, {playerName}, un pueblo entero que la nave aniquilo en una sola noche. Un Guardian del Porton domina la primera ala. Quiebralo, y la Dawn tendra su punto de apoyo dentro.",
+        "completion": "El porton es nuestro. Sigue adelante, {playerName}. Las calles solo empeoran de aqui en mas.",
+        "objectives": {
+          "0": {
+            "label": "El Guardian del Porton abatido"
+          }
+        }
+      },
+      "q_ch_vats": {
+        "title": "Las Cubas de la Plaga",
+        "text": "Sevra la Pestifera fragua la podredumbre que mantiene muerto a Claudeholme, {playerName}, en cubas en lo profundo de la segunda ala. Acaba con ella, y los pozos de su plaga se secaran.",
+        "completion": "Sevra cae y sus cubas se enfrian. El aire de la segunda ala ya casi se puede respirar.",
+        "objectives": {
+          "0": {
+            "label": "Sevra la Pestifera abatida"
+          }
+        }
+      },
+      "q_ch_toll": {
+        "title": "El Peaje de las Almas",
+        "text": "El Recaudador atesora las almas del pueblo en la tercera ala, {playerName}, alimentando con ellas a la nave pieza por pieza. Derribalo y deja que esas almas queden libres.",
+        "completion": "El Recaudador esta destrozado, y las almas que retenia se dispersan como ceniza en el viento. Libres, por fin.",
+        "objectives": {
+          "0": {
+            "label": "El Recaudador abatido"
+          }
+        }
+      },
+      "q_ch_pit": {
+        "title": "El Foso de Carrona",
+        "text": "La cuarta ala es un foso de carrona, {playerName}, y Brulk el Senor de los Gusanos es la montana de muertos cosidos en su fondo. Lleva a tu grupo entero. Acaba con esa cosa.",
+        "completion": "Brulk estalla por fin en pedazos. El foso ya se puede cruzar, {playerName}, aunque yo no respiraria hondo mientras lo haces.",
+        "objectives": {
+          "0": {
+            "label": "Brulk el Senor de los Gusanos abatido"
+          }
+        }
+      },
+      "q_ch_chapel": {
+        "title": "Ritos Profanos",
+        "text": "Mowl el Cantor guia a los muertos en ritos profanos en la vieja capilla, {playerName}, la quinta ala. Fue sacerdote de la Luz en otro tiempo. Silencia su himno y deja que la capilla descanse.",
+        "completion": "El himno ha callado. Sea lo que Mowl fuera antes de que la nave lo tomara, ya esta libre de ello. Que la Luz lo guarde.",
+        "objectives": {
+          "0": {
+            "label": "Mowl el Cantor abatido"
+          }
+        }
+      },
+      "q_ch_muster": {
+        "title": "Rompe la Leva",
+        "text": "El Mariscal de Cenizas adiestra a la milicia muerta del pueblo en la sexta ala, {playerName}, formandolos en filas. Un ejercito de muertos es lo ultimo que necesitan estos paramos. Quiebra a su comandante.",
+        "completion": "El Mariscal de Cenizas ha caido y sus filas se desmoronan en huesos sin el. Hoy ningun ejercito sale de Claudeholme.",
+        "objectives": {
+          "0": {
+            "label": "El Mariscal de Cenizas abatido"
+          }
+        }
+      },
+      "q_ch_forge": {
+        "title": "Silencia al Herrero de Huesos",
+        "text": "El Herrero de Huesos forja a los muertos en constructos en la septima ala, {playerName}, una fila interminable de soldados de hueso para la nave. Destroza su fragua y silencia su martillo.",
+        "completion": "El martillo ha callado y la fragua esta fria. La fila de soldados de hueso termina aqui, {playerName}. Solo queda el senor de la muerte.",
+        "objectives": {
+          "0": {
+            "label": "El Herrero de Huesos abatido"
+          }
+        }
+      },
+      "q_ch_deathlord": {
+        "title": "El Senor Hueco",
+        "text": "Lord Veholt el Hueco gobierna Claudeholme desde la ala mas profunda, {playerName}, el senor de la muerte de la nave hecho carne. Es la razon por la que el pueblo jamas descansa. Reune a los mas fuertes que puedas y acaba con el. Libera a Claudeholme para siempre.",
+        "completion": "Veholt ha muerto, y una quietud cae sobre Claudeholme que el pueblo no conocia desde que llego la nave. Liberaste un lugar que la Dawn habia dado por perdido, {playerName}. No lo olvidaremos.",
+        "objectives": {
+          "0": {
+            "label": "Lord Veholt el Hueco abatido"
+          }
+        }
+      },
+      "q_ch_streets": {
+        "title": "Calles de los Muertos",
+        "text": "Antes de cazar a los senores de las alas, {playerName}, mengua los cascarones que atascan las calles de Claudeholme. Quince de ellos, para despejar el paso a la vanguardia que viene tras de ti.",
+        "completion": "Quince cascarones abatidos, y las calles ya son transitables. La vanguardia ya puede avanzar, gracias a ti.",
+        "objectives": {
+          "0": {
+            "label": "Cascaron de Claudeholme abatido"
+          }
+        }
+      },
+      "q_ch_relics": {
+        "title": "Reliquias Recuperadas",
+        "text": "Claudeholme fue un pueblo devoto en otro tiempo, {playerName}, y sus reliquias aun yacen entre los muertos que antano las guardaban. Recupera seis. Bendecidas de nuevo, haran mas bien en manos de la Dawn que pudriendose en la oscuridad.",
+        "completion": "Seis reliquias, cada una entibiandose a medida que la corrupcion se desvanece. El pueblo entrega su fe poco a poco, {playerName}, y nosotros quedamos mejor armados por ello.",
+        "objectives": {
+          "0": {
+            "label": "Reliquia Recuperada"
+          }
+        }
+      },
+      "q_ch_attune_1": {
+        "title": "Ecos en lo Hueco",
+        "text": "Estas en sintonia con Naxxramas, {playerName}, pero el propio Claudexxaramas es una puerta mas profunda, y la llave que la abre yace en Claudeholme. Comienza con Veholt: derribalo y traeme el Sello Hueco que porta. La primera de tres piezas.",
+        "completion": "El Sello Hueco zumba en mi mano como una campana golpeada. Una pieza de tres, {playerName}. La llave de la brecha es real, y la hemos comenzado.",
+        "objectives": {
+          "0": {
+            "label": "Sello Hueco"
+          }
+        }
+      },
+      "q_ch_attune_2": {
+        "title": "Las Reliquias Corrompidas",
+        "text": "El Sello Hueco esta corrompido por la plaga, {playerName}, y solo las propias reliquias benditas del pueblo lo purificaran. Traeme cinco reliquias recuperadas de los muertos de Claudeholme, y limpiare el sello para la forja.",
+        "completion": "Cinco reliquias, dispuestas en torno al sello, y la corrupcion se desprende de el como piel vieja. Ya esta limpio, {playerName}, y listo para la fragua.",
+        "objectives": {
+          "0": {
+            "label": "Reliquia Recuperada"
+          }
+        }
+      },
+      "q_ch_attune_3": {
+        "title": "Forjando la Llave de la Brecha",
+        "text": "El sello necesita un nucleo que lo ancle, {playerName}, y solo el senor de la muerte porta uno. Vuelve a Claudeholme, derriba de nuevo a Veholt, y traeme el Nucleo de la Brecha de su cadaver. La segunda pieza.",
+        "completion": "El Nucleo de la Brecha, aun frio del pecho de Veholt. Dos piezas de tres, {playerName}. La llave de la brecha toma forma en mis manos.",
+        "objectives": {
+          "0": {
+            "label": "Nucleo de la Brecha"
+          }
+        }
+      },
+      "q_ch_attune_4": {
+        "title": "Hierro de Ceniza y Hueso",
+        "text": "La llave de la brecha debe revestirse de hierro de ceniza, {playerName}, el metal maldito que trabaja el Herrero de Huesos. Traeme un lingote de hierro de ceniza de su fragua en Claudeholme, y el revestimiento quedara hecho.",
+        "completion": "Hierro de ceniza, aun tibio del fuego del Herrero de Huesos. El revestimiento esta fundido, {playerName}. Solo falta la corona del senor de la muerte para coronar la llave.",
+        "objectives": {
+          "0": {
+            "label": "Lingote de Hierro de Ceniza"
+          }
+        }
+      },
+      "q_ch_attune_5": {
+        "title": "La Llave del Claudexxaramas",
+        "text": "Queda una pieza, {playerName}: la Corona Hueca de la propia frente de Veholt. Vuelve a Claudeholme una ultima vez, toma la corona, y la colocare sobre la llave de la brecha. Con ella, el propio Claudexxaramas se abrira a la Dawn, y tu nos guiaras a traves.",
+        "completion": "Esta hecho. La Llave de la Brecha de la Dawn es tuya, {playerName}, sello, nucleo y corona, revestidos de hierro de ceniza. Cuando la Dawn of Claude asalte el Claudexxaramas, tu portaras la llave que lo abre. No hay campeon mas grande de esta orden. Mantente listo. La brecha se acerca.",
+        "objectives": {
+          "0": {
+            "label": "Corona Hueca de Veholt"
+          }
+        }
+      },
       "q_drowned_choir": {
         "title": "El Coro Ahogado",
         "text": "Los vadeadores no actúan solos. Entre ellos caminan los Devotos Ahogados: la secta que se hundió con el templo, aún con sus vestiduras putrefactas, aún entonando la plegaria desde las rocas de la orilla. Silencia a ocho de ellos y tráeme seis de las ofrendas que portan. Quiero saber qué pretenden entregar a su diosa.",
@@ -6708,6 +7006,11 @@ export const es: EnTranslations = {
         "name": "Arena de banda de Nythraxis",
         "enterText": "Cruzas la puerta real sellada.",
         "leaveText": "Regresas al aire frío de Thornpeak."
+      },
+      "claudeholme": {
+        "name": "Claudeholme",
+        "enterText": "Cruzas la brecha hacia Claudeholme, y el pueblo muerto se agita.",
+        "leaveText": "Sales de Claudeholme de vuelta a la luz cenicienta."
       },
       "drowned_temple": {
         "name": "El Templo Ahogado",

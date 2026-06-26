@@ -4579,6 +4579,105 @@ export const en_CA: EnTranslations = {
       "dawnstalker_dagger": {
         "name": "Dawnstalker Dagger"
       },
+      "pw_feet": {
+        "name": "Plaguewarden's Sabatons"
+      },
+      "pw_gloves": {
+        "name": "Plaguewarden's Gauntlets"
+      },
+      "pw_waist": {
+        "name": "Plaguewarden's Girdle"
+      },
+      "pw_helmet": {
+        "name": "Plaguewarden's Greathelm"
+      },
+      "pw_legs": {
+        "name": "Plaguewarden's Legplates"
+      },
+      "pw_shoulder": {
+        "name": "Plaguewarden's Pauldrons"
+      },
+      "pw_chest": {
+        "name": "Plaguewarden's Breastplate"
+      },
+      "pw_mh": {
+        "name": "Plaguewarden's Cleaver"
+      },
+      "hm_feet": {
+        "name": "Hollowmancer's Slippers"
+      },
+      "hm_gloves": {
+        "name": "Hollowmancer's Handwraps"
+      },
+      "hm_waist": {
+        "name": "Hollowmancer's Cord"
+      },
+      "hm_helmet": {
+        "name": "Hollowmancer's Cowl"
+      },
+      "hm_legs": {
+        "name": "Hollowmancer's Leggings"
+      },
+      "hm_shoulder": {
+        "name": "Hollowmancer's Mantle"
+      },
+      "hm_chest": {
+        "name": "Hollowmancer's Robe"
+      },
+      "hm_mh": {
+        "name": "Hollowmancer's Scepter"
+      },
+      "as_feet": {
+        "name": "Ashstalker's Treads"
+      },
+      "as_gloves": {
+        "name": "Ashstalker's Grips"
+      },
+      "as_waist": {
+        "name": "Ashstalker's Belt"
+      },
+      "as_helmet": {
+        "name": "Ashstalker's Mask"
+      },
+      "as_legs": {
+        "name": "Ashstalker's Legguards"
+      },
+      "as_shoulder": {
+        "name": "Ashstalker's Spaulders"
+      },
+      "as_chest": {
+        "name": "Ashstalker's Tunic"
+      },
+      "as_mh": {
+        "name": "Ashstalker's Dagger"
+      },
+      "veholt_war": {
+        "name": "Hollowblade of Veholt"
+      },
+      "veholt_mag": {
+        "name": "Veholt's Deathwhisper"
+      },
+      "veholt_rog": {
+        "name": "Veholt's Hollowfang"
+      },
+      "claudeholme_relic": {
+        "name": "Reclaimed Relic"
+      },
+      "veholt_sigil": {
+        "name": "Hollow Sigil"
+      },
+      "breach_core": {
+        "name": "Breach Core"
+      },
+      "ash_iron": {
+        "name": "Ash-Iron Ingot"
+      },
+      "hollow_crown": {
+        "name": "Veholt's Hollow Crown"
+      },
+      "breachkey_dawn": {
+        "name": "Breachkey of the Dawn"
+      },
       "bristleback_maul": {
         "name": "Bristleback Maul"
       },
@@ -5286,6 +5385,45 @@ export const en_CA: EnTranslations = {
       "gravelord_oss": {
         "name": "Gravelord Oss"
       },
+      "claudeholme_husk": {
+        "name": "Claudeholme Husk"
+      },
+      "claudeholme_reaver": {
+        "name": "Claudeholme Reaver"
+      },
+      "claudeholme_wraith": {
+        "name": "Hollow Wraith"
+      },
+      "plague_acolyte": {
+        "name": "Plague Acolyte"
+      },
+      "bone_construct": {
+        "name": "Bone Construct"
+      },
+      "ch_gatewarden": {
+        "name": "The Gatewarden"
+      },
+      "ch_plaguewright": {
+        "name": "Plaguewright Sevra"
+      },
+      "ch_tollkeeper": {
+        "name": "The Tollkeeper"
+      },
+      "ch_maggotlord": {
+        "name": "Maggot-Lord Brulk"
+      },
+      "ch_cantor": {
+        "name": "Cantor Mowl"
+      },
+      "ch_ashmarshal": {
+        "name": "The Ash-Marshal"
+      },
+      "ch_bonesmith": {
+        "name": "The Bonesmith"
+      },
+      "ch_veholt": {
+        "name": "Lord Veholt the Hollow"
+      },
       "ironvein_foreman": {
         "name": "Ironvein Foreman"
       },
@@ -5525,6 +5663,16 @@ export const en_CA: EnTranslations = {
         "name": "Archivist Vael",
         "title": "Dawn of Claude",
         "greeting": "Every shard of that necropolis I can study is a crack we might one day pry open, {playerName}. Bring me what the dead carry, and we will plan the breach together."
+      },
+      "dawn_vanguard_kael": {
+        "name": "Vanguard Captain Kael",
+        "title": "Dawn of Claude",
+        "greeting": "Claudeholme was a living town once, {playerName}, before the ship's shadow fell on it. Now its dead hold the streets. We breach it today."
+      },
+      "dawn_reclaimer_sela": {
+        "name": "Reclaimer Sela",
+        "title": "Dawn of Claude",
+        "greeting": "The dead of Claudeholme cannot be saved, {playerName}, only freed. Recover what the town lost, and help me forge the key that opens the Claudexxaramas itself."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6491,6 +6639,156 @@ export const en_CA: EnTranslations = {
           }
         }
       },
+      "q_ch_breach": {
+        "title": "The Breach at Claudeholme",
+        "text": "The portal in the ruins opens onto Claudeholme itself, {playerName}, a whole town the ship killed in a single night. A Gatewarden holds the first wing. Break it, and the Dawn has its foothold inside.",
+        "completion": "The gate is ours. Push on, {playerName}. The streets only worsen from here.",
+        "objectives": {
+          "0": {
+            "label": "The Gatewarden slain"
+          }
+        }
+      },
+      "q_ch_vats": {
+        "title": "The Plague-Vats",
+        "text": "Plaguewright Sevra brews the rot that keeps Claudeholme dead, {playerName}, in vats deep in the second wing. End her, and the wells of her plague run dry.",
+        "completion": "Sevra falls and her vats go cold. The air in the second wing is almost breathable now.",
+        "objectives": {
+          "0": {
+            "label": "Plaguewright Sevra slain"
+          }
+        }
+      },
+      "q_ch_toll": {
+        "title": "The Toll of Souls",
+        "text": "The Tollkeeper hoards the souls of the town at the third wing, {playerName}, feeding them to the ship piece by piece. Cut it down and let those souls go free.",
+        "completion": "The Tollkeeper is broken, and the souls it held scatter like ash on the wind. Free, at last.",
+        "objectives": {
+          "0": {
+            "label": "The Tollkeeper slain"
+          }
+        }
+      },
+      "q_ch_pit": {
+        "title": "The Carrion Pit",
+        "text": "The fourth wing is a carrion pit, {playerName}, and Maggot-Lord Brulk is the mountain of stitched dead at the bottom of it. Take your whole party. Put the thing down.",
+        "completion": "Brulk bursts apart at last. The pit can be crossed now, {playerName}, though I would not breathe deep while you do it.",
+        "objectives": {
+          "0": {
+            "label": "Maggot-Lord Brulk slain"
+          }
+        }
+      },
+      "q_ch_chapel": {
+        "title": "Unhallowed Rites",
+        "text": "Cantor Mowl leads the dead in unhallowed rites in the old chapel, {playerName}, the fifth wing. He was a priest of the Light once. Silence his hymn and let the chapel rest.",
+        "completion": "The hymn is silent. Whatever Mowl was before the ship took him, he is free of it now. The Light keep him.",
+        "objectives": {
+          "0": {
+            "label": "Cantor Mowl slain"
+          }
+        }
+      },
+      "q_ch_muster": {
+        "title": "Break the Muster",
+        "text": "The Ash-Marshal drills the town's dead militia in the sixth wing, {playerName}, mustering them into ranks. An army of the dead is the last thing these wastes need. Break their commander.",
+        "completion": "The Ash-Marshal is down and his ranks fall to bones without him. No army marches out of Claudeholme today.",
+        "objectives": {
+          "0": {
+            "label": "The Ash-Marshal slain"
+          }
+        }
+      },
+      "q_ch_forge": {
+        "title": "Silence the Bonesmith",
+        "text": "The Bonesmith forges the dead into constructs in the seventh wing, {playerName}, an endless line of bone-soldiers for the ship. Shatter his forge and silence his hammer.",
+        "completion": "The hammer is silent and the forge is cold. The line of bone-soldiers ends here, {playerName}. Only the deathlord remains.",
+        "objectives": {
+          "0": {
+            "label": "The Bonesmith slain"
+          }
+        }
+      },
+      "q_ch_deathlord": {
+        "title": "The Hollow Lord",
+        "text": "Lord Veholt the Hollow rules Claudeholme from the deepest wing, {playerName}, the ship's deathlord made flesh. He is the reason the town never rests. Gather the strongest you can and end him. Free Claudeholme for good.",
+        "completion": "Veholt is dead, and a stillness falls over Claudeholme that the town has not known since the ship came. You freed a place the Dawn had written off, {playerName}. We will not forget it.",
+        "objectives": {
+          "0": {
+            "label": "Lord Veholt the Hollow slain"
+          }
+        }
+      },
+      "q_ch_streets": {
+        "title": "Streets of the Dead",
+        "text": "Before you hunt the wing-lords, {playerName}, thin the husks that choke the streets of Claudeholme. Fifteen of them, to clear a path for the vanguard behind you.",
+        "completion": "Fifteen husks put down, and the streets are passable. The vanguard can move now, thanks to you.",
+        "objectives": {
+          "0": {
+            "label": "Claudeholme Husk slain"
+          }
+        }
+      },
+      "q_ch_relics": {
+        "title": "Reclaimed Relics",
+        "text": "Claudeholme was a faithful town once, {playerName}, and its relics still lie among the dead who once kept them. Recover six. Re-blessed, they will do more good in Dawn hands than rotting in the dark.",
+        "completion": "Six relics, each one warming as the taint lifts. The town gives up its faith a little at a time, {playerName}, and we are the better armed for it.",
+        "objectives": {
+          "0": {
+            "label": "Reclaimed Relic"
+          }
+        }
+      },
+      "q_ch_attune_1": {
+        "title": "Echoes in the Hollow",
+        "text": "You are attuned to Naxxramas, {playerName}, but the Claudexxaramas itself is a deeper door, and the key to it lies in Claudeholme. It starts with Veholt: cut him down and bring me the Hollow Sigil he carries. The first of three pieces.",
+        "completion": "The Hollow Sigil hums in my hand like a struck bell. One piece of three, {playerName}. The breachkey is real, and we have begun it.",
+        "objectives": {
+          "0": {
+            "label": "Hollow Sigil"
+          }
+        }
+      },
+      "q_ch_attune_2": {
+        "title": "The Tainted Relics",
+        "text": "The Hollow Sigil is plague-tainted, {playerName}, and only the town's own blessed relics will purify it. Bring me five reclaimed relics from the dead of Claudeholme, and I will cleanse the sigil for the forging.",
+        "completion": "Five relics, laid round the sigil, and the taint sloughs off it like old skin. It is clean now, {playerName}, and ready for the forge.",
+        "objectives": {
+          "0": {
+            "label": "Reclaimed Relic"
+          }
+        }
+      },
+      "q_ch_attune_3": {
+        "title": "Forging the Breachkey",
+        "text": "The sigil needs a core to anchor it, {playerName}, and only the deathlord carries one. Return to Claudeholme, cut Veholt down again, and bring me the Breach Core from his corpse. The second piece.",
+        "completion": "The Breach Core, still cold from Veholt's chest. Two pieces of three, {playerName}. The breachkey is taking shape in my hands.",
+        "objectives": {
+          "0": {
+            "label": "Breach Core"
+          }
+        }
+      },
+      "q_ch_attune_4": {
+        "title": "Ash-Iron and Bone",
+        "text": "The breachkey must be cased in ash-iron, {playerName}, the cursed metal the Bonesmith works. Bring me an ash-iron ingot from his forge in Claudeholme, and the casing is done.",
+        "completion": "Ash-iron, still warm from the Bonesmith's fire. The casing is cast, {playerName}. Only the deathlord's crown remains to crown the key.",
+        "objectives": {
+          "0": {
+            "label": "Ash-Iron Ingot"
+          }
+        }
+      },
+      "q_ch_attune_5": {
+        "title": "The Key to the Claudexxaramas",
+        "text": "One piece remains, {playerName}: the Hollow Crown from Veholt's own brow. Return to Claudeholme a final time, take the crown, and I will set it atop the breachkey. With it, the Claudexxaramas itself will open to the Dawn, and you will lead us through.",
+        "completion": "It is finished. The Breachkey of the Dawn is yours, {playerName}, sigil and core and crown all cased in ash-iron. When the Dawn of Claude storms the Claudexxaramas, you carry the key that opens it. There is no greater champion of this order. Stand ready. The breach is coming.",
+        "objectives": {
+          "0": {
+            "label": "Veholt's Hollow Crown"
+          }
+        }
+      },
       "q_drowned_choir": {
         "title": "The Drowned Choir",
         "text": "The waders do not act alone. Among them walk the Drowned Votaries — the cult that sank with the temple, still in their rotted vestments, still singing the prayer from the shore-rocks. Silence eight of them, and bring me six of the offerings they carry. I would know what they mean to give their goddess.",
@@ -6708,6 +7006,11 @@ export const en_CA: EnTranslations = {
         "name": "Nythraxis Raid Arena",
         "enterText": "You pass through the sealed royal door.",
         "leaveText": "You return to the cold air of Thornpeak."
+      },
+      "claudeholme": {
+        "name": "Claudeholme",
+        "enterText": "You step through the breach into Claudeholme, and the dead town stirs.",
+        "leaveText": "You climb back out of Claudeholme into the ashen light."
       },
       "drowned_temple": {
         "name": "The Drowned Temple",

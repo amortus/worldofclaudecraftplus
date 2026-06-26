@@ -1293,6 +1293,14 @@ export const GUIDE_DUNGEONS: GuideDungeon[] = [
     "name": "Gravewyrm Sanctum"
   },
   {
+    "id": "claudeholme",
+    "isRaid": false,
+    "suggestedPlayers": 5,
+    "min": 20,
+    "max": 22,
+    "name": "Claudeholme"
+  },
+  {
     "id": "raid",
     "isRaid": true,
     "suggestedPlayers": 10,

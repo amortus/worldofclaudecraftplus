@@ -4579,6 +4579,105 @@ export const it_IT: EnTranslations = {
       "dawnstalker_dagger": {
         "name": "Pugnale del Predatore dell'Alba"
       },
+      "pw_feet": {
+        "name": "Sabatoni del Guardiano della Peste"
+      },
+      "pw_gloves": {
+        "name": "Manopole del Guardiano della Peste"
+      },
+      "pw_waist": {
+        "name": "Cintura del Guardiano della Peste"
+      },
+      "pw_helmet": {
+        "name": "Grand'Elmo del Guardiano della Peste"
+      },
+      "pw_legs": {
+        "name": "Gambali del Guardiano della Peste"
+      },
+      "pw_shoulder": {
+        "name": "Spallacci del Guardiano della Peste"
+      },
+      "pw_chest": {
+        "name": "Corazza del Guardiano della Peste"
+      },
+      "pw_mh": {
+        "name": "Mannaia del Guardiano della Peste"
+      },
+      "hm_feet": {
+        "name": "Pantofole del Negromante del Vuoto"
+      },
+      "hm_gloves": {
+        "name": "Fasce del Negromante del Vuoto"
+      },
+      "hm_waist": {
+        "name": "Cordone del Negromante del Vuoto"
+      },
+      "hm_helmet": {
+        "name": "Cappuccio del Negromante del Vuoto"
+      },
+      "hm_legs": {
+        "name": "Gambali del Negromante del Vuoto"
+      },
+      "hm_shoulder": {
+        "name": "Mantellina del Negromante del Vuoto"
+      },
+      "hm_chest": {
+        "name": "Veste del Negromante del Vuoto"
+      },
+      "hm_mh": {
+        "name": "Scettro del Negromante del Vuoto"
+      },
+      "as_feet": {
+        "name": "Calzari del Cacciatore di Cenere"
+      },
+      "as_gloves": {
+        "name": "Prese del Cacciatore di Cenere"
+      },
+      "as_waist": {
+        "name": "Cinturone del Cacciatore di Cenere"
+      },
+      "as_helmet": {
+        "name": "Maschera del Cacciatore di Cenere"
+      },
+      "as_legs": {
+        "name": "Schinieri del Cacciatore di Cenere"
+      },
+      "as_shoulder": {
+        "name": "Spalliere del Cacciatore di Cenere"
+      },
+      "as_chest": {
+        "name": "Tunica del Cacciatore di Cenere"
+      },
+      "as_mh": {
+        "name": "Pugnale del Cacciatore di Cenere"
+      },
+      "veholt_war": {
+        "name": "Lama Vuota di Veholt"
+      },
+      "veholt_mag": {
+        "name": "Sussurro di Morte di Veholt"
+      },
+      "veholt_rog": {
+        "name": "Zanna Vuota di Veholt"
+      },
+      "claudeholme_relic": {
+        "name": "Reliquia Recuperata"
+      },
+      "veholt_sigil": {
+        "name": "Sigillo Vuoto"
+      },
+      "breach_core": {
+        "name": "Nucleo della Breccia"
+      },
+      "ash_iron": {
+        "name": "Lingotto di Ferro di Cenere"
+      },
+      "hollow_crown": {
+        "name": "Corona Vuota di Veholt"
+      },
+      "breachkey_dawn": {
+        "name": "Chiave della Breccia della Dawn"
+      },
       "bristleback_maul": {
         "name": "Maglio Bristleback"
       },
@@ -5286,6 +5385,45 @@ export const it_IT: EnTranslations = {
       "gravelord_oss": {
         "name": "Signore delle Tombe Oss"
       },
+      "claudeholme_husk": {
+        "name": "Spoglia di Claudeholme"
+      },
+      "claudeholme_reaver": {
+        "name": "Predone di Claudeholme"
+      },
+      "claudeholme_wraith": {
+        "name": "Spettro Vuoto"
+      },
+      "plague_acolyte": {
+        "name": "Accolito della Peste"
+      },
+      "bone_construct": {
+        "name": "Costrutto d'Ossa"
+      },
+      "ch_gatewarden": {
+        "name": "Il Guardiano del Cancello"
+      },
+      "ch_plaguewright": {
+        "name": "Sevra l'Artefice della Peste"
+      },
+      "ch_tollkeeper": {
+        "name": "L'Esattore del Pedaggio"
+      },
+      "ch_maggotlord": {
+        "name": "Brulk il Signore dei Vermi"
+      },
+      "ch_cantor": {
+        "name": "Mowl il Cantore"
+      },
+      "ch_ashmarshal": {
+        "name": "Il Maresciallo di Cenere"
+      },
+      "ch_bonesmith": {
+        "name": "Il Fabbro d'Ossa"
+      },
+      "ch_veholt": {
+        "name": "Lord Veholt il Vuoto"
+      },
       "ironvein_foreman": {
         "name": "Caposquadra Venaferrata"
       },
@@ -5525,6 +5663,16 @@ export const it_IT: EnTranslations = {
         "name": "Archivista Vael",
         "title": "Dawn of Claude",
         "greeting": "Ogni scheggia di quella necropoli che posso studiare e una crepa che un giorno potremmo forzare, {playerName}. Portami cio che i morti recano con se, e pianificheremo insieme la breccia."
+      },
+      "dawn_vanguard_kael": {
+        "name": "Kael, Capitano dell'Avanguardia",
+        "title": "Dawn of Claude",
+        "greeting": "Claudeholme un tempo era una cittadina viva, {playerName}, prima che l'ombra della nave calasse su di essa. Ora i suoi morti tengono le strade. Oggi la espugneremo."
+      },
+      "dawn_reclaimer_sela": {
+        "name": "Sela la Reclamatrice",
+        "title": "Dawn of Claude",
+        "greeting": "I morti di Claudeholme non possono essere salvati, {playerName}, solo liberati. Recupera ciò che la cittadina ha perduto, e aiutami a forgiare la chiave che apre la stessa Claudexxaramas."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6491,6 +6639,156 @@ export const it_IT: EnTranslations = {
           }
         }
       },
+      "q_ch_breach": {
+        "title": "La Breccia di Claudeholme",
+        "text": "Il portale tra le rovine si apre sulla stessa Claudeholme, {playerName}, un'intera cittadina che la nave ha ucciso in una sola notte. Un Guardiano del Cancello tiene la prima ala. Sfondalo, e la Dawn avrà il suo punto d'appoggio all'interno.",
+        "completion": "Il cancello è nostro. Avanza, {playerName}. Le strade non fanno che peggiorare da qui.",
+        "objectives": {
+          "0": {
+            "label": "Il Guardiano del Cancello ucciso"
+          }
+        }
+      },
+      "q_ch_vats": {
+        "title": "I Tini della Peste",
+        "text": "Sevra l'Artefice della Peste distilla la putredine che tiene morta Claudeholme, {playerName}, in tini nelle profondità della seconda ala. Ponile fine, e le sorgenti della sua peste si prosciugheranno.",
+        "completion": "Sevra cade e i suoi tini si fanno freddi. L'aria nella seconda ala è quasi respirabile ora.",
+        "objectives": {
+          "0": {
+            "label": "Sevra l'Artefice della Peste uccisa"
+          }
+        }
+      },
+      "q_ch_toll": {
+        "title": "Il Pedaggio delle Anime",
+        "text": "L'Esattore del Pedaggio accumula le anime della cittadina nella terza ala, {playerName}, dandole in pasto alla nave pezzo per pezzo. Abbattilo e lascia che quelle anime vadano libere.",
+        "completion": "L'Esattore del Pedaggio è spezzato, e le anime che teneva si disperdono come cenere nel vento. Libere, finalmente.",
+        "objectives": {
+          "0": {
+            "label": "L'Esattore del Pedaggio ucciso"
+          }
+        }
+      },
+      "q_ch_pit": {
+        "title": "La Fossa di Carogne",
+        "text": "La quarta ala è una fossa di carogne, {playerName}, e Brulk il Signore dei Vermi è la montagna di morti ricuciti che giace sul suo fondo. Porta con te tutto il tuo gruppo. Abbatti quella cosa.",
+        "completion": "Brulk si squarcia finalmente. La fossa ora può essere attraversata, {playerName}, anche se non respirerei a fondo mentre lo fai.",
+        "objectives": {
+          "0": {
+            "label": "Brulk il Signore dei Vermi ucciso"
+          }
+        }
+      },
+      "q_ch_chapel": {
+        "title": "Riti Profani",
+        "text": "Mowl il Cantore guida i morti in riti profani nella vecchia cappella, {playerName}, la quinta ala. Un tempo era un sacerdote della Luce. Fa' tacere il suo inno e lascia riposare la cappella.",
+        "completion": "L'inno è muto. Qualunque cosa fosse Mowl prima che la nave lo prendesse, ora ne è libero. Che la Luce lo protegga.",
+        "objectives": {
+          "0": {
+            "label": "Mowl il Cantore ucciso"
+          }
+        }
+      },
+      "q_ch_muster": {
+        "title": "Spezza la Leva",
+        "text": "Il Maresciallo di Cenere addestra la milizia morta della cittadina nella sesta ala, {playerName}, radunandola in schiere. Un esercito di morti è l'ultima cosa di cui queste lande hanno bisogno. Spezza il loro comandante.",
+        "completion": "Il Maresciallo di Cenere è a terra e le sue schiere crollano in ossa senza di lui. Nessun esercito marcia fuori da Claudeholme oggi.",
+        "objectives": {
+          "0": {
+            "label": "Il Maresciallo di Cenere ucciso"
+          }
+        }
+      },
+      "q_ch_forge": {
+        "title": "Fa' Tacere il Fabbro d'Ossa",
+        "text": "Il Fabbro d'Ossa forgia i morti in costrutti nella settima ala, {playerName}, una fila senza fine di soldati d'ossa per la nave. Manda in frantumi la sua fucina e fa' tacere il suo martello.",
+        "completion": "Il martello è muto e la fucina è fredda. La fila di soldati d'ossa finisce qui, {playerName}. Resta solo il signore della morte.",
+        "objectives": {
+          "0": {
+            "label": "Il Fabbro d'Ossa ucciso"
+          }
+        }
+      },
+      "q_ch_deathlord": {
+        "title": "Il Signore Vuoto",
+        "text": "Lord Veholt il Vuoto governa Claudeholme dall'ala più profonda, {playerName}, il signore della morte della nave fatto carne. È lui la ragione per cui la cittadina non riposa mai. Raduna i più forti che puoi e ponigli fine. Libera Claudeholme una volta per tutte.",
+        "completion": "Veholt è morto, e una quiete cala su Claudeholme che la cittadina non conosceva da quando giunse la nave. Hai liberato un luogo che la Dawn aveva dato per perduto, {playerName}. Non lo dimenticheremo.",
+        "objectives": {
+          "0": {
+            "label": "Lord Veholt il Vuoto ucciso"
+          }
+        }
+      },
+      "q_ch_streets": {
+        "title": "Strade dei Morti",
+        "text": "Prima di dare la caccia ai signori delle ali, {playerName}, dirada le spoglie che soffocano le strade di Claudeholme. Quindici di esse, per aprire un varco all'avanguardia dietro di te.",
+        "completion": "Quindici spoglie abbattute, e le strade sono percorribili. L'avanguardia può muoversi ora, grazie a te.",
+        "objectives": {
+          "0": {
+            "label": "Spoglia di Claudeholme uccisa"
+          }
+        }
+      },
+      "q_ch_relics": {
+        "title": "Reliquie Recuperate",
+        "text": "Claudeholme un tempo era una cittadina devota, {playerName}, e le sue reliquie giacciono ancora tra i morti che un tempo le custodivano. Recuperane sei. Ribenedette, faranno più bene in mani della Dawn che a marcire nell'oscurità.",
+        "completion": "Sei reliquie, ognuna si scalda mentre la corruzione si dissolve. La cittadina cede la sua fede un poco alla volta, {playerName}, e noi ne siamo meglio armati.",
+        "objectives": {
+          "0": {
+            "label": "Reliquia Recuperata"
+          }
+        }
+      },
+      "q_ch_attune_1": {
+        "title": "Echi nel Vuoto",
+        "text": "Sei sintonizzato con Naxxramas, {playerName}, ma la stessa Claudexxaramas è una porta più profonda, e la chiave per essa giace a Claudeholme. Comincia con Veholt: abbattilo e portami il Sigillo Vuoto che porta con sé. Il primo di tre pezzi.",
+        "completion": "Il Sigillo Vuoto risuona nella mia mano come una campana percossa. Un pezzo su tre, {playerName}. La chiave della breccia è reale, e l'abbiamo iniziata.",
+        "objectives": {
+          "0": {
+            "label": "Sigillo Vuoto"
+          }
+        }
+      },
+      "q_ch_attune_2": {
+        "title": "Le Reliquie Corrotte",
+        "text": "Il Sigillo Vuoto è corrotto dalla peste, {playerName}, e solo le reliquie benedette della cittadina stessa lo purificheranno. Portami cinque reliquie recuperate dai morti di Claudeholme, e purificherò il sigillo per la forgiatura.",
+        "completion": "Cinque reliquie, disposte attorno al sigillo, e la corruzione si stacca come pelle vecchia. Ora è puro, {playerName}, e pronto per la fucina.",
+        "objectives": {
+          "0": {
+            "label": "Reliquia Recuperata"
+          }
+        }
+      },
+      "q_ch_attune_3": {
+        "title": "Forgiare la Chiave della Breccia",
+        "text": "Il sigillo ha bisogno di un nucleo che lo ancori, {playerName}, e solo il signore della morte ne porta uno. Torna a Claudeholme, abbatti di nuovo Veholt, e portami il Nucleo della Breccia dal suo cadavere. Il secondo pezzo.",
+        "completion": "Il Nucleo della Breccia, ancora freddo dal petto di Veholt. Due pezzi su tre, {playerName}. La chiave della breccia prende forma nelle mie mani.",
+        "objectives": {
+          "0": {
+            "label": "Nucleo della Breccia"
+          }
+        }
+      },
+      "q_ch_attune_4": {
+        "title": "Ferro di Cenere e Osso",
+        "text": "La chiave della breccia deve essere rivestita di ferro di cenere, {playerName}, il metallo maledetto che il Fabbro d'Ossa lavora. Portami un lingotto di ferro di cenere dalla sua fucina a Claudeholme, e il rivestimento sarà completo.",
+        "completion": "Ferro di cenere, ancora caldo dal fuoco del Fabbro d'Ossa. Il rivestimento è fuso, {playerName}. Resta solo la corona del signore della morte a coronare la chiave.",
+        "objectives": {
+          "0": {
+            "label": "Lingotto di Ferro di Cenere"
+          }
+        }
+      },
+      "q_ch_attune_5": {
+        "title": "La Chiave per la Claudexxaramas",
+        "text": "Resta un solo pezzo, {playerName}: la Corona Vuota dalla fronte stessa di Veholt. Torna a Claudeholme un'ultima volta, prendi la corona, e la porrò in cima alla chiave della breccia. Con essa, la stessa Claudexxaramas si aprirà alla Dawn, e tu ci guiderai attraverso.",
+        "completion": "È compiuta. La Chiave della Breccia della Dawn è tua, {playerName}, sigillo e nucleo e corona, tutto rivestito di ferro di cenere. Quando la Dawn of Claude assalterà la Claudexxaramas, tu porterai la chiave che la apre. Non c'è campione più grande di questo ordine. Tieniti pronto. La breccia è in arrivo.",
+        "objectives": {
+          "0": {
+            "label": "Corona Vuota di Veholt"
+          }
+        }
+      },
       "q_drowned_choir": {
         "title": "Il Coro Annegato",
         "text": "I guadatori non agiscono da soli. Tra loro camminano i Devoti Annegati — la setta che affondò col tempio, ancora nelle loro vesti marcite, ancora intenti a cantare la preghiera dalle rocce della riva. Riducine otto al silenzio e portami sei delle offerte che recano. Voglio sapere cosa intendono donare alla loro dea.",
@@ -6708,6 +7006,11 @@ export const it_IT: EnTranslations = {
         "name": "Arena d'incursione di Nythraxis",
         "enterText": "Oltrepassi la porta reale sigillata.",
         "leaveText": "Torni nell'aria fredda di Thornpeak."
+      },
+      "claudeholme": {
+        "name": "Claudeholme",
+        "enterText": "Attraversi la breccia verso Claudeholme, e la citta morta si desta.",
+        "leaveText": "Risali da Claudeholme nella luce di cenere."
       },
       "drowned_temple": {
         "name": "Il Tempio Annegato",

@@ -4579,6 +4579,105 @@ export const de_DE: EnTranslations = {
       "dawnstalker_dagger": {
         "name": "Morgenschleicher-Dolch"
       },
+      "pw_feet": {
+        "name": "Sabatons des Seuchenwächters"
+      },
+      "pw_gloves": {
+        "name": "Stulpenhandschuhe des Seuchenwächters"
+      },
+      "pw_waist": {
+        "name": "Gürtel des Seuchenwächters"
+      },
+      "pw_helmet": {
+        "name": "Großhelm des Seuchenwächters"
+      },
+      "pw_legs": {
+        "name": "Beinplatten des Seuchenwächters"
+      },
+      "pw_shoulder": {
+        "name": "Schulterplatten des Seuchenwächters"
+      },
+      "pw_chest": {
+        "name": "Brustplatte des Seuchenwächters"
+      },
+      "pw_mh": {
+        "name": "Spalter des Seuchenwächters"
+      },
+      "hm_feet": {
+        "name": "Schlüpfer des Leeremagiers"
+      },
+      "hm_gloves": {
+        "name": "Handwickel des Leeremagiers"
+      },
+      "hm_waist": {
+        "name": "Strick des Leeremagiers"
+      },
+      "hm_helmet": {
+        "name": "Kapuze des Leeremagiers"
+      },
+      "hm_legs": {
+        "name": "Beinkleider des Leeremagiers"
+      },
+      "hm_shoulder": {
+        "name": "Umhang des Leeremagiers"
+      },
+      "hm_chest": {
+        "name": "Robe des Leeremagiers"
+      },
+      "hm_mh": {
+        "name": "Zepter des Leeremagiers"
+      },
+      "as_feet": {
+        "name": "Trittlinge des Aschepirschers"
+      },
+      "as_gloves": {
+        "name": "Griffe des Aschepirschers"
+      },
+      "as_waist": {
+        "name": "Gurt des Aschepirschers"
+      },
+      "as_helmet": {
+        "name": "Maske des Aschepirschers"
+      },
+      "as_legs": {
+        "name": "Beinschützer des Aschepirschers"
+      },
+      "as_shoulder": {
+        "name": "Schulterstücke des Aschepirschers"
+      },
+      "as_chest": {
+        "name": "Wams des Aschepirschers"
+      },
+      "as_mh": {
+        "name": "Dolch des Aschepirschers"
+      },
+      "veholt_war": {
+        "name": "Hohlklinge von Veholt"
+      },
+      "veholt_mag": {
+        "name": "Veholts Todesflüstern"
+      },
+      "veholt_rog": {
+        "name": "Veholts Hohlfang"
+      },
+      "claudeholme_relic": {
+        "name": "Zurückgewonnene Reliquie"
+      },
+      "veholt_sigil": {
+        "name": "Hohles Siegel"
+      },
+      "breach_core": {
+        "name": "Einbruchskern"
+      },
+      "ash_iron": {
+        "name": "Ascheneisenbarren"
+      },
+      "hollow_crown": {
+        "name": "Veholts Hohle Krone"
+      },
+      "breachkey_dawn": {
+        "name": "Einbruchsschlüssel der Dawn"
+      },
       "bristleback_maul": {
         "name": "Bristleback-Schlägel"
       },
@@ -5286,6 +5385,45 @@ export const de_DE: EnTranslations = {
       "gravelord_oss": {
         "name": "Gräberfürst Oss"
       },
+      "claudeholme_husk": {
+        "name": "Hülle von Claudeholme"
+      },
+      "claudeholme_reaver": {
+        "name": "Schänder von Claudeholme"
+      },
+      "claudeholme_wraith": {
+        "name": "Hohler Schemen"
+      },
+      "plague_acolyte": {
+        "name": "Seuchenakolyth"
+      },
+      "bone_construct": {
+        "name": "Knochenkonstrukt"
+      },
+      "ch_gatewarden": {
+        "name": "Der Torwächter"
+      },
+      "ch_plaguewright": {
+        "name": "Seuchenmacherin Sevra"
+      },
+      "ch_tollkeeper": {
+        "name": "Der Zollwächter"
+      },
+      "ch_maggotlord": {
+        "name": "Madenfürst Brulk"
+      },
+      "ch_cantor": {
+        "name": "Kantor Mowl"
+      },
+      "ch_ashmarshal": {
+        "name": "Der Aschemarschall"
+      },
+      "ch_bonesmith": {
+        "name": "Der Knochenschmied"
+      },
+      "ch_veholt": {
+        "name": "Fürst Veholt der Hohle"
+      },
       "ironvein_foreman": {
         "name": "Eisenader-Vorarbeiter"
       },
@@ -5525,6 +5663,16 @@ export const de_DE: EnTranslations = {
         "name": "Archivar Vael",
         "title": "Dawn of Claude",
         "greeting": "Jeder Splitter jener Nekropole, den ich studieren kann, ist ein Riss, den wir eines Tages aufbrechen könnten, {playerName}. Bring mir, was die Toten bei sich tragen, und wir planen den Durchbruch gemeinsam."
+      },
+      "dawn_vanguard_kael": {
+        "name": "Vorhuthauptmann Kael",
+        "title": "Dawn of Claude",
+        "greeting": "Claudeholme war einst eine lebende Stadt, {playerName}, ehe der Schatten des Schiffs auf sie fiel. Nun halten ihre Toten die Straßen besetzt. Heute brechen wir hinein."
+      },
+      "dawn_reclaimer_sela": {
+        "name": "Rückgewinnerin Sela",
+        "title": "Dawn of Claude",
+        "greeting": "Die Toten von Claudeholme lassen sich nicht retten, {playerName}, nur befreien. Hole zurück, was die Stadt verlor, und hilf mir, den Schlüssel zu schmieden, der das Claudexxaramas selbst öffnet."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6491,6 +6639,156 @@ export const de_DE: EnTranslations = {
           }
         }
       },
+      "q_ch_breach": {
+        "title": "Der Einbruch in Claudeholme",
+        "text": "Das Portal in den Ruinen öffnet sich auf Claudeholme selbst, {playerName}, eine ganze Stadt, die das Schiff in einer einzigen Nacht tötete. Ein Torwächter hält den ersten Flügel. Zerschlage ihn, und die Dawn hat ihren Brückenkopf im Inneren.",
+        "completion": "Das Tor gehört uns. Dring weiter vor, {playerName}. Die Straßen werden von hier an nur schlimmer.",
+        "objectives": {
+          "0": {
+            "label": "Der Torwächter erschlagen"
+          }
+        }
+      },
+      "q_ch_vats": {
+        "title": "Die Seuchenbottiche",
+        "text": "Seuchenmacherin Sevra braut die Fäulnis, die Claudeholme tot hält, {playerName}, in Bottichen tief im zweiten Flügel. Mach ihr ein Ende, und die Quellen ihrer Seuche versiegen.",
+        "completion": "Sevra fällt und ihre Bottiche erkalten. Die Luft im zweiten Flügel ist nun beinahe atembar.",
+        "objectives": {
+          "0": {
+            "label": "Seuchenmacherin Sevra erschlagen"
+          }
+        }
+      },
+      "q_ch_toll": {
+        "title": "Der Zoll der Seelen",
+        "text": "Der Zollwächter hortet die Seelen der Stadt am dritten Flügel, {playerName}, und füttert das Schiff Stück für Stück mit ihnen. Streck ihn nieder und lass jene Seelen frei.",
+        "completion": "Der Zollwächter ist gebrochen, und die Seelen, die er hielt, zerstieben wie Asche im Wind. Endlich frei.",
+        "objectives": {
+          "0": {
+            "label": "Der Zollwächter erschlagen"
+          }
+        }
+      },
+      "q_ch_pit": {
+        "title": "Die Aasgrube",
+        "text": "Der vierte Flügel ist eine Aasgrube, {playerName}, und Madenfürst Brulk ist der Berg aus zusammengenähten Toten auf ihrem Grund. Nimm deine ganze Gruppe mit. Bring das Ding zur Strecke.",
+        "completion": "Brulk birst endlich auseinander. Die Grube lässt sich nun durchqueren, {playerName}, wenngleich ich dabei nicht tief einatmen würde.",
+        "objectives": {
+          "0": {
+            "label": "Madenfürst Brulk erschlagen"
+          }
+        }
+      },
+      "q_ch_chapel": {
+        "title": "Ungeweihte Riten",
+        "text": "Kantor Mowl führt die Toten in ungeweihten Riten in der alten Kapelle an, {playerName}, dem fünften Flügel. Einst war er ein Priester des Lichts. Bring seinen Hymnus zum Schweigen und lass die Kapelle ruhen.",
+        "completion": "Der Hymnus ist verstummt. Was auch immer Mowl war, ehe das Schiff ihn nahm, davon ist er nun befreit. Das Licht behüte ihn.",
+        "objectives": {
+          "0": {
+            "label": "Kantor Mowl erschlagen"
+          }
+        }
+      },
+      "q_ch_muster": {
+        "title": "Zerschlagt das Aufgebot",
+        "text": "Der Aschemarschall drillt die tote Miliz der Stadt im sechsten Flügel, {playerName}, und reiht sie in Glieder. Ein Heer der Toten ist das Letzte, was diese Einöden brauchen. Zerschlage ihren Befehlshaber.",
+        "completion": "Der Aschemarschall ist gefallen, und seine Glieder zerfallen ohne ihn zu Knochen. Heute marschiert kein Heer aus Claudeholme aus.",
+        "objectives": {
+          "0": {
+            "label": "Der Aschemarschall erschlagen"
+          }
+        }
+      },
+      "q_ch_forge": {
+        "title": "Bringt den Knochenschmied zum Schweigen",
+        "text": "Der Knochenschmied schmiedet die Toten zu Konstrukten im siebten Flügel, {playerName}, eine endlose Reihe von Knochensoldaten für das Schiff. Zertrümmere seine Schmiede und bring seinen Hammer zum Schweigen.",
+        "completion": "Der Hammer schweigt und die Schmiede ist erkaltet. Die Reihe der Knochensoldaten endet hier, {playerName}. Nur noch der Todesfürst bleibt.",
+        "objectives": {
+          "0": {
+            "label": "Der Knochenschmied erschlagen"
+          }
+        }
+      },
+      "q_ch_deathlord": {
+        "title": "Der Hohle Fürst",
+        "text": "Fürst Veholt der Hohle herrscht über Claudeholme aus dem tiefsten Flügel, {playerName}, der Todesfürst des Schiffs, Fleisch geworden. Er ist der Grund, weshalb die Stadt niemals ruht. Versammle die Stärksten, die du finden kannst, und mach ihm ein Ende. Befreie Claudeholme für immer.",
+        "completion": "Veholt ist tot, und eine Stille legt sich über Claudeholme, die die Stadt seit dem Kommen des Schiffs nicht gekannt hat. Du hast einen Ort befreit, den die Dawn schon abgeschrieben hatte, {playerName}. Das werden wir nicht vergessen.",
+        "objectives": {
+          "0": {
+            "label": "Fürst Veholt der Hohle erschlagen"
+          }
+        }
+      },
+      "q_ch_streets": {
+        "title": "Straßen der Toten",
+        "text": "Ehe du die Flügelfürsten jagst, {playerName}, lichte die Hüllen, die die Straßen von Claudeholme verstopfen. Fünfzehn von ihnen, um der Vorhut hinter dir einen Weg zu bahnen.",
+        "completion": "Fünfzehn Hüllen niedergestreckt, und die Straßen sind passierbar. Die Vorhut kann nun vorrücken, dank dir.",
+        "objectives": {
+          "0": {
+            "label": "Hülle von Claudeholme erschlagen"
+          }
+        }
+      },
+      "q_ch_relics": {
+        "title": "Zurückgewonnene Reliquien",
+        "text": "Claudeholme war einst eine fromme Stadt, {playerName}, und ihre Reliquien liegen noch immer unter den Toten, die sie einst hüteten. Hole sechs zurück. Neu gesegnet werden sie in den Händen der Dawn mehr Gutes tun als in der Dunkelheit zu verrotten.",
+        "completion": "Sechs Reliquien, jede einzelne erwärmt sich, während die Verderbnis von ihr weicht. Die Stadt gibt ihren Glauben Stück für Stück preis, {playerName}, und wir sind dadurch besser gewappnet.",
+        "objectives": {
+          "0": {
+            "label": "Zurückgewonnene Reliquie"
+          }
+        }
+      },
+      "q_ch_attune_1": {
+        "title": "Echos in der Leere",
+        "text": "Du bist auf Naxxramas eingestimmt, {playerName}, doch das Claudexxaramas selbst ist eine tiefere Pforte, und der Schlüssel zu ihr liegt in Claudeholme. Es beginnt mit Veholt: streck ihn nieder und bring mir das Hohle Siegel, das er trägt. Das erste von drei Stücken.",
+        "completion": "Das Hohle Siegel summt in meiner Hand wie eine angeschlagene Glocke. Ein Stück von dreien, {playerName}. Der Einbruchsschlüssel ist Wirklichkeit, und wir haben ihn begonnen.",
+        "objectives": {
+          "0": {
+            "label": "Hohles Siegel"
+          }
+        }
+      },
+      "q_ch_attune_2": {
+        "title": "Die verderbten Reliquien",
+        "text": "Das Hohle Siegel ist seuchenverderbt, {playerName}, und nur die eigenen gesegneten Reliquien der Stadt werden es läutern. Bring mir fünf zurückgewonnene Reliquien von den Toten Claudeholmes, und ich werde das Siegel für die Schmiedung reinigen.",
+        "completion": "Fünf Reliquien, rings um das Siegel gelegt, und die Verderbnis schält sich von ihm wie alte Haut. Es ist nun rein, {playerName}, und bereit für die Schmiede.",
+        "objectives": {
+          "0": {
+            "label": "Zurückgewonnene Reliquie"
+          }
+        }
+      },
+      "q_ch_attune_3": {
+        "title": "Die Schmiedung des Einbruchsschlüssels",
+        "text": "Das Siegel braucht einen Kern, der es verankert, {playerName}, und nur der Todesfürst trägt einen solchen. Kehre nach Claudeholme zurück, streck Veholt erneut nieder und bring mir den Einbruchskern aus seinem Leichnam. Das zweite Stück.",
+        "completion": "Der Einbruchskern, noch kalt von Veholts Brust. Zwei Stücke von dreien, {playerName}. Der Einbruchsschlüssel nimmt in meinen Händen Gestalt an.",
+        "objectives": {
+          "0": {
+            "label": "Einbruchskern"
+          }
+        }
+      },
+      "q_ch_attune_4": {
+        "title": "Ascheneisen und Knochen",
+        "text": "Der Einbruchsschlüssel muss in Ascheneisen gefasst werden, {playerName}, dem verfluchten Metall, das der Knochenschmied bearbeitet. Bring mir einen Ascheneisenbarren aus seiner Schmiede in Claudeholme, und die Fassung ist vollendet.",
+        "completion": "Ascheneisen, noch warm vom Feuer des Knochenschmieds. Die Fassung ist gegossen, {playerName}. Nur noch die Krone des Todesfürsten fehlt, um den Schlüssel zu krönen.",
+        "objectives": {
+          "0": {
+            "label": "Ascheneisenbarren"
+          }
+        }
+      },
+      "q_ch_attune_5": {
+        "title": "Der Schlüssel zum Claudexxaramas",
+        "text": "Ein Stück bleibt noch, {playerName}: die Hohle Krone von Veholts eigener Stirn. Kehre ein letztes Mal nach Claudeholme zurück, nimm die Krone, und ich werde sie auf den Einbruchsschlüssel setzen. Mit ihm wird sich das Claudexxaramas selbst der Dawn öffnen, und du wirst uns hindurchführen.",
+        "completion": "Es ist vollbracht. Der Einbruchsschlüssel der Dawn gehört dir, {playerName}, Siegel und Kern und Krone, allesamt in Ascheneisen gefasst. Wenn die Dawn of Claude das Claudexxaramas stürmt, trägst du den Schlüssel, der es öffnet. Es gibt keinen größeren Vorkämpfer dieses Ordens. Halte dich bereit. Der Einbruch naht.",
+        "objectives": {
+          "0": {
+            "label": "Veholts Hohle Krone"
+          }
+        }
+      },
       "q_drowned_choir": {
         "title": "Der Ertränkte Chor",
         "text": "Die Wäter handeln nicht allein. Unter ihnen wandeln die Ertränkten Andächtigen — der Kult, der mit dem Tempel versank, noch immer in seinen verfaulten Gewändern, noch immer das Gebet von den Uferfelsen singend. Bringe acht von ihnen zum Schweigen und bring mir sechs der Opfergaben, die sie bei sich tragen. Ich will wissen, was sie ihrer Göttin darbringen wollen.",
@@ -6708,6 +7006,11 @@ export const de_DE: EnTranslations = {
         "name": "Nythraxis-Schlachtzugsarena",
         "enterText": "Ihr durchschreitet die versiegelte königliche Tür.",
         "leaveText": "Ihr kehrt in die kalte Luft von Thornpeak zurück."
+      },
+      "claudeholme": {
+        "name": "Claudeholme",
+        "enterText": "Du trittst durch die Bresche nach Claudeholme, und die tote Stadt regt sich.",
+        "leaveText": "Du steigst aus Claudeholme zuruck ins aschgraue Licht."
       },
       "drowned_temple": {
         "name": "Der Ertränkte Tempel",

@@ -93,6 +93,20 @@ const MOB_IDS = [
   'naxx_deathguard',
   'morthax_the_hollow',
   'gravelord_oss',
+  // Claudeholme dungeon (trash + 8 wing bosses)
+  'claudeholme_husk',
+  'claudeholme_reaver',
+  'claudeholme_wraith',
+  'plague_acolyte',
+  'bone_construct',
+  'ch_gatewarden',
+  'ch_plaguewright',
+  'ch_tollkeeper',
+  'ch_maggotlord',
+  'ch_cantor',
+  'ch_ashmarshal',
+  'ch_bonesmith',
+  'ch_veholt',
 ] as const;
 
 const NPC_IDS = [
@@ -123,6 +137,8 @@ const NPC_IDS = [
   'dawn_quartermaster_henning',
   'dawn_scout_irelle',
   'dawn_archivist_vael',
+  'dawn_vanguard_kael',
+  'dawn_reclaimer_sela',
 ] as const;
 
 const QUEST_IDS = [
@@ -218,6 +234,22 @@ const QUEST_IDS = [
   'q_aw_attune_1',
   'q_aw_gravelord',
   'q_aw_attunement',
+  // Claudeholme dungeon quests + the Breachkey (raid attunement) chain
+  'q_ch_breach',
+  'q_ch_vats',
+  'q_ch_toll',
+  'q_ch_pit',
+  'q_ch_chapel',
+  'q_ch_muster',
+  'q_ch_forge',
+  'q_ch_deathlord',
+  'q_ch_streets',
+  'q_ch_relics',
+  'q_ch_attune_1',
+  'q_ch_attune_2',
+  'q_ch_attune_3',
+  'q_ch_attune_4',
+  'q_ch_attune_5',
 ] as const;
 
 const ZONE_IDS = ['eastbrook_vale', 'mirefen_marsh', 'thornpeak_heights', 'ashen_wastes'] as const;
@@ -227,6 +259,7 @@ const DUNGEON_IDS = [
   'gravewyrm_sanctum',
   'nythraxis_crypt',
   'nythraxis_boss_arena',
+  'claudeholme',
 ] as const;
 const DELVE_IDS = ['collapsed_reliquary'] as const;
 

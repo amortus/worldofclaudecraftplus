@@ -30,7 +30,7 @@ import {
   COLLAPSED_RELIQUARY_MODULES,
   DELVE_MOBS,
 } from './content/delves';
-import { DUNGEON_DEFS, DUNGEON_MOBS } from './content/dungeons';
+import { CLAUDEHOLME_ITEMS, DUNGEON_DEFS, DUNGEON_MOBS } from './content/dungeons';
 import { GROUND_PICKUP_LINES } from './content/ground_pickup_lines';
 import {
   TEMPLE_CAMPS,
@@ -150,6 +150,7 @@ export const ITEMS: Record<string, ItemDef> = mergeItems(
   TEMPLE_ITEMS,
   DELVE_ITEMS,
   ZONE4_ITEMS,
+  CLAUDEHOLME_ITEMS,
 );
 
 export const MOBS: Record<string, MobTemplate> = {
@@ -342,7 +343,9 @@ export function dungeonAt(x: number): DungeonDef | null {
 // the band split below keeps arena positions from being read as a dungeon.
 // ---------------------------------------------------------------------------
 
-export const ARENA_X = 4200; // arena instances share this x; slots stack along z
+// Arena sits past the dungeon bands (900 + index*600). Pushed out to 5400 to leave
+// room for dungeon index 6 (x=4500, Claudeholme) and a future index 7 (5100) below it.
+export const ARENA_X = 5400; // arena instances share this x; slots stack along z
 export const ARENA_X_MIN = ARENA_X; // x at/after this = an arena instance, not a dungeon
 export const ARENA_SLOT_COUNT = 4; // concurrent 1v1 matches the world can host
 const ARENA_Z0 = -1250;
@@ -384,10 +387,10 @@ export const CRYPT_SPAWNS = DUNGEONS.hollow_crypt.spawns;
 // DELVE_X_MIN must stay above ARENA_X_MIN (4000) and ARENA_X (4200).
 // ---------------------------------------------------------------------------
 
-// 4800 sits clear of the v0.10.0 layout: dungeons end at ARENA_X_MIN (4000) and
-// the arena pit is centred at ARENA_X (4200, ~±22u footprint). The delve band's
-// west edge (DELVE_BAND_X_MIN = 4773) leaves a comfortable margin past the arena.
-export const DELVE_X_MIN = 4800;
+// 6000 sits clear of the relocated layout: the highest dungeon band is index 7
+// (x=5100), the arena pit is centred at ARENA_X (5400, ~±22u footprint), and the
+// delve band's west edge (DELVE_BAND_X_MIN) leaves a comfortable margin past it.
+export const DELVE_X_MIN = 6000;
 // Each delve room is centred at DELVE_X_MIN + index*600. Delve modules use wider
 // side walls than the base crypt kit: the side-wall centre is at instance-local
 // |x| = DELVE_WALL_X (25, mirror of delve_layout.ts WALL_X) and the collider's

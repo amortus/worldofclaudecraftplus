@@ -4579,6 +4579,105 @@ export const zh_TW: EnTranslations = {
       "dawnstalker_dagger": {
         "name": "曦行者匕首"
       },
+      "pw_feet": {
+        "name": "瘟疫守衛者的脛甲"
+      },
+      "pw_gloves": {
+        "name": "瘟疫守衛者的護手"
+      },
+      "pw_waist": {
+        "name": "瘟疫守衛者的腰帶"
+      },
+      "pw_helmet": {
+        "name": "瘟疫守衛者的巨盔"
+      },
+      "pw_legs": {
+        "name": "瘟疫守衛者的腿甲"
+      },
+      "pw_shoulder": {
+        "name": "瘟疫守衛者的護肩"
+      },
+      "pw_chest": {
+        "name": "瘟疫守衛者的胸甲"
+      },
+      "pw_mh": {
+        "name": "瘟疫守衛者的劈刀"
+      },
+      "hm_feet": {
+        "name": "空殼祕法師的軟靴"
+      },
+      "hm_gloves": {
+        "name": "空殼祕法師的手綁帶"
+      },
+      "hm_waist": {
+        "name": "空殼祕法師的束繩"
+      },
+      "hm_helmet": {
+        "name": "空殼祕法師的兜帽"
+      },
+      "hm_legs": {
+        "name": "空殼祕法師的長褲"
+      },
+      "hm_shoulder": {
+        "name": "空殼祕法師的披肩"
+      },
+      "hm_chest": {
+        "name": "空殼祕法師的長袍"
+      },
+      "hm_mh": {
+        "name": "空殼祕法師的權杖"
+      },
+      "as_feet": {
+        "name": "灰燼潛行者的踏靴"
+      },
+      "as_gloves": {
+        "name": "灰燼潛行者的握套"
+      },
+      "as_waist": {
+        "name": "灰燼潛行者的皮帶"
+      },
+      "as_helmet": {
+        "name": "灰燼潛行者的面具"
+      },
+      "as_legs": {
+        "name": "灰燼潛行者的護腿"
+      },
+      "as_shoulder": {
+        "name": "灰燼潛行者的肩甲"
+      },
+      "as_chest": {
+        "name": "灰燼潛行者的外衣"
+      },
+      "as_mh": {
+        "name": "灰燼潛行者的匕首"
+      },
+      "veholt_war": {
+        "name": "維霍特的空殼之刃"
+      },
+      "veholt_mag": {
+        "name": "維霍特的死亡低語"
+      },
+      "veholt_rog": {
+        "name": "維霍特的空殼之牙"
+      },
+      "claudeholme_relic": {
+        "name": "回收的聖物"
+      },
+      "veholt_sigil": {
+        "name": "空殼徽記"
+      },
+      "breach_core": {
+        "name": "突破核心"
+      },
+      "ash_iron": {
+        "name": "灰鐵錠"
+      },
+      "hollow_crown": {
+        "name": "維霍特的空殼王冠"
+      },
+      "breachkey_dawn": {
+        "name": "黎明突破鑰匙"
+      },
       "bristleback_maul": {
         "name": "硬鬃重槌"
       },
@@ -5286,6 +5385,45 @@ export const zh_TW: EnTranslations = {
       "gravelord_oss": {
         "name": "墓主奧斯"
       },
+      "claudeholme_husk": {
+        "name": "克勞德霍姆軀殼"
+      },
+      "claudeholme_reaver": {
+        "name": "克勞德霍姆掠殺者"
+      },
+      "claudeholme_wraith": {
+        "name": "空殼怨靈"
+      },
+      "plague_acolyte": {
+        "name": "瘟疫信徒"
+      },
+      "bone_construct": {
+        "name": "骸骨構造體"
+      },
+      "ch_gatewarden": {
+        "name": "守門人"
+      },
+      "ch_plaguewright": {
+        "name": "瘟疫匠賽芙拉"
+      },
+      "ch_tollkeeper": {
+        "name": "收魂者"
+      },
+      "ch_maggotlord": {
+        "name": "蛆蟲領主布魯克"
+      },
+      "ch_cantor": {
+        "name": "頌歌者莫沃"
+      },
+      "ch_ashmarshal": {
+        "name": "灰燼元帥"
+      },
+      "ch_bonesmith": {
+        "name": "鑄骨匠"
+      },
+      "ch_veholt": {
+        "name": "空殼之主維霍特"
+      },
       "ironvein_foreman": {
         "name": "鐵脈工頭"
       },
@@ -5525,6 +5663,16 @@ export const zh_TW: EnTranslations = {
         "name": "檔案官維爾",
         "title": "克勞德黎明",
         "greeting": "我能研究的每一片那座死靈城的碎片，都是我們或許有朝一日能撬開的裂縫，{playerName}。把死者身上攜帶之物帶來給我，我們便一同謀劃這場突破。"
+      },
+      "dawn_vanguard_kael": {
+        "name": "先鋒隊長凱爾",
+        "title": "克勞德黎明",
+        "greeting": "克勞德霍姆曾是一座生機盎然的城鎮，{playerName}，直到那艘船的陰影籠罩了它。如今亡者佔據著街道。我們今日就要攻入。"
+      },
+      "dawn_reclaimer_sela": {
+        "name": "回收者賽拉",
+        "title": "克勞德黎明",
+        "greeting": "克勞德霍姆的亡者無法被拯救，{playerName}，只能被解脫。取回這座城鎮失去的東西，並助我鑄成那把開啟克勞德薩拉瑪斯本身的鑰匙。"
       },
       "tidewatcher_ondrel": {
         "name": "翁德瑞爾·韋恩",
@@ -6491,6 +6639,156 @@ export const zh_TW: EnTranslations = {
           }
         }
       },
+      "q_ch_breach": {
+        "title": "克勞德霍姆的突破口",
+        "text": "廢墟中的傳送門通往克勞德霍姆本身，{playerName}，那是一整座被那艘船在一夜之間殺死的城鎮。一名守門人把守著第一翼。擊破他，黎明就在內部立下了據點。",
+        "completion": "大門是我們的了。繼續推進，{playerName}。從這裡開始，街道只會愈發險惡。",
+        "objectives": {
+          "0": {
+            "label": "擊殺守門人"
+          }
+        }
+      },
+      "q_ch_vats": {
+        "title": "瘟疫之槽",
+        "text": "瘟疫匠賽芙拉煉製著讓克勞德霍姆永世不得安息的腐爛之物，{playerName}，就在第二翼深處的槽中。終結她，她的瘟疫之源便會枯竭。",
+        "completion": "賽芙拉倒下了，她的槽也冷卻下來。第二翼的空氣如今幾乎可以呼吸了。",
+        "objectives": {
+          "0": {
+            "label": "擊殺瘟疫匠賽芙拉"
+          }
+        }
+      },
+      "q_ch_toll": {
+        "title": "靈魂的代價",
+        "text": "收魂者在第三翼囤積著城鎮的靈魂，{playerName}，一片片地餵給那艘船。將它斬倒，讓那些靈魂得到自由。",
+        "completion": "收魂者被擊碎了，它所囚禁的靈魂如灰燼般隨風飄散。終於，自由了。",
+        "objectives": {
+          "0": {
+            "label": "擊殺收魂者"
+          }
+        }
+      },
+      "q_ch_pit": {
+        "title": "腐屍之坑",
+        "text": "第四翼是一處腐屍之坑，{playerName}，蛆蟲領主布魯克便是坑底那座由縫合屍體堆成的山。帶上你全部的隊伍。將那東西放倒。",
+        "completion": "布魯克終於迸裂開來。如今那坑可以穿越了，{playerName}，不過我建議你穿越時別吸得太深。",
+        "objectives": {
+          "0": {
+            "label": "擊殺蛆蟲領主布魯克"
+          }
+        }
+      },
+      "q_ch_chapel": {
+        "title": "褻瀆的儀式",
+        "text": "頌歌者莫沃在古老的禮拜堂中率領亡者進行褻瀆的儀式，{playerName}，那是第五翼。他曾是聖光的祭司。讓他的讚歌沉寂，讓禮拜堂得以安息。",
+        "completion": "讚歌已然沉寂。無論那艘船奪去他之前莫沃是何模樣，他如今都已從中解脫。願聖光眷顧他。",
+        "objectives": {
+          "0": {
+            "label": "擊殺頌歌者莫沃"
+          }
+        }
+      },
+      "q_ch_muster": {
+        "title": "粉碎集結",
+        "text": "灰燼元帥在第六翼操練著城鎮的亡者民兵，{playerName}，將他們編入隊列。一支亡者大軍是這片荒原最不需要的東西。擊破他們的指揮官。",
+        "completion": "灰燼元帥倒下了，沒有他，他的隊列便潰散成枯骨。今日沒有任何軍隊能踏出克勞德霍姆。",
+        "objectives": {
+          "0": {
+            "label": "擊殺灰燼元帥"
+          }
+        }
+      },
+      "q_ch_forge": {
+        "title": "讓鑄骨匠沉默",
+        "text": "鑄骨匠在第七翼將亡者鍛造成構造體，{playerName}，為那艘船製造無窮無盡的骸骨士兵。粉碎他的鍛爐，讓他的鐵錘沉寂。",
+        "completion": "鐵錘沉寂了，鍛爐也冷卻了。骸骨士兵的隊列在此終結，{playerName}。如今只剩那位死亡之主。",
+        "objectives": {
+          "0": {
+            "label": "擊殺鑄骨匠"
+          }
+        }
+      },
+      "q_ch_deathlord": {
+        "title": "空殼之主",
+        "text": "空殼之主維霍特從最深的一翼統治著克勞德霍姆，{playerName}，他是那艘船的死亡之主化為血肉之軀。他便是這座城鎮永不得安息的緣由。集結你所能召集的最強者並終結他。徹底解放克勞德霍姆。",
+        "completion": "維霍特死了，一片自那艘船到來後克勞德霍姆便不曾有過的寂靜降臨在這城鎮上。你解放了一處黎明早已放棄的地方，{playerName}。我們不會忘記這份功績。",
+        "objectives": {
+          "0": {
+            "label": "擊殺空殼之主維霍特"
+          }
+        }
+      },
+      "q_ch_streets": {
+        "title": "亡者之街",
+        "text": "在你獵殺各翼之主之前，{playerName}，先削減那些堵塞克勞德霍姆街道的軀殼。十五具，為你身後的先鋒隊清出一條路。",
+        "completion": "十五具軀殼被放倒，街道得以通行。多虧了你，先鋒隊如今可以行動了。",
+        "objectives": {
+          "0": {
+            "label": "擊殺克勞德霍姆軀殼"
+          }
+        }
+      },
+      "q_ch_relics": {
+        "title": "回收的聖物",
+        "text": "克勞德霍姆曾是一座虔誠的城鎮，{playerName}，它的聖物仍散落在曾守護它們的亡者之間。取回六件。重新受到祝福後，它們在黎明手中能發揮的善，遠勝於在黑暗中腐朽。",
+        "completion": "六件聖物，每一件都隨著污穢的消退而漸漸溫熱。這座城鎮一點一點地交還它的信仰，{playerName}，而我們也因此武裝得更為精良。",
+        "objectives": {
+          "0": {
+            "label": "回收的聖物"
+          }
+        }
+      },
+      "q_ch_attune_1": {
+        "title": "空殼中的迴響",
+        "text": "你已與納克薩瑪斯共鳴，{playerName}，但克勞德薩拉瑪斯本身是一道更深的門，而開啟它的鑰匙就在克勞德霍姆。一切從維霍特開始：將他斬倒，把他身上的空殼徽記帶來給我。三塊碎片中的第一塊。",
+        "completion": "空殼徽記在我手中嗡鳴，如同被敲響的鐘。三塊之一，{playerName}。突破鑰匙是真實存在的，而我們已經著手了。",
+        "objectives": {
+          "0": {
+            "label": "空殼徽記"
+          }
+        }
+      },
+      "q_ch_attune_2": {
+        "title": "受污的聖物",
+        "text": "空殼徽記被瘟疫所污染，{playerName}，唯有這座城鎮自身受祝福的聖物才能淨化它。從克勞德霍姆的亡者那裡為我帶來五件回收的聖物，我便會為鑄造而淨化這枚徽記。",
+        "completion": "五件聖物，環繞在徽記四周，污穢如老皮般從它身上剝落。它如今潔淨了，{playerName}，可以送進鍛爐了。",
+        "objectives": {
+          "0": {
+            "label": "回收的聖物"
+          }
+        }
+      },
+      "q_ch_attune_3": {
+        "title": "鑄造突破鑰匙",
+        "text": "徽記需要一個核心來穩固它，{playerName}，而唯有那位死亡之主身懷此物。返回克勞德霍姆，再次將維霍特斬倒，從他的屍體中為我帶來突破核心。第二塊碎片。",
+        "completion": "突破核心，仍帶著維霍特胸膛的寒意。三塊之二，{playerName}。突破鑰匙正在我手中成形。",
+        "objectives": {
+          "0": {
+            "label": "突破核心"
+          }
+        }
+      },
+      "q_ch_attune_4": {
+        "title": "灰鐵與骸骨",
+        "text": "突破鑰匙必須以灰鐵包覆，{playerName}，那是鑄骨匠所鍛造的詛咒金屬。從他在克勞德霍姆的鍛爐中為我帶來一錠灰鐵，外殼便算完成了。",
+        "completion": "灰鐵，仍帶著鑄骨匠爐火的餘溫。外殼已鑄成，{playerName}。如今只剩那位死亡之主的王冠，用以為鑰匙加冕。",
+        "objectives": {
+          "0": {
+            "label": "灰鐵錠"
+          }
+        }
+      },
+      "q_ch_attune_5": {
+        "title": "通往克勞德薩拉瑪斯的鑰匙",
+        "text": "只剩一塊碎片，{playerName}：取自維霍特額前的空殼王冠。最後一次返回克勞德霍姆，奪取那頂王冠，我便會將它安置在突破鑰匙之巔。有了它，克勞德薩拉瑪斯本身將向黎明敞開，而你將帶領我們穿越。",
+        "completion": "完成了。黎明突破鑰匙屬於你了，{playerName}，徽記、核心與王冠盡數包覆於灰鐵之中。當克勞德黎明攻入克勞德薩拉瑪斯時，你將執掌那把開啟它的鑰匙。這個組織再無比你更偉大的勇士。準備就緒吧。突破將至。",
+        "objectives": {
+          "0": {
+            "label": "維霍特的空殼王冠"
+          }
+        }
+      },
       "q_drowned_choir": {
         "title": "溺亡唱詩班",
         "text": "那些涉者並非單獨行動。在牠們之間行走的，是溺亡信徒——隨神殿一同沉沒的邪教徒，仍披著腐朽的法衣，仍從岸岩之間唱著那篇禱文。讓其中八人歸於沉寂，並為我帶回他們所攜的六件供品。我想知道他們要獻給女神的究竟是什麼。",
@@ -6708,6 +7006,11 @@ export const zh_TW: EnTranslations = {
         "name": "尼思拉克西斯團隊競技場",
         "enterText": "你穿過封印的王室之門。",
         "leaveText": "你回到荊峰的寒冷空氣中。"
+      },
+      "claudeholme": {
+        "name": "克勞德霍姆",
+        "enterText": "你穿過裂隙進入克勞德霍姆，死寂的城鎮開始騷動。",
+        "leaveText": "你從克勞德霍姆爬回灰燼般的天光之下。"
       },
       "drowned_temple": {
         "name": "溺亡神殿",

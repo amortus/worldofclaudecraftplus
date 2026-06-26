@@ -4579,6 +4579,105 @@ export const fr_CA: EnTranslations = {
       "dawnstalker_dagger": {
         "name": "Dague du traqueur de l'aube"
       },
+      "pw_feet": {
+        "name": "Solerets du Gardien de peste"
+      },
+      "pw_gloves": {
+        "name": "Gantelets du Gardien de peste"
+      },
+      "pw_waist": {
+        "name": "Ceinturon du Gardien de peste"
+      },
+      "pw_helmet": {
+        "name": "Heaume du Gardien de peste"
+      },
+      "pw_legs": {
+        "name": "Jambières du Gardien de peste"
+      },
+      "pw_shoulder": {
+        "name": "Spallières du Gardien de peste"
+      },
+      "pw_chest": {
+        "name": "Plastron du Gardien de peste"
+      },
+      "pw_mh": {
+        "name": "Fendoir du Gardien de peste"
+      },
+      "hm_feet": {
+        "name": "Chaussons du Mancien creux"
+      },
+      "hm_gloves": {
+        "name": "Bandages du Mancien creux"
+      },
+      "hm_waist": {
+        "name": "Cordon du Mancien creux"
+      },
+      "hm_helmet": {
+        "name": "Capuchon du Mancien creux"
+      },
+      "hm_legs": {
+        "name": "Jambes du Mancien creux"
+      },
+      "hm_shoulder": {
+        "name": "Manteline du Mancien creux"
+      },
+      "hm_chest": {
+        "name": "Robe du Mancien creux"
+      },
+      "hm_mh": {
+        "name": "Sceptre du Mancien creux"
+      },
+      "as_feet": {
+        "name": "Bottes du Traqueur des cendres"
+      },
+      "as_gloves": {
+        "name": "Poignes du Traqueur des cendres"
+      },
+      "as_waist": {
+        "name": "Ceinture du Traqueur des cendres"
+      },
+      "as_helmet": {
+        "name": "Masque du Traqueur des cendres"
+      },
+      "as_legs": {
+        "name": "Gardes-jambes du Traqueur des cendres"
+      },
+      "as_shoulder": {
+        "name": "Épaulières du Traqueur des cendres"
+      },
+      "as_chest": {
+        "name": "Tunique du Traqueur des cendres"
+      },
+      "as_mh": {
+        "name": "Dague du Traqueur des cendres"
+      },
+      "veholt_war": {
+        "name": "Lame creuse de Veholt"
+      },
+      "veholt_mag": {
+        "name": "Murmemort de Veholt"
+      },
+      "veholt_rog": {
+        "name": "Croc creux de Veholt"
+      },
+      "claudeholme_relic": {
+        "name": "Relique récupérée"
+      },
+      "veholt_sigil": {
+        "name": "Sceau creux"
+      },
+      "breach_core": {
+        "name": "Noyau de brèche"
+      },
+      "ash_iron": {
+        "name": "Lingot de fer de cendre"
+      },
+      "hollow_crown": {
+        "name": "Couronne creuse de Veholt"
+      },
+      "breachkey_dawn": {
+        "name": "Clé de brèche de la Dawn"
+      },
       "bristleback_maul": {
         "name": "Maillet Bristleback"
       },
@@ -5286,6 +5385,45 @@ export const fr_CA: EnTranslations = {
       "gravelord_oss": {
         "name": "Seigneur des tombes Oss"
       },
+      "claudeholme_husk": {
+        "name": "Carcasse de Claudeholme"
+      },
+      "claudeholme_reaver": {
+        "name": "Ravageur de Claudeholme"
+      },
+      "claudeholme_wraith": {
+        "name": "Spectre creux"
+      },
+      "plague_acolyte": {
+        "name": "Acolyte de la peste"
+      },
+      "bone_construct": {
+        "name": "Golem d'ossements"
+      },
+      "ch_gatewarden": {
+        "name": "Le Gardien de la porte"
+      },
+      "ch_plaguewright": {
+        "name": "Sevra l'Artisane de peste"
+      },
+      "ch_tollkeeper": {
+        "name": "Le Percepteur de péage"
+      },
+      "ch_maggotlord": {
+        "name": "Brulk le Seigneur des asticots"
+      },
+      "ch_cantor": {
+        "name": "Mowl le Chantre"
+      },
+      "ch_ashmarshal": {
+        "name": "Le Maréchal des cendres"
+      },
+      "ch_bonesmith": {
+        "name": "Le Forgeron d'os"
+      },
+      "ch_veholt": {
+        "name": "Seigneur Veholt le Creux"
+      },
       "ironvein_foreman": {
         "name": "Contremaître Veinefer"
       },
@@ -5525,6 +5663,16 @@ export const fr_CA: EnTranslations = {
         "name": "Archiviste Vael",
         "title": "Dawn of Claude",
         "greeting": "Chaque eclat de cette necropole que je puis etudier est une faille que nous pourrons un jour forcer, {playerName}. Apportez-moi ce que portent les morts, et nous planifierons la breche ensemble."
+      },
+      "dawn_vanguard_kael": {
+        "name": "Capitaine d'avant-garde Kael",
+        "title": "Dawn of Claude",
+        "greeting": "Claudeholme fut jadis une ville vivante, {playerName}, avant que l'ombre du vaisseau ne s'abatte sur elle. À présent ses morts tiennent les rues. Nous l'enfonçons aujourd'hui."
+      },
+      "dawn_reclaimer_sela": {
+        "name": "Récupératrice Sela",
+        "title": "Dawn of Claude",
+        "greeting": "Les morts de Claudeholme ne peuvent être sauvés, {playerName}, seulement libérés. Récupère ce que la ville a perdu, et aide-moi à forger la clé qui ouvre le Claudexxaramas lui-même."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -6491,6 +6639,156 @@ export const fr_CA: EnTranslations = {
           }
         }
       },
+      "q_ch_breach": {
+        "title": "La brèche de Claudeholme",
+        "text": "Le portail dans les ruines s'ouvre sur Claudeholme même, {playerName}, une ville entière que le vaisseau a tuée en une seule nuit. Un Gardien de la porte tient la première aile. Brise-le, et la Dawn aura son point d'ancrage à l'intérieur.",
+        "completion": "La porte est à nous. Continue d'avancer, {playerName}. Les rues ne font qu'empirer à partir d'ici.",
+        "objectives": {
+          "0": {
+            "label": "Le Gardien de la porte abattu"
+          }
+        }
+      },
+      "q_ch_vats": {
+        "title": "Les cuves de peste",
+        "text": "Sevra l'Artisane de peste brasse la pourriture qui maintient Claudeholme dans la mort, {playerName}, dans des cuves au plus profond de la deuxième aile. Mets fin à ses jours, et les puits de sa peste se tariront.",
+        "completion": "Sevra tombe et ses cuves se refroidissent. L'air de la deuxième aile est presque respirable à présent.",
+        "objectives": {
+          "0": {
+            "label": "Sevra l'Artisane de peste abattue"
+          }
+        }
+      },
+      "q_ch_toll": {
+        "title": "Le péage des âmes",
+        "text": "Le Percepteur de péage amasse les âmes de la ville à la troisième aile, {playerName}, les livrant au vaisseau pièce par pièce. Abats-le et laisse ces âmes s'envoler libres.",
+        "completion": "Le Percepteur de péage est brisé, et les âmes qu'il retenait se dispersent comme cendre au vent. Libres, enfin.",
+        "objectives": {
+          "0": {
+            "label": "Le Percepteur de péage abattu"
+          }
+        }
+      },
+      "q_ch_pit": {
+        "title": "La fosse à charogne",
+        "text": "La quatrième aile est une fosse à charogne, {playerName}, et Brulk le Seigneur des asticots est la montagne de morts cousus qui en occupe le fond. Emmène tout ton groupe. Mets cette chose à terre.",
+        "completion": "Brulk éclate enfin en morceaux. La fosse peut être traversée à présent, {playerName}, mais je ne respirerais pas profondément en le faisant.",
+        "objectives": {
+          "0": {
+            "label": "Brulk le Seigneur des asticots abattu"
+          }
+        }
+      },
+      "q_ch_chapel": {
+        "title": "Rites profanes",
+        "text": "Mowl le Chantre mène les morts dans des rites profanes au sein de la vieille chapelle, {playerName}, la cinquième aile. Il fut jadis un prêtre de la Lumière. Fais taire son hymne et laisse la chapelle reposer.",
+        "completion": "L'hymne s'est tu. Quel qu'ait été Mowl avant que le vaisseau ne le prenne, il en est libéré à présent. Que la Lumière le garde.",
+        "objectives": {
+          "0": {
+            "label": "Mowl le Chantre abattu"
+          }
+        }
+      },
+      "q_ch_muster": {
+        "title": "Briser le rassemblement",
+        "text": "Le Maréchal des cendres entraîne la milice morte de la ville dans la sixième aile, {playerName}, les rassemblant en rangs. Une armée de morts est la dernière chose dont ces terres désolées ont besoin. Brise leur commandant.",
+        "completion": "Le Maréchal des cendres est à terre et ses rangs s'effondrent en ossements sans lui. Aucune armée ne marche hors de Claudeholme aujourd'hui.",
+        "objectives": {
+          "0": {
+            "label": "Le Maréchal des cendres abattu"
+          }
+        }
+      },
+      "q_ch_forge": {
+        "title": "Faire taire le Forgeron d'os",
+        "text": "Le Forgeron d'os façonne les morts en golems dans la septième aile, {playerName}, une lignée sans fin de soldats d'os pour le vaisseau. Fracasse sa forge et fais taire son marteau.",
+        "completion": "Le marteau s'est tu et la forge est froide. La lignée de soldats d'os s'achève ici, {playerName}. Seul le seigneur de la mort demeure.",
+        "objectives": {
+          "0": {
+            "label": "Le Forgeron d'os abattu"
+          }
+        }
+      },
+      "q_ch_deathlord": {
+        "title": "Le Seigneur creux",
+        "text": "Seigneur Veholt le Creux règne sur Claudeholme depuis l'aile la plus profonde, {playerName}, le seigneur de la mort du vaisseau fait chair. Il est la raison pour laquelle la ville ne repose jamais. Rassemble les plus puissants que tu puisses trouver et mets fin à ses jours. Libère Claudeholme pour de bon.",
+        "completion": "Veholt est mort, et une immobilité s'abat sur Claudeholme que la ville n'a pas connue depuis la venue du vaisseau. Tu as libéré un lieu que la Dawn avait condamné, {playerName}. Nous ne l'oublierons pas.",
+        "objectives": {
+          "0": {
+            "label": "Seigneur Veholt le Creux abattu"
+          }
+        }
+      },
+      "q_ch_streets": {
+        "title": "Les rues des morts",
+        "text": "Avant de traquer les seigneurs des ailes, {playerName}, éclaircis les carcasses qui engorgent les rues de Claudeholme. Quinze d'entre elles, pour dégager un passage à l'avant-garde derrière toi.",
+        "completion": "Quinze carcasses abattues, et les rues sont praticables. L'avant-garde peut avancer à présent, grâce à toi.",
+        "objectives": {
+          "0": {
+            "label": "Carcasse de Claudeholme abattue"
+          }
+        }
+      },
+      "q_ch_relics": {
+        "title": "Reliques récupérées",
+        "text": "Claudeholme fut jadis une ville pieuse, {playerName}, et ses reliques gisent encore parmi les morts qui les gardaient autrefois. Récupères-en six. Bénies de nouveau, elles feront plus de bien entre les mains de la Dawn qu'à pourrir dans les ténèbres.",
+        "completion": "Six reliques, chacune se réchauffant à mesure que la souillure se dissipe. La ville rend sa foi peu à peu, {playerName}, et nous en sommes mieux armés.",
+        "objectives": {
+          "0": {
+            "label": "Relique récupérée"
+          }
+        }
+      },
+      "q_ch_attune_1": {
+        "title": "Échos dans le creux",
+        "text": "Tu es harmonisé à Naxxramas, {playerName}, mais le Claudexxaramas lui-même est une porte plus profonde, et la clé qui l'ouvre repose dans Claudeholme. Tout commence avec Veholt : abats-le et rapporte-moi le Sceau creux qu'il porte. Le premier de trois fragments.",
+        "completion": "Le Sceau creux résonne dans ma main comme une cloche frappée. Un fragment sur trois, {playerName}. La clé de brèche est réelle, et nous l'avons commencée.",
+        "objectives": {
+          "0": {
+            "label": "Sceau creux"
+          }
+        }
+      },
+      "q_ch_attune_2": {
+        "title": "Les reliques souillées",
+        "text": "Le Sceau creux est souillé de peste, {playerName}, et seules les reliques bénies de la ville pourront le purifier. Rapporte-moi cinq reliques récupérées sur les morts de Claudeholme, et je purifierai le sceau pour la forge.",
+        "completion": "Cinq reliques, disposées autour du sceau, et la souillure s'en détache comme une vieille peau. Il est pur à présent, {playerName}, et prêt pour la forge.",
+        "objectives": {
+          "0": {
+            "label": "Relique récupérée"
+          }
+        }
+      },
+      "q_ch_attune_3": {
+        "title": "Forger la clé de brèche",
+        "text": "Le sceau a besoin d'un noyau pour l'ancrer, {playerName}, et seul le seigneur de la mort en porte un. Retourne à Claudeholme, abats Veholt de nouveau, et rapporte-moi le Noyau de brèche de son cadavre. Le deuxième fragment.",
+        "completion": "Le Noyau de brèche, encore froid de la poitrine de Veholt. Deux fragments sur trois, {playerName}. La clé de brèche prend forme entre mes mains.",
+        "objectives": {
+          "0": {
+            "label": "Noyau de brèche"
+          }
+        }
+      },
+      "q_ch_attune_4": {
+        "title": "Fer de cendre et os",
+        "text": "La clé de brèche doit être enchâssée dans du fer de cendre, {playerName}, le métal maudit que travaille le Forgeron d'os. Rapporte-moi un lingot de fer de cendre de sa forge à Claudeholme, et l'enchâssement sera achevé.",
+        "completion": "Du fer de cendre, encore chaud du feu du Forgeron d'os. L'enchâssement est coulé, {playerName}. Seule la couronne du seigneur de la mort manque pour couronner la clé.",
+        "objectives": {
+          "0": {
+            "label": "Lingot de fer de cendre"
+          }
+        }
+      },
+      "q_ch_attune_5": {
+        "title": "La clé du Claudexxaramas",
+        "text": "Un fragment demeure, {playerName} : la Couronne creuse du front même de Veholt. Retourne à Claudeholme une dernière fois, prends la couronne, et je la poserai au sommet de la clé de brèche. Avec elle, le Claudexxaramas lui-même s'ouvrira à la Dawn, et tu nous y conduiras.",
+        "completion": "C'est achevé. La Clé de brèche de la Dawn est tienne, {playerName}, sceau, noyau et couronne tous enchâssés dans le fer de cendre. Quand la Dawn of Claude prendra d'assaut le Claudexxaramas, c'est toi qui porteras la clé qui l'ouvre. Il n'est pas de plus grand champion de cet ordre. Tiens-toi prêt. La brèche approche.",
+        "objectives": {
+          "0": {
+            "label": "Couronne creuse de Veholt"
+          }
+        }
+      },
       "q_drowned_choir": {
         "title": "Le Chœur noyé",
         "text": "Les pataugeurs n'agissent pas seuls. Parmi eux marchent les Dévots noyés — la secte qui a sombré avec le temple, encore vêtue de ses ornements putréfiés, chantant toujours la prière depuis les rochers du rivage. Réduis-en huit au silence et rapporte-moi six des offrandes qu'ils portent. Je veux savoir ce qu'ils comptent donner à leur déesse.",
@@ -6708,6 +7006,11 @@ export const fr_CA: EnTranslations = {
         "name": "Arène de raid de Nythraxis",
         "enterText": "Vous franchissez la porte royale scellée.",
         "leaveText": "Vous retrouvez l'air froid de Thornpeak."
+      },
+      "claudeholme": {
+        "name": "Claudeholme",
+        "enterText": "Vous franchissez la breche vers Claudeholme, et la ville morte s'eveille.",
+        "leaveText": "Vous remontez de Claudeholme vers la lumiere cendreuse."
       },
       "drowned_temple": {
         "name": "Le Temple noyé",
