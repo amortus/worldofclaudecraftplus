@@ -211,6 +211,13 @@ function sampleVertex(x: number, z: number, seed: number): VertexSample {
   cTmp.lerp(grassYellowC, v2 * 0.35);
   // the marsh reads muddier: patches of wet dirt across the lowland
   if (biome === 'marsh') lerpSplat(w, 1, 0.3 * v2 * clamp01((4 - h) / 6));
+  // the blight is dead bare earth: the splat defaults to the GREEN grass texture,
+  // so drop it for the dirt layer and pull the tint toward bare brown. Without
+  // this the 3D ground stays grassy-green even though the palette/minimap is brown.
+  if (biome === 'blight') {
+    lerpSplat(w, 1, 0.9);
+    cTmp.lerp(dirtC, 0.6);
+  }
   // shoreline sand — color and splat weight share one feathered falloff so
   // the beach blends out instead of cutting a razor-hard grass/sand line
   const shore = clamp01((WATER_LEVEL + 1.6 - h) / 1.6);
