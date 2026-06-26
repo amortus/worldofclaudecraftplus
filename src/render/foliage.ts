@@ -841,7 +841,9 @@ interface DressingSpot {
 
 const DRESS_STEP_HIGH = 12;
 const DRESS_STEP_LOW = 10;
-const DRESS_DENSITY: Record<BiomeId, number> = { vale: 0.26, marsh: 0.26, peaks: 0.15, blight: 0.1 };
+// blight: 0 - the dead wasteland has no living ground dressing (no green ferns/
+// bushes); the bare ashen ground + dead trees + rocks carry the look.
+const DRESS_DENSITY: Record<BiomeId, number> = { vale: 0.26, marsh: 0.26, peaks: 0.15, blight: 0 };
 const DRESS_DENSITY_LOW_SCALE = 1.24;
 const DRESS_LOW_SCALE_BOOST = 1.08;
 const DRESS_TINT_SOFTEN_LOW = 0.56;
