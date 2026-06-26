@@ -297,17 +297,19 @@ export class Vfx {
     if (!this.emitChance(8, dt)) return;
     const green = new THREE.Color(0x5fbf3a).multiplyScalar(hdr(1.25));
     const a = Math.random() * Math.PI * 2;
-    const r = 0.2 + Math.random() * 0.45;
+    // spread (emit radius, horizontal drift, rise, lifetime) widened ~50% so the
+    // corruption smoke propagates further off the creature
+    const r = 0.3 + Math.random() * 0.68;
     this.spawn(
       x + Math.cos(a) * r,
       y + 0.15 + Math.random() * 0.35,
       z + Math.sin(a) * r,
-      (Math.random() - 0.5) * 0.15,
-      0.45 + Math.random() * 0.4,
-      (Math.random() - 0.5) * 0.15,
+      (Math.random() - 0.5) * 0.23,
+      0.55 + Math.random() * 0.5,
+      (Math.random() - 0.5) * 0.23,
       green,
-      0.4 + Math.random() * 0.35,
-      1.1 + Math.random() * 0.8,
+      0.45 + Math.random() * 0.4,
+      1.4 + Math.random() * 1.0,
       -0.12,
       Math.random() < 0.5 ? SPR.smoke : SPR.magicWisp,
     );
