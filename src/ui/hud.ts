@@ -8336,7 +8336,13 @@ export class Hud {
     renderVendorWindow(
       $('#vendor-window'),
       entityDisplayName(npc),
-      buildVendorView(npc.vendorItems, this.sim.vendorBuyback, ITEMS),
+      buildVendorView(
+        npc.vendorItems,
+        this.sim.vendorBuyback,
+        ITEMS,
+        NPCS[npc.templateId]?.vendorReqs,
+        this.sim.reputation,
+      ),
       {
         itemIcon: (item) => this.itemIcon(item),
         moneyHtml: (copper) => this.moneyHtml(copper),

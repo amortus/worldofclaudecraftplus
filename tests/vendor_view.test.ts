@@ -36,6 +36,39 @@ describe('buildVendorView goods', () => {
   });
 });
 
+describe('buildVendorView reputation gate', () => {
+  const items = table(item('plate', { buyValue: 100 }), item('boots', { buyValue: 50 }));
+  const reqs = {
+    plate: { faction: 'dawn_of_claude', standing: 'exalted' as const },
+    boots: { faction: 'dawn_of_claude', standing: 'friendly' as const },
+  };
+
+  it('locks a gated item when the player lacks the required standing', () => {
+    // 3000 reputation = Friendly: meets boots (Friendly), not plate (Exalted).
+    const view = buildVendorView(['plate', 'boots'], [], items, reqs, { dawn_of_claude: 3000 });
+    const plate = view.goods.find((g) => g.itemId === 'plate')!;
+    const boots = view.goods.find((g) => g.itemId === 'boots')!;
+    expect(plate.locked).toBe(true);
+    expect(plate.reqStanding).toBe('exalted');
+    expect(plate.reqFaction).toBe('dawn_of_claude');
+    expect(boots.locked).toBe(false);
+    expect(boots.reqStanding).toBe('friendly');
+  });
+
+  it('unlocks a gated item once the standing is met', () => {
+    const view = buildVendorView(['plate'], [], items, reqs, { dawn_of_claude: 42000 }); // Exalted
+    expect(view.goods[0].locked).toBe(false);
+    expect(view.goods[0].reqStanding).toBe('exalted');
+  });
+
+  it('leaves ungated items unlocked with no req fields', () => {
+    const view = buildVendorView(['plate'], [], items);
+    expect(view.goods[0].locked).toBe(false);
+    expect(view.goods[0].reqStanding).toBeUndefined();
+    expect(view.goods[0].reqFaction).toBeUndefined();
+  });
+});
+
 describe('buildVendorView buyback', () => {
   it('lists redeemable buyback slots with sell-value price and count', () => {
     const items = table(item('sword', { sellValue: 12 }));

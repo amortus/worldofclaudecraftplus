@@ -214,6 +214,8 @@ export const ru_RU: EnTranslations = {
     "reputation": {
       "empty": "У вас пока нет репутаций.",
       "maxed": "Максимум",
+      "requires": "Требуется {standing} с {faction}",
+      "lockedHint": "Нужна более высокая репутация, чтобы купить это.",
       "standing": {
         "hated": "Ненависть",
         "hostile": "Враждебность",

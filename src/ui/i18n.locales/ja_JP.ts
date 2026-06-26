@@ -3415,6 +3415,8 @@ export const ja_JP: Partial<Record<TranslationKey, string>> = {
   'hudChrome.character.tabReputation': '評判',
   'hudChrome.reputation.empty': 'まだ評判がありません。',
   'hudChrome.reputation.maxed': '最大',
+  'hudChrome.reputation.requires': "{faction}で{standing}が必要",
+  'hudChrome.reputation.lockedHint': "これを購入するにはより高い評判が必要です。",
   'hudChrome.reputation.standing.hated': '敵対',
   'hudChrome.reputation.standing.hostile': '敵視',
   'hudChrome.reputation.standing.unfriendly': '非友好的',

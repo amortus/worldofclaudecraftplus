@@ -214,6 +214,8 @@ export const zh_CN: EnTranslations = {
     "reputation": {
       "empty": "你还没有任何声望。",
       "maxed": "已满",
+      "requires": "需要{faction}声望达到{standing}",
+      "lockedHint": "你需要更高的声望才能购买此物品。",
       "standing": {
         "hated": "仇恨",
         "hostile": "敌对",

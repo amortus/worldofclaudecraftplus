@@ -10,6 +10,7 @@
 import { esc } from './esc';
 import { itemDisplayName } from './entity_i18n';
 import { formatMoney as formatLocalizedMoney, t } from './i18n';
+import { repRequirementText } from './reputation_labels';
 import { svgIcon } from './ui_icons';
 import type { ItemDef } from '../sim/types';
 import type { VendorView } from './vendor_view';
@@ -48,16 +49,35 @@ export function renderVendorWindow(
   const scrollTop = el.scrollTop;
   el.innerHTML = `<div class="panel-title"><span>${esc(t('itemUi.vendor.goodsTitle', { name: vendorName }))}</span><button type="button" class="x-btn" data-close aria-label="${esc(t('itemUi.vendor.close'))}">${svgIcon('close')}</button></div>`;
 
-  for (const { itemId, item, price: priceCopper } of view.goods) {
+  for (const { itemId, item, price: priceCopper, locked, reqStanding, reqFaction } of view.goods) {
     const row = document.createElement('button');
     row.type = 'button';
-    row.className = 'vendor-item';
+    row.className = locked ? 'vendor-item vendor-item-locked' : 'vendor-item';
     const price = formatLocalizedMoney(priceCopper);
     const itemName = itemDisplayName(item);
-    row.setAttribute('aria-label', t('itemUi.vendor.buyAria', { item: itemName, price }));
-    row.innerHTML = `${deps.itemIcon(item)}<span class="vi-name">${esc(itemName)}</span><span class="vi-price">${deps.moneyHtml(priceCopper)}</span>`;
-    row.addEventListener('click', () => deps.onBuy(itemId));
-    deps.attachTooltip(row, () => deps.itemTooltip(item) + `<div class="tt-sub">${esc(t('itemUi.tooltip.clickBuy'))}</div>`);
+    // Rep gate: show the required standing inline (and grey out / disable the row
+    // until the player earns it), so it is clear why the purchase is unavailable.
+    const reqText = reqStanding && reqFaction ? repRequirementText(reqFaction, reqStanding) : '';
+    const reqHtml = reqText
+      ? `<span class="vi-req${locked ? ' vi-req-unmet' : ''}">${esc(reqText)}</span>`
+      : '';
+    row.setAttribute(
+      'aria-label',
+      locked && reqText ? `${itemName}, ${reqText}` : t('itemUi.vendor.buyAria', { item: itemName, price }),
+    );
+    if (locked) row.setAttribute('aria-disabled', 'true');
+    row.innerHTML = `${deps.itemIcon(item)}<span class="vi-name">${esc(itemName)}${reqHtml}</span><span class="vi-price">${deps.moneyHtml(priceCopper)}</span>`;
+    row.addEventListener('click', () => {
+      if (!locked) deps.onBuy(itemId);
+    });
+    deps.attachTooltip(row, () => {
+      let html = deps.itemTooltip(item);
+      if (reqText) {
+        html += `<div class="tt-req${locked ? ' tt-req-unmet' : ''}">${esc(reqText)}</div>`;
+      }
+      html += `<div class="tt-sub">${esc(t(locked ? 'hudChrome.reputation.lockedHint' : 'itemUi.tooltip.clickBuy'))}</div>`;
+      return html;
+    });
     el.appendChild(row);
   }
 

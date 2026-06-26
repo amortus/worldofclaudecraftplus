@@ -3385,6 +3385,8 @@ export const pt_BR: Partial<Record<TranslationKey, string>> = {
   'hudChrome.character.tabReputation': 'Reputação',
   'hudChrome.reputation.empty': 'Você ainda não tem reputações.',
   'hudChrome.reputation.maxed': 'Máximo',
+  'hudChrome.reputation.requires': "Requer {standing} com {faction}",
+  'hudChrome.reputation.lockedHint': "Você precisa de mais reputação para comprar isto.",
   'hudChrome.reputation.standing.hated': 'Odiado',
   'hudChrome.reputation.standing.hostile': 'Hostil',
   'hudChrome.reputation.standing.unfriendly': 'Inamistoso',

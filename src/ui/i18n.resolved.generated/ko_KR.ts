@@ -214,6 +214,8 @@ export const ko_KR: EnTranslations = {
     "reputation": {
       "empty": "아직 평판이 없습니다.",
       "maxed": "최대",
+      "requires": "{faction} 평판이 {standing} 필요",
+      "lockedHint": "이것을 구매하려면 더 높은 평판이 필요합니다.",
       "standing": {
         "hated": "증오",
         "hostile": "적대",

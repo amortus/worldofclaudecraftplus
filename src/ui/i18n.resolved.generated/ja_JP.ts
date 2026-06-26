@@ -214,6 +214,8 @@ export const ja_JP: EnTranslations = {
     "reputation": {
       "empty": "まだ評判がありません。",
       "maxed": "最大",
+      "requires": "{faction}で{standing}が必要",
+      "lockedHint": "これを購入するにはより高い評判が必要です。",
       "standing": {
         "hated": "敵対",
         "hostile": "敵視",

@@ -214,6 +214,8 @@ export const en_XA: EnTranslations = {
     "reputation": {
       "empty": "[Ýóú ĥáʋé ñó ŕéþúţáţíóñš ýéţ.]",
       "maxed": "[Ɱáẋéð]",
+      "requires": "[Ŕéɋúíŕéš {standing} ŵíţĥ {faction}]",
+      "lockedHint": "[Ýóú ñééð á ĥíĝĥéŕ ŕéþúţáţíóñ ţó ƀúý ţĥíš.]",
       "standing": {
         "hated": "[Ĥáţéð]",
         "hostile": "[Ĥóšţíļé]",

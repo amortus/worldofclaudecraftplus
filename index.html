@@ -1746,8 +1746,15 @@
   #vendor-window { width: 400px; }
   .vendor-item { display: flex; gap: 8px; align-items: center; width: 100%; padding: 5px; border: 0; border-radius: 4px; cursor: var(--cursor-point); background: transparent; color: inherit; font-family: var(--ui-font); text-align: left; }
   .vendor-item:hover { background: #ffffff10; }
-  .vendor-item .vi-name { font-size: 12px; flex: 1; }
+  .vendor-item .vi-name { font-size: 12px; flex: 1; display: flex; flex-direction: column; }
   .vendor-item .vi-price { font-size: 11px; color: #ddd; }
+  /* Reputation-gated vendor goods: required standing inline, locked rows greyed. */
+  .vendor-item .vi-req { font-size: 10px; color: #c9b27a; margin-top: 1px; }
+  .vendor-item .vi-req.vi-req-unmet { color: #e06a5a; }
+  .vendor-item-locked { opacity: 0.5; cursor: var(--cursor-default, default); }
+  .vendor-item-locked:hover { background: #ffffff08; }
+  #tooltip .tt-req { color: #c9b27a; font-size: 11px; margin-top: 2px; }
+  #tooltip .tt-req.tt-req-unmet { color: #e06a5a; }
   .vendor-sell-junk { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 40px; margin-top: 8px; padding: 8px; border: 1px solid #6a5320; border-radius: 4px; cursor: var(--cursor-point); background: linear-gradient(#8a6a26, #5a4413 55%, #473409); color: #ffe6a8; font-family: var(--title-font); font-size: 12px; }
   .vendor-sell-junk .vi-name { flex: 0 1 auto; }
   .vendor-sell-junk:hover:not(:disabled) { filter: brightness(1.12); }

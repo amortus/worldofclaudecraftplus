@@ -214,6 +214,8 @@ export const en: EnTranslations = {
     "reputation": {
       "empty": "You have no reputations yet.",
       "maxed": "Maxed",
+      "requires": "Requires {standing} with {faction}",
+      "lockedHint": "You need a higher reputation to buy this.",
       "standing": {
         "hated": "Hated",
         "hostile": "Hostile",

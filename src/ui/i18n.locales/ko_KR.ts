@@ -3418,6 +3418,8 @@ export const ko_KR: Partial<Record<TranslationKey, string>> = {
   'hudChrome.character.tabReputation': '평판',
   'hudChrome.reputation.empty': '아직 평판이 없습니다.',
   'hudChrome.reputation.maxed': '최대',
+  'hudChrome.reputation.requires': "{faction} 평판이 {standing} 필요",
+  'hudChrome.reputation.lockedHint': "이것을 구매하려면 더 높은 평판이 필요합니다.",
   'hudChrome.reputation.standing.hated': '증오',
   'hudChrome.reputation.standing.hostile': '적대',
   'hudChrome.reputation.standing.unfriendly': '비우호',

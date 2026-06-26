@@ -10,12 +10,25 @@
 // DOM-free and i18n-free so tests/vendor_view.test.ts can drive it directly.
 
 import type { InvSlot, ItemDef } from '../sim/types';
+import { atLeastStanding, type ReputationStanding } from '../sim/reputation';
+
+/** A vendor's per-item reputation gate (mirrors NpcDef.vendorReqs entries). */
+export interface VendorReq {
+  faction: string;
+  standing: ReputationStanding;
+}
 
 export interface VendorGoodsRow {
   itemId: string;
   item: ItemDef;
   /** Copper the vendor sells this item for. Always > 0 for a goods row. */
   price: number;
+  /** Faction whose standing gates this item, if any. */
+  reqFaction?: string;
+  /** Standing required to buy it, if gated. */
+  reqStanding?: ReputationStanding;
+  /** True iff the item is rep-gated AND the player does not yet meet the gate. */
+  locked: boolean;
 }
 
 export interface VendorBuybackRow {
@@ -42,12 +55,23 @@ export function buildVendorView(
   vendorItemIds: readonly string[],
   buybackSlots: readonly InvSlot[],
   items: Record<string, ItemDef>,
+  vendorReqs?: Record<string, VendorReq>,
+  reputation?: Record<string, number>,
 ): VendorView {
   const goods: VendorGoodsRow[] = [];
   for (const itemId of vendorItemIds) {
     const item = items[itemId];
     if (!item?.buyValue) continue;
-    goods.push({ itemId, item, price: item.buyValue });
+    const req = vendorReqs?.[itemId];
+    const locked = req ? !atLeastStanding(reputation?.[req.faction] ?? 0, req.standing) : false;
+    goods.push({
+      itemId,
+      item,
+      price: item.buyValue,
+      reqFaction: req?.faction,
+      reqStanding: req?.standing,
+      locked,
+    });
   }
   const buyback: VendorBuybackRow[] = [];
   for (const slot of buybackSlots) {

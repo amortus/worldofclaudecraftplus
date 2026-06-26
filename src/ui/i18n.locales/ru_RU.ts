@@ -3466,6 +3466,8 @@ export const ru_RU: Partial<Record<TranslationKey, string>> = {
   'hudChrome.character.tabReputation': 'Репутация',
   'hudChrome.reputation.empty': 'У вас пока нет репутаций.',
   'hudChrome.reputation.maxed': 'Максимум',
+  'hudChrome.reputation.requires': "Требуется {standing} с {faction}",
+  'hudChrome.reputation.lockedHint': "Нужна более высокая репутация, чтобы купить это.",
   'hudChrome.reputation.standing.hated': 'Ненависть',
   'hudChrome.reputation.standing.hostile': 'Враждебность',
   'hudChrome.reputation.standing.unfriendly': 'Неприязнь',

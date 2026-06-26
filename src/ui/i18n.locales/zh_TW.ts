@@ -3268,6 +3268,8 @@ export const zh_TW: Partial<Record<TranslationKey, string>> = {
   'hudChrome.character.tabReputation': '聲望',
   'hudChrome.reputation.empty': '你還沒有任何聲望。',
   'hudChrome.reputation.maxed': '已滿',
+  'hudChrome.reputation.requires': "需要{faction}聲望達到{standing}",
+  'hudChrome.reputation.lockedHint': "你需要更高的聲望才能購買此物品。",
   'hudChrome.reputation.standing.hated': '仇恨',
   'hudChrome.reputation.standing.hostile': '敵對',
   'hudChrome.reputation.standing.unfriendly': '不友好',
