@@ -136,7 +136,7 @@ import {
   isCompleteTotpCode,
 } from './ui/two_factor_setup';
 import { hydrateIcons } from './ui/ui_icons';
-import { warmIconsIdle } from './ui/icon_warm';
+import { warmPlayerIcons } from './ui/icon_warm';
 import {
   resolveWocBalanceUpdate,
   setWalletDisplayAvailable,
@@ -847,14 +847,10 @@ async function startGame(
     hud = new Hud(world, renderer, keybinds);
     perf.setHud(hud);
     hydrateIcons(); // swap [data-icon] placeholders (micro-menu, mobile bar, meters) for inline SVG
-    // Pre-generate the player's ability icons during browser idle time so the first
-    // open of the spellbook / talents / action bar doesn't synchronously toDataURL
-    // dozens of icons on a keypress (the >1s INP stall the perf panel showed).
-    warmIconsIdle(
-      (CLASSES[world.player.templateId as keyof typeof CLASSES]?.abilities ?? []).map(
-        (id) => ({ kind: 'ability' as const, id }),
-      ),
-    );
+    // Pre-generate the player's panel icons (ability / item / talent) during browser
+    // idle time so the first open of the spellbook / talents / bags / character window
+    // doesn't synchronously toDataURL dozens of icons on a keypress (the INP stall).
+    warmPlayerIcons(world);
   } catch (err) {
     // e.g. WebGL context creation failure: surface it instead of leaving the
     // loading screen up forever
