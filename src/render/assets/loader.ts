@@ -28,9 +28,9 @@ function constrainedBrowser(): boolean {
 }
 
 const constrained = constrainedBrowser();
-const gltfQueue: AssetQueue = { active: 0, limit: constrained ? 2 : 4, pending: [] };
-const textureQueue: AssetQueue = { active: 0, limit: constrained ? 3 : 6, pending: [] };
-const hdrQueue: AssetQueue = { active: 0, limit: 1, pending: [] };
+const gltfQueue: AssetQueue = { active: 0, limit: constrained ? 2 : 8, pending: [] };
+const textureQueue: AssetQueue = { active: 0, limit: constrained ? 3 : 8, pending: [] };
+const hdrQueue: AssetQueue = { active: 0, limit: constrained ? 1 : 3, pending: [] };
 
 function pumpQueue(q: AssetQueue): void {
   while (q.active < q.limit && q.pending.length > 0) {

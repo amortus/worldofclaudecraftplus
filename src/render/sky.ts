@@ -118,7 +118,8 @@ function shouldUseLiteBackdrop(): boolean {
     const params = new URLSearchParams(location.search);
     const forced = params.get('backdrop') ?? params.get('skybox');
     if (forced === '4k' || forced === 'lite') return true;
-    if (forced === '8k' || forced === 'high') return false;
+    // 8K only when explicitly requested or ultra gfx — default is 4K
+    if (forced === '8k' || forced === 'high' || params.get('gfx') === 'ultra') return false;
   }
   if (typeof navigator !== 'undefined') {
     const nav = navigator as NavigatorWithBackdropHints;
@@ -130,7 +131,8 @@ function shouldUseLiteBackdrop(): boolean {
       if (matchMedia('(pointer: coarse)').matches || matchMedia('(max-width: 900px)').matches) return true;
     }
   }
-  return false;
+  // Default to 4K — 8K requires explicit opt-in (?backdrop=8k or ?gfx=ultra)
+  return true;
 }
 
 const BIOME_BACKDROP = shouldUseLiteBackdrop() ? BIOME_BACKDROP_4K : BIOME_BACKDROP_8K;
