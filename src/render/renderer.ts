@@ -1252,13 +1252,23 @@ export class Renderer {
       });
     }
 
-    // particle system: projectiles, impacts, heal glows, ambience
+    // particle system: projectiles, impacts, heal glows, ambience. The anchor
+    // callback runs per projectile/caster per frame, so it writes into a 2-slot
+    // round-robin scratch instead of allocating a Vector3 each call. Two slots
+    // because some emits (e.g. beam) resolve two anchors that must not alias.
+    const anchorScratch = [new THREE.Vector3(), new THREE.Vector3()];
+    let anchorSlot = 0;
     this.vfx = new Vfx(this.scene, (id, frac) => {
       const v = this.views.get(id);
       if (!v) return null;
       const e = this.sim.entities.get(id);
       const h = v.height * (e?.scale ?? 1) * frac;
-      return new THREE.Vector3(v.group.position.x, v.group.position.y + h, v.group.position.z);
+      anchorSlot ^= 1;
+      return anchorScratch[anchorSlot].set(
+        v.group.position.x,
+        v.group.position.y + h,
+        v.group.position.z,
+      );
     });
     this.vfx.setViewportScale(this.webgl.domElement.clientHeight * this.webgl.getPixelRatio(), 60);
 

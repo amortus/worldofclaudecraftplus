@@ -135,6 +135,8 @@ export class Vfx {
   private head = 0;
   private projectiles: Projectile[] = [];
   private tmpColor = new THREE.Color();
+  private tmpDir = new THREE.Vector3(); // homing-step scratch (per projectile per frame)
+  private readonly blightGreen = new THREE.Color(0x5fbf3a).multiplyScalar(hdr(1.25));
   private quality = 1;
 
   constructor(scene: THREE.Scene, private anchor: EntityAnchor) {
@@ -295,7 +297,6 @@ export class Vfx {
   // frame at the creature's position; it self-throttles by emit rate + quality.
   blightAura(x: number, y: number, z: number, dt: number): void {
     if (!this.emitChance(8, dt)) return;
-    const green = new THREE.Color(0x5fbf3a).multiplyScalar(hdr(1.25));
     const a = Math.random() * Math.PI * 2;
     // spread (emit radius, horizontal drift, rise, lifetime) widened ~50% so the
     // corruption smoke propagates further off the creature
@@ -307,7 +308,7 @@ export class Vfx {
       (Math.random() - 0.5) * 0.23,
       0.55 + Math.random() * 0.5,
       (Math.random() - 0.5) * 0.23,
-      green,
+      this.blightGreen,
       0.45 + Math.random() * 0.4,
       1.4 + Math.random() * 1.0,
       -0.12,
@@ -512,7 +513,7 @@ export class Vfx {
         this.projectiles.splice(i, 1);
         continue;
       }
-      const dir = target.clone().sub(pr.pos);
+      const dir = this.tmpDir.copy(target).sub(pr.pos);
       const dist = dir.length();
       const step = pr.speed * dt;
       if (dist <= Math.max(0.7, step)) {

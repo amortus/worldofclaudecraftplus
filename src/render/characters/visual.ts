@@ -370,6 +370,7 @@ export class CharacterVisual {
   }
 
   setGhost(on: boolean): void {
+    if (on === this.ghosted) return; // called unconditionally every frame per visible char
     this.ghosted = on;
     this.applyVisualMaterials();
   }
