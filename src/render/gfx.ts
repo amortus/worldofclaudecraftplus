@@ -83,6 +83,10 @@ export interface GfxSettings {
   readonly terrainSplat: boolean;
   readonly windSway: boolean;
   readonly maxPointLights: number;
+  /** Texture anisotropy cap (desktop 8; mobile tiers drop it: anisotropic filtering is costly). */
+  readonly anisotropy: number;
+  /** Build ONE shared IBL cubemap instead of one per biome (mobile VRAM + boot win). */
+  readonly singleIbl: boolean;
 }
 
 export interface GfxRuntimeBudget {
@@ -308,6 +312,8 @@ function settingsFor(
     terrainSplat: tier === 'medium' || tier === 'high' || tier === 'ultra',
     windSway: true,
     maxPointLights: 6,
+    anisotropy: tier === 'low' ? 1 : tier === 'medium' ? 2 : 8,
+    singleIbl: tier === 'low' || tier === 'medium',
   };
   if (hints?.graphicsPreset === PRESET_ADVANCED) {
     if ((hints.terrainDetail ?? 1) < 0.5) settings = { ...settings, terrainSplat: false };

@@ -973,7 +973,10 @@ export class Renderer {
     // the environment intensity is rescaled to match the shipped look.
     if (!LOW_GFX) {
       const pmrem = new THREE.PMREMGenerator(this.webgl);
-      for (const b of ['vale', 'marsh', 'peaks'] as BiomeId[]) {
+      // Mobile tiers prefilter ONE shared cubemap (vale) instead of three: the biome
+      // swap below falls back to it. Saves ~16MB VRAM and two PMREM prefilters at boot.
+      const iblBiomes = (GFX.singleIbl ? ['vale'] : ['vale', 'marsh', 'peaks']) as BiomeId[];
+      for (const b of iblBiomes) {
         const eq = this.skyView.envTexture(b);
         if (eq) this.envRTs.set(b, pmrem.fromEquirectangular(eq));
       }
@@ -3431,7 +3434,8 @@ export class Renderer {
     const dominant = blend.t < 0.5 ? blend.from : blend.to;
     if (dominant !== this.envBiome && this.envRTs.has(dominant)) {
       this.envBiome = dominant;
-      this.scene.environment = this.envRTs.get(dominant)?.texture ?? null;
+      this.scene.environment =
+        this.envRTs.get(dominant)?.texture ?? this.envRTs.get('vale')?.texture ?? null;
       this.scene.environmentRotation.y = this.skyView.envRotationY(dominant);
       this.scene.environmentIntensity = this.envOutdoorIntensity * 0.4;
     }

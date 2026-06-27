@@ -34,12 +34,12 @@ const SLOPE_EPS = 1.5; // matches the legacy color pass so tints don't shift
 // ---------------------------------------------------------------------------
 
 const TERRAIN_TEX: Record<string, THREE.Texture> = {};
-const ALBEDO_ANISOTROPY = 8;
-const NORMAL_ANISOTROPY = 4;
 
 function kickTerrainTex(key: string, file: string, srgb: boolean): void {
   registerPreload(loadTexture(`/textures/terrain/${file}`, { srgb, repeat: true }).then((tex) => {
-    tex.anisotropy = srgb ? ALBEDO_ANISOTROPY : NORMAL_ANISOTROPY;
+    // Albedo gets the full tier cap; normals never need more than 4. Desktop stays 8/4,
+    // mobile tiers drop to 2/2 (medium) or 1/1 (low).
+    tex.anisotropy = srgb ? GFX.anisotropy : Math.min(GFX.anisotropy, 4);
     TERRAIN_TEX[key] = tex;
     return tex;
   }));
