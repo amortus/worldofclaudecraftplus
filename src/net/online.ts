@@ -1121,14 +1121,14 @@ export class ClientWorld implements IWorld {
       const wasDead = e.dead;
       const nowDead = !!w.dead;
       if ((wasDead && !nowDead) || teleDx * teleDx + teleDz * teleDz > TELEPORT_SNAP_DIST_SQ) {
-        e.prevPos = { x: w.x, y: w.y, z: w.z };
+        e.prevPos.x = w.x;
+        e.prevPos.y = w.y;
+        e.prevPos.z = w.z;
         e.prevFacing = w.f;
       } else {
-        e.prevPos = {
-          x: e.prevPos.x + (e.pos.x - e.prevPos.x) * entAlpha,
-          y: e.prevPos.y + (e.pos.y - e.prevPos.y) * entAlpha,
-          z: e.prevPos.z + (e.pos.z - e.prevPos.z) * entAlpha,
-        };
+        e.prevPos.x += (e.pos.x - e.prevPos.x) * entAlpha;
+        e.prevPos.y += (e.pos.y - e.prevPos.y) * entAlpha;
+        e.prevPos.z += (e.pos.z - e.prevPos.z) * entAlpha;
         e.prevFacing = e.prevFacing + wrapAngle(e.facing - e.prevFacing) * entFacingAlpha;
       }
       e.pos.x = w.x;
@@ -1155,18 +1155,40 @@ export class ClientWorld implements IWorld {
       e.petTauntTimer = w.pt ?? 0;
       e.petAutoTaunt = !!w.pa;
       e.petManualTauntPending = false;
-      e.threat = new Map(w.thr ?? []);
-      e.auras = (w.auras ?? []).map((a: any) => ({
-        id: a.id,
-        name: a.name,
-        kind: a.kind,
-        remaining: a.rem,
-        duration: a.dur,
-        value: 0,
-        sourceId: 0,
-        school: 'physical' as const,
-        stacks: a.stacks,
-      }));
+      // Reuse the existing threat Map instead of allocating a new one every snapshot.
+      e.threat.clear();
+      const thr = w.thr as [number, number][] | undefined;
+      if (thr) for (let ti = 0; ti < thr.length; ti++) e.threat.set(thr[ti][0], thr[ti][1]);
+      // Reuse the auras array + objects instead of allocating a new array of new
+      // objects every snapshot (per entity, ~20Hz). Overwrite existing slots; only
+      // allocate for genuinely new ones.
+      const srcAuras = (w.auras ?? []) as any[];
+      const dstAuras = e.auras;
+      for (let ai = 0; ai < srcAuras.length; ai++) {
+        const a = srcAuras[ai];
+        const o = dstAuras[ai];
+        if (o) {
+          o.id = a.id;
+          o.name = a.name;
+          o.kind = a.kind;
+          o.remaining = a.rem;
+          o.duration = a.dur;
+          o.stacks = a.stacks;
+        } else {
+          dstAuras[ai] = {
+            id: a.id,
+            name: a.name,
+            kind: a.kind,
+            remaining: a.rem,
+            duration: a.dur,
+            value: 0,
+            sourceId: 0,
+            school: 'physical' as const,
+            stacks: a.stacks,
+          };
+        }
+      }
+      dstAuras.length = srcAuras.length;
       e.loot = w.lootList ?? null;
       return e;
     };
