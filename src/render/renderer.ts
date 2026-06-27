@@ -3663,12 +3663,32 @@ export class Renderer {
       if (!e) continue;
       // form swaps (polymorph sheep, druid forms) — computed up front because
       // the shadow gates below must not run the base rig's proxy under a form
-      const polyed = e.auras.some((a) => a.kind === 'polymorph');
-      const bear = !polyed && e.auras.some((a) => a.kind === 'form_bear');
-      const ghostWolf = !polyed && !bear && e.auras.some((a) => a.id === 'ghost_wolf');
-      const cat = !polyed && !bear && (ghostWolf || e.auras.some((a) => a.kind === 'form_cat'));
-      const travel = !polyed && !bear && !cat && e.auras.some((a) => a.kind === 'form_travel');
-      const _stealthed = e.auras.some((a) => a.kind === 'stealth');
+      // One pass over auras instead of six .some() rescans per entity per frame
+      // (each .some() also allocated a closure). Same precedence as before.
+      let hasPoly = false;
+      let hasBear = false;
+      let hasGhostWolf = false;
+      let hasCat = false;
+      let hasTravel = false;
+      let hasStealth = false;
+      const eAuras = e.auras;
+      for (let ai = 0; ai < eAuras.length; ai++) {
+        const a = eAuras[ai];
+        switch (a.kind) {
+          case 'polymorph': hasPoly = true; break;
+          case 'form_bear': hasBear = true; break;
+          case 'form_cat': hasCat = true; break;
+          case 'form_travel': hasTravel = true; break;
+          case 'stealth': hasStealth = true; break;
+        }
+        if (a.id === 'ghost_wolf') hasGhostWolf = true;
+      }
+      const polyed = hasPoly;
+      const bear = !polyed && hasBear;
+      const ghostWolf = !polyed && !bear && hasGhostWolf;
+      const cat = !polyed && !bear && (ghostWolf || hasCat);
+      const travel = !polyed && !bear && !cat && hasTravel;
+      const _stealthed = hasStealth;
       // distance cull: far rigs are invisible specks but cost real draw calls
       const cdx = e.pos.x - p.pos.x,
         cdz = e.pos.z - p.pos.z;
