@@ -2481,6 +2481,33 @@ export class Renderer {
         },
       },
       {
+        id: 'world.geometry-upload',
+        category: 'world',
+        priority: 72,
+        required: true,
+        run: () => {
+          // Eagerly upload EVERY terrain-chunk and prop-band geometry buffer to the
+          // GPU now, while the loading screen still covers the canvas. These meshes
+          // are pre-built but fog-culled, so otherwise each one uploads its
+          // vertex/instance buffer lazily the first time the camera rotates it into
+          // view = the reported rotation hitch. Force-show all, render once, restore.
+          const FAR = 1e9;
+          const cx = this.camera.position.x;
+          const cy = this.camera.position.y;
+          const cz = this.camera.position.z;
+          const lx = this.cameraLookAt.x;
+          const ly = this.cameraLookAt.y;
+          const lz = this.cameraLookAt.z;
+          this.terrainView.update(cx, cz, FAR);
+          this.propsView.update(cx, cy, cz, lx, ly, lz, FAR);
+          this.webgl.render(this.scene, this.camera);
+          const fogFar = (this.scene.fog as THREE.Fog).far;
+          this.terrainView.update(cx, cz, fogFar);
+          this.propsView.update(cx, cy, cz, lx, ly, lz, fogFar);
+          renderPasses++;
+        },
+      },
+      {
         id: 'programs.compile',
         category: 'world',
         priority: 80,
