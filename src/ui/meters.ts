@@ -165,6 +165,7 @@ export class Meters {
   /** 0 = current/latest, 1..N = history entries, N+1 = all-time */
   private viewIdx = 0;
   private lastRender = 0;
+  private lastDataUpdate = 0;
   private root: HTMLElement;
   private rowsEl: HTMLElement;
   private titleEl: HTMLElement;
@@ -237,7 +238,15 @@ export class Meters {
   /** called every hud frame; renders at ~4Hz while open */
   update(): void {
     const now = performance.now();
-    this.data.update(this.world, this.partyPids(), now);
+    // Throttle the bookkeeping pass to ~10Hz. It was running every rAF frame (up to
+    // 144Hz) even with the window closed, and partyPids() + data.update each iterate
+    // ALL world entities and allocate a Set - a steady CPU tax in crowded zones/raids.
+    // Real-time damage is accumulated event-driven in onEvent, so 10Hz windowing is
+    // ample for accurate encounter segmentation whether the panel is open or not.
+    if (now - this.lastDataUpdate >= 100) {
+      this.lastDataUpdate = now;
+      this.data.update(this.world, this.partyPids(), now);
+    }
     if (!this.isOpen || now - this.lastRender < 250) return;
     this.render();
   }
