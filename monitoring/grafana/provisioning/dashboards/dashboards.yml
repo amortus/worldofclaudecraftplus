@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: 'WorldOfClaude'
+    orgId: 1
+    folder: 'WorldOfClaude'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 60
+    options:
+      path: /etc/grafana/dashboards

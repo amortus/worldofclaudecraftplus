@@ -1,0 +1,93 @@
+{
+  "title": "WorldOfClaude — Server Overview",
+  "uid": "woc-overview",
+  "schemaVersion": 39,
+  "refresh": "15s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Players Online",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "woc_players_online", "legendFormat": "players" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" }
+    },
+    {
+      "id": 2,
+      "title": "Entities in Sim",
+      "type": "stat",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "woc_entities_total", "legendFormat": "entities" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" }
+    },
+    {
+      "id": 3,
+      "title": "Tick Duration (ms EMA)",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "woc_tick_duration_ms", "legendFormat": "ms" }],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "colorMode": "background",
+        "thresholds": {
+          "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 30 },
+            { "color": "red", "value": 45 }
+          ]
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Heap Used (MB)",
+      "type": "stat",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "woc_process_heap_bytes / 1024 / 1024", "legendFormat": "MB" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "unit": "none" }
+    },
+    {
+      "id": 5,
+      "title": "Players Online — History",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "targets": [{ "expr": "woc_players_online", "legendFormat": "players" }]
+    },
+    {
+      "id": 6,
+      "title": "Tick Duration (ms) — History",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "targets": [{ "expr": "woc_tick_duration_ms", "legendFormat": "tick ms" }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 30 },
+              { "color": "red", "value": 45 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Memory — RSS vs Heap",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "woc_process_rss_bytes / 1024 / 1024", "legendFormat": "RSS MB" },
+        { "expr": "woc_process_heap_bytes / 1024 / 1024", "legendFormat": "Heap MB" }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Entities in Sim — History",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "targets": [{ "expr": "woc_entities_total", "legendFormat": "entities" }]
+    }
+  ]
+}
