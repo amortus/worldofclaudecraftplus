@@ -15,10 +15,12 @@ const desktop: GfxRuntimeHints = {
 };
 
 describe('graphics tier resolution', () => {
-  it('resolves initial renderer startup with no persisted preset to ultra graphics', () => {
+  it('resolves initial renderer startup with no persisted preset to medium when GPU is unrecognized', () => {
     expect(desktop.graphicsPreset).toBeUndefined();
+    // graphicsPresetLabel treats undefined as DEFAULT_PRESET (ultra), but tier resolution
+    // is now device-aware: a masked/unknown GPU lands on medium, not ultra.
     expect(graphicsPresetLabel(desktop.graphicsPreset)).toBe('ultra');
-    expect(tierFromHints(desktop, false)).toBe('ultra');
+    expect(tierFromHints(desktop, false)).toBe('medium');
   });
 
   it('honors explicit URL tier overrides', () => {
@@ -38,15 +40,17 @@ describe('graphics tier resolution', () => {
     expect(isConstrainedBrowser(desktop)).toBe(false);
   });
 
-  it('defaults missing presets to ultra on desktop but auto-lowers constrained devices', () => {
-    expect(tierFromHints(desktop, false)).toBe('ultra');
+  it('defaults missing presets device-aware: unknown GPU -> medium, software GL -> low', () => {
+    // Unknown/masked GPU (no gpuRenderer) resolves to medium via resolveDefaultGraphicsPreset.
+    expect(tierFromHints(desktop, false)).toBe('medium');
     expect(tierFromHints({ ...desktop, graphicsPreset: 0 }, false)).toBe('low');
-    expect(tierFromHints(desktop, true)).toBe('ultra');
-    // A phone-class device with no saved preset auto-lowers (medium, or low when
-    // memory-constrained) instead of booting the full ultra pipeline.
+    // Software GL with no explicit preset floors to low.
+    expect(tierFromHints(desktop, true)).toBe('low');
+    // A phone-class device with no saved preset auto-lowers to medium (unknown GPU + mobile).
     expect(tierFromHints({ ...desktop, maxTouchPoints: 1, coarsePointer: true }, false)).toBe('medium');
-    expect(tierFromHints({ ...desktop, maxTouchPoints: 1, coarsePointer: true, deviceMemory: 4 }, false)).toBe('low');
-    expect(tierFromHints({ ...desktop, deviceMemory: 4 }, false)).toBe('low');
+    // deviceMemory alone (no touch) doesn't floor to low anymore — GPU class drives that.
+    expect(tierFromHints({ ...desktop, maxTouchPoints: 1, coarsePointer: true, deviceMemory: 4 }, false)).toBe('medium');
+    expect(tierFromHints({ ...desktop, deviceMemory: 4 }, false)).toBe('medium');
     // An explicit Options preset or a forced URL tier still wins on those devices.
     expect(tierFromHints({ ...desktop, maxTouchPoints: 1, coarsePointer: true, graphicsPreset: 4 }, false)).toBe('ultra');
     expect(tierFromHints({ ...desktop, search: '?gfx=high', maxTouchPoints: 1, coarsePointer: true }, false)).toBe('high');
@@ -70,25 +74,20 @@ describe('graphics tier resolution', () => {
     expect(graphicsPresetLabel(3)).toBe('high');
     expect(graphicsPresetLabel(4)).toBe('ultra');
     expect(graphicsPresetLabel(5)).toBe('advanced');
-    expect(shouldUseAutoGovernor({ search: '', graphicsPreset: 0 })).toBe(true);
-    expect(shouldUseAutoGovernor({ search: '', graphicsPreset: undefined })).toBe(false);
-    expect(shouldUseAutoGovernor({ search: '', graphicsPreset: 1 })).toBe(true);
-    expect(shouldUseAutoGovernor({ search: '', graphicsPreset: 2 })).toBe(true);
-    expect(shouldUseAutoGovernor({ search: '', graphicsPreset: 3 })).toBe(true);
-    expect(shouldUseAutoGovernor({ search: '', graphicsPreset: 4 })).toBe(false);
-    expect(shouldUseAutoGovernor({ search: '', graphicsPreset: 5 })).toBe(true);
-    expect(shouldUseAutoGovernor({ search: '?gfx=low', graphicsPreset: 0 })).toBe(true);
-    expect(shouldUseAutoGovernor({ search: '?gfx=high', graphicsPreset: 0 })).toBe(true);
-    expect(shouldUseAutoGovernor({ search: '?gfx=ultra', graphicsPreset: 0 })).toBe(false);
-    expect(shouldUseAutoGovernor({ search: '?gfx=ultra', graphicsPreset: 4 })).toBe(false);
-    expect(shouldUseAutoGovernor({ search: '?governor=0', graphicsPreset: 1 })).toBe(false);
-    expect(shouldUseAutoGovernor({ search: '?gfx=ultra&governor=1', graphicsPreset: 0 })).toBe(true);
-    // Resolved-tier form: an auto-tiered mobile device on medium/low engages the
-    // governor even with no stored preset (the preset-label form would not).
-    expect(shouldUseAutoGovernor({ search: '', graphicsPreset: undefined }, 'medium')).toBe(true);
-    expect(shouldUseAutoGovernor({ search: '', graphicsPreset: undefined }, 'low')).toBe(true);
-    expect(shouldUseAutoGovernor({ search: '', graphicsPreset: undefined }, 'ultra')).toBe(false);
-    expect(shouldUseAutoGovernor({ search: '?gfx=ultra' }, 'medium')).toBe(false);
+    // shouldUseAutoGovernor(tier, search): on for every non-ultra tier; URL governor= overrides.
+    expect(shouldUseAutoGovernor('low', '')).toBe(true);
+    expect(shouldUseAutoGovernor('medium', '')).toBe(true);
+    expect(shouldUseAutoGovernor('high', '')).toBe(true);
+    expect(shouldUseAutoGovernor('ultra', '')).toBe(false);
+    expect(shouldUseAutoGovernor('low', '?gfx=low')).toBe(true);
+    expect(shouldUseAutoGovernor('high', '?gfx=high')).toBe(true);
+    // search ?gfx= does NOT flip the tier here — tier is already resolved by the caller
+    expect(shouldUseAutoGovernor('ultra', '?gfx=ultra')).toBe(false);
+    expect(shouldUseAutoGovernor('medium', '?gfx=ultra')).toBe(true);
+    // URL governor= overrides the tier decision
+    expect(shouldUseAutoGovernor('low', '?governor=0')).toBe(false);
+    expect(shouldUseAutoGovernor('ultra', '?governor=1')).toBe(true);
+    expect(shouldUseAutoGovernor('low', '?gfx=ultra&governor=1')).toBe(true);
   });
 
   it('keeps every quality tier bounded by explicit runtime budgets', () => {
@@ -178,10 +177,11 @@ describe('graphics tier resolution', () => {
     expect(GFX_BUCKET_BANDS.ultra.foliage.baseline).toBeGreaterThan(GFX_BUCKET_BANDS.high.foliage.baseline);
   });
 
-  it('detects older Intel integrated GPUs without overriding the ultra default', () => {
+  it('detects older Intel integrated GPUs and drops them to low tier', () => {
     expect(isWeakIntegratedGpu('ANGLE (Intel, ANGLE Metal Renderer: Intel(R) Iris(TM) Plus Graphics 655)')).toBe(true);
     expect(isWeakIntegratedGpu('ANGLE (Apple, ANGLE Metal Renderer: Apple M2)')).toBe(false);
-    expect(tierFromHints({ ...desktop, gpuRenderer: 'ANGLE (Intel, Intel(R) Iris(TM) Plus Graphics 655)' }, false)).toBe('ultra');
+    // Weak integrated GPUs now classify as 'weak' -> PRESET_LOW, not ultra.
+    expect(tierFromHints({ ...desktop, gpuRenderer: 'ANGLE (Intel, Intel(R) Iris(TM) Plus Graphics 655)' }, false)).toBe('low');
   });
 
   it('keeps masked double-sided vegetation off the transparent blended path', () => {

@@ -7,7 +7,10 @@ import * as THREE from 'three';
 //   1. '?lowgfx' (legacy flag) or '?gfx=low'  -> low
 //   2. '?gfx=medium' / '?gfx=high' / '?gfx=ultra' -> that tier, EVEN on software GL
 //      (headless screenshot verification: stills render slowly but correctly)
-//   3. otherwise: persisted graphics preset, with missing values -> ultra
+//   3. an explicit persisted graphics preset -> that tier
+//   4. no persisted preset (first boot / inconclusive detection) -> DEVICE-AWARE default via
+//      resolveDefaultGraphicsPreset (recognized weak/software -> low, strong desktop -> high/ultra,
+//      anything unrecognized -> medium), so the 3D tier matches the medium data-fx-level fallback
 
 export type GfxTier = 'low' | 'medium' | 'high' | 'ultra';
 export const GFX_CONFIG_VERSION = 14;
@@ -48,6 +51,7 @@ export interface GfxRuntimeHints {
   maxTouchPoints: number;
   coarsePointer: boolean;
   narrowViewport: boolean;
+  hardwareConcurrency?: number;
   gpuRenderer?: string;
   graphicsPreset?: number;
   terrainDetail?: number;
@@ -257,21 +261,16 @@ export function graphicsPresetLabel(value: number | undefined): 'low' | 'medium'
   }
 }
 
-export function shouldUseAutoGovernor(
-  hints?: Pick<GfxRuntimeHints, 'search' | 'graphicsPreset'>,
-  resolvedTier?: GfxTier,
-): boolean {
-  if (!hints) return false;
-  const params = new URLSearchParams(hints.search);
+export function shouldUseAutoGovernor(tier: GfxTier, search: string): boolean {
+  const params = new URLSearchParams(search);
   const override = params.get('governor') ?? params.get('autoGovernor');
   if (override === '1' || override === 'true' || override === 'on') return true;
   if (override === '0' || override === 'false' || override === 'off') return false;
-  if (forcedTierFromSearch(hints.search) === 'ultra') return false;
-  // Engage the adaptive governor on every tier except ultra. Prefer the
-  // RESOLVED tier so an auto-tiered mobile device (medium/low with no stored
-  // preset) gets it; fall back to the stored preset label when unknown.
-  if (resolvedTier !== undefined) return resolvedTier !== 'ultra';
-  return graphicsPresetLabel(hints.graphicsPreset) !== 'ultra';
+  // The runtime governor adapts every non-ultra tier; ultra opts out (the player explicitly maxed
+  // it, or a recognized strong desktop auto-resolved there). Keying off the RESOLVED tier, not the
+  // raw preset, keeps the governor ON for a first-run inconclusive device (the medium fallback) so
+  // it can step quality down, instead of being silently opted out by an unset-preset -> ultra label.
+  return tier !== 'ultra';
 }
 
 export function configureMaskedDoubleSidedVegetationMaterial<T extends THREE.Material>(mat: T): T {
@@ -296,7 +295,7 @@ function settingsFor(
     bucketBands,
     bucketBaselines: bucketBaselines(bucketBands),
     budget: GFX_BUDGETS[tier],
-    autoGovernor: shouldUseAutoGovernor(hints, tier),
+    autoGovernor: shouldUseAutoGovernor(tier, hints?.search ?? ''),
     composer: tier === 'high' || tier === 'ultra',
     // N8AO runs on both composer tiers: half-res + Low quality on high keeps
     // it ~1ms-class on real GPUs; ultra gets full-res Medium
@@ -342,16 +341,43 @@ function storedNumericSetting(key: string): number | undefined {
   }
 }
 
+// Corroborating-signal thresholds for resolveDefaultGraphicsPreset. Chromium clamps
+// navigator.deviceMemory to a max of 8 (GiB) and WebKit caps hardwareConcurrency at 8 on
+// macOS, so 8 is the practical "ample" ceiling on both axes; these only ever RAISE a tier or
+// break a tie, never demote (see resolveDefaultGraphicsPreset).
+const AMPLE_DEVICE_MEMORY_GIB = 8;
+const AMPLE_LOGICAL_CORES = 8;
+
+// The session's GPU renderer string never changes, so probe it at most once and
+// release the throwaway context immediately. runtimeHints() is called several
+// times during boot (the module-load GFX best-guess, firstRunGraphicsPreset, and
+// initGfxTier), and a fresh canvas context per call would ORPHAN one WebGL context
+// each: browsers cap live contexts near 16, and exhausting them is exactly what
+// starved the world models before the PR901 release-on-teardown fix. One probe,
+// one context, lost the moment its renderer string is read, cached thereafter.
+let gpuRendererProbed = false;
+let probedGpuRenderer: string | undefined;
+
 function probeGpuRenderer(): string | undefined {
+  if (gpuRendererProbed) return probedGpuRenderer;
+  gpuRendererProbed = true;
+  probedGpuRenderer = readGpuRendererString();
+  return probedGpuRenderer;
+}
+
+function readGpuRendererString(): string | undefined {
   if (typeof document === 'undefined') return undefined;
+  let gl: WebGLRenderingContext | WebGL2RenderingContext | null = null;
   try {
     const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl');
+    gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl');
     if (!gl) return undefined;
     const dbg = gl.getExtension('WEBGL_debug_renderer_info');
     return String(dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
   } catch {
     return undefined;
+  } finally {
+    gl?.getExtension('WEBGL_lose_context')?.loseContext();
   }
 }
 
@@ -368,6 +394,7 @@ function runtimeHints(): GfxRuntimeHints {
   return {
     search: typeof location !== 'undefined' ? location.search : '',
     deviceMemory: nav?.deviceMemory,
+    hardwareConcurrency: nav?.hardwareConcurrency,
     maxTouchPoints: nav?.maxTouchPoints ?? 0,
     coarsePointer: typeof matchMedia !== 'undefined' ? matchMedia('(pointer: coarse)').matches : false,
     narrowViewport: typeof matchMedia !== 'undefined'
@@ -385,6 +412,111 @@ function runtimeHints(): GfxRuntimeHints {
 export function isConstrainedBrowser(hints: GfxRuntimeHints): boolean {
   if (hints.deviceMemory !== undefined && hints.deviceMemory <= 4) return true;
   return hints.maxTouchPoints > 0 && (hints.coarsePointer || hints.narrowViewport);
+}
+
+/**
+ * Coarse GPU class from the UNMASKED_RENDERER_WEBGL string, the single most reliable static
+ * capability signal (RAM/cores are only weak tie-breakers, see resolveDefaultGraphicsPreset).
+ * Conservative on purpose: a masked/unplaced name returns 'unknown' so the resolver falls back
+ * to MEDIUM rather than guessing. Mirrors the detect-gpu name->class model (pmndrs/detect-gpu,
+ * which reads UNMASKED_RENDERER_WEBGL and looks it up in an fps-per-GPU blob; we drop the blob
+ * and bucket by family) plus the mobile-GPU generation ladders (Adreno 3xx-4xx/Mali-T weak ->
+ * 5xx-6xx mid -> 7xx/8xx flagship; Apple A rises A14+). Test order matters: software first, then
+ * the codebase's named weak-integrated parts, then strong/flagship, then mid, then old/low.
+ */
+export type GpuClass =
+  | 'software'
+  | 'strongDesktop'
+  | 'flagshipMobile'
+  | 'midIntegrated'
+  | 'midMobile'
+  | 'weak'
+  | 'unknown';
+
+export function classifyGpuRenderer(name: string | undefined): GpuClass {
+  const n = (name ?? '').toLowerCase();
+  if (!n) return 'unknown';
+  // Software rasterizers (no real GPU): always the lowest tier. The bare "software" token is kept
+  // in lockstep with isSoftwareGL below so the two software detectors never disagree.
+  if (/swiftshader|llvmpipe|basic render|softpipe|microsoft basic|software/.test(n)) return 'software';
+  // The older Intel integrated parts the codebase already names as weak (kept AHEAD of the
+  // mid-integrated bucket so an Iris Plus 6xx / UHD 6xx / HD 5xx-6xx stays weak, consistent with
+  // the existing leanFoliage treatment in settingsFor).
+  if (isWeakIntegratedGpu(name)) return 'weak';
+  // Strong desktop discrete + Apple Silicon.
+  if (/\b(rtx|gtx)\b|geforce|radeon(\(tm\))?\s?(rx|pro|vii)|\barc\b|\bnvidia\b|apple\s?m[1-9]/.test(n))
+    return 'strongDesktop';
+  // Recent flagship mobile.
+  if (
+    /apple a(1[4-9]|[2-9]\d)|adreno \(tm\) (6[6-9]\d|7\d\d|8\d\d)|immortalis|mali-g7\d\d|xclipse/.test(n)
+  )
+    return 'flagshipMobile';
+  // Mid integrated (newer Intel Xe / AMD Vega-and-RDNA iGPUs / modern desktop UHD 7xx). The
+  // `radeon(\(tm\))? ?` form matches Chrome's ANGLE strings and Mesa form; strongDesktop already
+  // claimed the discrete RX/Pro/VII families, so this only catches integrated Radeons.
+  if (/iris xe|iris plus|radeon(\(tm\))? ?(vega|graphics)|uhd graphics 7\d\d|intel.*xe/.test(n))
+    return 'midIntegrated';
+  // Mid mobile. The Mali clause excludes G50-G52 (entry-level Valhall parts the weak ladder
+  // below claims) so they fall through to LOW; G53+ stay mid.
+  if (
+    /apple a1[1-3]|adreno \(tm\) (5\d\d|6[0-5]\d)|mali-g(5[3-9]|6\d|7[0-8])|powervr (gt|gm|b)/.test(n)
+  )
+    return 'midMobile';
+  // Old / low mobile + old integrated.
+  if (
+    /adreno \(tm\) [34]\d\d|mali-t|mali-4\d\d|mali-g(31|51|52)\b|powervr (sgx|g6)|apple a([5-9]|10)\b|(hd|uhd) graphics (\d{3}\b|[45]\d{2})|intel.*gma/.test(n)
+  )
+    return 'weak';
+  return 'unknown';
+}
+
+/**
+ * The device-appropriate graphics preset (1 low .. 4 ultra) for a player who has NOT chosen one.
+ * MEDIUM (2) is the deliberate fallback whenever the signals are inconclusive. Pure function of
+ * static device hints only; reads NO FPS governor and runs ONCE on first boot.
+ * CRITICAL: deviceMemory + hardwareConcurrency may only RAISE a tier or break a tie, NEVER
+ * pull one down. Safari caps hardwareConcurrency (2 on iOS) and omits deviceMemory entirely,
+ * so a flagship iPhone reports cores=2 / mem=undefined: a low-count down-rank would wrongly
+ * bucket it low. The recognized GPU class sets the floor; a masked/unknown name lands on MEDIUM.
+ */
+export function resolveDefaultGraphicsPreset(hints: GfxRuntimeHints): number {
+  const gpu = classifyGpuRenderer(hints.gpuRenderer);
+  const mem = hints.deviceMemory;
+  const cores = hints.hardwareConcurrency;
+  const isMobile = hints.maxTouchPoints > 0 && (hints.coarsePointer || hints.narrowViewport);
+  const ampleOrUnknownMem =
+    mem === undefined ||
+    mem >= AMPLE_DEVICE_MEMORY_GIB ||
+    (cores !== undefined && cores >= AMPLE_LOGICAL_CORES);
+
+  if (gpu === 'software' || gpu === 'weak') return PRESET_LOW;
+  if (gpu === 'strongDesktop' && !isMobile)
+    return ampleOrUnknownMem ? PRESET_ULTRA : PRESET_HIGH;
+  if (gpu === 'flagshipMobile' || (gpu === 'strongDesktop' && isMobile)) return PRESET_HIGH;
+  if (gpu === 'midIntegrated' || gpu === 'midMobile') return PRESET_MEDIUM;
+  if (
+    gpu === 'unknown' &&
+    !isMobile &&
+    mem !== undefined &&
+    mem >= AMPLE_DEVICE_MEMORY_GIB &&
+    cores !== undefined &&
+    cores >= AMPLE_LOGICAL_CORES
+  )
+    return PRESET_HIGH;
+  return PRESET_MEDIUM;
+}
+
+/**
+ * The device-aware preset to persist on a player's FIRST run, or null when no default should be
+ * written. The caller passes a dedicated `defaultAlreadyApplied` marker rather than checking
+ * graphicsPreset presence, because Settings.save() persists the whole values object the first
+ * time ANY unrelated setting is stored, defeating a key-presence check.
+ * A masked/inconclusive device resolves to MEDIUM and returns null so it re-detects on later boots.
+ */
+export function firstRunGraphicsPreset(defaultAlreadyApplied: boolean): number | null {
+  if (defaultAlreadyApplied) return null;
+  const detected = resolveDefaultGraphicsPreset(runtimeHints());
+  return detected === PRESET_MEDIUM ? null : detected;
 }
 
 function tierFromPreset(preset: number): GfxTier {
@@ -414,8 +546,11 @@ export function tierFromHints(hints: GfxRuntimeHints, softwareGl: boolean): GfxT
   if (forced) return forced;
   // An explicit Options choice is authoritative on every device.
   if (hints.graphicsPreset !== undefined) return tierFromPreset(hints.graphicsPreset);
-  // No saved preset: pick by device class (desktop stays ultra; see above).
-  return autoTierForDevice(hints);
+  // No saved preset: resolve device-aware via resolveDefaultGraphicsPreset (medium fallback;
+  // recognized weak/software -> low, strong desktop -> high/ultra, unrecognized -> medium).
+  // Software GL with no explicit preset drops to the low floor.
+  const preset = softwareGl ? PRESET_LOW : resolveDefaultGraphicsPreset(hints);
+  return tierFromPreset(preset);
 }
 
 // Software GL (SwiftShader/llvmpipe — headless test runners, VMs) can't take
@@ -455,6 +590,11 @@ export function initGfxTier(webgl: THREE.WebGLRenderer): GfxTier {
 
 export const gfxInternalsForTest = {
   settingsFor,
+  probeGpuRenderer,
+  resetGpuRendererProbe: () => {
+    gpuRendererProbed = false;
+    probedGpuRenderer = undefined;
+  },
 };
 
 // One clock uniform shared by every onBeforeCompile shader (wind, water,

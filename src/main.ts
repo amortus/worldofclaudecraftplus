@@ -71,7 +71,7 @@ import { CharacterPreview } from './render/characters';
 import { skinCount } from './render/characters/manifest';
 import { playerPortraitDataUrl } from './render/characters/portrait';
 import { installWebGLContextRelease } from './render/context_release';
-import { GFX } from './render/gfx';
+import { firstRunGraphicsPreset, GFX } from './render/gfx';
 import { Renderer } from './render/renderer';
 import { navigatorSaveData } from './render/sky';
 import { pathCrossesFence } from './sim/colliders';
@@ -823,6 +823,18 @@ async function startGame(
 
   const keybinds = new Keybinds(keybindScope);
   const settings = new Settings();
+  // First-run graphics default: until a device default has been applied (the dedicated
+  // graphicsDefaultApplied marker, NOT the graphicsPreset key, which save() def-fills the moment
+  // any unrelated setting is stored), probe the device (GPU name, memory, cores, touch) and
+  // PERSIST a device-appropriate preset over the medium default, BEFORE the effects applier and
+  // renderer read it, so the 3D tier, the data-fx-level cadence (nameplates), and the options UI
+  // all agree. A masked/inconclusive device resolves to medium and returns null, so it stays on
+  // the medium default and re-detects next boot; only a CONCLUSIVE result is persisted + marked.
+  const autoPreset = firstRunGraphicsPreset(settings.get('graphicsDefaultApplied'));
+  if (autoPreset !== null) {
+    settings.set('graphicsPreset', autoPreset);
+    settings.set('graphicsDefaultApplied', true);
+  }
   // UI theming: apply the persisted theme's CSS variables to :root, then keep a
   // hook so the Options panel can switch preset / override colours live.
   const themeStore = new ThemeStore();

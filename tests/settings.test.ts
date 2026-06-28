@@ -14,12 +14,14 @@ function installStorage(): void {
 beforeEach(() => installStorage());
 
 describe('Settings', () => {
-  it('defaults fresh sessions and initial logins to the ultra graphics preset', () => {
+  it('defaults fresh sessions to medium graphics preset (device-aware first-run sets the actual tier)', () => {
     const s = new Settings();
 
     expect(localStorage.getItem('woc_settings')).toBeNull();
-    expect(SETTING_RANGES.graphicsPreset.def).toBe(4);
-    expect(s.get('graphicsPreset')).toBe(4);
+    // def is now MEDIUM (2): the Reset target and the fallback when device detection is inconclusive.
+    // main.ts probes the device on first boot and persists the appropriate tier over this default.
+    expect(SETTING_RANGES.graphicsPreset.def).toBe(2);
+    expect(s.get('graphicsPreset')).toBe(2);
   });
 
   it('starts at the documented defaults (camera calmer than the old 1.0)', () => {
