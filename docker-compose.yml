@@ -116,6 +116,20 @@ services:
     volumes:
       - eastbrook_wiki_images:/var/www/html/images
 
+  discord-bot:
+    build:
+      context: ./discord-bot
+    container_name: eastbrook-discord-bot
+    restart: unless-stopped
+    depends_on:
+      - game
+    environment:
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:?Set DISCORD_BOT_TOKEN in .env}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-1520893074597744640}
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-1520892787472465950}
+      GAME_API_URL: http://game:8787
+      SITE_URL: ${PUBLIC_ORIGIN:-https://worldofclaudecraft.com.br}
+
   prometheus:
     image: prom/prometheus:v2.53.0
     container_name: eastbrook-prometheus
