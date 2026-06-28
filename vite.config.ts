@@ -164,6 +164,12 @@ export default defineConfig({
         play: fileURLToPath(new URL('play.html', import.meta.url)),
         guide: fileURLToPath(new URL('guide.html', import.meta.url)),
       },
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/three/')) return 'vendor-three';
+          if (id.includes('node_modules/')) return 'vendor';
+        },
+      },
     },
   },
   test: {
