@@ -129,6 +129,8 @@ services:
       DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-1520892787472465950}
       GAME_API_URL: http://game:8787
       SITE_URL: ${PUBLIC_ORIGIN:-https://worldofclaudecraft.com.br}
+      UPDATES_CHANNEL_NAME: ${UPDATES_CHANNEL_NAME:-anúncios}
+      PIX_KEY: ${PIX_KEY:-}
 
   prometheus:
     image: prom/prometheus:v2.53.0
