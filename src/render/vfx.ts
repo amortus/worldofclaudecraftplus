@@ -137,6 +137,18 @@ export class Vfx {
   private tmpColor = new THREE.Color();
   private tmpDir = new THREE.Vector3(); // homing-step scratch (per projectile per frame)
   private readonly blightGreen = new THREE.Color(0x5fbf3a).multiplyScalar(hdr(1.25));
+  // Pre-allocated Color objects per school — avoids `new THREE.Color()` per cast event.
+  private readonly schoolColors: Record<string, { base: THREE.Color; core: THREE.Color; trail: THREE.Color }> = (() => {
+    const out: Record<string, { base: THREE.Color; core: THREE.Color; trail: THREE.Color }> = {};
+    for (const [school, hex] of Object.entries(SCHOOL_COLORS)) {
+      out[school] = {
+        base: new THREE.Color(hex),
+        core: new THREE.Color(hex).multiplyScalar(hdr(2.5)),
+        trail: new THREE.Color(hex).multiplyScalar(hdr(1.4)),
+      };
+    }
+    return out;
+  })();
   private quality = 1;
 
   constructor(scene: THREE.Scene, private anchor: EntityAnchor) {
@@ -319,14 +331,14 @@ export class Vfx {
   projectile(sourceId: number, targetId: number, school: string): void {
     const from = this.anchor(sourceId, 0.62);
     if (!from) return;
-    const color = new THREE.Color(SCHOOL_COLORS[school] ?? 0xffffff);
+    const sc = this.schoolColors[school];
     const sprites = projectileSprites(school);
     this.projectiles.push({
-      pos: from.clone(),
+      pos: from.clone(), // each projectile owns its Vector3 — must not share
       targetId,
-      color,
-      coreColor: color.clone().multiplyScalar(hdr(2.5)),
-      trailColor: color.clone().multiplyScalar(hdr(1.4)),
+      color: sc?.base ?? new THREE.Color(0xffffff),
+      coreColor: sc?.core ?? new THREE.Color(0xffffff).multiplyScalar(hdr(2.5)),
+      trailColor: sc?.trail ?? new THREE.Color(0xffffff).multiplyScalar(hdr(1.4)),
       speed: 26,
       ttl: 3,
       coreSprite: sprites.core,

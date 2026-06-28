@@ -485,6 +485,7 @@ interface EntityView {
   shadowOn: boolean;
   isFar: boolean;
   lastOverheadEmoteKey: string | null;
+  auraStealth: boolean; // cached per entity-loop frame — avoids .some() in nameplate pass
   // render-space position last frame, for true u/s locomotion speed
   lastX: number;
   lastZ: number;
@@ -3158,6 +3159,7 @@ export class Renderer {
       objectCasters,
       shadowOn: true,
       isFar: false,
+      auraStealth: false,
       lastOverheadEmoteKey: null,
       lastX: e.pos.x,
       lastZ: e.pos.z,
@@ -3671,6 +3673,8 @@ export class Renderer {
       let hasCat = false;
       let hasTravel = false;
       let hasStealth = false;
+      let hasWardstone = false;
+      let hasSoulRend = false;
       const eAuras = e.auras;
       for (let ai = 0; ai < eAuras.length; ai++) {
         const a = eAuras[ai];
@@ -3682,7 +3686,10 @@ export class Renderer {
           case 'stealth': hasStealth = true; break;
         }
         if (a.id === 'ghost_wolf') hasGhostWolf = true;
+        else if (a.id === 'nythraxis_wardstone_lit') hasWardstone = true;
+        else if (a.id === 'nythraxis_soul_rend') hasSoulRend = true;
       }
+      v.auraStealth = hasStealth;
       const polyed = hasPoly;
       const bear = !polyed && hasBear;
       const ghostWolf = !polyed && !bear && hasGhostWolf;
@@ -3785,7 +3792,7 @@ export class Renderer {
         if (
           vis &&
           (e.objectItemId === 'bastion_ward_stone' || e.objectItemId === 'soulshard_pillar') &&
-          e.auras.some((a) => a.id === 'nythraxis_wardstone_lit')
+          hasWardstone
         ) {
           this.vfx.castSparkle(e.id, 'arcane', dt * 2.6);
         }
@@ -3993,7 +4000,7 @@ export class Renderer {
           dt,
         );
       }
-      if (e.auras.some((a) => a.id === 'nythraxis_soul_rend')) {
+      if (hasSoulRend) {
         this.vfx.castSparkle(e.id, 'shadow', dt * 3.2);
       }
       if (swimming) this.vfx.swimRipple(v.group.position, moving ? dt * 3 : dt);
@@ -4627,7 +4634,7 @@ export class Renderer {
       } else if (e.kind === 'player') {
         // other players: friendly blue with an hp bar; <Guild> tag under the name.
         // Self has no overhead nameplate, so its guild line stays hidden too.
-        const opacity = e.auras.some((a) => a.kind === 'stealth') ? '0.55' : '1';
+        const opacity = v.auraStealth ? '0.55' : '1';
         const nameDisplay = isSelf ? 'none' : '';
         const hpDisplay = e.dead || isSelf ? 'none' : '';
         const guild = isSelf ? '' : e.guild;
