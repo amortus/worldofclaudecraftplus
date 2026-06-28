@@ -17,6 +17,9 @@ const SITE_URL  = process.env.SITE_URL           || 'https://worldofclaudecraft.
 if (!TOKEN) { console.error('DISCORD_BOT_TOKEN não definido'); process.exit(1); }
 
 // ── Slash commands ────────────────────────────────────────────────────────────
+const PIX_KEY   = process.env.PIX_KEY   || '';
+const PIX_NAME  = process.env.PIX_NAME  || 'World of ClaudeCraft BR';
+
 const commands = [
   new SlashCommandBuilder()
     .setName('jogar')
@@ -33,6 +36,22 @@ const commands = [
   new SlashCommandBuilder()
     .setName('dungeons')
     .setDescription('Lista as masmorras e níveis recomendados'),
+
+  new SlashCommandBuilder()
+    .setName('ranking')
+    .setDescription('Top 10 jogadores do servidor por XP'),
+
+  new SlashCommandBuilder()
+    .setName('arena')
+    .setDescription('Top 10 da Arena PvP ranqueada'),
+
+  new SlashCommandBuilder()
+    .setName('wiki')
+    .setDescription('Link para a wiki BR com guias completos'),
+
+  new SlashCommandBuilder()
+    .setName('apoiar')
+    .setDescription('Apoie o servidor para mantê-lo online 🙏'),
 ];
 
 // Registra slash commands na guild
@@ -166,6 +185,95 @@ client.on('interactionCreate', async (interaction) => {
       )
       .setFooter({ text: `Jogue em ${SITE_URL}` });
 
+    await interaction.reply({ embeds: [embed] });
+  }
+
+  else if (commandName === 'ranking') {
+    await interaction.deferReply();
+    try {
+      const res = await fetch(`${GAME_API}/api/leaderboard?limit=10&scope=realm`);
+      const data = await res.json();
+      const leaders = data.leaders ?? [];
+      const lines = leaders.length
+        ? leaders.map((p, i) => {
+            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `**${i+1}.**`;
+            return `${medal} **${p.name}** — Nível ${p.level ?? '?'} · ${(p.lifetimeXp ?? 0).toLocaleString('pt-BR')} XP`;
+          }).join('\n')
+        : '*Nenhum jogador no ranking ainda — seja o primeiro!*';
+      const embed = new EmbedBuilder()
+        .setColor(0xFFD700)
+        .setTitle('🏆 Top 10 — Ranking do Servidor')
+        .setDescription(lines)
+        .setFooter({ text: `World of ClaudeCraft BR · ${SITE_URL}` })
+        .setTimestamp();
+      await interaction.editReply({ embeds: [embed] });
+    } catch {
+      await interaction.editReply('❌ Não foi possível buscar o ranking agora.');
+    }
+  }
+
+  else if (commandName === 'arena') {
+    await interaction.deferReply();
+    try {
+      const res = await fetch(`${GAME_API}/api/arena/leaderboard?format=1v1`);
+      const data = await res.json();
+      const leaders = data.leaders ?? [];
+      const lines = leaders.length
+        ? leaders.slice(0, 10).map((p, i) => {
+            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `**${i+1}.**`;
+            return `${medal} **${p.name}** — ${p.rating ?? 1500} pts`;
+          }).join('\n')
+        : '*Nenhum jogador na arena ainda — entre na fila com `G`!*';
+      const embed = new EmbedBuilder()
+        .setColor(0xED4245)
+        .setTitle('⚔️ Top 10 — Arena PvP 1v1')
+        .setDescription(lines)
+        .setFooter({ text: `World of ClaudeCraft BR · The Ashen Coliseum` })
+        .setTimestamp();
+      await interaction.editReply({ embeds: [embed] });
+    } catch {
+      await interaction.editReply('❌ Não foi possível buscar o ranking da arena.');
+    }
+  }
+
+  else if (commandName === 'wiki') {
+    const embed = new EmbedBuilder()
+      .setColor(0x5865F2)
+      .setTitle('📖 Wiki — World of ClaudeCraft BR')
+      .setDescription(
+        `Guias completos em português para o servidor BR.\n\n` +
+        `🔗 **${SITE_URL}/wiki/index.php/Main_Page**\n\n` +
+        `**Conteúdo disponível:**\n` +
+        `• [[Começando]] — crie conta e entre em 2 min\n` +
+        `• [[Classes]] — rotações e builds das 9 classes\n` +
+        `• [[Masmorras]] — boss guides completos\n` +
+        `• [[Zonas]] — mapas, quests e progressão\n` +
+        `• [[Arena]] — sistema PvP ranqueado\n` +
+        `• [[Controles]] — todas as teclas`
+      )
+      .setFooter({ text: 'World of ClaudeCraft BR' });
+    await interaction.reply({ embeds: [embed] });
+  }
+
+  else if (commandName === 'apoiar') {
+    const pixInfo = PIX_KEY
+      ? `\n\n💸 **Pix:** \`${PIX_KEY}\` (${PIX_NAME})\n*Qualquer valor ajuda a manter o servidor online!*`
+      : '\n\n*Link de apoio em breve — obrigado pelo interesse!*';
+    const embed = new EmbedBuilder()
+      .setColor(0xFFD700)
+      .setTitle('🙏 Apoie o Servidor BR')
+      .setDescription(
+        `O **World of ClaudeCraft BR** é gratuito e sem pay-to-win.\n` +
+        `O servidor tem custo mensal de infraestrutura — sua contribuição mantém tudo online 24/7!\n` +
+        `${pixInfo}\n\n` +
+        `**O que sua doação suporta:**\n` +
+        `• ☁️ Servidor VPS dedicado (Oracle Cloud)\n` +
+        `• 🌐 Domínio worldofclaudecraft.com.br\n` +
+        `• 📊 Monitoramento Grafana/Prometheus\n` +
+        `• 🔧 Desenvolvimento de novos conteúdos\n\n` +
+        `*Todo doador recebe o cargo especial **Patrono** no Discord!*`
+      )
+      .setFooter({ text: 'Obrigado por jogar World of ClaudeCraft BR! ⚔️' });
     await interaction.reply({ embeds: [embed] });
   }
 
