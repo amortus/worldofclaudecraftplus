@@ -13,6 +13,7 @@ const CLIENT_ID = process.env.DISCORD_CLIENT_ID || '1520893074597744640';
 const GUILD_ID  = process.env.DISCORD_GUILD_ID  || '1520892787472465950';
 const GAME_API  = process.env.GAME_API_URL       || 'http://game:8787';
 const SITE_URL  = process.env.SITE_URL           || 'https://worldofclaudecraft.com.br';
+const UPDATES_CHANNEL = process.env.UPDATES_CHANNEL_NAME || 'atualizações';
 
 if (!TOKEN) { console.error('DISCORD_BOT_TOKEN não definido'); process.exit(1); }
 
@@ -52,7 +53,64 @@ const commands = [
   new SlashCommandBuilder()
     .setName('apoiar')
     .setDescription('Apoie o servidor para mantê-lo online 🙏'),
+
+  new SlashCommandBuilder()
+    .setName('novidades')
+    .setDescription('Veja as últimas atualizações do servidor BR'),
 ];
+
+// ── Changelog ─────────────────────────────────────────────────────────────────
+const UPDATES = [
+  {
+    version: 'v1.4.0-br',
+    date: '28 Jun 2026',
+    title: '🧠 Detecção Inteligente de GPU + Melhorias',
+    items: [
+      '**Gráficos adaptativos no primeiro login** — o jogo detecta automaticamente sua GPU e escolhe a qualidade ideal (celular fraco → Baixo; PC gamer → Ultra). Fim do lag na primeira vez!',
+      '**SEO PT-BR** — título, descrição e idioma do site agora em português para melhor busca no Google',
+      '**Discord atualizado** — novos comandos `/ranking`, `/arena`, `/wiki`, `/apoiar` e `/novidades`',
+      '**Wiki dark theme** — tema escuro completo com estilo dark fantasy na wiki do servidor',
+      '**Suporte a 7 novos idiomas** — holandês, polonês, indonésio, turco, sueco, vietnamita e dinamarquês',
+      '**Correção de build Docker** — deploy mais estável no servidor',
+    ],
+  },
+];
+
+function buildNovidadesEmbed(update) {
+  const desc = update.items.map(i => `• ${i}`).join('\n\n');
+  return new EmbedBuilder()
+    .setColor(0xC8A840)
+    .setTitle(`📋 ${update.title}`)
+    .setDescription(desc)
+    .addFields({ name: '🗓️ Data', value: update.date, inline: true })
+    .setFooter({ text: `World of ClaudeCraft BR · ${SITE_URL}` })
+    .setTimestamp();
+}
+
+// Posta no canal de atualizações se ainda não postou esta versão
+async function postUpdateToChannel(guild) {
+  const channel = guild.channels.cache.find(
+    c => c.name === UPDATES_CHANNEL && c.isTextBased(),
+  );
+  if (!channel) return;
+
+  const latest = UPDATES[0];
+  const marker = `<!-- woc-update:${latest.version} -->`;
+
+  // Verifica se já postamos essa versão (lê últimas 10 msgs)
+  try {
+    const msgs = await channel.messages.fetch({ limit: 10 });
+    const already = msgs.some(m => m.content?.includes(marker) || m.embeds?.some(e => e.title?.includes(latest.version)));
+    if (already) return;
+  } catch {
+    // sem permissão de leitura — tenta postar mesmo assim
+  }
+
+  await channel.send({
+    content: marker,
+    embeds: [buildNovidadesEmbed(latest)],
+  }).catch(console.error);
+}
 
 // Registra slash commands na guild
 async function registerCommands() {
@@ -75,6 +133,10 @@ const client = new Client({
 client.once('ready', async () => {
   console.log(`✓ Bot online: ${client.user.tag}`);
   await registerCommands().catch(console.error);
+
+  // Posta atualização no canal #atualizações se versão nova
+  const guild = client.guilds.cache.get(GUILD_ID);
+  if (guild) await postUpdateToChannel(guild).catch(console.error);
 
   // Status rotativo
   const statuses = [
@@ -291,6 +353,11 @@ client.on('interactionCreate', async (interaction) => {
       .setFooter({ text: `Jogue em ${SITE_URL}` });
 
     await interaction.reply({ embeds: [embed] });
+  }
+
+  else if (commandName === 'novidades') {
+    const latest = UPDATES[0];
+    await interaction.reply({ embeds: [buildNovidadesEmbed(latest)] });
   }
 });
 
