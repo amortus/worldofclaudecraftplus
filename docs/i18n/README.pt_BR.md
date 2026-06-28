@@ -1,24 +1,35 @@
 <div align="center">
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-ESM-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
-[![Three.js](https://img.shields.io/badge/Three.js-r165-000000?logo=threedotjs&logoColor=white)](https://threejs.org/)
-[![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
-[![Vitest](https://img.shields.io/badge/Vitest-4.1-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+# World of ClaudeCraft — Servidor Brasileiro
+
+**O MMO clássico gratuito no seu navegador. Sem download. Sem instalação.**
+
+**🇧🇷 Servidor oficial BR: [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/)**
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE)
-[![Version](https://img.shields.io/badge/version-0.6.0-blue)](../../package.json)
-[![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/GjhnUsBtw)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Three.js](https://img.shields.io/badge/Three.js-r165-000000?logo=threedotjs&logoColor=white)](https://threejs.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 
 [English](../../README.md) · [Español](README.es.md) · [Español (España)](README.es_ES.md) · [Français](README.fr_FR.md) · [Français (Canada)](README.fr_CA.md) · [Italiano](README.it_IT.md) · [Deutsch](README.de_DE.md) · [简体中文](README.zh_CN.md) · [繁體中文](README.zh_TW.md) · [한국어](README.ko_KR.md) · [日本語](README.ja_JP.md) · **Português (Brasil)** · [Русский](README.ru_RU.md)
 
+[Jogar agora](https://worldofclaudecraft.com.br/) · [Hospedar seu mundo](#hospede-um-comando) · [Contribuir](CONTRIBUTING.pt_BR.md)
+
 </div>
 
-# World of ClaudeCraft — um MMO de estilo clássico
-
-[Entre no Discord da comunidade](https://discord.gg/GjhnUsBtw)
-
 ![Tela de título de World of ClaudeCraft](../../docs/screenshots/title-screen.jpg)
+
+## O que é isso
+
+World of ClaudeCraft é um MMO completo no estilo clássico que você joga agora mesmo no navegador, de graça, sem instalar nada. O servidor brasileiro está em [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/).
+
+Um mundo compartilhado roda em três modos, todos do mesmo núcleo de jogo:
+
+- o **mundo offline no navegador**, onde você clica em Play Offline e já está dentro,
+- o **servidor multiplayer autoritativo**, onde contas com Postgres compartilham um mundo ao vivo com outros jogadores,
+- o **ambiente RL headless**, onde Python controla o jogo real por uma interface Gym.
+
+Mesma seed, mesmo mundo, em todo lugar. Quase nada é asset pré-fabricado: cidades, criaturas, ícones de magia e sons são todos gerados em tempo de execução.
 
 Um micro-MMO com sabor de MMO da era clássica que você pode hospedar e jogar:
 
@@ -300,9 +311,8 @@ Contribuições de todo tipo são bem-vindas: código, traduções, relatos de b
 documentação. Comece pelo [CONTRIBUTING.pt_BR.md](CONTRIBUTING.pt_BR.md) para a
 configuração e as diretrizes, e por favor siga o nosso
 [Código de Conduta](../../CODE_OF_CONDUCT.md). É novo por aqui? Procure issues com o
-rótulo [`good first issue`](https://github.com/levy-street/world-of-claudecraft/labels/good%20first%20issue),
-abra uma [issue](https://github.com/levy-street/world-of-claudecraft/issues/new/choose)
-ou dê um oi no [Discord](https://discord.gg/GjhnUsBtw).
+rótulo [`good first issue`](https://github.com/amortus/worldofclaudecraftplus/labels/good%20first%20issue)
+ou abra uma [issue](https://github.com/amortus/worldofclaudecraftplus/issues/new/choose).
 
 ## Licença
 
