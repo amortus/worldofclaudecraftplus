@@ -422,6 +422,10 @@ export class GameServer {
   // refresh leaves them alone so the override sticks during testing (dev only).
   private devTierPids = new Set<number>();
   private saveTimer = 0;
+  // Reused per-client scratch buffers in broadcastSnapshots — avoids 3 allocs × N clients × 20Hz
+  private readonly _bcastEnts: string[] = [];
+  private readonly _bcastKeep: number[] = [];
+  private readonly _bcastPresent = new Set<number>();
   private socialPosTimer = 0;
   private saveAllInFlight: Promise<void> | null = null;
   private readonly characterSaveQueues = new Map<number, Promise<void>>();
@@ -2028,9 +2032,12 @@ export class GameServer {
       const p = this.sim.entities.get(session.pid);
       const meta = this.sim.meta(session.pid);
       if (!p || !meta) continue;
-      const ents: string[] = [];
-      const keep: number[] = [];
-      const present = new Set<number>();
+      const ents = this._bcastEnts;
+      const keep = this._bcastKeep;
+      const present = this._bcastPresent;
+      ents.length = 0;
+      keep.length = 0;
+      present.clear();
       this.sim.grid.forEachInRadius(p.pos.x, p.pos.z, INTEREST_QUERY_RADIUS, (e, d2) => {
         if (e.id === session.pid) return;
         if (!this.canObserveEntity(p, e, d2)) return;
