@@ -92,7 +92,11 @@ async function postUpdateToChannel(guild) {
   const channel = guild.channels.cache.find(
     c => c.name === UPDATES_CHANNEL && c.isTextBased(),
   );
-  if (!channel) return;
+  if (!channel) {
+    console.log(`⚠ Canal "${UPDATES_CHANNEL}" não encontrado. Canais disponíveis: ${guild.channels.cache.filter(c => c.isTextBased()).map(c => c.name).join(', ')}`);
+    return;
+  }
+  console.log(`✓ Postando atualização em #${channel.name}`);
 
   const latest = UPDATES[0];
   const marker = `<!-- woc-update:${latest.version} -->`;
