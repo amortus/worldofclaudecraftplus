@@ -8,7 +8,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE)
 [![Version](https://img.shields.io/badge/version-0.6.0-blue)](../../package.json)
-[![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/GjhnUsBtw)
+[![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/RMa4rgyhZ)
 
 [English](../../README.md) · **Español** · [Español (España)](README.es_ES.md) · [Français](README.fr_FR.md) · [Français (Canada)](README.fr_CA.md) · [Italiano](README.it_IT.md) · [Deutsch](README.de_DE.md) · [简体中文](README.zh_CN.md) · [繁體中文](README.zh_TW.md) · [한국어](README.ko_KR.md) · [日本語](README.ja_JP.md) · [Português (Brasil)](README.pt_BR.md) · [Русский](README.ru_RU.md)
 
@@ -16,7 +16,7 @@
 
 # World of ClaudeCraft — un MMO de estilo clásico
 
-[Únete al Discord de la comunidad](https://discord.gg/GjhnUsBtw)
+[Únete al Discord de la comunidad](https://discord.gg/RMa4rgyhZ)
 
 ![Pantalla de título de World of ClaudeCraft](../../docs/screenshots/title-screen.jpg)
 
@@ -312,7 +312,7 @@ bugs y documentación. Empieza por [CONTRIBUTING.es.md](CONTRIBUTING.es.md) para
 configuración y las pautas, y por favor sigue nuestro [Código de Conducta](../../CODE_OF_CONDUCT.md).
 ¿Eres nuevo aquí? Busca issues etiquetados como [`good first issue`](https://github.com/levy-street/world-of-claudecraft/labels/good%20first%20issue),
 abre un [issue](https://github.com/levy-street/world-of-claudecraft/issues/new/choose)
-o saluda en [Discord](https://discord.gg/GjhnUsBtw).
+o saluda en [Discord](https://discord.gg/RMa4rgyhZ).
 
 ## Licencia
 

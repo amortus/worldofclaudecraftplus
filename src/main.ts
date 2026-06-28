@@ -3884,7 +3884,7 @@ function updateSeoMetadata(lang: SupportedLanguage): void {
   if (jsonLd) {
     const sameAs = [
       'https://github.com/levy-street/world-of-claudecraft',
-      'https://discord.gg/GjhnUsBtw',
+      'https://discord.gg/RMa4rgyhZ',
       'https://www.youtube.com/@WoClaudeCraft',
       'https://x.com/WoClaudecraft',
       'https://www.instagram.com/worldofclaudecraft/',

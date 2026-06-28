@@ -8,7 +8,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE)
 [![Version](https://img.shields.io/badge/version-0.6.0-blue)](../../package.json)
-[![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/GjhnUsBtw)
+[![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/RMa4rgyhZ)
 
 [English](../../README.md) · [Español](README.es.md) · [Español (España)](README.es_ES.md) · [Français](README.fr_FR.md) · [Français (Canada)](README.fr_CA.md) · [Italiano](README.it_IT.md) · [Deutsch](README.de_DE.md) · [简体中文](README.zh_CN.md) · [繁體中文](README.zh_TW.md) · [한국어](README.ko_KR.md) · [日本語](README.ja_JP.md) · [Português (Brasil)](README.pt_BR.md) · **Русский**
 
@@ -16,7 +16,7 @@
 
 # World of ClaudeCraft — MMO в классическом стиле
 
-[Присоединяйтесь к сообществу в Discord](https://discord.gg/GjhnUsBtw)
+[Присоединяйтесь к сообществу в Discord](https://discord.gg/RMa4rgyhZ)
 
 ![Заставка World of ClaudeCraft](../../docs/screenshots/title-screen.jpg)
 
@@ -296,7 +296,7 @@ scripts/      браузерные E2E + скриншот-тур + интегр�
 рекомендации, и, пожалуйста, соблюдайте наш [Кодекс поведения](../../CODE_OF_CONDUCT.md).
 Впервые здесь? Посмотрите задачи с меткой [`good first issue`](https://github.com/levy-street/world-of-claudecraft/labels/good%20first%20issue),
 откройте [задачу](https://github.com/levy-street/world-of-claudecraft/issues/new/choose)
-или поздоровайтесь в [Discord](https://discord.gg/GjhnUsBtw).
+или поздоровайтесь в [Discord](https://discord.gg/RMa4rgyhZ).
 
 ## Лицензия
 

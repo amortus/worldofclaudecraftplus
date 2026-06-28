@@ -167,14 +167,14 @@ describe('client HTML shell', () => {
     );
     expect(dataDeletionHtml).toContain('<h1>Data Deletion</h1>');
     expect(dataDeletionHtml).toContain('href="mailto:contact@worldofclaudecraft.com.br"');
-    expect(dataDeletionHtml).toContain('href="https://discord.gg/GjhnUsBtw"');
+    expect(dataDeletionHtml).toContain('href="https://discord.gg/RMa4rgyhZ"');
     expect(dataDeletionHtml).toContain('href="/support">Support</a>');
     expect(supportHtml).toContain(
       '<link rel="canonical" href="https://worldofclaudecraft.com.br/support" />',
     );
     expect(supportHtml).toContain('<h1>Support</h1>');
     expect(supportHtml).toContain('href="mailto:contact@worldofclaudecraft.com.br"');
-    expect(supportHtml).toContain('href="https://discord.gg/GjhnUsBtw"');
+    expect(supportHtml).toContain('href="https://discord.gg/RMa4rgyhZ"');
     expect(supportHtml).toContain('href="/data-deletion">Data Deletion page</a>');
     expect(supportHtml).toContain('"@type": "ContactPage"');
     expect(html).toContain('href="/terms" class="footer-link" data-i18n="footer.terms"');

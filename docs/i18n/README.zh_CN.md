@@ -8,7 +8,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE)
 [![Version](https://img.shields.io/badge/version-0.6.0-blue)](../../package.json)
-[![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/GjhnUsBtw)
+[![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/RMa4rgyhZ)
 
 [English](../../README.md) · [Español](README.es.md) · [Español (España)](README.es_ES.md) · [Français](README.fr_FR.md) · [Français (Canada)](README.fr_CA.md) · [Italiano](README.it_IT.md) · [Deutsch](README.de_DE.md) · **简体中文** · [繁體中文](README.zh_TW.md) · [한국어](README.ko_KR.md) · [日本語](README.ja_JP.md) · [Português (Brasil)](README.pt_BR.md) · [Русский](README.ru_RU.md)
 
@@ -16,7 +16,7 @@
 
 # World of ClaudeCraft —— 一款经典风格 MMO
 
-[加入社区 Discord](https://discord.gg/GjhnUsBtw)
+[加入社区 Discord](https://discord.gg/RMa4rgyhZ)
 
 ![World of ClaudeCraft 标题画面](../../docs/screenshots/title-screen.jpg)
 
@@ -274,7 +274,7 @@ scripts/      浏览器 E2E + 截图巡览 + 多人集成测试
 [行为准则](../../CODE_OF_CONDUCT.md)。初来乍到？不妨找一找标有
 [`good first issue`](https://github.com/levy-street/world-of-claudecraft/labels/good%20first%20issue)
 标签的 issue，提交一个 [issue](https://github.com/levy-street/world-of-claudecraft/issues/new/choose)，
-或者来 [Discord](https://discord.gg/GjhnUsBtw) 上打个招呼。
+或者来 [Discord](https://discord.gg/RMa4rgyhZ) 上打个招呼。
 
 ## License
 

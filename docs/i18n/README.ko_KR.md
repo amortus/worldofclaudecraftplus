@@ -8,7 +8,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../../LICENSE)
 [![Version](https://img.shields.io/badge/version-0.6.0-blue)](../../package.json)
-[![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/GjhnUsBtw)
+[![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/RMa4rgyhZ)
 
 [English](../../README.md) · [Español](README.es.md) · [Español (España)](README.es_ES.md) · [Français](README.fr_FR.md) · [Français (Canada)](README.fr_CA.md) · [Italiano](README.it_IT.md) · [Deutsch](README.de_DE.md) · [简体中文](README.zh_CN.md) · [繁體中文](README.zh_TW.md) · **한국어** · [日本語](README.ja_JP.md) · [Português (Brasil)](README.pt_BR.md) · [Русский](README.ru_RU.md)
 
@@ -16,7 +16,7 @@
 
 # World of ClaudeCraft — 클래식 스타일 MMO
 
-[커뮤니티 Discord 참여하기](https://discord.gg/GjhnUsBtw)
+[커뮤니티 Discord 참여하기](https://discord.gg/RMa4rgyhZ)
 
 ![World of ClaudeCraft 타이틀 화면](../../docs/screenshots/title-screen.jpg)
 
@@ -191,7 +191,7 @@ scripts/      브라우저 E2E + 스크린샷 투어 + 멀티플레이어 통합
 
 ## 기여하기
 
-코드, 번역, 버그 제보, 문서 등 모든 종류의 기여를 환영합니다. 설정 방법과 가이드라인은 [CONTRIBUTING.ko_KR.md](CONTRIBUTING.ko_KR.md)에서 시작하시고, 저희의 [행동 강령](../../CODE_OF_CONDUCT.md)을 지켜 주세요. 처음이신가요? [`good first issue`](https://github.com/levy-street/world-of-claudecraft/labels/good%20first%20issue) 라벨이 붙은 이슈를 찾아보시거나, [이슈](https://github.com/levy-street/world-of-claudecraft/issues/new/choose)를 열어 주시거나, [Discord](https://discord.gg/GjhnUsBtw)에서 인사를 건네 주세요.
+코드, 번역, 버그 제보, 문서 등 모든 종류의 기여를 환영합니다. 설정 방법과 가이드라인은 [CONTRIBUTING.ko_KR.md](CONTRIBUTING.ko_KR.md)에서 시작하시고, 저희의 [행동 강령](../../CODE_OF_CONDUCT.md)을 지켜 주세요. 처음이신가요? [`good first issue`](https://github.com/levy-street/world-of-claudecraft/labels/good%20first%20issue) 라벨이 붙은 이슈를 찾아보시거나, [이슈](https://github.com/levy-street/world-of-claudecraft/issues/new/choose)를 열어 주시거나, [Discord](https://discord.gg/RMa4rgyhZ)에서 인사를 건네 주세요.
 
 ## License
 
