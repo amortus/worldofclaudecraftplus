@@ -1068,32 +1068,6 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
     if (req.method === 'POST' && url === '/api/perf-report') {
       return await handlePerfReport(req, res);
     }
-    if (req.method === 'GET' && url === '/metrics') {
-      const s = game.adminStats();
-      const lines = [
-        '# HELP woc_players_online Number of connected players',
-        '# TYPE woc_players_online gauge',
-        `woc_players_online ${s.online}`,
-        '# HELP woc_entities_total Number of entities in simulation',
-        '# TYPE woc_entities_total gauge',
-        `woc_entities_total ${s.simEntities}`,
-        '# HELP woc_tick_duration_ms Exponential moving average of server tick duration in ms',
-        '# TYPE woc_tick_duration_ms gauge',
-        `woc_tick_duration_ms ${s.tickMsAvg}`,
-        '# HELP woc_process_heap_bytes Node.js heap used bytes',
-        '# TYPE woc_process_heap_bytes gauge',
-        `woc_process_heap_bytes ${s.heapUsedBytes}`,
-        '# HELP woc_process_rss_bytes Node.js resident set size bytes',
-        '# TYPE woc_process_rss_bytes gauge',
-        `woc_process_rss_bytes ${s.rssBytes}`,
-        '# HELP woc_process_uptime_seconds Process uptime in seconds',
-        '# TYPE woc_process_uptime_seconds counter',
-        `woc_process_uptime_seconds ${s.uptimeSeconds}`,
-      ];
-      res.writeHead(200, { 'Content-Type': 'text/plain; version=0.0.4; charset=utf-8' });
-      res.end(lines.join('\n') + '\n');
-      return;
-    }
     if (req.method === 'GET' && url === '/api/project-stats') {
       const accountsCount = await getAccountsCount();
       return json(res, 200, {
@@ -1438,6 +1412,32 @@ async function main(): Promise<void> {
     else if (req.method === 'GET' && path.startsWith('/c/')) void handleProfilePage(req, res);
     else if (req.method === 'GET' && path === '/sitemap-characters.xml')
       void handleCharacterSitemap(req, res);
+    else if (req.method === 'GET' && path === '/metrics') {
+      const s = game.adminStats();
+      const mem = process.memoryUsage();
+      const lines = [
+        '# HELP woc_players_online Number of connected players',
+        '# TYPE woc_players_online gauge',
+        `woc_players_online ${s.online}`,
+        '# HELP woc_entities_total Number of entities in simulation',
+        '# TYPE woc_entities_total gauge',
+        `woc_entities_total ${s.simEntities}`,
+        '# HELP woc_tick_duration_ms Exponential moving average of server tick duration in ms',
+        '# TYPE woc_tick_duration_ms gauge',
+        `woc_tick_duration_ms ${s.tickMsAvg}`,
+        '# HELP woc_process_heap_bytes Node.js heap used bytes',
+        '# TYPE woc_process_heap_bytes gauge',
+        `woc_process_heap_bytes ${mem.heapUsed}`,
+        '# HELP woc_process_rss_bytes Node.js resident set size bytes',
+        '# TYPE woc_process_rss_bytes gauge',
+        `woc_process_rss_bytes ${mem.rss}`,
+        '# HELP woc_process_uptime_seconds Process uptime in seconds',
+        '# TYPE woc_process_uptime_seconds counter',
+        `woc_process_uptime_seconds ${s.uptimeSeconds}`,
+      ];
+      res.writeHead(200, { 'Content-Type': 'text/plain; version=0.0.4; charset=utf-8' });
+      res.end(lines.join('\n') + '\n');
+    }
     else serveStatic(req, res);
   });
 
