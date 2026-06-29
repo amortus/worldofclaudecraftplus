@@ -111,38 +111,12 @@ const PROP_ASSET_DEFS: Record<string, PropAssetDef> = {
 type PropKey = keyof typeof PROP_ASSET_DEFS;
 
 const loadedProps = new Map<string, GLTF>();
-const ACTIVE_PROP_KEYS = new Set<PropKey>(
-  GFX.standardMaterials
-    ? (Object.keys(PROP_ASSET_DEFS) as PropKey[])
-    : [
-        'house1',
-        'house2',
-        'house3',
-        'blacksmith',
-        'inn',
-        'bellTower',
-        'well',
-        'stand1',
-        'stand2',
-        'cart',
-        'fence',
-        'bonfire',
-        'oreRocks',
-        'tentOpen',
-        'tentSmall',
-        'rockLargeD',
-        'mushroomRed',
-        'column',
-        'columnBroken',
-        'dockPlatform',
-        'rowboat',
-        'graveRound',
-        'timberPillar',
-        'crateWooden',
-        'barrel',
-        'delveEntrance2', // delve entrance portal, a landmark, so keep it on low gfx too
-      ],
-);
+// Always preload all props: GFX is re-evaluated by initGfxTier() after the WebGL
+// context exists, which may upgrade the tier from the module-load-time best-guess.
+// A low→medium upgrade makes lowProps=false, so !lowProps prop calls crash if those
+// assets weren't fetched. Loading all props costs extra bandwidth for low-tier users
+// but eliminates the race condition entirely.
+const ACTIVE_PROP_KEYS = new Set<PropKey>(Object.keys(PROP_ASSET_DEFS) as PropKey[]);
 
 // Headless sim/test imports never fetch; the browser kicks loads immediately.
 if (typeof window !== 'undefined') {
