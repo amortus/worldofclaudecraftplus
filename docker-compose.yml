@@ -69,6 +69,8 @@ services:
       APPLE_DEVICECHECK_ENV: ${APPLE_DEVICECHECK_ENV:-production}
       # Runtime: protects the loopback-only deploy countdown endpoint.
       RESTART_COUNTDOWN_SECRET: ${RESTART_COUNTDOWN_SECRET:-}
+      # Optional: Discord webhook URL to forward bug reports to a channel.
+      DISCORD_BUG_WEBHOOK: ${DISCORD_BUG_WEBHOOK:-}
     # loopback-only: the TLS reverse proxy (Caddy) is the public entrance
     ports:
       - "127.0.0.1:8787:8787"

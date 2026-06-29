@@ -265,6 +265,7 @@ async function getLeaderboard(scope: 'realm' | 'global'): Promise<LeaderboardEnt
 // ---------------------------------------------------------------------------
 const GITHUB_REPO = process.env.GITHUB_REPO ?? 'levy-street/world-of-claudecraft';
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN ?? '';
+const DISCORD_BUG_WEBHOOK = process.env.DISCORD_BUG_WEBHOOK ?? '';
 const RELEASES_TTL_MS = 15 * 60_000; // 15 min — releases change rarely
 const RELEASES_SIZE = 20;
 const RELEASE_BODY_MAX = 8_000; // guard against a pathologically long body
@@ -1056,6 +1057,27 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
           screenshot: typeof body.screenshot === 'string' ? body.screenshot : null,
           meta: body.meta,
         });
+        if (DISCORD_BUG_WEBHOOK) {
+          const posStr = `${Math.round(pos.x ?? 0)}, ${Math.round(pos.z ?? 0)}`;
+          const who = characterName ? `**${characterName}**` : `conta #${accountId}`;
+          const desc = description.slice(0, 300) + (description.length > 300 ? '…' : '');
+          fetch(DISCORD_BUG_WEBHOOK, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              embeds: [{
+                title: `🐛 Bug Report #${report.id}`,
+                color: 0xe74c3c,
+                fields: [
+                  { name: 'Personagem', value: who, inline: true },
+                  { name: 'Posição', value: posStr, inline: true },
+                  { name: 'Descrição', value: desc },
+                ],
+                footer: { text: `Reino: ${REALM}` },
+              }],
+            }),
+          }).catch((err) => console.error('discord bug webhook failed:', err));
+        }
         return json(res, 200, {
           ok: true,
           reportId: report.id,
