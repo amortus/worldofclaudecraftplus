@@ -1492,38 +1492,37 @@ async function startGame(
   function interactKey(): void {
     const p = world.player;
     let bestCorpse: number | null = null,
-      bestCorpseD = INTERACT_RANGE;
+      bestCorpseD2 = INTERACT_RANGE * INTERACT_RANGE;
     let bestObj: number | null = null,
-      bestObjD = INTERACT_RANGE;
+      bestObjD2 = INTERACT_RANGE * INTERACT_RANGE;
     let bestNpc: number | null = null,
-      bestNpcD = INTERACT_RANGE + 1;
+      bestNpcD2 = (INTERACT_RANGE + 1) * (INTERACT_RANGE + 1);
     // Delve interactables (warded chest, cracked grave, sealed/tombstone passage,
     // surface stairs) are driven through delveInteract, not the generic pickup
     // path, the sim owns their per-object proximity + state gating and the
     // lockpick offer. Selected a touch wider than INTERACT_RANGE so the sim can
     // emit its precise "move closer to the chest/passage" hint.
     let bestDelve: number | null = null,
-      bestDelveD = INTERACT_RANGE + 1;
-    for (const e of world.entities.values()) {
-      const d = dist2d(p.pos, e.pos);
-      if (e.kind === 'mob' && e.lootable && d < bestCorpseD) {
+      bestDelveD2 = (INTERACT_RANGE + 1) * (INTERACT_RANGE + 1);
+    world.entitiesNearby(p.pos.x, p.pos.z, INTERACT_RANGE + 2, (e, d2) => {
+      if (e.kind === 'mob' && e.lootable && d2 < bestCorpseD2) {
         bestCorpse = e.id;
-        bestCorpseD = d;
+        bestCorpseD2 = d2;
       }
       if (e.kind === 'object' && e.templateId?.startsWith('delve_')) {
-        if (d < bestDelveD) {
+        if (d2 < bestDelveD2) {
           bestDelve = e.id;
-          bestDelveD = d;
+          bestDelveD2 = d2;
         }
-      } else if (e.kind === 'object' && e.lootable && d < bestObjD) {
+      } else if (e.kind === 'object' && e.lootable && d2 < bestObjD2) {
         bestObj = e.id;
-        bestObjD = d;
+        bestObjD2 = d2;
       }
-      if (e.kind === 'npc' && d < bestNpcD) {
+      if (e.kind === 'npc' && d2 < bestNpcD2) {
         bestNpc = e.id;
-        bestNpcD = d;
+        bestNpcD2 = d2;
       }
-    }
+    });
     if (bestCorpse !== null) {
       world.lootCorpse(bestCorpse);
       return;
@@ -1558,15 +1557,14 @@ async function startGame(
     const p = world.player;
     const activePvpOpponents = activePvpOpponentIds(world);
     let best: number | null = null;
-    let bestD = 40;
-    for (const e of world.entities.values()) {
-      if (!isAttackableEntity(e, world.playerId, activePvpOpponents)) continue;
-      const d = dist2d(p.pos, e.pos);
-      if (d < bestD) {
+    let bestD2 = 40 * 40;
+    world.entitiesNearby(p.pos.x, p.pos.z, 40, (e, d2) => {
+      if (!isAttackableEntity(e, world.playerId, activePvpOpponents)) return;
+      if (d2 < bestD2) {
         best = e.id;
-        bestD = d;
+        bestD2 = d2;
       }
-    }
+    });
     if (best === null) {
       hud.showError(t('errors.noEnemyNearby'));
       return;
@@ -1677,15 +1675,14 @@ async function startGame(
       const p = world.player;
       const activePvpOpponents = activePvpOpponentIds(world);
       let best: number | null = null;
-      let bestD = ATTACK_MOVE_ACQUIRE_RANGE;
-      for (const e of world.entities.values()) {
-        if (!isAttackableEntity(e, world.playerId, activePvpOpponents)) continue;
-        const d = dist2d(p.pos, e.pos);
-        if (d < bestD) {
+      let bestD2 = ATTACK_MOVE_ACQUIRE_RANGE * ATTACK_MOVE_ACQUIRE_RANGE;
+      world.entitiesNearby(p.pos.x, p.pos.z, ATTACK_MOVE_ACQUIRE_RANGE, (e, d2) => {
+        if (!isAttackableEntity(e, world.playerId, activePvpOpponents)) return;
+        if (d2 < bestD2) {
           best = e.id;
-          bestD = d;
+          bestD2 = d2;
         }
-      }
+      });
       if (best !== null) {
         const e = world.entities.get(best)!;
         world.targetEntity(best);

@@ -1,6 +1,7 @@
 // Online play: REST auth client + WebSocket world mirror.
 
 import { signChallenge } from '../sim/client_challenge';
+import { SpatialGrid } from '../sim/spatial';
 import { mechChromaItemId, mechChromaSkinIndex } from '../sim/content/skins';
 import {
   cloneAllocation,
@@ -715,6 +716,10 @@ function blankEntity(id: number): Entity {
 export class ClientWorld implements IWorld {
   cfg: { seed: number; playerClass: PlayerClass };
   entities = new Map<number, Entity>();
+  private _entityGrid?: SpatialGrid;
+  private get entityGrid(): SpatialGrid {
+    return (this._entityGrid ??= new SpatialGrid());
+  }
   playerId = -1;
   moveInput: MoveInput = emptyMoveInput();
   inventory: InvSlot[] = [];
@@ -1061,6 +1066,7 @@ export class ClientWorld implements IWorld {
         e.facing = w.f;
         e.prevFacing = w.f;
         this.entities.set(w.id, e);
+        this.entityGrid.insert(e);
       }
       if (hasIdentity) {
         e.kind = w.k;
@@ -1323,6 +1329,7 @@ export class ClientWorld implements IWorld {
       const dx = self ? e.pos.x - self.pos.x : 0;
       const dz = self ? e.pos.z - self.pos.z : 0;
       if (dx * dx + dz * dz < DESPAWN_GRACE_MIN_DIST_SQ) {
+        this.entityGrid.remove(e);
         this.entities.delete(id);
         missingSince.delete(id);
         continue;
@@ -1331,10 +1338,21 @@ export class ClientWorld implements IWorld {
       if (since === undefined) {
         missingSince.set(id, now);
       } else if (now - since >= DESPAWN_GRACE_MS) {
+        this.entityGrid.remove(e);
         this.entities.delete(id);
         missingSince.delete(id);
       }
     }
+    // Sync grid positions for entities that moved this snapshot
+    this.entityGrid.refresh(this.entities.values());
+  }
+
+  // -----------------------------------------------------------------------
+  // IWorld spatial query
+  // -----------------------------------------------------------------------
+
+  entitiesNearby(x: number, z: number, radius: number, fn: (e: Entity, d2: number) => void): void {
+    this.entityGrid.forEachInRadius(x, z, radius, fn);
   }
 
   // -----------------------------------------------------------------------

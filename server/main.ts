@@ -56,6 +56,7 @@ import {
   ensureSchema,
   findAccount,
   findCharacterReportTargetByName,
+  getPublicCharacterByName,
   getAccountsCount,
   getCharacter,
   getCharacterById,
@@ -1083,6 +1084,14 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
         players_online: game.clients.size,
         names: [...game.clients.values()].map((s) => s.name),
       });
+    }
+    if (req.method === 'GET' && url.startsWith('/api/player')) {
+      const name = new URL(req.url ?? '/', 'http://localhost').searchParams.get('name') ?? '';
+      if (!name.trim()) return json(res, 400, { error: 'name required' });
+      const profile = await getPublicCharacterByName(name);
+      if (!profile) return json(res, 404, { error: 'character not found' });
+      const online = game.liveLevelForCharacter(profile.id) !== null;
+      return json(res, 200, { ...profile, online });
     }
     if (req.method === 'GET' && url === '/api/arena/leaderboard') {
       // public all-time Ashen Coliseum ladder (top rated characters)

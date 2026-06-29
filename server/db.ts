@@ -1487,6 +1487,46 @@ export async function findCharacterReportTargetByName(
     : null;
 }
 
+export interface PublicCharacterProfile {
+  id: number;
+  name: string;
+  class: PlayerClass;
+  level: number;
+  lifetimeXp: number;
+  prestigeRank: number;
+  guild: string | null;
+}
+
+// Public read-only character profile by name — safe to expose unauthenticated.
+// Returns name, class, level, lifetime XP, prestige rank, and guild.
+export async function getPublicCharacterByName(name: string): Promise<PublicCharacterProfile | null> {
+  const term = name.trim();
+  if (!term) return null;
+  const res = await pool.query(
+    `SELECT c.id, c.name, c.class, c.level,
+            COALESCE(${LIFETIME_XP_EXPR}, 0) AS lifetime_xp,
+            COALESCE((c.state->>'prestigeRank')::int, 0) AS prestige_rank,
+            g.name AS guild
+       FROM characters c
+       LEFT JOIN guild_members gm ON gm.character_id = c.id
+       LEFT JOIN guilds g ON g.id = gm.guild_id AND g.realm = $1
+      WHERE c.realm = $1 AND lower(c.name) = lower($2)
+      LIMIT 1`,
+    [REALM, term],
+  );
+  const row = res.rows[0];
+  if (!row) return null;
+  return {
+    id: Number(row.id),
+    name: row.name as string,
+    class: row.class as PlayerClass,
+    level: Number(row.level),
+    lifetimeXp: Number(row.lifetime_xp),
+    prestigeRank: Number(row.prestige_rank),
+    guild: (row.guild as string | null) ?? null,
+  };
+}
+
 // Guild display name for a character (realm-scoped), or null when unguilded.
 // Read here rather than via PgSocialDb so the character-sheet/profile routes can
 // fetch it without constructing a SocialService, and to avoid a db↔social_db

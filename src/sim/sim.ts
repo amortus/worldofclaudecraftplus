@@ -12343,6 +12343,11 @@ export class Sim {
     }
   }
 
+  // Spatial query — satisfies IWorld.entitiesNearby; delegates to the existing grid.
+  entitiesNearby(x: number, z: number, radius: number, fn: (e: Entity, d2: number) => void): void {
+    this.grid.forEachInRadius(x, z, radius, fn);
+  }
+
   // Persistent social systems (friends / ignore / guilds) require an account
   // and database, so they only exist in online play. The offline Sim satisfies
   // the IWorld surface with inert stubs.

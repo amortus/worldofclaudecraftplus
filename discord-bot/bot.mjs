@@ -57,6 +57,13 @@ const commands = [
   new SlashCommandBuilder()
     .setName('novidades')
     .setDescription('Veja as últimas atualizações do servidor BR'),
+
+  new SlashCommandBuilder()
+    .setName('perfil')
+    .setDescription('Veja o perfil de um personagem do servidor')
+    .addStringOption(opt =>
+      opt.setName('nome').setDescription('Nome do personagem').setRequired(true)
+    ),
 ];
 
 // ── Changelog ─────────────────────────────────────────────────────────────────
@@ -148,11 +155,11 @@ client.once('ready', async () => {
     { name: 'World of ClaudeCraft BR', type: ActivityType.Watching },
     { name: '/jogar para entrar no mundo', type: ActivityType.Custom },
   ];
-  let i = 0;
+  let statusIdx = 0;
   const setStatus = () => {
-    const s = statuses[i % statuses.length];
-    client.user.setActivity(s.name, { type: s.type });
-    i++;
+    const s = statuses[statusIdx % statuses.length];
+    try { client.user.setActivity(s.name, { type: s.type }); } catch { /* ignore */ }
+    statusIdx++;
   };
   setStatus();
   setInterval(setStatus, 30_000);
@@ -212,7 +219,8 @@ client.on('interactionCreate', async (interaction) => {
   else if (commandName === 'status') {
     await interaction.deferReply();
     try {
-      const res = await fetch(`${GAME_API}/api/status`);
+      const res = await fetch(`${GAME_API}/api/status`, { signal: AbortSignal.timeout(5000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const embed = new EmbedBuilder()
         .setColor(data.players_online > 0 ? 0x57F287 : 0x99AAB5)
@@ -257,7 +265,8 @@ client.on('interactionCreate', async (interaction) => {
   else if (commandName === 'ranking') {
     await interaction.deferReply();
     try {
-      const res = await fetch(`${GAME_API}/api/leaderboard?limit=10&scope=realm`);
+      const res = await fetch(`${GAME_API}/api/leaderboard?limit=10&scope=realm`, { signal: AbortSignal.timeout(5000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const leaders = data.leaders ?? [];
       const lines = leaders.length
@@ -281,7 +290,8 @@ client.on('interactionCreate', async (interaction) => {
   else if (commandName === 'arena') {
     await interaction.deferReply();
     try {
-      const res = await fetch(`${GAME_API}/api/arena/leaderboard?format=1v1`);
+      const res = await fetch(`${GAME_API}/api/arena/leaderboard?format=1v1`, { signal: AbortSignal.timeout(5000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const leaders = data.leaders ?? [];
       const lines = leaders.length
@@ -363,6 +373,53 @@ client.on('interactionCreate', async (interaction) => {
     const latest = UPDATES[0];
     await interaction.reply({ embeds: [buildNovidadesEmbed(latest)] });
   }
+
+  else if (commandName === 'perfil') {
+    const nome = interaction.options.getString('nome', true).trim();
+    await interaction.deferReply();
+    try {
+      const res = await fetch(`${GAME_API}/api/player?name=${encodeURIComponent(nome)}`, { signal: AbortSignal.timeout(5000) });
+      if (res.status === 404) {
+        await interaction.editReply(`❌ Personagem **${nome}** não encontrado.`);
+        return;
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const p = await res.json();
+      const CLASS_EMOJI = {
+        warrior: '🛡️', paladin: '✨', hunter: '🏹', rogue: '🗡️',
+        priest: '🌟', shaman: '⚡', mage: '🔥', warlock: '💀', druid: '🌿',
+      };
+      const classEmoji = CLASS_EMOJI[p.class] ?? '⚔️';
+      const classLabel = p.class ? (p.class.charAt(0).toUpperCase() + p.class.slice(1)) : '?';
+      const xpFormatted = (p.lifetimeXp ?? 0).toLocaleString('pt-BR');
+      const prestige = p.prestigeRank > 0 ? ` · Prestígio ${p.prestigeRank}` : '';
+      const guild = p.guild ? `**<${p.guild}>**  ` : '';
+      const onlineStatus = p.online ? '🟢 Online agora' : '⚫ Offline';
+      const embed = new EmbedBuilder()
+        .setColor(p.online ? 0x57F287 : 0x99AAB5)
+        .setTitle(`${classEmoji} ${p.name}`)
+        .setDescription(`${guild}${onlineStatus}`)
+        .addFields(
+          { name: 'Classe', value: classLabel, inline: true },
+          { name: 'Nível', value: `**${p.level}**${prestige}`, inline: true },
+          { name: 'XP Total', value: xpFormatted, inline: true },
+        )
+        .setFooter({ text: `World of ClaudeCraft BR · ${SITE_URL}` })
+        .setTimestamp();
+      await interaction.editReply({ embeds: [embed] });
+    } catch {
+      await interaction.editReply('❌ Não foi possível buscar o perfil agora.');
+    }
+  }
 });
+
+// ── Graceful shutdown ─────────────────────────────────────────────────────────
+async function shutdown(signal) {
+  console.log(`${signal} received — logging out`);
+  try { await client.destroy(); } catch { /* ignore */ }
+  process.exit(0);
+}
+process.on('SIGTERM', () => void shutdown('SIGTERM'));
+process.on('SIGINT',  () => void shutdown('SIGINT'));
 
 client.login(TOKEN);

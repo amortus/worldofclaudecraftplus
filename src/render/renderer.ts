@@ -1831,14 +1831,23 @@ export class Renderer {
     includeRequired: boolean,
   ): void {
     this.viewCandidates.length = 0;
-    for (const e of this.sim.entities.values()) {
-      if (this.views.has(e.id)) continue;
-      const required = e.id === center.id || e.id === center.targetId;
-      if (required && !includeRequired) continue;
-      const d2 = distSqXZ(e, center);
-      if (!required && d2 > rangeSq) continue;
-      this.viewCandidates.push({ e, d2, priority: this.viewCandidatePriority(e, center, d2) });
+    // Required entities (self + current target) bypass range check — always include them
+    if (includeRequired) {
+      for (const id of [center.id, center.targetId]) {
+        if (id === null) continue;
+        const e = this.sim.entities.get(id);
+        if (!e || this.views.has(e.id)) continue;
+        const d2 = distSqXZ(e, center);
+        this.viewCandidates.push({ e, d2, priority: this.viewCandidatePriority(e, center, d2) });
+      }
     }
+    // Spatial query for entities within render range — O(cells_in_radius) vs O(n_all_entities)
+    const radius = Math.sqrt(rangeSq);
+    this.sim.entitiesNearby(center.pos.x, center.pos.z, radius, (e, d2) => {
+      if (this.views.has(e.id)) return;
+      if (e.id === center.id || e.id === center.targetId) return; // already handled above
+      this.viewCandidates.push({ e, d2, priority: this.viewCandidatePriority(e, center, d2) });
+    });
     if (this.viewCandidates.length > 1) {
       this.viewCandidates.sort((a, b) => a.priority - b.priority || a.d2 - b.d2 || a.e.id - b.e.id);
     }

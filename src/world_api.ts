@@ -341,6 +341,8 @@ export interface RaidLockout {
 export interface IWorld {
   cfg: { seed: number; playerClass: PlayerClass };
   entities: Map<number, Entity>;
+  /** O(cells_in_radius) spatial query over known entities. Backed by SpatialGrid in ClientWorld. */
+  entitiesNearby(x: number, z: number, radius: number, fn: (e: Entity, d2: number) => void): void;
   playerId: number;
   player: Entity;
   moveInput: MoveInput;
