@@ -1491,7 +1491,14 @@ async function main(): Promise<void> {
   // cap frame size: the largest legitimate client message is a small JSON
   // command; without this the ws default (~100 MiB) lets one socket force a
   // huge allocation + parse before any field-level validation runs
-  const wss = new WebSocketServer({ noServer: true, maxPayload: 16 * 1024 });
+  const wss = new WebSocketServer({
+    noServer: true,
+    maxPayload: 16 * 1024,
+    perMessageDeflate: {
+      zlibDeflateOptions: { level: 1 }, // fastest deflate — minimises CPU per tick
+      threshold: 256,                   // only compress frames larger than 256 B
+    },
+  });
   server.on('upgrade', (req, socket, head) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
     if (url.pathname !== '/ws') {

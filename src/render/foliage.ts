@@ -1271,11 +1271,18 @@ function buildGrassRing(parent: THREE.Group, seed: number): GrassRing {
       if (!parent.visible) parent.visible = true;
 
       generation++;
-      const coverRadius = activeRadius() + chunkHalfDiag;
-      const c0 = Math.floor((px - coverRadius) / GRASS_CHUNK_SIZE);
-      const c1 = Math.floor((px + coverRadius) / GRASS_CHUNK_SIZE);
-      const z0 = Math.floor((pz - coverRadius) / GRASS_CHUNK_SIZE);
-      const z1 = Math.floor((pz + coverRadius) / GRASS_CHUNK_SIZE);
+      const visRadius = activeRadius() + chunkHalfDiag;
+      // Pre-build one ring of chunks beyond the visible radius so they are
+      // ready before the player reaches them, eliminating the build stutter
+      // on first entry. Pre-loaded chunks stay invisible until they enter
+      // visRadius on a future frame.
+      const preRadius = visRadius + GRASS_CHUNK_SIZE;
+      const c0 = Math.floor((px - preRadius) / GRASS_CHUNK_SIZE);
+      const c1 = Math.floor((px + preRadius) / GRASS_CHUNK_SIZE);
+      const z0 = Math.floor((pz - preRadius) / GRASS_CHUNK_SIZE);
+      const z1 = Math.floor((pz + preRadius) / GRASS_CHUNK_SIZE);
+      const visRadiusSq = visRadius * visRadius;
+      const preRadiusSq = preRadius * preRadius;
       for (let cx = c0; cx <= c1; cx++) {
         for (let cz = z0; cz <= z1; cz++) {
           const centerX = chunkCenter(cx);
@@ -1283,13 +1290,13 @@ function buildGrassRing(parent: THREE.Group, seed: number): GrassRing {
           const dx = centerX - px;
           const dz = centerZ - pz;
           const prioritySq = dx * dx + dz * dz;
-          if (prioritySq > coverRadius * coverRadius) continue;
+          if (prioritySq > preRadiusSq) continue;
           const key = chunkKey(cx, cz);
           const chunk = chunks.get(key) ?? createChunk(cx, cz);
           chunk.lastSeen = generation;
           chunk.lastUsed = generation;
           chunk.prioritySq = prioritySq;
-          if (chunk.mesh) chunk.mesh.visible = true;
+          if (chunk.mesh) chunk.mesh.visible = prioritySq <= visRadiusSq;
           queueChunk(chunk);
         }
       }
