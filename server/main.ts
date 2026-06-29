@@ -1494,10 +1494,6 @@ async function main(): Promise<void> {
   const wss = new WebSocketServer({
     noServer: true,
     maxPayload: 16 * 1024,
-    perMessageDeflate: {
-      zlibDeflateOptions: { level: 1 }, // fastest deflate — minimises CPU per tick
-      threshold: 256,                   // only compress frames larger than 256 B
-    },
   });
   server.on('upgrade', (req, socket, head) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
