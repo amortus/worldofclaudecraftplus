@@ -1061,22 +1061,38 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
           const posStr = `${Math.round(pos.x ?? 0)}, ${Math.round(pos.z ?? 0)}`;
           const who = characterName ? `**${characterName}**` : `conta #${accountId}`;
           const desc = description.slice(0, 300) + (description.length > 300 ? '…' : '');
-          fetch(DISCORD_BUG_WEBHOOK, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              embeds: [{
-                title: `🐛 Bug Report #${report.id}`,
-                color: 0xe74c3c,
-                fields: [
-                  { name: 'Personagem', value: who, inline: true },
-                  { name: 'Posição', value: posStr, inline: true },
-                  { name: 'Descrição', value: desc },
-                ],
-                footer: { text: `Reino: ${REALM}` },
-              }],
-            }),
-          }).catch((err) => console.error('discord bug webhook failed:', err));
+          const screenshot = typeof body.screenshot === 'string' && report.screenshotStored
+            ? body.screenshot
+            : null;
+          const embedPayload = {
+            embeds: [{
+              title: `🐛 Bug Report #${report.id}`,
+              color: 0xe74c3c,
+              fields: [
+                { name: 'Personagem', value: who, inline: true },
+                { name: 'Posição', value: posStr, inline: true },
+                { name: 'Descrição', value: desc },
+              ],
+              ...(screenshot ? { image: { url: 'attachment://screenshot.jpg' } } : {}),
+              footer: { text: `Reino: ${REALM}` },
+            }],
+          };
+          if (screenshot) {
+            // Strip data URL prefix and send as multipart attachment
+            const base64Data = screenshot.replace(/^data:image\/[^;]+;base64,/, '');
+            const imgBuf = Buffer.from(base64Data, 'base64');
+            const form = new FormData();
+            form.append('payload_json', JSON.stringify(embedPayload));
+            form.append('files[0]', new Blob([imgBuf], { type: 'image/jpeg' }), 'screenshot.jpg');
+            fetch(DISCORD_BUG_WEBHOOK, { method: 'POST', body: form })
+              .catch((err) => console.error('discord bug webhook failed:', err));
+          } else {
+            fetch(DISCORD_BUG_WEBHOOK, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(embedPayload),
+            }).catch((err) => console.error('discord bug webhook failed:', err));
+          }
         }
         return json(res, 200, {
           ok: true,
