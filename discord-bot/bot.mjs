@@ -69,6 +69,18 @@ const commands = [
 // ── Changelog ─────────────────────────────────────────────────────────────────
 const UPDATES = [
   {
+    version: 'v1.5.0-br',
+    date: '29 Jun 2026',
+    title: '🗺️ Mapa Redesenhado + Otimizações de Performance',
+    items: [
+      '**Mapa do mundo reformulado** — novo sistema de hillshade em 2 eixos (NW), transições suaves entre biomas, franja de praia nas margens de lagos, neve nos picos e variação de cor pixel a pixel. Visual muito mais detalhado e realista',
+      '**Relatórios de bug no Discord** — ao clicar "Relatar Erro" no jogo, a screenshot e descrição chegam direto no canal #bugs-e-suporte do servidor',
+      '**Compressão WebSocket** — mensagens de rede comprimidas automaticamente (~40–60% menores). Conexão mais rápida especialmente em redes lentas',
+      '**Grama sem travadas** — chunks de grama são pré-carregados antes de ficarem visíveis. A câmera entra na área e a grama já está pronta',
+      '**Perfil de personagem** — use `/perfil <nome>` no Discord para ver stats de qualquer jogador do servidor',
+    ],
+  },
+  {
     version: 'v1.4.0-br',
     date: '28 Jun 2026',
     title: '🧠 Detecção Inteligente de GPU + Melhorias',
