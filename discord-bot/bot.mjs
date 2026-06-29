@@ -64,6 +64,10 @@ const commands = [
     .addStringOption(opt =>
       opt.setName('nome').setDescription('Nome do personagem').setRequired(true)
     ),
+
+  new SlashCommandBuilder()
+    .setName('roadmap')
+    .setDescription('Veja o que está planejado para o futuro do servidor'),
 ];
 
 // ── Changelog ─────────────────────────────────────────────────────────────────
@@ -384,6 +388,56 @@ client.on('interactionCreate', async (interaction) => {
   else if (commandName === 'novidades') {
     const latest = UPDATES[0];
     await interaction.reply({ embeds: [buildNovidadesEmbed(latest)] });
+  }
+
+  else if (commandName === 'roadmap') {
+    const embed = new EmbedBuilder()
+      .setColor(0x5865F2)
+      .setTitle('🗺️ Roadmap — World of ClaudeCraft BR')
+      .setDescription('O que está planejado para o futuro do servidor. As fases são executadas em ordem de prioridade.')
+      .addFields(
+        {
+          name: '✅ Já existe no jogo',
+          value:
+            '9 classes · 4 zonas · Tutorial · Quests · Dungeons · Party · Guild · Arena PvP · Leaderboard · Wiki · 14 idiomas',
+          inline: false,
+        },
+        {
+          name: '🔥 Fase 1 — Retenção (próximos 30–60 dias)',
+          value:
+            '• **World Boss semanal** — boss de elite com aviso no Discord\n' +
+            '• **Daily quests** — 3 missões por zona, reset diário\n' +
+            '• **Leaderboard na home** — top 10 sem precisar logar',
+          inline: false,
+        },
+        {
+          name: '⚔️ Fase 2 — Profundidade (60–120 dias)',
+          value:
+            '• **Guild UI** completa in-game\n' +
+            '• **Mais dungeons** por zona\n' +
+            '• **Crafting** — receitas + drops → item craftável\n' +
+            '• **Achievements**',
+          inline: false,
+        },
+        {
+          name: '✨ Fase 3 — Polimento visual (120+ dias)',
+          value:
+            '• Novos modelos de mobs\n' +
+            '• Efeitos de habilidade melhorados\n' +
+            '• UI com identidade visual própria\n' +
+            '• Música por zona',
+          inline: false,
+        },
+        {
+          name: '💡 Ideias futuras',
+          value:
+            'Mounts · Housing · PvP em mundo aberto · Profissões · Eventos sazonais · Battleground 5v5 · Raid 10 jogadores · Lore BR',
+          inline: false,
+        },
+      )
+      .setFooter({ text: `Roadmap completo em docs/ROADMAP.md · ${SITE_URL}` })
+      .setTimestamp();
+    await interaction.reply({ embeds: [embed] });
   }
 
   else if (commandName === 'perfil') {
