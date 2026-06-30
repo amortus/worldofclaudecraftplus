@@ -59,6 +59,18 @@ export function warmPlayerIcons(world: IWorld): void {
   }
 }
 
+/** Queue arbitrary icon-generation tasks into the SAME idle-capped pump warmPlayerIcons
+ *  uses (so they never run a long blocking slice). Used to fill a list panel's placeholder
+ *  icons (market / vendor) during idle time instead of encoding them on the open click. */
+export function warmIcons(tasks: Array<() => void>): void {
+  if (tasks.length === 0) return;
+  for (const task of tasks) queue.push(task);
+  if (!running) {
+    running = true;
+    pump();
+  }
+}
+
 function pump(): void {
   const ric = (globalThis as unknown as { requestIdleCallback?: RIC }).requestIdleCallback;
   const run = (deadline?: IdleDeadline): void => {

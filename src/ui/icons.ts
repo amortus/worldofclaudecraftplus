@@ -3072,6 +3072,27 @@ export function iconDataUrl(kind: IconKind, id: string, size: number = DEFAULT_I
   return url;
 }
 
+// Like iconDataUrl, but returns null instead of synchronously encoding a procedural
+// icon that is not cached yet. Image-art icons (weapon variants, ability art) are cheap
+// static URLs and still return immediately. Used by list panels (market/vendor) to paint
+// a placeholder now and fill the real icon during idle time, so opening a 50-row page
+// does not toDataURL dozens of icons in one main-thread-blocking burst.
+export function iconDataUrlIfReady(
+  kind: IconKind,
+  id: string,
+  size: number = DEFAULT_ICON_SIZE,
+): string | null {
+  if (kind === 'item') {
+    const img = weaponIconUrl(id);
+    if (img) return img;
+  }
+  if (kind === 'ability' || kind === 'aura') {
+    const img = abilityImageUrl(id);
+    if (img) return img;
+  }
+  return urlCache.get(`${kind}|${id}|${size}`) ?? null;
+}
+
 // ---------------------------------------------------------------------------
 // Raid / target markers (issue #105)
 //

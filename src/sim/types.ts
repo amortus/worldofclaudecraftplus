@@ -1284,6 +1284,11 @@ export interface Entity {
   // client maps it to a held weapon model. Recomputed in recalcPlayerStats and
   // synced in identity fields (terse `mh`). The sim never reads it for gameplay.
   mainhandItemId: string | null;
+  // Full worn equipment (players only; empty otherwise). Render-only mirror of
+  // PlayerMeta.equipment, recomputed in recalcPlayerStats and synced in identity
+  // fields (terse `eq`) so another player can be inspected. Like mainhandItemId, the
+  // sim never reads it for gameplay (no effect on stats).
+  equippedItems: Partial<Record<EquipSlot, string>>;
   // $WOC holder-tier flair (cosmetic): 0/undefined = none, 1-10 = Ember…Sovereign.
   // Set server-side from the player's connected-wallet balance and synced in
   // identity fields like skin. The sim never reads it (no gameplay effect).
@@ -1770,6 +1775,24 @@ export function meleeMissChance(attackerLevel: number, targetLevel: number): num
   const diff = targetLevel - attackerLevel;
   const miss = diff > 0 ? 5 + aboveLevelMissPct(diff) : 5 + diff * 0.2;
   return Math.min(0.95, Math.max(0.005, miss / 100));
+}
+
+// Enemy mobs always connect at least this often against a player (or player-owned
+// pet), regardless of level difference.
+export const MOB_VS_PLAYER_MAX_MISS = 0.2;
+
+// Per-swing miss chance with the above-level penalty applied DIRECTIONALLY. The steep
+// penalty in meleeMissChance is an anti-power-level deterrent for PLAYERS hitting
+// higher-level mobs; because it keys off (target - attacker) level it would otherwise
+// also fire in reverse, making a low-level mob whiff on a higher-level player most of the
+// time. A hostile wild mob swinging at a player (or a player-owned pet) caps its miss at
+// MOB_VS_PLAYER_MAX_MISS (>= 80% hit); player/pet -> mob keeps the full scaling. Dodge
+// and blind are separate, intended effects the caller layers on.
+export function swingMissChance(attacker: Entity, target: Entity): number {
+  const miss = meleeMissChance(attacker.level, target.level);
+  const mobAttacker = attacker.kind === 'mob' && attacker.hostile && attacker.ownerId === null;
+  const playerSide = target.kind === 'player' || target.ownerId !== null;
+  return mobAttacker && playerSide ? Math.min(miss, MOB_VS_PLAYER_MAX_MISS) : miss;
 }
 
 export function armorReduction(armor: number, attackerLevel: number): number {

@@ -41,6 +41,7 @@ import {
   FIRST_TALENT_LEVEL,
   MAX_LOADOUTS,
   pointsSpent,
+  repairAllocation,
   type Role,
   type SavedLoadout,
   type TalentAllocation,
@@ -223,6 +224,7 @@ import {
   type SkinCatalog,
   type SkinRank,
   spellHitChance,
+  swingMissChance,
   TURN_SPEED,
   type Vec3,
   virtualLevel,
@@ -1472,11 +1474,20 @@ export class Sim {
       }
       for (const q of s.questsDone) meta.questsDone.add(q);
       if (s.talents)
-        meta.talents = {
-          spec: s.talents.spec ?? null,
-          ranks: { ...s.talents.ranks },
-          choices: { ...s.talents.choices },
-        };
+        // Revalidate the persisted build against the current rules + level budget before
+        // it is baked into the flat mods below. A stored allocation replays verbatim on
+        // load, so without this an over-budget, prereq-broken, or gated build (stale
+        // tuning, a level-down, or a tampered save) would still grant its stats/abilities.
+        // An honest in-budget build is returned unchanged.
+        meta.talents = repairAllocation(
+          cls,
+          {
+            spec: s.talents.spec ?? null,
+            ranks: { ...s.talents.ranks },
+            choices: { ...s.talents.choices },
+          },
+          talentPointsAtLevel(player.level),
+        );
       if (s.loadouts)
         meta.loadouts = s.loadouts.map((l) => ({
           name: l.name,
@@ -2228,7 +2239,9 @@ export class Sim {
         r.meta.loadouts.length > 0 ? Math.min(index, r.meta.loadouts.length - 1) : -1;
       const next = r.meta.activeLoadout >= 0 ? r.meta.loadouts[r.meta.activeLoadout] : null;
       if (next) {
-        r.meta.talents = cloneAllocation(next.alloc);
+        // AUTO-apply (no user gate), so repair against the level budget first: a stale
+        // or tampered next loadout would otherwise be baked into live mods wholesale.
+        r.meta.talents = repairAllocation(r.meta.cls, next.alloc, talentPointsAtLevel(r.e.level));
         this.recomputeTalents(r.meta);
       }
     } else if (r.meta.activeLoadout > index) r.meta.activeLoadout -= 1;
@@ -5199,7 +5212,7 @@ export class Sim {
       fx: 'projectile',
     });
     const missChance =
-      meleeMissChance(attacker.level, target.level) + this.blindMissBonus(attacker);
+      swingMissChance(attacker, target) + this.blindMissBonus(attacker);
     if (this.rng.chance(missChance)) {
       this.emit({
         type: 'damage',
@@ -5241,7 +5254,7 @@ export class Sim {
     },
   ): boolean {
     const missChance =
-      meleeMissChance(attacker.level, target.level) + this.blindMissBonus(attacker);
+      swingMissChance(attacker, target) + this.blindMissBonus(attacker);
     const dodgeChance = opts.cannotBeDodged
       ? 0
       : target.kind === 'player'
@@ -7092,7 +7105,7 @@ export class Sim {
   }
 
   mobSwing(mob: Entity, target: Entity): void {
-    const missChance = meleeMissChance(mob.level, target.level);
+    const missChance = swingMissChance(mob, target);
     const dodgeChance = target.kind === 'player' ? target.dodgeChance : 0.05;
     const roll = this.rng.next();
     if (roll < missChance) {

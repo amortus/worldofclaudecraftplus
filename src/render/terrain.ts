@@ -430,6 +430,39 @@ function terrainNormalTexture(seed: number): THREE.DataTexture {
   return tex;
 }
 
+// A 1x1 flat (0,0,1) normal, so the splat material can declare a normalMap immediately
+// and have the costly baked relief swapped in OFF the synchronous build path. Until the
+// swap the terrain simply lacks the macro per-pixel relief (vertex + splat normals only).
+function flatNormalTexture(): THREE.DataTexture {
+  const tex = new THREE.DataTexture(new Uint8Array([128, 128, 255, 255]), 1, 1, THREE.RGBAFormat);
+  tex.colorSpace = THREE.NoColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+// Bake terrainNormalTexture (~1.2M samples, ~150-300ms) OFF the synchronous terrain build
+// so it does not stall loading, then swap it onto the material when idle. Browser only:
+// with no requestIdleCallback (headless / tests) we build inline so behaviour is unchanged
+// there (nothing renders headless anyway). The terrain splat material carries no per-frame
+// uniforms and the renderer does not cache its shader, so the one needsUpdate recompile on
+// swap is harmless; the #define USE_NORMALMAP is unchanged (flat -> baked normal map).
+function deferTerrainNormalMap(mat: THREE.MeshStandardMaterial, seed: number): void {
+  const ric = (
+    globalThis as typeof globalThis & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+    }
+  ).requestIdleCallback;
+  const bake = (): void => {
+    const tex = terrainNormalTexture(seed);
+    const prev = mat.normalMap;
+    mat.normalMap = tex;
+    mat.needsUpdate = true;
+    prev?.dispose();
+  };
+  if (typeof ric === 'function') ric(bake, { timeout: 1500 });
+  else bake();
+}
+
 // ---------------------------------------------------------------------------
 // Materials
 // ---------------------------------------------------------------------------
@@ -445,7 +478,7 @@ function buildSplatMaterial(seed: number): THREE.MeshStandardMaterial {
     vertexColors: true,
     roughness: 1.0,
     metalness: 0,
-    normalMap: terrainNormalTexture(seed),
+    normalMap: flatNormalTexture(), // baked relief swapped in off-thread; see deferTerrainNormalMap
     normalScale: new THREE.Vector2(0.85, 0.85),
   });
   mat.onBeforeCompile = (sh) => {
@@ -551,6 +584,7 @@ function buildSplatMaterial(seed: number): THREE.MeshStandardMaterial {
           normal = normalize(normal + mat3(viewMatrix) * wallPerturb * (vSplat.z * wallW * 0.8));
         }`);
   };
+  deferTerrainNormalMap(mat, seed);
   return mat;
 }
 
