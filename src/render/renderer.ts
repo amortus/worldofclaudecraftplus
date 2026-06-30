@@ -116,6 +116,11 @@ const VIEW_CREATE_BUDGET_LOW = 2;
 const VIEW_CREATE_BUDGET_HIGH = 8;
 const VIEW_CREATE_SLOW_FRAME_MS = 33;
 const VIEW_CREATE_HITCH_FRAME_MS = 50;
+// Max idle visuals/objects kept per reuse-pool key. The pools recycle despawned rigs
+// across interest churn; left UNBOUNDED they strand each clone's per-instance skeleton
+// bone DataTexture (only visual.dispose() frees it), growing GPU memory over a session
+// until the driver pages textures every frame (a sustained multi-hundred-ms render stall).
+const VIEW_POOL_CAP = 6;
 const VIEW_CREATE_BACKOFF_SECONDS = 0.75;
 const VIEW_PREWARM_RANGE_SQ = ENTITY_VIEW_CREATE_RANGE_SQ;
 const VIEW_PREWARM_MAX_MS = 12000;
@@ -2016,15 +2021,23 @@ export class Renderer {
 
   private storePooledVisual(key: string, visual: CharacterVisual): void {
     visual.root.removeFromParent();
-    visual.root.visible = false;
-    visual.root.position.set(0, 0, 0);
-    visual.root.rotation.set(0, 0, 0);
-    visual.root.scale.set(1, 1, 1);
     let pool = this.visualPool.get(key);
     if (!pool) {
       pool = [];
       this.visualPool.set(key, pool);
     }
+    // Past the cap, free the rig (skeleton bone texture + mixer) like a non-pooled
+    // despawn instead of hoarding it - otherwise interest churn grows GPU memory
+    // unbounded over a session. dispose() only frees per-instance resources; the
+    // shared per-asset geometry/material caches survive.
+    if (pool.length >= VIEW_POOL_CAP) {
+      visual.dispose();
+      return;
+    }
+    visual.root.visible = false;
+    visual.root.position.set(0, 0, 0);
+    visual.root.rotation.set(0, 0, 0);
+    visual.root.scale.set(1, 1, 1);
     pool.push(visual);
   }
 
@@ -2048,15 +2061,24 @@ export class Renderer {
 
   private storePooledObject(key: string, object: PooledObjectView): void {
     object.group.removeFromParent();
-    object.group.visible = false;
-    object.group.position.set(0, 0, 0);
-    object.group.rotation.set(0, 0, 0);
-    object.group.scale.set(1, 1, 1);
     let pool = this.objectPool.get(key);
     if (!pool) {
       pool = [];
       this.objectPool.set(key, pool);
     }
+    // Past the cap, dispose the evicted object's owned geometry like a non-pooled
+    // despawn does (shared/prewarmed geometry is left alone).
+    if (pool.length >= VIEW_POOL_CAP) {
+      object.group.traverse((o) => {
+        const mesh = o as THREE.Mesh;
+        if (mesh.isMesh && !isSharedGeometry(mesh.geometry)) mesh.geometry.dispose();
+      });
+      return;
+    }
+    object.group.visible = false;
+    object.group.position.set(0, 0, 0);
+    object.group.rotation.set(0, 0, 0);
+    object.group.scale.set(1, 1, 1);
     pool.push(object);
   }
 
