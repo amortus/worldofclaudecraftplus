@@ -617,6 +617,10 @@ type MobileHotbarDrag = {
 // world map: terrain is pre-rendered for the whole zone at this resolution
 // (cached per zone) and a sub-rect is blitted for the current zoom.
 const MAP_BG_RES = 480;
+// While the full-res (MAP_BG_RES) background is still being idle-prewarmed, the map
+// shows a cheap low-res paint so opening it never blocks the main thread for ~1-3s
+// (the per-pixel terrainHeight x2 hillshade paint). Swapped to full-res when ready.
+const MAP_PLACEHOLDER_RES = 64;
 const MAP_MAX_ZOOM = 6;
 const MAP_DETAIL_ZOOM = 2.2; // at/above this zoom, overlay buildings + vegetation
 
@@ -827,6 +831,9 @@ export class Hud {
   // cached forever; rendering one is ~200ms (230k terrainHeight/roadDistance
   // samples), which is why it must never run on the open path (see mapPrewarm).
   private mapBgCache = new Map<string, HTMLCanvasElement>();
+  // Cheap low-res stand-ins shown until the full-res prewarm commits to mapBgCache.
+  // Kept separate so prewarmMapBg's `has` guard never mistakes a placeholder for done.
+  private mapPlaceholderCache = new Map<string, HTMLCanvasElement>();
   // In-flight idle prewarm of one zone's background, painted a few rows per
   // idle slice so it never blocks a frame. Committed to mapBgCache when done.
   private mapPrewarm: {
@@ -4913,11 +4920,18 @@ export class Hud {
   private mapZoneBg(zone: ZoneDef): HTMLCanvasElement {
     const cached = this.mapBgCache.get(zone.id);
     if (cached) return cached;
-    const bg = this.renderTerrainCanvas(MAP_BG_RES, this.mapZoneRegion(zone));
-    this.mapBgCache.set(zone.id, bg);
-    // a redundant in-flight prewarm for this same zone can be dropped now
-    if (this.mapPrewarm?.zoneId === zone.id) this.cancelMapPrewarm();
-    return bg;
+    // Do NOT paint the full MAP_BG_RES hillshade map synchronously here: at 480px with
+    // per-pixel terrainHeight x2 it is a ~1-3s main-thread stall that blocks ALL input
+    // (the reported INP "input delay"). Kick off the idle prewarm for the real bg and
+    // return a cheap cached low-res paint instead; mapZoneBg is re-queried every
+    // map-window frame and returns the full-res once the prewarm commits it.
+    this.prewarmMapBg(zone.id);
+    let ph = this.mapPlaceholderCache.get(zone.id);
+    if (!ph) {
+      ph = this.renderTerrainCanvas(MAP_PLACEHOLDER_RES, this.mapZoneRegion(zone));
+      this.mapPlaceholderCache.set(zone.id, ph);
+    }
+    return ph;
   }
 
   // Kick off (or no-op) an idle, time-sliced render of a zone's map background
@@ -4996,12 +5010,21 @@ export class Hud {
     const job = this.mapPrewarm;
     if (!job) return;
     const seed = this.sim.cfg.seed;
-    const ROWS_PER_SLICE = 16; // ~6ms at MAP_BG_RES; one frame fits several
+    const ROWS_PER_SLICE = 4; // 480px hillshade rows are costly (2 terrainHeight/pixel)
+    // Hard wall-clock cap IN ADDITION to the idle deadline: a single expensive slice can
+    // blow the idle budget, and an overrunning prewarm callback is itself a long task
+    // that delays input. Keep each callback to ~one slice / a few ms.
+    const start = performance.now();
     do {
       const end = Math.min(job.H, job.row + ROWS_PER_SLICE);
       paintTerrainRows(job.img.data, job.W, job.H, job.region, seed, job.row, end);
       job.row = end;
-    } while (job.row < job.H && deadline !== undefined && deadline.timeRemaining() > 3);
+    } while (
+      job.row < job.H &&
+      deadline !== undefined &&
+      deadline.timeRemaining() > 3 &&
+      performance.now() - start < 6
+    );
     if (job.row >= job.H) {
       job.ctx.putImageData(job.img, 0, 0);
       this.mapBgCache.set(job.zoneId, job.canvas);
