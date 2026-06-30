@@ -125,6 +125,13 @@ const VIEW_POOL_CAP = 6;
 const VIEW_CREATE_BACKOFF_SECONDS = 0.75;
 const VIEW_PREWARM_RANGE_SQ = ENTITY_VIEW_CREATE_RANGE_SQ;
 const VIEW_PREWARM_MAX_MS = 12000;
+// Re-render the sun shadow map (a full second scene draw from the light, the dominant
+// per-frame GPU submit on shadowed tiers - worst on `medium`, which runs shadows with no
+// post chain to hide behind) only every Nth frame instead of every frame. The shadow
+// frustum is large and the PCFSoft filter soft, so freezing the sun + shadow for a couple
+// frames is visually stable while removing ~2/3 of the recurring shadow cost that produced
+// the move-time INP hitches. See the sync() throttle + the constructor autoUpdate=false.
+const SHADOW_UPDATE_EVERY = 3;
 // Shader linking is the whole point of the prewarm: if it doesn't finish, the
 // first in-world frame that needs a program compiles it synchronously — the
 // multi-hundred-ms (up to ~1.7s) freeze players feel when new model types
@@ -942,6 +949,10 @@ export class Renderer {
     this.webgl.setSize(this.viewport.width, this.viewport.height, false);
     this.webgl.shadowMap.enabled = !LOW_GFX;
     this.webgl.shadowMap.type = THREE.PCFSoftShadowMap;
+    // Drive shadow refresh manually (see the sync() throttle): a full shadow re-render every
+    // frame is the dominant recurring GPU submit, so we re-render only every SHADOW_UPDATE_EVERY
+    // frames. The shadow shader compiles on its first in-world render (one-time).
+    this.webgl.shadowMap.autoUpdate = false;
     this.webgl.toneMapping = THREE.ACESFilmicToneMapping; // OutputPass reads this on the composer path
     this.webgl.toneMappingExposure = this.baseExposure;
     this.camera = new THREE.PerspectiveCamera(
@@ -4221,12 +4232,19 @@ export class Renderer {
     worldStart = markWorldPhase('fish', worldStart);
     this.updateAmbience(p.pos.x, this.camera.position.y, dt);
     worldStart = markWorldPhase('ambience', worldStart);
-    // shadow frustum follows the player
-    const pv = this.views.get(p.id);
-    if (pv) {
-      const pp = pv.group.position;
-      this.sun.position.set(pp.x + SUN_ANCHOR.x, pp.y + SUN_ANCHOR.y, pp.z + SUN_ANCHOR.z);
-      this.sun.target.position.set(pp.x, pp.y, pp.z);
+    // Shadow frustum follows the player, but refresh it (reposition the sun + re-render)
+    // only every SHADOW_UPDATE_EVERY frames - starting on the first frame (`=== 1`) so the
+    // shadow appears immediately. Repositioning and flagging needsUpdate together keeps the
+    // shadow matrix the main pass samples in lockstep with the rendered content (no
+    // sliding), while the full sun re-render is amortized off most frames.
+    if (this.webgl.shadowMap.enabled && this.frameIdx % SHADOW_UPDATE_EVERY === 1) {
+      const pv = this.views.get(p.id);
+      if (pv) {
+        const pp = pv.group.position;
+        this.sun.position.set(pp.x + SUN_ANCHOR.x, pp.y + SUN_ANCHOR.y, pp.z + SUN_ANCHOR.z);
+        this.sun.target.position.set(pp.x, pp.y, pp.z);
+      }
+      this.webgl.shadowMap.needsUpdate = true;
     }
     worldStart = markWorldPhase('shadows', worldStart);
     // sky dome + sun disc ride along with the camera
