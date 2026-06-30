@@ -621,6 +621,10 @@ const MAP_BG_RES = 480;
 // shows a cheap low-res paint so opening it never blocks the main thread for ~1-3s
 // (the per-pixel terrainHeight x2 hillshade paint). Swapped to full-res when ready.
 const MAP_PLACEHOLDER_RES = 64;
+// The whole-world minimap bg (140 x ~560 px of per-pixel hillshade) is shown at this
+// cheap res first so HUD construction never does the full ~78k-pixel paint synchronously
+// (a login-time main-thread freeze); the full 140px paint is idle-sliced in afterwards.
+const MINIMAP_PLACEHOLDER_RES = 24;
 const MAP_MAX_ZOOM = 6;
 const MAP_DETAIL_ZOOM = 2.2; // at/above this zoom, overlay buildings + vegetation
 
@@ -812,6 +816,18 @@ export class Hud {
   private lastMusicDungeonId: string | null = null;
   private minimapCtx: CanvasRenderingContext2D;
   private minimapBg: HTMLCanvasElement;
+  // In-flight idle paint of the full-res whole-world minimap bg (see startMinimapPrewarm):
+  // a cheap low-res minimapBg shows immediately, this fills the full 140px version a few
+  // rows per idle slice, then swaps it in. Mirrors mapPrewarm but is one-shot (no cancel).
+  private minimapPrewarm: {
+    canvas: HTMLCanvasElement;
+    ctx: CanvasRenderingContext2D;
+    img: ImageData;
+    W: number;
+    H: number;
+    row: number;
+    region: MapRegion;
+  } | null = null;
   private clockEl: HTMLElement | null = null;
   private raidLockoutEl: HTMLElement | null = null;
   private raidLockoutLocked = false;
@@ -1083,12 +1099,19 @@ export class Hud {
     });
     const mm = $('#minimap') as unknown as HTMLCanvasElement;
     this.minimapCtx = mm.getContext('2d')!;
-    this.minimapBg = this.renderTerrainCanvas(140, {
+    const worldRegion: MapRegion = {
       minX: WORLD_MIN_X,
       maxX: WORLD_MAX_X,
       minZ: WORLD_MIN_Z,
       maxZ: WORLD_MAX_Z,
-    });
+    };
+    // The whole-world minimap bg is ~140x560 = ~78k pixels, each a per-pixel hillshade
+    // (terrainHeight x2 + roadDistance) sample. Painting it synchronously here froze the
+    // main thread for up to ~1.7s at HUD construction - a login-time stall that queued
+    // every early keypress (the reported INP "input delay"). Show a cheap low-res paint
+    // immediately, then idle-slice the full-res in and swap it (startMinimapPrewarm).
+    this.minimapBg = this.renderTerrainCanvas(MINIMAP_PLACEHOLDER_RES, worldRegion);
+    this.startMinimapPrewarm(worldRegion);
     mm.style.cursor = 'var(--cursor-point)';
     mm.title = t('controls.worldMap');
     mm.addEventListener('click', () => this.toggleMap());
@@ -5034,6 +5057,59 @@ export class Hud {
       return;
     }
     this.scheduleMapPrewarm();
+  };
+
+  // Build the full-res (140px) whole-world minimap background OFF the construction path:
+  // a few rows per idle slice, swapped into minimapBg when complete. The synchronous
+  // version froze the main thread for up to ~1.7s at login (see the constructor). One-shot
+  // (never re-triggered), so unlike mapPrewarm it needs no cancel / zone tracking.
+  private startMinimapPrewarm(region: MapRegion): void {
+    const W = 140;
+    const H = mapCanvasHeight(W, region);
+    const c = document.createElement('canvas');
+    c.width = W;
+    c.height = H;
+    const ctx = c.getContext('2d')!;
+    this.minimapPrewarm = { canvas: c, ctx, img: ctx.createImageData(W, H), W, H, row: 0, region };
+    this.scheduleMinimapPrewarm();
+  }
+
+  private scheduleMinimapPrewarm(): void {
+    const w = window as typeof window & {
+      requestIdleCallback?: (
+        cb: (d: { timeRemaining(): number }) => void,
+        opts?: { timeout: number },
+      ) => number;
+    };
+    if (w.requestIdleCallback) w.requestIdleCallback(this.pumpMinimapPrewarm, { timeout: 1000 });
+    else window.setTimeout(() => this.pumpMinimapPrewarm(), 16);
+  }
+
+  // Same budgeted slice + hard wall-clock cap as pumpMapPrewarm, so a single whole-world
+  // paint slice can never overrun into an input-blocking long task.
+  private pumpMinimapPrewarm = (deadline?: { timeRemaining(): number }): void => {
+    const job = this.minimapPrewarm;
+    if (!job) return;
+    const seed = this.sim.cfg.seed;
+    const ROWS_PER_SLICE = 4;
+    const start = performance.now();
+    do {
+      const end = Math.min(job.H, job.row + ROWS_PER_SLICE);
+      paintTerrainRows(job.img.data, job.W, job.H, job.region, seed, job.row, end);
+      job.row = end;
+    } while (
+      job.row < job.H &&
+      deadline !== undefined &&
+      deadline.timeRemaining() > 3 &&
+      performance.now() - start < 6
+    );
+    if (job.row >= job.H) {
+      job.ctx.putImageData(job.img, 0, 0);
+      this.minimapBg = job.canvas; // swap the cheap placeholder for the full-res bg
+      this.minimapPrewarm = null;
+      return;
+    }
+    this.scheduleMinimapPrewarm();
   };
 
   // Refresh the minimap clock to the current real local time. Cheap to call

@@ -63,9 +63,17 @@ function pump(): void {
   const ric = (globalThis as unknown as { requestIdleCallback?: RIC }).requestIdleCallback;
   const run = (deadline?: IdleDeadline): void => {
     let n = 0;
-    // A few per slice unconditionally, then as many as the idle budget allows,
-    // capped so one slice never blocks for long.
-    while (queue.length > 0 && n < 24 && (n < 4 || !deadline || deadline.timeRemaining() > 4)) {
+    const start = performance.now();
+    // At least one per slice for guaranteed progress, then as many as the idle budget
+    // allows, but never past a hard ~6ms wall-clock cap: a cold slice PNG-encodes ~5-20ms
+    // each, so without the cap 4 unconditional encodes were an ~80ms input-blocking long
+    // task. Same cap the map / minimap idle pumps use. Warm (cached) tasks are ~0ms, so a
+    // warm slice still batches up to 24.
+    while (
+      queue.length > 0 &&
+      n < 24 &&
+      (n < 1 || ((!deadline || deadline.timeRemaining() > 4) && performance.now() - start < 6))
+    ) {
       const task = queue.shift();
       if (!task) break;
       try {
