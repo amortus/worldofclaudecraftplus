@@ -624,16 +624,16 @@ export const es: EnTranslations = {
       "tooLarge": "Una banda con más de cinco miembros no puede volver a convertirse en grupo."
     },
     "loadingTips": {
-      "map": "Press M to open the world map and find quest objectives.",
-      "quests": "Talk to townsfolk marked with a ! to pick up quests.",
-      "inspect": "Right-click another player to inspect their equipped gear.",
-      "camera": "Hold right mouse to rotate the camera, and scroll to zoom in or out.",
-      "chat": "Type /join world to chat with the whole realm, or /join lfg to find a group.",
-      "rested": "Resting in town banks rested XP, so you level faster when you return.",
-      "talents": "Spend talent points (N) as you level to shape your build.",
-      "vendor": "Sell junk to vendors; list rare finds on the World Market for other players.",
-      "group": "Tougher fights and dungeons are easier with a group. Invite players you meet!",
-      "classes": "Each of the nine classes plays differently. Try a few to find your favorite."
+      "map": "Pulsa M para abrir el mapa del mundo y encontrar objetivos de misiones.",
+      "quests": "Habla con los aldeanos marcados con ! para conseguir misiones.",
+      "inspect": "Haz clic derecho en otro jugador para inspeccionar su equipo.",
+      "camera": "Manten el boton derecho del raton para rotar la camara, y usa la rueda para acercar o alejar.",
+      "chat": "Escribe /join world para chatear con todo el reino, o /join lfg para buscar grupo.",
+      "rested": "Descansar en la ciudad acumula XP de descanso, asi subes de nivel mas rapido al volver.",
+      "talents": "Gasta puntos de talento (N) al subir de nivel para definir tu build.",
+      "vendor": "Vende basura a los vendedores; publica objetos raros en el Mercado Mundial para otros jugadores.",
+      "group": "Las peleas y mazmorras dificiles son mas faciles en grupo. Invita a los jugadores que encuentres!",
+      "classes": "Cada una de las nueve clases juega distinto. Prueba algunas para encontrar tu favorita."
     },
     "donate": {
       "title": "Apoie o World of ClaudeCraft",

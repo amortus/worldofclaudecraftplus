@@ -624,16 +624,16 @@ export const zh_TW: EnTranslations = {
       "tooLarge": "超過五名成員的團隊無法轉換回隊伍。"
     },
     "loadingTips": {
-      "map": "Press M to open the world map and find quest objectives.",
-      "quests": "Talk to townsfolk marked with a ! to pick up quests.",
-      "inspect": "Right-click another player to inspect their equipped gear.",
-      "camera": "Hold right mouse to rotate the camera, and scroll to zoom in or out.",
-      "chat": "Type /join world to chat with the whole realm, or /join lfg to find a group.",
-      "rested": "Resting in town banks rested XP, so you level faster when you return.",
-      "talents": "Spend talent points (N) as you level to shape your build.",
-      "vendor": "Sell junk to vendors; list rare finds on the World Market for other players.",
-      "group": "Tougher fights and dungeons are easier with a group. Invite players you meet!",
-      "classes": "Each of the nine classes plays differently. Try a few to find your favorite."
+      "map": "按 M 開啟世界地圖，查看任務目標。",
+      "quests": "與頭頂有 ! 的村民交談來接取任務。",
+      "inspect": "右鍵點擊其他玩家可查看其裝備。",
+      "camera": "按住滑鼠右鍵旋轉視角，滾動滾輪縮放。",
+      "chat": "輸入 /join world 與全伺服器聊天，或輸入 /join lfg 尋找隊伍。",
+      "rested": "在城鎮休息可累積休息經驗，回來後升級更快。",
+      "talents": "升級時用 (N) 分配天賦點，打造你的流派。",
+      "vendor": "把雜物賣給商人；把稀有物品掛到世界市場賣給其他玩家。",
+      "group": "組隊能讓強敵和地下城更輕鬆。邀請你遇到的玩家吧！",
+      "classes": "九個職業各有不同的玩法。多試幾個，找到你最喜歡的。"
     },
     "donate": {
       "title": "Apoie o World of ClaudeCraft",

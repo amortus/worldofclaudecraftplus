@@ -624,16 +624,16 @@ export const fr_FR: EnTranslations = {
       "tooLarge": "Un raid de plus de cinq membres ne peut pas être reconverti en groupe."
     },
     "loadingTips": {
-      "map": "Press M to open the world map and find quest objectives.",
-      "quests": "Talk to townsfolk marked with a ! to pick up quests.",
-      "inspect": "Right-click another player to inspect their equipped gear.",
-      "camera": "Hold right mouse to rotate the camera, and scroll to zoom in or out.",
-      "chat": "Type /join world to chat with the whole realm, or /join lfg to find a group.",
-      "rested": "Resting in town banks rested XP, so you level faster when you return.",
-      "talents": "Spend talent points (N) as you level to shape your build.",
-      "vendor": "Sell junk to vendors; list rare finds on the World Market for other players.",
-      "group": "Tougher fights and dungeons are easier with a group. Invite players you meet!",
-      "classes": "Each of the nine classes plays differently. Try a few to find your favorite."
+      "map": "Appuyez sur M pour ouvrir la carte du monde et trouver les objectifs de quete.",
+      "quests": "Parlez aux villageois marques d'un ! pour obtenir des quetes.",
+      "inspect": "Clic droit sur un autre joueur pour inspecter son equipement.",
+      "camera": "Maintenez le clic droit pour pivoter la camera, et la molette pour zoomer.",
+      "chat": "Tapez /join world pour discuter avec tout le royaume, ou /join lfg pour trouver un groupe.",
+      "rested": "Se reposer en ville accumule de l'XP de repos : vous montez de niveau plus vite a votre retour.",
+      "talents": "Depensez des points de talent (N) en montant de niveau pour faconner votre build.",
+      "vendor": "Vendez le bric-a-brac aux marchands ; mettez les objets rares sur le Marche mondial pour les autres joueurs.",
+      "group": "Les combats et donjons difficiles sont plus faciles en groupe. Invitez les joueurs que vous croisez !",
+      "classes": "Chacune des neuf classes se joue differemment. Essayez-en quelques-unes pour trouver votre preferee."
     },
     "donate": {
       "title": "Apoie o World of ClaudeCraft",

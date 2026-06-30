@@ -624,16 +624,16 @@ export const de_DE: EnTranslations = {
       "tooLarge": "Ein Schlachtzug mit mehr als fünf Mitgliedern kann nicht wieder in eine Gruppe umgewandelt werden."
     },
     "loadingTips": {
-      "map": "Press M to open the world map and find quest objectives.",
-      "quests": "Talk to townsfolk marked with a ! to pick up quests.",
-      "inspect": "Right-click another player to inspect their equipped gear.",
-      "camera": "Hold right mouse to rotate the camera, and scroll to zoom in or out.",
-      "chat": "Type /join world to chat with the whole realm, or /join lfg to find a group.",
-      "rested": "Resting in town banks rested XP, so you level faster when you return.",
-      "talents": "Spend talent points (N) as you level to shape your build.",
-      "vendor": "Sell junk to vendors; list rare finds on the World Market for other players.",
-      "group": "Tougher fights and dungeons are easier with a group. Invite players you meet!",
-      "classes": "Each of the nine classes plays differently. Try a few to find your favorite."
+      "map": "Druecke M, um die Weltkarte zu oeffnen und Questziele zu finden.",
+      "quests": "Sprich mit Dorfbewohnern, die mit einem ! markiert sind, um Quests anzunehmen.",
+      "inspect": "Rechtsklick auf einen anderen Spieler, um seine Ausruestung zu betrachten.",
+      "camera": "Halte die rechte Maustaste, um die Kamera zu drehen, und scrolle zum Zoomen.",
+      "chat": "Tippe /join world, um mit dem ganzen Reich zu chatten, oder /join lfg, um eine Gruppe zu finden.",
+      "rested": "Ausruhen in der Stadt sammelt Erholungs-EP, so steigst du bei der Rueckkehr schneller auf.",
+      "talents": "Gib Talentpunkte (N) beim Aufsteigen aus, um deinen Build zu formen.",
+      "vendor": "Verkaufe Troedel an Haendler; biete seltene Funde auf dem Weltmarkt fuer andere Spieler an.",
+      "group": "Schwere Kaempfe und Dungeons sind in einer Gruppe leichter. Lade Spieler ein, die du triffst!",
+      "classes": "Jede der neun Klassen spielt sich anders. Probiere ein paar aus, um deine Lieblingsklasse zu finden."
     },
     "donate": {
       "title": "Apoie o World of ClaudeCraft",

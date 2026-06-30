@@ -26,30 +26,30 @@
   "counts": {
     "keys": 4890,
     "rows": 63570,
-    "translated": 63085,
-    "pending": 426,
+    "translated": 63205,
+    "pending": 306,
     "blocked": 59,
     "blockedSource": 92
   },
   "perLocale": {
     "es": {
-      "translated": 4836,
-      "pending": 53,
+      "translated": 4846,
+      "pending": 43,
       "blocked": 1
     },
     "es_ES": {
-      "translated": 4836,
-      "pending": 53,
+      "translated": 4846,
+      "pending": 43,
       "blocked": 1
     },
     "fr_FR": {
-      "translated": 4825,
-      "pending": 53,
+      "translated": 4835,
+      "pending": 43,
       "blocked": 12
     },
     "fr_CA": {
-      "translated": 4826,
-      "pending": 53,
+      "translated": 4836,
+      "pending": 43,
       "blocked": 11
     },
     "en_CA": {
@@ -58,43 +58,43 @@
       "blocked": 0
     },
     "it_IT": {
-      "translated": 4825,
-      "pending": 53,
+      "translated": 4835,
+      "pending": 43,
       "blocked": 12
     },
     "de_DE": {
-      "translated": 4823,
-      "pending": 53,
+      "translated": 4833,
+      "pending": 43,
       "blocked": 14
     },
     "zh_CN": {
-      "translated": 4872,
-      "pending": 18,
+      "translated": 4882,
+      "pending": 8,
       "blocked": 0
     },
     "zh_TW": {
-      "translated": 4872,
-      "pending": 18,
+      "translated": 4882,
+      "pending": 8,
       "blocked": 0
     },
     "ko_KR": {
-      "translated": 4872,
-      "pending": 18,
+      "translated": 4882,
+      "pending": 8,
       "blocked": 0
     },
     "ja_JP": {
-      "translated": 4872,
-      "pending": 18,
+      "translated": 4882,
+      "pending": 8,
       "blocked": 0
     },
     "pt_BR": {
-      "translated": 4864,
-      "pending": 18,
+      "translated": 4874,
+      "pending": 8,
       "blocked": 8
     },
     "ru_RU": {
-      "translated": 4872,
-      "pending": 18,
+      "translated": 4882,
+      "pending": 8,
       "blocked": 0
     }
   }

@@ -624,16 +624,16 @@ export const ko_KR: EnTranslations = {
       "tooLarge": "인원이 5명을 초과하는 공격대는 파티로 다시 전환할 수 없습니다."
     },
     "loadingTips": {
-      "map": "Press M to open the world map and find quest objectives.",
-      "quests": "Talk to townsfolk marked with a ! to pick up quests.",
-      "inspect": "Right-click another player to inspect their equipped gear.",
-      "camera": "Hold right mouse to rotate the camera, and scroll to zoom in or out.",
-      "chat": "Type /join world to chat with the whole realm, or /join lfg to find a group.",
-      "rested": "Resting in town banks rested XP, so you level faster when you return.",
-      "talents": "Spend talent points (N) as you level to shape your build.",
-      "vendor": "Sell junk to vendors; list rare finds on the World Market for other players.",
-      "group": "Tougher fights and dungeons are easier with a group. Invite players you meet!",
-      "classes": "Each of the nine classes plays differently. Try a few to find your favorite."
+      "map": "M 키를 눌러 월드 맵을 열고 퀘스트 목표를 확인하세요.",
+      "quests": "머리 위에 ! 가 있는 마을 사람에게 말을 걸어 퀘스트를 받으세요.",
+      "inspect": "다른 플레이어를 우클릭하면 착용 장비를 확인할 수 있습니다.",
+      "camera": "마우스 오른쪽 버튼을 누른 채로 카메라를 회전하고, 스크롤로 확대/축소하세요.",
+      "chat": "/join world 를 입력해 왕국 전체와 대화하거나, /join lfg 로 그룹을 찾으세요.",
+      "rested": "마을에서 휴식하면 휴식 경험치가 쌓여 돌아왔을 때 더 빨리 레벨업합니다.",
+      "talents": "레벨업 시 (N) 으로 특성 포인트를 투자해 빌드를 구성하세요.",
+      "vendor": "잡템은 상인에게 팔고, 희귀 아이템은 월드 마켓에 올려 다른 플레이어에게 파세요.",
+      "group": "어려운 전투와 던전은 그룹으로 하면 더 쉽습니다. 만나는 플레이어를 초대하세요!",
+      "classes": "아홉 개의 클래스는 각각 플레이가 다릅니다. 몇 가지 해보고 마음에 드는 클래스를 찾으세요."
     },
     "donate": {
       "title": "Apoie o World of ClaudeCraft",

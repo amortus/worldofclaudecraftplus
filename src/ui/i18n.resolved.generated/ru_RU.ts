@@ -624,16 +624,16 @@ export const ru_RU: EnTranslations = {
       "tooLarge": "Рейд, в котором более пяти участников, нельзя преобразовать обратно в группу."
     },
     "loadingTips": {
-      "map": "Press M to open the world map and find quest objectives.",
-      "quests": "Talk to townsfolk marked with a ! to pick up quests.",
-      "inspect": "Right-click another player to inspect their equipped gear.",
-      "camera": "Hold right mouse to rotate the camera, and scroll to zoom in or out.",
-      "chat": "Type /join world to chat with the whole realm, or /join lfg to find a group.",
-      "rested": "Resting in town banks rested XP, so you level faster when you return.",
-      "talents": "Spend talent points (N) as you level to shape your build.",
-      "vendor": "Sell junk to vendors; list rare finds on the World Market for other players.",
-      "group": "Tougher fights and dungeons are easier with a group. Invite players you meet!",
-      "classes": "Each of the nine classes plays differently. Try a few to find your favorite."
+      "map": "Нажмите M, чтобы открыть карту мира и найти цели заданий.",
+      "quests": "Говорите с жителями, отмеченными !, чтобы взять задания.",
+      "inspect": "Щёлкните правой кнопкой по другому игроку, чтобы осмотреть его снаряжение.",
+      "camera": "Удерживайте правую кнопку мыши для поворота камеры, колесо — для приближения.",
+      "chat": "Введите /join world, чтобы общаться со всем королевством, или /join lfg, чтобы найти группу.",
+      "rested": "Отдых в городе копит отдохнувший опыт, так вы быстрее получаете уровни по возвращении.",
+      "talents": "Тратьте очки талантов (N) при повышении уровня, чтобы выстроить свою сборку.",
+      "vendor": "Продавайте хлам торговцам; выставляйте редкие находки на Мировом рынке для других игроков.",
+      "group": "Сложные бои и подземелья проще в группе. Приглашайте игроков, которых встретите!",
+      "classes": "Каждый из девяти классов играется по-своему. Попробуйте несколько и найдите любимый."
     },
     "donate": {
       "title": "Apoie o World of ClaudeCraft",

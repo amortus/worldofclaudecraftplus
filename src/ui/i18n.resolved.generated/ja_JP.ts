@@ -624,16 +624,16 @@ export const ja_JP: EnTranslations = {
       "tooLarge": "メンバーが5人を超えるレイドはパーティに戻せません。"
     },
     "loadingTips": {
-      "map": "Press M to open the world map and find quest objectives.",
-      "quests": "Talk to townsfolk marked with a ! to pick up quests.",
-      "inspect": "Right-click another player to inspect their equipped gear.",
-      "camera": "Hold right mouse to rotate the camera, and scroll to zoom in or out.",
-      "chat": "Type /join world to chat with the whole realm, or /join lfg to find a group.",
-      "rested": "Resting in town banks rested XP, so you level faster when you return.",
-      "talents": "Spend talent points (N) as you level to shape your build.",
-      "vendor": "Sell junk to vendors; list rare finds on the World Market for other players.",
-      "group": "Tougher fights and dungeons are easier with a group. Invite players you meet!",
-      "classes": "Each of the nine classes plays differently. Try a few to find your favorite."
+      "map": "M キーでワールドマップを開き、クエストの目標を確認できます。",
+      "quests": "頭上に ! が付いた町の人に話しかけてクエストを受けましょう。",
+      "inspect": "他のプレイヤーを右クリックすると装備を確認できます。",
+      "camera": "右クリックを押しながらカメラを回転、スクロールでズームできます。",
+      "chat": "/join world で王国全体とチャット、/join lfg でパーティーを探せます。",
+      "rested": "町で休むと休息経験値がたまり、戻ったときに早くレベルアップできます。",
+      "talents": "レベルアップ時に (N) でタレントポイントを振り、ビルドを構築しましょう。",
+      "vendor": "不要品は商人に売り、レアな品は世界市場に出品して他のプレイヤーに売りましょう。",
+      "group": "強敵やダンジョンはパーティーで挑むと楽になります。出会ったプレイヤーを誘いましょう！",
+      "classes": "9つのクラスはそれぞれ操作感が異なります。いくつか試してお気に入りを見つけましょう。"
     },
     "donate": {
       "title": "Apoie o World of ClaudeCraft",
