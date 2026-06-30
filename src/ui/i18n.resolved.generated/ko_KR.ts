@@ -623,6 +623,18 @@ export const ko_KR: EnTranslations = {
       "leaderOnly": "공격대장만 파티로 전환할 수 있습니다.",
       "tooLarge": "인원이 5명을 초과하는 공격대는 파티로 다시 전환할 수 없습니다."
     },
+    "loadingTips": {
+      "map": "Press M to open the world map and find quest objectives.",
+      "quests": "Talk to townsfolk marked with a ! to pick up quests.",
+      "inspect": "Right-click another player to inspect their equipped gear.",
+      "camera": "Hold right mouse to rotate the camera, and scroll to zoom in or out.",
+      "chat": "Type /join world to chat with the whole realm, or /join lfg to find a group.",
+      "rested": "Resting in town banks rested XP, so you level faster when you return.",
+      "talents": "Spend talent points (N) as you level to shape your build.",
+      "vendor": "Sell junk to vendors; list rare finds on the World Market for other players.",
+      "group": "Tougher fights and dungeons are easier with a group. Invite players you meet!",
+      "classes": "Each of the nine classes plays differently. Try a few to find your favorite."
+    },
     "donate": {
       "title": "Apoie o World of ClaudeCraft",
       "intro": "Sua doacao ajuda a manter os servidores no ar e o jogo sempre evoluindo. Qualquer valor faz diferenca. Obrigado!",

@@ -623,6 +623,18 @@ export const pt_BR: EnTranslations = {
       "leaderOnly": "Só o líder da raide pode converter em um grupo.",
       "tooLarge": "Uma raide com mais de cinco membros não pode ser convertida de volta em um grupo."
     },
+    "loadingTips": {
+      "map": "Press M to open the world map and find quest objectives.",
+      "quests": "Talk to townsfolk marked with a ! to pick up quests.",
+      "inspect": "Right-click another player to inspect their equipped gear.",
+      "camera": "Hold right mouse to rotate the camera, and scroll to zoom in or out.",
+      "chat": "Type /join world to chat with the whole realm, or /join lfg to find a group.",
+      "rested": "Resting in town banks rested XP, so you level faster when you return.",
+      "talents": "Spend talent points (N) as you level to shape your build.",
+      "vendor": "Sell junk to vendors; list rare finds on the World Market for other players.",
+      "group": "Tougher fights and dungeons are easier with a group. Invite players you meet!",
+      "classes": "Each of the nine classes plays differently. Try a few to find your favorite."
+    },
     "donate": {
       "title": "Apoie o World of ClaudeCraft",
       "intro": "Sua doacao ajuda a manter os servidores no ar e o jogo sempre evoluindo. Qualquer valor faz diferenca. Obrigado!",

@@ -101,6 +101,7 @@ import { assembleBugReportMeta } from './ui/bug_report';
 import { chatInputSize } from './ui/chat_input_autosize';
 import { CLASS_DETAILS, SIGNATURE_ABILITIES } from './ui/class_details_data';
 import { tEntity } from './ui/entity_i18n';
+import { startLoadingTips, stopLoadingTips } from './ui/loading_tips';
 import { Hud } from './ui/hud';
 import {
   ensureLocaleLoaded,
@@ -693,6 +694,7 @@ function showLoadingScreen(statusText: string): void {
   el.classList.remove('fade');
   el.classList.add('visible');
   setLoadingStatus(statusText);
+  startLoadingTips(document.getElementById('ls-tip'));
 }
 
 function setLoadingStatus(text: string): void {
@@ -707,6 +709,7 @@ function setLoadingProgress(done: number, total: number): void {
 function hideLoadingScreen(): void {
   const el = $('#loading-screen');
   if (!el.classList.contains('visible')) return;
+  stopLoadingTips();
   el.classList.add('fade');
   loadingHideTimer = window.setTimeout(() => {
     el.classList.remove('visible', 'fade');

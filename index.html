@@ -4067,6 +4067,7 @@
   }
   #ls-fill { height: 100%; width: 0%; background: linear-gradient(180deg, var(--color-primary), var(--color-primary-dim)); transition: width .2s ease; }
   #ls-status { color: var(--color-text-light); font-family: var(--font-heading); font-size: 13px; text-shadow: 1px 1px 2px #000; }
+  #ls-tip { margin-top: 2px; max-width: min(560px, 88vw); min-height: 1.1em; color: #c9bfa6; font-family: var(--font-heading); font-size: 12px; line-height: 1.35; text-align: center; text-shadow: 1px 1px 2px #000; opacity: .88; }
 
   /* ---------- play console (realm selector + Play CTA) ---------- */
   .play-console {
@@ -9313,6 +9314,7 @@
     <div class="ls-progress">
       <div class="ls-bar"><div id="ls-fill"></div></div>
       <div id="ls-status" data-i18n="loading.enteringWorld">Entering the world...</div>
+      <div id="ls-tip" class="ls-tip"></div>
     </div>
   </div>
 
