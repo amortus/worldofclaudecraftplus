@@ -27,6 +27,9 @@ export class CharacterPreview {
   private clock = new THREE.Clock();
   private animationFrameId: number | null = null;
   private resizeObserver: ResizeObserver | null = null;
+  private unregisterContext: (() => void) | null = null;
+  private cleanupDragControls: (() => void) | null = null;
+  private destroyed = false;
 
   // Drag controls
   private isDragging = false;
@@ -47,7 +50,7 @@ export class CharacterPreview {
     this.renderer.setSize(this.container.clientWidth, this.container.clientHeight, false);
     this.renderer.shadowMap.enabled = false; // Preview doesn't need heavy shadows
     // Hand this context back on page teardown (see context_release.ts).
-    trackWebGLContext(this.renderer);
+    this.unregisterContext = trackWebGLContext(this.renderer);
 
     // 2. Initialize Scene
     this.scene = new THREE.Scene();
@@ -92,6 +95,7 @@ export class CharacterPreview {
    *  to default to the class start weapon (so the creation turntable matches the
    *  freshly created character in-world). */
   setClass(cls: PlayerClass, weaponItemId?: string | null): void {
+    if (this.destroyed) return;
     const weapon = weaponItemId !== undefined ? weaponItemId : (CLASSES[cls].startWeapon ?? null);
     this.setVisualKey(`player_${cls}`, weapon);
   }
@@ -99,6 +103,7 @@ export class CharacterPreview {
   /** Set the active model by raw visual key (e.g. `player_mech` for the cosmetic
    *  turntable). The asset must already be loaded — callers preload first. */
   setVisualKey(visualKey: string, weaponItemId: string | null = null): void {
+    if (this.destroyed) return;
     // Clean up current visual if it exists
     if (this.currentVisual) {
       this.characterGroup.remove(this.currentVisual.root);
@@ -120,12 +125,14 @@ export class CharacterPreview {
 
   /** Swap the previewed skin (alternate body texture); persists across setClass. */
   setSkin(skinIndex: number): void {
+    if (this.destroyed) return;
     this.currentSkin = skinIndex;
     this.currentVisual?.setSkin(skinIndex);
   }
 
   /** Dynamically shift the canvas to a new container */
   setContainer(container: HTMLElement): void {
+    if (this.destroyed) return;
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
       this.resizeObserver = null;
@@ -141,6 +148,7 @@ export class CharacterPreview {
 
   /** Force the renderer to match the current visible container size. */
   syncSize(): void {
+    if (this.destroyed) return;
     const width = this.container.clientWidth;
     const height = this.container.clientHeight;
     if (width > 0 && height > 0) {
@@ -194,6 +202,15 @@ export class CharacterPreview {
     this.canvas.addEventListener('touchstart', onTouchStart, { passive: true });
     window.addEventListener('touchmove', onTouchMove, { passive: true });
     window.addEventListener('touchend', onTouchEnd);
+
+    this.cleanupDragControls = () => {
+      this.canvas.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      this.canvas.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
+    };
   }
 
   private setupResizeObserver(): void {
@@ -204,6 +221,7 @@ export class CharacterPreview {
   }
 
   private animate = (): void => {
+    if (this.destroyed) return;
     this.animationFrameId = requestAnimationFrame(this.animate);
 
     const dt = Math.min(this.clock.getDelta(), 0.1); // cap dt to prevent huge jumps
@@ -243,6 +261,7 @@ export class CharacterPreview {
       poseFraction?: number;
     } = {},
   ): string {
+    if (this.destroyed) return '';
     const width = Math.max(1, Math.round(opts.width ?? 540));
     const height = Math.max(1, Math.round(opts.height ?? 720));
     const angle = opts.angle ?? -0.42; // gentle 3/4 turn for a heroic stance
@@ -292,6 +311,8 @@ export class CharacterPreview {
 
   /** Cleanup resources */
   destroy(): void {
+    if (this.destroyed) return;
+    this.destroyed = true;
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
@@ -300,14 +321,22 @@ export class CharacterPreview {
       this.resizeObserver.disconnect();
       this.resizeObserver = null;
     }
+    this.cleanupDragControls?.();
+    this.cleanupDragControls = null;
     if (this.currentVisual) {
       this.characterGroup.remove(this.currentVisual.root);
+      this.currentVisual.dispose();
       this.currentVisual = null;
     }
 
-    // Clean up event listeners is handled by window/document GC or manual tracking if necessary,
-    // but canvas event listeners are garbage collected when canvas is removed.
-    // Window listeners need explicit removal to avoid memory leaks:
-    // However, since we keep a single canvas alive and move it, we don't destroy often.
+    this.unregisterContext?.();
+    this.unregisterContext = null;
+    try {
+      this.renderer.forceContextLoss();
+    } catch {
+      /* context may already be lost */
+    }
+    this.renderer.dispose();
+    this.canvas.remove();
   }
 }

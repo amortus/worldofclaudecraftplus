@@ -1,3 +1,4 @@
+import { syncAppViewport as syncAppViewportShared } from './game/app_viewport';
 import { audio } from './game/audio';
 import {
   BROWSER_BODY_CLASSES,
@@ -406,26 +407,7 @@ function syncBuildInfo(): void {
 }
 
 function syncAppViewport(): void {
-  const useStableGameViewport =
-    document.body.classList.contains('game-active') && useTouchInterface();
-  const width = Math.max(
-    1,
-    Math.round(
-      useStableGameViewport
-        ? window.innerWidth
-        : (window.visualViewport?.width ?? window.innerWidth),
-    ),
-  );
-  const height = Math.max(
-    1,
-    Math.round(
-      useStableGameViewport
-        ? window.innerHeight
-        : (window.visualViewport?.height ?? window.innerHeight),
-    ),
-  );
-  document.documentElement.style.setProperty('--app-vw', `${width}px`);
-  document.documentElement.style.setProperty('--app-vh', `${height}px`);
+  syncAppViewportShared();
 }
 
 function preventMobileZoom(): void {
@@ -744,6 +726,7 @@ function enterLoadingState(statusText: string): void {
   hideMobilePreflightPrompt();
   showLoadingScreen(statusText);
   $('#start-screen').style.display = 'none';
+  releaseStartScreenPreview();
 }
 
 async function prepareWorldEntry(): Promise<boolean> {
@@ -2351,6 +2334,12 @@ let characterPreview: CharacterPreview | null = null;
 let authModeApply: ((mode: 'login' | 'register') => void) | null = null;
 let offlineSkin = 0; // chosen appearance skin for the offline quick-start character
 let onlineSkin = 0; // chosen appearance skin for new online characters
+
+function releaseStartScreenPreview(): void {
+  if (!characterPreview) return;
+  characterPreview.destroy();
+  characterPreview = null;
+}
 
 /** Fill a skin-picker row with one option per available skin, each showing an
  *  actual 2D portrait preview of the character in that chroma. */

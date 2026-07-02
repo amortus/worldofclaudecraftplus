@@ -4685,6 +4685,64 @@
   body.native-app.mobile-touch .auth-panel-premium input:focus-visible {
     box-shadow: none;
   }
+  body.native-app.mobile-touch[data-start-panel="login-panel"] #homepage-views-container,
+  body.native-app.mobile-touch[data-start-panel="realm-panel"] #homepage-views-container,
+  body.native-app.mobile-touch[data-start-panel="charselect-panel"] #homepage-views-container {
+    padding-top: max(8px, env(safe-area-inset-top));
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  body.native-app.mobile-touch[data-start-panel="login-panel"] #hero-view,
+  body.native-app.mobile-touch[data-start-panel="realm-panel"] #hero-view,
+  body.native-app.mobile-touch[data-start-panel="charselect-panel"] #hero-view {
+    gap: 10px;
+    min-height: calc(var(--app-vh) - 108px);
+  }
+  body.native-app.mobile-touch[data-start-panel="login-panel"] #title-logo,
+  body.native-app.mobile-touch[data-start-panel="realm-panel"] #title-logo,
+  body.native-app.mobile-touch[data-start-panel="charselect-panel"] #title-logo {
+    width: min(220px, 30vw);
+    margin-bottom: 4px;
+  }
+  body.native-app.mobile-touch[data-start-panel="mode-select"] #title-logo {
+    width: min(188px, 28vw);
+    margin-bottom: 8px;
+  }
+  body.native-app.mobile-touch[data-start-panel="login-panel"] #login-panel,
+  body.native-app.mobile-touch[data-start-panel="realm-panel"] #realm-panel {
+    width: min(680px, calc(100vw - 72px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+    max-width: none;
+    max-height: calc(var(--app-vh) - 128px);
+    padding: 18px 22px;
+    overflow-y: auto;
+  }
+  body.native-app.mobile-touch[data-start-panel="login-panel"] #login-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 18px;
+    align-items: end;
+  }
+  body.native-app.mobile-touch[data-start-panel="login-panel"] #login-panel .auth-title,
+  body.native-app.mobile-touch[data-start-panel="login-panel"] #login-panel #btn-login-discord,
+  body.native-app.mobile-touch[data-start-panel="login-panel"] #login-panel #auth-or-divider,
+  body.native-app.mobile-touch[data-start-panel="login-panel"] #login-panel #cf-turnstile-container,
+  body.native-app.mobile-touch[data-start-panel="login-panel"] #login-panel #login-error,
+  body.native-app.mobile-touch[data-start-panel="login-panel"] #login-panel .auth-actions,
+  body.native-app.mobile-touch[data-start-panel="login-panel"] #login-panel .auth-switch {
+    grid-column: 1 / -1;
+  }
+  body.native-app.mobile-touch[data-start-panel="login-panel"] #login-panel .auth-title {
+    margin-bottom: 4px;
+    font-size: 21px;
+  }
+  body.native-app.mobile-touch[data-start-panel="login-panel"] #login-panel .auth-field {
+    margin-bottom: 10px;
+  }
+  body.native-app.mobile-touch[data-start-panel="login-panel"] #login-panel .auth-actions-row {
+    margin-top: 2px;
+  }
+  body.native-app.mobile-touch[data-start-panel="login-panel"] #login-panel .auth-switch {
+    margin-top: 8px;
+  }
 
   .password-wrapper {
     width: 100%;
@@ -6873,6 +6931,24 @@
     justify-content: center;
     min-height: calc(var(--app-vh) - 178px);
   }
+  body.native-app.mobile-touch[data-start-panel="realm-panel"] #homepage-views-container,
+  body.native-app.mobile-touch[data-start-panel="charselect-panel"] #homepage-views-container,
+  body.native-app.mobile-touch[data-start-panel="login-panel"] #homepage-views-container {
+    padding-top: max(8px, env(safe-area-inset-top));
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  body.native-app.mobile-touch[data-start-panel="realm-panel"] #hero-view,
+  body.native-app.mobile-touch[data-start-panel="charselect-panel"] #hero-view,
+  body.native-app.mobile-touch[data-start-panel="login-panel"] #hero-view {
+    gap: 10px;
+    min-height: calc(var(--app-vh) - 108px);
+  }
+  body.native-app.mobile-touch[data-start-panel="realm-panel"] #title-logo,
+  body.native-app.mobile-touch[data-start-panel="charselect-panel"] #title-logo,
+  body.native-app.mobile-touch[data-start-panel="login-panel"] #title-logo {
+    width: min(220px, 30vw);
+    margin-bottom: 4px;
+  }
   body.mobile-touch[data-start-panel="realm-panel"] #realm-panel,
   body.mobile-touch[data-start-panel="login-panel"] #login-panel {
     margin-top: 0;
@@ -6990,14 +7066,81 @@
   }
 
   @media (orientation: landscape) {
+    body.mobile-touch[data-start-panel="mode-select"] #homepage-views-container {
+      align-items: center;
+      padding-top: max(8px, env(safe-area-inset-top));
+      padding-bottom: max(8px, env(safe-area-inset-bottom));
+    }
+    body.mobile-touch[data-start-panel="charselect-panel"] #homepage-views-container,
+    body.mobile-touch[data-start-panel="charcreate-panel"] #homepage-views-container {
+      padding-top: max(8px, env(safe-area-inset-top));
+      padding-bottom: max(8px, env(safe-area-inset-bottom));
+    }
+    body.mobile-touch[data-start-panel="mode-select"] #hero-view {
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      min-height: calc(var(--app-vh) - 96px);
+    }
+    body.mobile-touch[data-start-panel="charselect-panel"] #hero-view,
+    body.mobile-touch[data-start-panel="charcreate-panel"] #hero-view {
+      justify-content: flex-start;
+      min-height: calc(var(--app-vh) - 86px);
+    }
+    body.mobile-touch[data-start-panel="charselect-panel"] #title-logo,
+    body.mobile-touch[data-start-panel="charcreate-panel"] #title-logo {
+      display: none;
+    }
+    body.mobile-touch[data-start-panel="mode-select"] #title-logo {
+      width: min(176px, 24vw);
+      margin: 0;
+      flex: 0 0 auto;
+    }
+    body.mobile-touch[data-start-panel="mode-select"] #mode-select {
+      width: min(
+        620px,
+        calc(100vw - 232px - env(safe-area-inset-left) - env(safe-area-inset-right))
+      );
+      max-width: none;
+      padding: 14px;
+    }
+    body.mobile-touch[data-start-panel="mode-select"] #token-ca,
+    body.mobile-touch[data-start-panel="mode-select"] .play-tip,
+    body.mobile-touch[data-start-panel="mode-select"] .official-site-copy {
+      display: none;
+    }
+    body.mobile-touch[data-start-panel="charselect-panel"] .official-site-copy,
+    body.mobile-touch[data-start-panel="charcreate-panel"] .official-site-copy {
+      display: none;
+    }
     body.mobile-touch .play-console {
       width: 100%;
-      max-width: 460px;
-      gap: 12px;
+      max-width: none;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(140px, 0.46fr);
+      align-items: stretch;
+      gap: 10px;
     }
     body.mobile-touch .server-select-caption { margin-bottom: 5px; }
+    body.mobile-touch .server-select-trigger {
+      min-height: 56px;
+      height: 100%;
+      padding: 9px 12px;
+    }
+    body.mobile-touch .server-select-menu {
+      top: calc(100% + 6px);
+    }
+    body.mobile-touch .server-select-option {
+      padding: 9px 10px;
+    }
+    body.mobile-touch .server-opt-desc {
+      line-height: 1.25;
+    }
     body.mobile-touch .btn-play {
-      min-height: 54px;
+      width: 100%;
+      min-height: 56px;
+      padding: 10px 18px;
       font-size: 20px;
     }
     body.mobile-touch .mobile-joystick {
@@ -7971,6 +8114,314 @@
   body.mobile-touch #char-list .char-row .portrait-chip { grid-area: portrait; align-self: center; }
   body.mobile-touch #char-list .char-row .char-id { grid-area: id; }
   body.mobile-touch #char-list .char-row .char-actions { grid-area: actions; display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 7px; width: 100%; }
+
+  @media (orientation: landscape) {
+    body.mobile-touch[data-start-panel="charselect-panel"] #homepage-views-container,
+    body.mobile-touch[data-start-panel="charcreate-panel"] #homepage-views-container {
+      padding-top: max(8px, env(safe-area-inset-top));
+      padding-bottom: max(8px, env(safe-area-inset-bottom));
+    }
+    body.mobile-touch[data-start-panel="charselect-panel"] #hero-view,
+    body.mobile-touch[data-start-panel="charcreate-panel"] #hero-view {
+      min-height: calc(var(--app-vh) - 86px);
+      justify-content: flex-start;
+    }
+    body.mobile-touch #charselect-panel,
+    body.mobile-touch #charcreate-panel {
+      width: min(
+        1040px,
+        calc(100vw - 32px - env(safe-area-inset-left) - env(safe-area-inset-right))
+      );
+      height: min(560px, calc(var(--app-vh) - 96px));
+      min-height: 0;
+      max-height: none;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      padding: 0;
+    }
+    body.mobile-touch #charselect-panel .auth-title,
+    body.mobile-touch #charcreate-panel .auth-title {
+      font-size: 18px;
+      line-height: 1.1;
+      margin-bottom: 0;
+      letter-spacing: 1px;
+    }
+    body.mobile-touch #charselect-panel .cs-head,
+    body.mobile-touch #charcreate-panel .cs-head {
+      flex: 0 0 auto;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    body.mobile-touch #charselect-panel .cs-head-row {
+      width: 100%;
+      align-items: center;
+      gap: 8px;
+    }
+    body.mobile-touch #charselect-panel .cs-wallet,
+    body.mobile-touch #charselect-panel .cs-wallet-hidden-note {
+      display: none;
+    }
+    body.mobile-touch #charselect-panel .cs-controls {
+      gap: 6px;
+    }
+    body.mobile-touch #charselect-panel .cs-realm-btn {
+      min-height: 38px;
+      padding: 6px 10px;
+      gap: 6px;
+      font-size: 12px;
+    }
+    body.mobile-touch #charselect-panel .cs-realm-menu {
+      max-height: min(260px, calc(var(--app-vh) - 126px));
+    }
+    body.mobile-touch #charselect-panel .mobile-char-tabs {
+      display: none;
+    }
+    body.mobile-touch #charselect-panel[data-mobile-tab="characters"] .char-create,
+    body.mobile-touch #charselect-panel[data-mobile-tab="characters"] .charselect-col-right,
+    body.mobile-touch #charselect-panel[data-mobile-tab="create"] #char-list {
+      display: flex;
+    }
+    body.mobile-touch #charselect-panel .cs-body,
+    body.mobile-touch #charcreate-panel .cs-body {
+      display: grid;
+      grid-template-columns: minmax(250px, 0.78fr) minmax(430px, 1.22fr);
+      gap: 10px;
+      flex: 1 1 auto;
+      min-height: 0;
+      align-items: stretch;
+    }
+    body.mobile-touch #charselect-panel .cs-list-col,
+    body.mobile-touch #charselect-panel .cs-detail-col,
+    body.mobile-touch #charcreate-panel .cs-create-col,
+    body.mobile-touch #charcreate-panel .cs-detail-col {
+      min-height: 0;
+      height: 100%;
+      overflow: hidden;
+      padding: 10px;
+    }
+    body.mobile-touch #charselect-panel .cs-list-col {
+      gap: 8px;
+    }
+    body.mobile-touch #charselect-panel #char-list {
+      overflow-y: auto;
+      scrollbar-gutter: stable;
+      scrollbar-width: auto;
+      scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+      padding: 0 4px 0 0;
+      gap: 6px;
+    }
+    body.mobile-touch #charselect-panel #char-list::-webkit-scrollbar {
+      width: 8px;
+    }
+    body.mobile-touch #charselect-panel #char-list::-webkit-scrollbar-track {
+      background: var(--scrollbar-track);
+      border: 1px solid #35270f;
+      border-radius: 999px;
+    }
+    body.mobile-touch #charselect-panel #char-list::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, var(--scrollbar-thumb) 0%, #3a2b10 100%);
+      border: 1px solid var(--scrollbar-border);
+      border-radius: 999px;
+    }
+    body.mobile-touch #charselect-panel .cs-list-actions,
+    body.mobile-touch #charcreate-panel .cs-form-actions {
+      margin-top: 8px;
+      gap: 8px;
+    }
+    body.mobile-touch #charselect-panel .cs-list-actions {
+      position: absolute;
+      top: 28px;
+      right: 0;
+      z-index: 3;
+      margin-top: 0;
+      justify-content: flex-end;
+    }
+    body.mobile-touch #charselect-panel .cs-list-actions .btn {
+      flex: 0 0 auto;
+      min-width: 122px;
+      min-height: 38px;
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+    body.mobile-touch #charselect-panel .cs-list-actions .cs-new-btn {
+      min-width: 158px;
+    }
+    body.mobile-touch #char-list .char-row {
+      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-areas: "portrait id" "actions actions";
+      column-gap: 9px;
+      row-gap: 6px;
+      padding: 7px 8px;
+      margin-bottom: 0;
+    }
+    body.mobile-touch #char-list .char-row .char-actions {
+      display: grid;
+      grid-template-columns: 0.9fr 1.1fr;
+      gap: 6px;
+      width: 100%;
+    }
+    body.mobile-touch #char-list .char-row .btn {
+      min-height: 36px;
+      padding: 7px 8px;
+      font-size: 10.5px;
+    }
+    body.mobile-touch #char-list .portrait-sm {
+      width: 40px;
+      height: 40px;
+    }
+    body.mobile-touch #charselect-panel .cs-detail-col {
+      display: grid;
+      grid-template-columns: minmax(120px, 0.54fr) minmax(0, 1.46fr);
+      gap: 10px;
+      align-items: stretch;
+    }
+    body.mobile-touch #charselect-panel .cs-detail-col .cs-preview {
+      height: auto;
+      min-height: 0;
+      min-width: 0;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details {
+      box-sizing: border-box;
+      min-height: 0;
+      overflow-y: auto;
+      scrollbar-gutter: stable;
+      scrollbar-width: auto;
+      scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+      opacity: 1;
+      transform: none;
+      padding-right: 12px;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details::-webkit-scrollbar {
+      width: 10px;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details::-webkit-scrollbar-track {
+      background: var(--scrollbar-track);
+      border: 1px solid #35270f;
+      border-radius: 999px;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, var(--scrollbar-thumb) 0%, #3a2b10 100%);
+      border: 1px solid var(--scrollbar-border);
+      border-radius: 999px;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details .class-details-content {
+      max-width: 100%;
+      min-height: 0;
+      height: auto;
+      overflow: visible;
+      gap: 5px;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details .class-details-lore {
+      display: none;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details .class-details-role {
+      display: none;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details .class-details-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: stretch;
+      max-width: 100%;
+      min-width: 0;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details .class-details-grid > * {
+      max-width: 100%;
+      min-width: 0;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details .details-spells-section {
+      min-width: 0;
+      padding-top: 2px;
+      padding-bottom: 4px;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details .class-details-name {
+      font-size: 16px;
+      line-height: 1;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details .details-section-title {
+      margin-bottom: 3px;
+      font-size: 10px;
+      line-height: 1.05;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details .details-stat-bar-row {
+      min-width: 0;
+      margin-bottom: 2px;
+      gap: 6px;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details .details-stat-label {
+      flex: 0 0 64px;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details .details-stat-val {
+      flex: 0 0 22px;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details .details-stat-label,
+    body.mobile-touch #charselect-panel #charselect-class-details .details-stat-val,
+    body.mobile-touch #charselect-panel #charselect-class-details .details-gear-row {
+      font-size: 10.5px;
+      margin-bottom: 3px;
+      line-height: 1.15;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details .details-stat-bar-track {
+      flex: 1 1 auto;
+      height: 8px;
+      min-width: 0;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details .details-gear-row {
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details .details-spells-list {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 5px;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details .details-spell-item {
+      box-sizing: border-box;
+      width: 100%;
+      min-width: 0;
+      padding: 5px 7px;
+      gap: 6px;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details .details-spell-icon-img {
+      width: 26px;
+      height: 26px;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details .details-spell-text {
+      min-width: 0;
+      font-size: 10.5px;
+      line-height: 1.12;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details .details-spell-text br {
+      display: none;
+    }
+    body.mobile-touch #charselect-panel #charselect-class-details .details-spell-text strong {
+      font-size: 11.5px;
+    }
+    body.mobile-touch #charcreate-panel .cs-body {
+      grid-template-columns: minmax(310px, 0.95fr) minmax(360px, 1.05fr);
+    }
+    body.mobile-touch #charcreate-panel .mini-class-row {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+    }
+    body.mobile-touch #charcreate-panel .mini-class {
+      min-height: 38px;
+      padding: 6px 8px;
+    }
+    body.mobile-touch #charcreate-panel .cs-create-col .skin-row {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+    body.mobile-touch #charcreate-panel .cs-detail-col .cs-preview {
+      height: 150px;
+      min-height: 150px;
+    }
+  }
 
   body.mobile-touch .mobile-menu-toggle {
     display: flex;

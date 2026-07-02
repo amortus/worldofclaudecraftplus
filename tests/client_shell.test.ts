@@ -42,6 +42,10 @@ const mobileControlsTs = readFileSync(
   new URL('../src/game/mobile_controls.ts', import.meta.url),
   'utf8',
 ).replace(/\r\n/g, '\n');
+const characterPreviewTs = readFileSync(
+  new URL('../src/render/characters/preview.ts', import.meta.url),
+  'utf8',
+).replace(/\r\n/g, '\n');
 const robotsTxt = readFileSync(new URL('../public/robots.txt', import.meta.url), 'utf8').replace(
   /\r\n/g,
   '\n',
@@ -440,6 +444,63 @@ describe('client HTML shell', () => {
     expect(html).toContain(
       'body.native-app.mobile-touch[data-start-panel="login-panel"] .portal-ring,',
     );
+    // Native landscape login: the panel becomes a two-column grid.
+    expect(html).toContain(
+      'body.native-app.mobile-touch[data-start-panel="login-panel"] #login-panel {\n    display: grid;\n    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);',
+    );
+    // Landscape charselect/charcreate rework (shared, non-native): the query leads
+    // with the char panel homepage padding, then lays the panels out two-column.
+    expect(html).toContain(
+      '@media (orientation: landscape) {\n    body.mobile-touch[data-start-panel="charselect-panel"] #homepage-views-container,',
+    );
+    expect(html).toContain(
+      'body.mobile-touch[data-start-panel="charselect-panel"] #hero-view,\n    body.mobile-touch[data-start-panel="charcreate-panel"] #hero-view {\n      justify-content: flex-start;\n      min-height: calc(var(--app-vh) - 86px);',
+    );
+    expect(html).toContain(
+      'body.mobile-touch[data-start-panel="mode-select"] #title-logo {\n      width: min(176px, 24vw);\n      margin: 0;',
+    );
+    expect(html).toContain(
+      'body.mobile-touch[data-start-panel="charselect-panel"] #title-logo,\n    body.mobile-touch[data-start-panel="charcreate-panel"] #title-logo {\n      display: none;',
+    );
+    expect(html).toContain('height: min(560px, calc(var(--app-vh) - 96px));');
+    expect(html).toContain(
+      'body.mobile-touch #charselect-panel .cs-detail-col {\n      display: grid;\n      grid-template-columns: minmax(120px, 0.54fr) minmax(0, 1.46fr);',
+    );
+    expect(html).toContain(
+      'body.mobile-touch #charselect-panel #char-list {\n      overflow-y: auto;\n      scrollbar-gutter: stable;\n      scrollbar-width: auto;',
+    );
+    expect(html).toContain(
+      'body.mobile-touch #charselect-panel #char-list::-webkit-scrollbar {\n      width: 8px;',
+    );
+    expect(html).toContain(
+      'body.mobile-touch #charselect-panel #charselect-class-details {\n      box-sizing: border-box;\n      min-height: 0;\n      overflow-y: auto;',
+    );
+    expect(html).toContain(
+      'body.mobile-touch #charselect-panel #charselect-class-details .class-details-grid {\n      display: flex;\n      flex-direction: column;',
+    );
+    expect(html).toContain(
+      'body.mobile-touch #charselect-panel #charselect-class-details .details-spells-list {\n      display: grid;\n      grid-template-columns: minmax(0, 1fr);',
+    );
+    expect(html).toContain(
+      'body.mobile-touch #charselect-panel .cs-list-col,\n    body.mobile-touch #charselect-panel .cs-detail-col,\n    body.mobile-touch #charcreate-panel .cs-create-col,\n    body.mobile-touch #charcreate-panel .cs-detail-col {\n      min-height: 0;\n      height: 100%;\n      overflow: hidden;',
+    );
+    expect(html).toContain(
+      'body.mobile-touch #charselect-panel .cs-list-actions {\n      position: absolute;\n      top: 28px;\n      right: 0;',
+    );
+    expect(html).toContain(
+      'body.mobile-touch #charselect-panel .cs-list-actions .btn {\n      flex: 0 0 auto;\n      min-width: 122px;\n      min-height: 38px;',
+    );
+    // The same shared charselect landscape block is mirrored into play.html.
+    expect(playHtml).toContain(
+      '@media (orientation: landscape) {\n    body.mobile-touch[data-start-panel="charselect-panel"] #homepage-views-container,',
+    );
+    expect(playHtml).toContain(
+      'body.mobile-touch #charselect-panel .cs-detail-col {\n      display: grid;\n      grid-template-columns: minmax(120px, 0.54fr) minmax(0, 1.46fr);',
+    );
+    // play.html has no native shell, so it must NOT carry the native-app rules.
+    expect(playHtml).not.toContain(
+      'body.native-app.mobile-touch[data-start-panel="login-panel"] #login-panel {',
+    );
     expect(html).toContain(
       'touch-action: manipulation;\n    -webkit-tap-highlight-color: transparent;',
     );
@@ -457,6 +518,37 @@ describe('client HTML shell', () => {
       'body.mobile-touch .homepage-header {\n    display: flex;\n    position: relative;',
     );
     expect(mainTs).not.toContain("visualViewport?.addEventListener('scroll', syncAppViewport)");
+  });
+
+  it('resyncs the app viewport before opening the options window', () => {
+    // #options-menu is a child of #ui, a fixed overflow:hidden box sized from
+    // --app-vh/--app-vw. toggleOptionsMenu must resync those custom properties
+    // before showing the panel, otherwise a stale (shorter) --app-vh from just
+    // before a fullscreen/resize transition settles hard-clips the panel and the
+    // lowest keybind/Action Bar rows become unreachable (no visible scrollbar).
+    expect(hudTs).toContain("import { syncAppViewport } from '../game/app_viewport';");
+    const start = hudTs.indexOf('toggleOptionsMenu(): void {');
+    expect(start).toBeGreaterThan(-1);
+    const body = hudTs.slice(start);
+    const callAt = body.indexOf('syncAppViewport()');
+    const showAt = body.indexOf("$('#options-menu').style.display = 'block'");
+    expect(callAt).toBeGreaterThan(-1);
+    expect(showAt).toBeGreaterThan(-1);
+    expect(callAt).toBeLessThan(showAt);
+  });
+
+  it('releases the start-screen character preview before entering the world', () => {
+    expect(mainTs).toContain('function releaseStartScreenPreview(): void {');
+    expect(mainTs).toContain('characterPreview.destroy();\n  characterPreview = null;');
+    expect(mainTs).toContain(
+      "$('#start-screen').style.display = 'none';\n  releaseStartScreenPreview();",
+    );
+    expect(characterPreviewTs).toContain('destroy(): void {\n    if (this.destroyed) return;');
+    expect(characterPreviewTs).toContain(
+      'this.unregisterContext?.();\n    this.unregisterContext = null;',
+    );
+    expect(characterPreviewTs).toContain('this.renderer.forceContextLoss();');
+    expect(characterPreviewTs).toContain('this.renderer.dispose();');
   });
 
   it('lets HUD windows scroll by touch on iOS (Bag / Market)', () => {
@@ -592,12 +684,23 @@ describe('client HTML shell', () => {
     expect(html).toContain(
       'body.mobile-touch #mode-select {\n    width: 100%;\n    max-width: min(440px, calc(100vw - 32px - env(safe-area-inset-left) - env(safe-area-inset-right)));\n    margin-inline: auto;',
     );
-    // Landscape compacts the single play console instead of splitting two cards.
+    // Landscape now runs the play console as a two-column grid (server picker +
+    // Play), and the mode-select landscape query leads with the homepage padding.
     expect(html).toContain(
-      '@media (orientation: landscape) {\n    body.mobile-touch .play-console {',
+      '@media (orientation: landscape) {\n    body.mobile-touch[data-start-panel="mode-select"] #homepage-views-container {',
     );
     expect(html).toContain(
-      '@media (orientation: landscape) {\n    body.mobile-touch .play-console {\n      width: 100%;\n      max-width: 460px;',
+      'body.mobile-touch[data-start-panel="mode-select"] #mode-select {\n      width: min(\n        620px,',
+    );
+    expect(html).toContain(
+      'body.mobile-touch .play-console {\n      width: 100%;\n      max-width: none;\n      display: grid;\n      grid-template-columns: minmax(0, 1fr) minmax(140px, 0.46fr);',
+    );
+    // play.html shares the same inline landscape rules (kept in sync by hand).
+    expect(playHtml).toContain(
+      '@media (orientation: landscape) {\n    body.mobile-touch[data-start-panel="mode-select"] #homepage-views-container {',
+    );
+    expect(playHtml).toContain(
+      'body.mobile-touch .play-console {\n      width: 100%;\n      max-width: none;\n      display: grid;\n      grid-template-columns: minmax(0, 1fr) minmax(140px, 0.46fr);',
     );
   });
 

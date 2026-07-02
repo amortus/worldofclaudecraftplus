@@ -1,7 +1,7 @@
-// Pins the native wrappers' orientation/fullscreen config. Adapted from
-// upstream: our iOS plist still lists portrait orientations (we never ported
-// upstream's landscape-only lock), so this asserts UIRequiresFullScreen plus
-// landscape support rather than portrait absence. Android IS landscape-locked.
+// Pins the native wrappers' orientation/fullscreen config. Both wrappers are
+// landscape-locked: Android via sensorLandscape, iOS/iPadOS via a landscape-only
+// UISupportedInterfaceOrientations. We keep the extra UIRequiresFullScreen assert
+// (App Store review of a fullscreen game needs it) on top of upstream's checks.
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
@@ -15,7 +15,7 @@ describe('native mobile orientation', () => {
     expect(manifest).toContain('android:screenOrientation="sensorLandscape"');
   });
 
-  it('declares fullscreen and supports landscape on iOS and iPadOS', () => {
+  it('allows only landscape orientations on iOS and iPadOS', () => {
     const plist = read('ios/App/App/Info.plist');
     // Required for App Store review of a fullscreen game: without it, iPad
     // multitasking demands support for ALL orientations.
@@ -28,6 +28,8 @@ describe('native mobile orientation', () => {
     for (const block of orientationBlocks) {
       expect(block?.[1]).toContain('UIInterfaceOrientationLandscapeLeft');
       expect(block?.[1]).toContain('UIInterfaceOrientationLandscapeRight');
+      expect(block?.[1]).not.toContain('UIInterfaceOrientationPortrait');
+      expect(block?.[1]).not.toContain('UIInterfaceOrientationPortraitUpsideDown');
     }
   });
 });
