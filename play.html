@@ -795,6 +795,10 @@
   .chat-quest-link { color: #ffd100; cursor: var(--cursor-point); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
   .chat-quest-link:hover { color: #fff176; }
   .chat-quest-link:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
+  /* Item chat link: color is set inline from the item quality, so hover just brightens rather than overriding the quality hue. */
+  .chat-item-link { cursor: var(--cursor-point); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  .chat-item-link:hover { filter: brightness(1.25); }
+  .chat-item-link:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
   .chat-pane::-webkit-scrollbar { width: 8px; }
   .chat-pane::-webkit-scrollbar-track { background: #0b0b10; }
   .chat-pane::-webkit-scrollbar-thumb { background: #4a3d1d; border-radius: 4px; }
@@ -1587,7 +1591,9 @@
   #arena-status .as-timer { font-size: 11px; color: #d8cba0; margin-top: 4px; }
 
   /* ---------- The World Market (the Merchant's auction house) ---------- */
-  #market-window { width: 470px; height: min(640px, calc(85vh - 24px)); display: none; flex-direction: column; overflow: hidden; min-height: 0; }
+  #market-window { width: 560px; height: min(640px, calc(85vh - 24px)); display: none; flex-direction: column; overflow: hidden; min-height: 0; }
+  /* Ellipsize a verbose localized market title so it never overlaps the close button. */
+  #market-window .panel-title > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .mkt-tabs { display: flex; gap: 4px; margin: 2px 0 8px; }
   .mkt-tab { flex: 1; text-align: center; font-family: var(--title-font); font-size: 12px; color: var(--color-text-muted);
     padding: 5px 4px; border: 0; border-radius: 4px 4px 0 0; cursor: var(--cursor-point); background: #ffffff08; border-bottom: 2px solid transparent; }
@@ -1613,6 +1619,8 @@
   .mkt-select.open .mkt-select-chevron { transform: translateY(2px) rotate(225deg); }
   .mkt-select-menu { position: absolute; left: 0; top: calc(100% + 4px); width: 100%; max-height: 236px; overflow-y: auto;
     padding: 5px; border: 1px solid #6f5a2a; border-radius: 6px; background: #140f09f7; box-shadow: 0 10px 24px #000c, inset 0 1px 0 #ffffff12; z-index: 20; }
+  /* Flipped by hud.ts (positionFilterMenu) when there is more clip-box room above the trigger than below it, e.g. a filter near the bottom of #market-window on mobile: the menu would otherwise render past the window's overflow: hidden clip with no way to scroll to the rest of it. */
+  .mkt-select.open-up .mkt-select-menu { top: auto; bottom: calc(100% + 4px); }
   .mkt-select-option { width: 100%; display: block; border: 0; border-radius: 4px; background: transparent; color: #f0e4c8;
     font-family: var(--font-ui); font-size: 13px; line-height: 1.2; text-align: left; padding: 7px 8px; cursor: var(--cursor-point); }
   .mkt-select-option:hover, .mkt-select-option:focus-visible { outline: 0; background: #ffffff14; color: var(--color-accent); }
@@ -5480,13 +5488,24 @@
     left: 10px; right: 10px; top: 10px; width: auto; transform: none;
     box-sizing: border-box; overflow-y: auto;
   }
-  body.mobile-touch #vendor-window,
-  body.mobile-touch #market-window {
+  body.mobile-touch #vendor-window {
     max-height: calc(58vh - 20px);
   }
+  /* The Market carries a tab strip plus the filter selects, which stack to a tall
+     single column on mobile; the vendor's 58vh cap would leave the flex:1 listing
+     body (#market-body) zero height, so it collapsed and could not be scrolled.
+     Give the window the full available height (like #trade-window) so the listing
+     body keeps a usable, touch-scrollable height under the header. */
   body.mobile-touch #market-window {
-    max-height: calc(58vh - 20px);
+    max-height: calc(100vh - 20px);
     overflow: hidden;
+  }
+  /* Floor the listing body so it keeps a usable, touch-scrollable height even when
+     the subtype filter adds a third stacked row on a short landscape screen. (On a
+     very short viewport the window's overflow:hidden can still clip below this floor,
+     but the body scrolls internally, so it never collapses to the old zero height.) */
+  body.mobile-touch #market-body {
+    min-height: 96px;
   }
   body.mobile-touch .mkt-filters,
   body.mobile-touch .mkt-filters.has-subtype { grid-template-columns: 1fr; }

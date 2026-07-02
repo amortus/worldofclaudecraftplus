@@ -238,6 +238,21 @@ interface WireAura {
   kind: string;
   rem: number;
   dur: number;
+  // The aura's magnitude, so buff/debuff hover tooltips show the REAL numbers online, exactly
+  // as offline (the descriptor reads value per kind: flat stat amount, slow/haste multiplier,
+  // dot/hot per-tick, absorb remaining, ...). Sent RAW (like `dur`, not round2) so the exact
+  // number and its sign survive JSON: round2 could turn a tiny negative into -0 -> 0 and flip a
+  // stat-sap's isAuraDebuff classification. Omitted only when exactly 0, which decodes back to 0,
+  // so value-less auras and an old server are unchanged.
+  value?: number;
+  // imbue judgement min/max bonus-damage range (imbueRange); only imbue sets these.
+  value2?: number;
+  value3?: number;
+  // dot/hot tick cadence in seconds, so the tooltip's "every N sec" is right online.
+  tickInterval?: number;
+  // damage/heal school for dot/absorb/thorns tooltips. Physical is the client's decode default,
+  // so only a non-physical school needs to ride the wire.
+  school?: string;
   stacks?: number;
 }
 
@@ -318,6 +333,19 @@ function dynamicFields(e: Entity): Record<string, unknown> {
         kind: a.kind,
         rem: round2(a.remaining),
         dur: a.duration,
+        // Carry the aura's magnitude so buff/debuff hover tooltips show the real numbers online,
+        // not 0. Sent RAW (like `dur`, not round2) so the exact number and its sign survive JSON,
+        // keeping a negative stat-sap's isAuraDebuff classification intact (round2 could turn a
+        // tiny negative into -0 -> 0). Omitted only when exactly 0, which decodes back to 0, so
+        // value-less auras and an old server are unchanged. A hover tooltip magnitude is
+        // non-actionable cosmetic text, so sending it cannot let a graphics preset hide anything.
+        ...(a.value !== 0 ? { value: a.value } : {}),
+        // imbue judgement min/max range; dot/hot tick cadence; non-physical school. Each rides
+        // only when it carries meaning, so ordinary auras stay lean and decode to their defaults.
+        ...(a.value2 !== undefined ? { value2: a.value2 } : {}),
+        ...(a.value3 !== undefined ? { value3: a.value3 } : {}),
+        ...(a.tickInterval !== undefined ? { tickInterval: a.tickInterval } : {}),
+        ...(a.school !== 'physical' ? { school: a.school } : {}),
         ...(a.stacks && a.stacks > 1 ? { stacks: a.stacks } : {}),
       }),
     );

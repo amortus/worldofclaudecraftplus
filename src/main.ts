@@ -931,7 +931,7 @@ async function startGame(
     chatInput.style.height = '';
     chatInput.style.overflowY = '';
     chatInput.blur();
-    hud.clearPendingQuestLinks();
+    hud.clearPendingChatLinks();
     recoverFromMobileKeyboard();
   };
   function openChat(): void {
@@ -1245,6 +1245,12 @@ async function startGame(
     }
     if (key === 'filterProfanity') {
       settings.set('filterProfanity', !!value);
+      return;
+    }
+    if (key === 'startAttackOnAbilityUse') {
+      // No live subsystem to update: the HUD reads this setting at ability-cast
+      // time (see hud.castSlot). Persist the choice and we are done.
+      settings.set('startAttackOnAbilityUse', !!value);
       return;
     }
     if (key === 'attackMove') {

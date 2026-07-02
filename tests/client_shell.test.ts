@@ -622,14 +622,14 @@ describe('client HTML shell', () => {
 
   it('keeps the World Market to one scroll container with browse filters below the tabs', () => {
     expect(html).toContain(
-      '#market-window { width: 470px; height: min(640px, calc(85vh - 24px)); display: none; flex-direction: column; overflow: hidden;',
+      '#market-window { width: 560px; height: min(640px, calc(85vh - 24px)); display: none; flex-direction: column; overflow: hidden;',
     );
     expect(html).toContain('#market-body { overflow-y: auto; flex: 1; min-height: 0;');
     expect(html).toContain(
       '.mkt-page { display: flex; align-items: center; justify-content: space-between;',
     );
     expect(html).toContain(
-      'body.mobile-touch #market-window {\n    max-height: calc(58vh - 20px);\n    overflow: hidden;',
+      'body.mobile-touch #market-window {\n    max-height: calc(100vh - 20px);\n    overflow: hidden;',
     );
     expect(hudTs).toContain('MARKET_PAGE_SIZE');
     expect(hudTs).toContain('this.marketBrowsePage');

@@ -130,6 +130,7 @@ import {
 } from '../world_api';
 import { absorbBarView } from './absorb_bar';
 import { claimAdReward, showRewardedAd } from './ads';
+import { abilityStartsAutoAttack, hasAutoAttackTarget } from './attack_on_ability';
 import {
   applyBagFilter,
   BAG_CATEGORIES,
@@ -174,6 +175,7 @@ import {
   type SchematicPrimitive,
 } from './delve_map';
 import { dropdownKeyNav } from './dropdown_nav';
+import { computeDropdownPlacement } from './dropdown_position';
 import { emoteIconUrl } from './emote_icons';
 import { itemDisplayName, tEntity } from './entity_i18n';
 import { esc } from './esc';
@@ -267,7 +269,7 @@ import {
 import { chatPlayerContextActions } from './player_context_menu';
 import { hydratePortraits, portraitChipHtml } from './portrait_chip';
 import { maskProfanity } from './profanity';
-import { encodeQuestLink, parseChatSegments } from './quest_link';
+import { encodeItemLink, encodeQuestLink, parseChatSegments } from './quest_link';
 import { type QuestTrackerView, questTrackerView, type TrackedQuest } from './quest_tracker';
 import { pickNearest, type QuestMarker, questMarkers } from './quest_targets';
 import { QuestTracking } from './quest_tracking';
@@ -923,7 +925,7 @@ export class Hud {
   // resolves, shared by the map/minimap draw and the on-screen waypoint arrow.
   private readonly questTracking = new QuestTracking();
   private questMarkerCache: QuestMarker[] = [];
-  private pendingChatLinks = new Map<string, string>(); // display "[Name]" -> questId
+  private pendingChatLinks = new Map<string, string>(); // display "[Name]" -> [[q:id]]/[[i:id]] token
   private questDialogReturnFocus: HTMLElement | null = null;
   private questDialogOpenedAtMs = 0;
   private questLogReturnFocus: HTMLElement | null = null;
@@ -2130,7 +2132,7 @@ export class Hud {
   // channel tab. main.ts calls this on Enter so a channel tab works without
   // retyping the slash command; an explicit "/..." the player typed still wins.
   composeChatSend(typed: string): string {
-    const withLinks = this.applyPendingQuestLinks(typed);
+    const withLinks = this.applyPendingChatLinks(typed);
     const ch = this.chatFilterChannel();
     return ch ? composeChatLine(ch, withLinks) : withLinks.trim();
   }
@@ -2138,9 +2140,22 @@ export class Hud {
   // Shift-click a quest-log entry: open the chat input and insert a readable
   // [Name] link. composeChatSend swaps it for the canonical [[q:id]] token on send.
   insertQuestChatLink(questId: string): void {
+    this.insertChatLink(`[${questTitle(questId)}]`, encodeQuestLink(questId));
+  }
+
+  // Shift-click a bag item: insert a readable [Item Name] link into chat. On send,
+  // composeChatSend swaps it for the canonical [[i:id]] token (name resolved at render).
+  insertItemChatLink(itemId: string): void {
+    const item = ITEMS[itemId];
+    if (!item) return;
+    this.insertChatLink(`[${itemDisplayName(item)}]`, encodeItemLink(itemId));
+  }
+
+  // Shared affordance: append a readable [Name] to the chat input and remember the
+  // token it stands for, so applyPendingChatLinks can swap it back in on send.
+  private insertChatLink(display: string, token: string): void {
     const input = $('#chat-input') as unknown as HTMLInputElement;
-    const display = `[${questTitle(questId)}]`;
-    this.pendingChatLinks.set(display, questId);
+    this.pendingChatLinks.set(display, token);
     input.placeholder = this.activeChatPlaceholder();
     input.style.display = 'block';
     input.value =
@@ -2152,16 +2167,15 @@ export class Hud {
 
   // Drop any shift-click-inserted links that were never sent (chat closed/cleared),
   // so a stale [Name] entry can't silently rewrite a later message.
-  clearPendingQuestLinks(): void {
+  clearPendingChatLinks(): void {
     this.pendingChatLinks.clear();
   }
 
-  // Replace any inserted readable [Name] with its [[q:id]] token, then forget them.
-  private applyPendingQuestLinks(typed: string): string {
+  // Replace any inserted readable [Name] with its [[q:id]]/[[i:id]] token, then forget them.
+  private applyPendingChatLinks(typed: string): string {
     if (this.pendingChatLinks.size === 0) return typed;
     let out = typed;
-    for (const [display, questId] of this.pendingChatLinks)
-      out = out.split(display).join(encodeQuestLink(questId));
+    for (const [display, token] of this.pendingChatLinks) out = out.split(display).join(token);
     this.pendingChatLinks.clear();
     return out;
   }
@@ -3119,8 +3133,27 @@ export class Hud {
     if (action?.type === 'ability') {
       // cast by ability id: the server validates against its own known list,
       // so the client-side slot remap never desyncs slot semantics
-      if (this.abilityForSlot(barSlot)) {
+      const resolved = this.abilityForSlot(barSlot);
+      if (resolved) {
         this.sim.castAbility(action.id);
+        // Optional QoL: also engage auto-attack when the ability is an offensive
+        // attack, so white swings start without a separate Attack press. Gated on
+        // the player setting; abilityStartsAutoAttack skips heals/buffs and any
+        // damage-breakable CC (gouge/sap/sheep) the swing would shatter. We MUST also
+        // gate on hasAutoAttackTarget: many damaging abilities are requiresTarget:false
+        // AOEs (Arcane Explosion, Frost Nova, Thunder Clap, ...) cast with no hostile
+        // target, where startAutoAttack does NOT no-op but errors "Invalid attack
+        // target." (sim.startAutoAttack). The explicit Attack button keeps that error
+        // feedback; this convenience path must not trip it.
+        const tid = this.sim.player.targetId;
+        const target = tid !== null ? (this.sim.entities.get(tid) ?? null) : null;
+        if (
+          this.optionsHooks?.settings.get('startAttackOnAbilityUse') &&
+          abilityStartsAutoAttack(resolved.effects) &&
+          hasAutoAttackTarget(target)
+        ) {
+          this.sim.startAutoAttack();
+        }
         this.flashActionSlot(barSlot);
       }
     } else if (action?.type === 'item' && this.isHotbarItemId(action.id)) {
@@ -6721,7 +6754,7 @@ export class Hud {
             (ev.channel === 'say' || ev.channel === 'yell' || ev.channel === 'emote') &&
             ev.entityId !== undefined
           ) {
-            const masked = this.maskChat(this.questLinkPlainText(ev.text));
+            const masked = this.maskChat(this.chatLinkPlainText(ev.text));
             const bubble = ev.channel === 'emote' ? `${ev.from} ${masked}` : masked;
             this.renderer.showChatBubble(ev.entityId, bubble, ev.channel === 'yell');
           }
@@ -7193,6 +7226,10 @@ export class Hud {
         if (seg.value) parent.append(document.createTextNode(this.maskChat(seg.value)));
         continue;
       }
+      if (seg.kind === 'item') {
+        this.appendChatItemLink(parent, seg.itemId);
+        continue;
+      }
       const quest = QUESTS[seg.questId];
       if (!quest) {
         parent.append(document.createTextNode(this.maskChat('[?]')));
@@ -7214,13 +7251,36 @@ export class Hud {
     }
   }
 
-  // The plain-text form of a chat string with [[q:id]] tokens replaced by [Name]
-  // — used for 3D chat bubbles, which can't host interactive spans.
-  private questLinkPlainText(text: string): string {
+  // Render a [[i:id]] chat segment as a quality-colored, inspectable item link.
+  // Hover/focus shows the same item tooltip the bags window uses; an unknown id
+  // (e.g. content drift between players) degrades to a plain [?].
+  private appendChatItemLink(parent: HTMLElement, itemId: string): void {
+    const item = ITEMS[itemId];
+    if (!item) {
+      parent.append(document.createTextNode(this.maskChat('[?]')));
+      return;
+    }
+    const link = document.createElement('span');
+    link.className = 'chat-item-link';
+    link.style.color = QUALITY_COLOR[item.quality ?? 'common'] ?? '#fff';
+    link.textContent = `[${itemDisplayName(item)}]`;
+    link.tabIndex = 0;
+    this.attachTooltip(link, () => this.itemTooltip(item));
+    parent.append(link);
+  }
+
+  // The plain-text form of a chat string with [[q:id]]/[[i:id]] tokens replaced by
+  // [Name], used for 3D chat bubbles, which can't host interactive spans.
+  private chatLinkPlainText(text: string): string {
     return parseChatSegments(text)
-      .map((s) =>
-        s.kind === 'text' ? s.value : `[${QUESTS[s.questId] ? questTitle(s.questId) : '?'}]`,
-      )
+      .map((s) => {
+        if (s.kind === 'text') return s.value;
+        if (s.kind === 'item') {
+          const item = ITEMS[s.itemId];
+          return `[${item ? itemDisplayName(item) : '?'}]`;
+        }
+        return `[${QUESTS[s.questId] ? questTitle(s.questId) : '?'}]`;
+      })
       .join('');
   }
 
@@ -8721,15 +8781,53 @@ export class Hud {
         this.renderMarket();
       });
     });
+    // The filter dropdown's natural size (mirrors .mkt-select-menu's max-height/gap in
+    // the shell CSS). #market-window clips with overflow: hidden on mobile, and a menu
+    // that renders past that clip has no scroll path to the rest of it, so every open
+    // recomputes placement against the window's actual clip box instead of assuming
+    // there is always room below the trigger.
+    const MKT_MENU_PREFERRED_HEIGHT = 236;
+    const MKT_MENU_GAP = 4;
+    const MKT_MENU_MIN_HEIGHT = 80;
     const closeFilterMenus = () => {
       el.querySelectorAll<HTMLElement>('.mkt-select.open').forEach((menu) => {
-        menu.classList.remove('open');
+        menu.classList.remove('open', 'open-up');
         menu
           .querySelector<HTMLButtonElement>('.mkt-select-btn')
           ?.setAttribute('aria-expanded', 'false');
         const list = menu.querySelector<HTMLElement>('.mkt-select-menu');
-        if (list) list.hidden = true;
+        if (list) {
+          list.hidden = true;
+          list.style.maxHeight = '';
+        }
       });
+    };
+    const positionFilterMenu = (menu: HTMLElement) => {
+      const trigger = menu.querySelector<HTMLButtonElement>('.mkt-select-btn');
+      const list = menu.querySelector<HTMLElement>('.mkt-select-menu');
+      // `el` already IS #market-window, so there is no separate container to look up:
+      // querySelector('#market-window') on the window itself never matches its own
+      // root and would always fall back to `el`.
+      if (!trigger || !list) return;
+      // Local name is `tb`, not `t`, so it does not shadow the i18n t() import.
+      const tb = trigger.getBoundingClientRect();
+      const c = el.getBoundingClientRect();
+      // #market-window clips at its padding box (overflow: hidden), which sits inset
+      // from the border box measured above by the panel's border width on each edge;
+      // subtract it so the clamp matches the real clip, not the border-inclusive box.
+      const borderTop = Number.parseFloat(getComputedStyle(el).borderTopWidth) || 0;
+      const borderBottom = Number.parseFloat(getComputedStyle(el).borderBottomWidth) || 0;
+      const placement = computeDropdownPlacement({
+        triggerTop: tb.top,
+        triggerBottom: tb.bottom,
+        containerTop: c.top + borderTop,
+        containerBottom: c.bottom - borderBottom,
+        preferredMaxHeight: MKT_MENU_PREFERRED_HEIGHT,
+        gap: MKT_MENU_GAP,
+        minHeight: MKT_MENU_MIN_HEIGHT,
+      });
+      menu.classList.toggle('open-up', placement.side === 'above');
+      list.style.maxHeight = `${placement.maxHeight}px`;
     };
     el.querySelectorAll<HTMLButtonElement>('.mkt-select-btn').forEach((button) => {
       button.addEventListener('click', (event) => {
@@ -8742,6 +8840,7 @@ export class Hud {
         button.setAttribute('aria-expanded', open ? 'true' : 'false');
         const list = menu.querySelector<HTMLElement>('.mkt-select-menu');
         if (list) list.hidden = !open;
+        if (open) positionFilterMenu(menu);
       });
     });
     el.querySelectorAll<HTMLButtonElement>('[data-market-filter-option]').forEach((option) => {
@@ -9244,6 +9343,12 @@ export class Hud {
       );
       row.innerHTML = `${this.itemIcon(item)}<span style="color:${qColor}">${esc(itemName)}</span><span class="bi-count">${s.count > 1 ? esc(t('itemUi.bags.stackCount', { count: formatNumber(s.count, { maximumFractionDigits: 0 }) })) : ''}</span>`;
       row.addEventListener('click', (ev) => {
+        // Shift-click links the item into chat (classic shift-click-to-link), except at a
+        // vendor, where shift-click already owns the split-stack sell prompt (left untouched).
+        if (ev.shiftKey && !this.vendorOpen) {
+          this.insertItemChatLink(s.itemId);
+          return;
+        }
         if (this.tradeOpen) {
           this.addItemToTrade(s.itemId);
         } else if (this.marketOpen && this.marketTab === 'sell') {
@@ -9318,7 +9423,11 @@ export class Hud {
         else if (item.kind === 'potion')
           extra = `<div class="tt-sub">${esc(t('itemUi.tooltip.clickUseInstant'))}</div>`;
         else if (item.use) extra = `<div class="tt-sub">${esc(t('itemUi.tooltip.clickUse'))}</div>`;
-        return this.itemTooltip(item) + extra;
+        // Shift-click-to-link hint, in every mode except at a vendor (shift owns sell there).
+        const link = !this.vendorOpen
+          ? `<div class="tt-sub">${esc(t('hudChrome.itemShare.linkHint'))}</div>`
+          : '';
+        return this.itemTooltip(item) + extra + link;
       });
       grid.appendChild(row);
     }
@@ -13987,6 +14096,11 @@ export class Hud {
       'landingHighContrast',
     );
     this.settingBoolToggle(body, t('hud.options.invertLookY'), 'invertLookY');
+    this.settingBoolToggle(
+      body,
+      t('hudChrome.options.startAttackOnAbility'),
+      'startAttackOnAbilityUse',
+    );
 
     // On/off toggle for chat timestamps.
     const tsRow = document.createElement('div');

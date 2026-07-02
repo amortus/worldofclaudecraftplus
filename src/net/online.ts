@@ -1182,6 +1182,17 @@ export class ClientWorld implements IWorld {
           o.kind = a.kind;
           o.remaining = a.rem;
           o.duration = a.dur;
+          // The wire carries the aura magnitude (and imbue range / tick cadence / school) so buff
+          // and debuff hover tooltips show the real numbers online exactly as offline. A 0/absent
+          // value decodes to 0, a missing school falls back to the physical default, and imbue
+          // range / tick cadence stay undefined when not sent. Reassign EVERY snapshot (with
+          // defaults) so a reused slot never keeps a stale value/school when the aura at that
+          // index changes. sourceId stays simplified (a separate pre-existing wire reduction).
+          o.value = a.value ?? 0;
+          o.value2 = a.value2;
+          o.value3 = a.value3;
+          o.tickInterval = a.tickInterval;
+          o.school = a.school ?? 'physical';
           o.stacks = a.stacks;
         } else {
           dstAuras[ai] = {
@@ -1190,9 +1201,12 @@ export class ClientWorld implements IWorld {
             kind: a.kind,
             remaining: a.rem,
             duration: a.dur,
-            value: 0,
+            value: a.value ?? 0,
+            value2: a.value2,
+            value3: a.value3,
+            tickInterval: a.tickInterval,
             sourceId: 0,
-            school: 'physical' as const,
+            school: a.school ?? 'physical',
             stacks: a.stacks,
           };
         }

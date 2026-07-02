@@ -17,8 +17,9 @@ import { type ClientSession, GameServer, wireEntity } from '../server/game';
 import { ClientWorld } from '../src/net/online';
 import { DELVES } from '../src/sim/data';
 import { Sim } from '../src/sim/sim';
-import { DT, type PlayerClass } from '../src/sim/types';
+import { type Aura, DT, type PlayerClass } from '../src/sim/types';
 import { terrainHeight } from '../src/sim/world';
+import { absorbTotal } from '../src/ui/absorb_bar';
 
 const DELTA_KEYS = [
   'inv',
@@ -1295,6 +1296,155 @@ describe('guild nameplate wire', () => {
     // a later full record without `gd` means "no guild" → reset to ''
     (client as any).applySnapshot({ t: 'snap', ents: [base] });
     expect(client.entities.get(7)?.guild).toBe('');
+  });
+});
+
+// Buff/debuff hover tooltips read an aura's magnitude (flat stat amount, slow/haste multiplier,
+// dot/hot per-tick, absorb remaining, imbue range, ...), so the wire must carry it or the tooltip
+// reads 0 online (the "Increases attack power by 0" bug). The serializer now sends `value`
+// whenever it is nonzero (raw, so a negative stat-sap's sign and its debuff classification
+// survive), plus value2/value3 (imbue), tickInterval (dot/hot), and a non-physical school. The
+// client decode reads `a.value ?? 0` and `a.school ?? 'physical'`, so a value-0 aura or an old
+// server still decodes to the defaults (backward compatible). This drives a real Sim aura through
+// the real serializer (wireEntity) and the real client decode (ClientWorld.applySnapshot).
+describe('aura magnitude over the wire (buff/debuff tooltip parity)', () => {
+  function wireAura(wire: Record<string, unknown>, id: string): Record<string, unknown> {
+    const list = (wire.auras ?? []) as Record<string, unknown>[];
+    const found = list.find((a) => a.id === id);
+    if (!found) throw new Error(`aura ${id} not on the wire`);
+    return found;
+  }
+
+  function roundTrip(aura: Aura): { wire: Record<string, unknown>; mirror: Aura } {
+    const sim = new Sim({ seed: 1, playerClass: 'warrior', noPlayer: true });
+    const pid = sim.addPlayer('warrior', 'Sapped');
+    const p = sim.entities.get(pid)!;
+    p.auras = [aura];
+    const wire = wireEntity(p);
+    const client = bareClient(99);
+    (client as any).applySnapshot({ t: 'snap', ents: [wire] });
+    const mirror = client.entities.get(pid)!.auras[0];
+    return { wire, mirror };
+  }
+
+  function sapInt(value: number): Aura {
+    return {
+      id: 'sap_int',
+      name: 'Mind Sap',
+      kind: 'buff_int',
+      remaining: 20,
+      duration: 20,
+      value,
+      sourceId: 0,
+      school: 'physical',
+    };
+  }
+
+  it('sends a POSITIVE buff value so its tooltip shows the real magnitude', () => {
+    const buff = { ...sapInt(40), id: 'arcane_intellect', name: 'Arcane Intellect' };
+    const { wire, mirror } = roundTrip(buff);
+    expect(wireAura(wire, 'arcane_intellect').value).toBe(40); // rides the wire now
+    expect(mirror.value).toBe(40); // client mirrors the real magnitude (not the old hardcoded 0)
+  });
+
+  it('sends a NEGATIVE buff_* value raw so the stat-sap sign survives the wire', () => {
+    // hud classifies a stat-sap as a debuff via `kind.startsWith('buff_') && value < 0`, which can
+    // only fire online if the negative value rides (sent raw so round2 cannot flip -0 to 0).
+    const { wire, mirror } = roundTrip(sapInt(-30));
+    expect(wireAura(wire, 'sap_int').value).toBe(-30);
+    expect(mirror.value).toBe(-30);
+    expect(mirror.kind).toBe('buff_int');
+  });
+
+  it('sends a POSITIVE absorb value + non-physical school so the shield overlay works online', () => {
+    const shield: Aura = {
+      id: 'power_word_shield',
+      name: 'Power Word: Shield',
+      kind: 'absorb',
+      remaining: 30,
+      duration: 30,
+      value: 250,
+      sourceId: 0,
+      school: 'holy',
+    };
+    const { wire, mirror } = roundTrip(shield);
+    expect(wireAura(wire, 'power_word_shield').value).toBe(250);
+    expect(wireAura(wire, 'power_word_shield').school).toBe('holy'); // non-physical school rides
+    expect(mirror.value).toBe(250); // client mirrors the remaining absorb...
+    expect(mirror.school).toBe('holy');
+    // ...so the unit-frame shield overlay now derives online exactly as offline.
+    expect(absorbTotal([mirror])).toBe(250);
+  });
+
+  it('round-trips a dot magnitude, tick cadence, and non-physical school', () => {
+    const dot: Aura = {
+      id: 'corruption',
+      name: 'Corruption',
+      kind: 'dot',
+      remaining: 12,
+      duration: 12,
+      value: 15,
+      tickInterval: 3,
+      sourceId: 0,
+      school: 'shadow',
+    };
+    const { wire, mirror } = roundTrip(dot);
+    expect(wireAura(wire, 'corruption').value).toBe(15);
+    expect(wireAura(wire, 'corruption').tickInterval).toBe(3);
+    expect(wireAura(wire, 'corruption').school).toBe('shadow');
+    expect(mirror.value).toBe(15);
+    expect(mirror.tickInterval).toBe(3);
+    expect(mirror.school).toBe('shadow');
+  });
+
+  it('round-trips the imbue judgement range (value2/value3), value omitted when 0', () => {
+    const imbue: Aura = {
+      id: 'holy_might',
+      name: 'Holy Might',
+      kind: 'imbue',
+      remaining: 300,
+      duration: 300,
+      value: 0, // imbue carries its numbers in value2/value3, so value stays 0...
+      value2: 8,
+      value3: 12,
+      sourceId: 0,
+      school: 'holy',
+    };
+    const { wire, mirror } = roundTrip(imbue);
+    expect('value' in wireAura(wire, 'holy_might')).toBe(false); // ...and is omitted (decodes 0)
+    expect(wireAura(wire, 'holy_might').value2).toBe(8);
+    expect(wireAura(wire, 'holy_might').value3).toBe(12);
+    expect(mirror.value).toBe(0);
+    expect(mirror.value2).toBe(8);
+    expect(mirror.value3).toBe(12);
+  });
+
+  it('tolerates an old-server wire aura with no value (backward compatible -> 0/physical)', () => {
+    const client = bareClient(1);
+    (client as any).applySnapshot({
+      t: 'snap',
+      ents: [
+        {
+          id: 2,
+          k: 'mob',
+          tid: 'wolf',
+          nm: 'Wolf',
+          lv: 3,
+          x: 0,
+          y: 0,
+          z: 0,
+          f: 0,
+          hp: 40,
+          mhp: 40,
+          auras: [{ id: 'old_buff', name: 'Old Buff', kind: 'buff_str', rem: 10, dur: 10 }],
+        },
+      ],
+    });
+    const aura = client.entities.get(2)?.auras[0];
+    expect(aura?.value).toBe(0);
+    expect(aura?.school).toBe('physical');
+    expect(aura?.value2).toBeUndefined();
+    expect(aura?.tickInterval).toBeUndefined();
   });
 });
 
