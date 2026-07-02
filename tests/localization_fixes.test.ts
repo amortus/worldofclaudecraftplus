@@ -732,6 +732,10 @@ function scanEmitCandidates(simSrc: string, serverSrc: string): Cand[] {
   }
   const s2 = new RegExp(`sendChatNotice\\([^,]+,\\s*${lit}`, 'g');
   for (const m of serverSrc.matchAll(s2)) cands.push({ type: 'error', tmpl: unq(m[1]) });
+  // sendSystemNotice emits a gold type:'log' system line (localizeSystemText arm),
+  // so scan it too or a future moderation confirmation could ship raw English.
+  const s2b = new RegExp(`sendSystemNotice\\([^,]+,\\s*${lit}`, 'g');
+  for (const m of serverSrc.matchAll(s2b)) cands.push({ type: 'log', tmpl: unq(m[1]) });
   const seen = new Set<string>();
   return cands.filter((c) => {
     const k = `${c.type} ${c.tmpl}`;
@@ -950,6 +954,7 @@ describe('S3 scanner enumerates each hardened emit form (regression)', () => {
     "this.send({ type: 'error', text: 'SYNTH_SERVER_INLINE' });", // s1
     "this.send({ type: 'log', text: flag ? 'SYNTH_SRV_TERN_A' : 'SYNTH_SRV_TERN_B' });", // s1t
     "sendChatNotice(session, 'SYNTH_CHATNOTICE');", // s2
+    "this.sendSystemNotice(session, 'SYNTH_SYSNOTICE');", // s2b
   ].join('\n');
 
   // [label, expected type, expected tmpl] - every entry must be enumerated.
@@ -968,6 +973,7 @@ describe('S3 scanner enumerates each hardened emit form (regression)', () => {
     ['server ternary text, branch A (s1t)', 'log', 'SYNTH_SRV_TERN_A'],
     ['server ternary text, branch B (s1t)', 'log', 'SYNTH_SRV_TERN_B'],
     ['server sendChatNotice (s2)', 'error', 'SYNTH_CHATNOTICE'],
+    ['server sendSystemNotice (s2b)', 'log', 'SYNTH_SYSNOTICE'],
   ];
 
   it('every hardened emit form is enumerated by scanEmitCandidates()', () => {
