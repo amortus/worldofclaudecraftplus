@@ -159,8 +159,10 @@ import { SpatialGrid } from './spatial';
 import {
   abilityScalingPower,
   channelTickBonus,
+  directHealBonus,
   directHitBonus,
   dotTickBonus,
+  hotTickBonus,
 } from './spell_scaling';
 import { orderTabTargets, TAB_QUERY_RADIUS } from './tab_target';
 import {
@@ -3922,18 +3924,29 @@ export class Sim {
           break;
         case 'heal': {
           const healTarget = target ?? p;
-          this.applyHeal(p, healTarget, this.rng.range(eff.min, eff.max), ability.name);
+          // Heals scale with Spell Power at the direct cast-time coefficient, the
+          // healing mirror of the direct-nuke rider (applyHeal fires the crit). Flat
+          // addition after the rng heal roll: no new draws, determinism preserved.
+          const healAmount =
+            this.rng.range(eff.min, eff.max) + directHealBonus(p.spellPower, res.castTime);
+          this.applyHeal(p, healTarget, healAmount, ability.name);
           break;
         }
         case 'hot': {
           const hotTarget = target ?? p;
+          // A HoT that RIDES a direct heal (Regrowth-style) does NOT also scale here:
+          // the direct component already took the cast-time coefficient, so scaling the
+          // rider too would double-dip. Only pure HoTs (Rejuvenation) take the rider.
+          const hybridHeal = res.effects.some((e) => e.type === 'heal');
+          const hotBase = Math.max(1, Math.round(eff.total / (eff.duration / eff.interval)));
+          const hotSp = hybridHeal ? 0 : hotTickBonus(p.spellPower, eff.duration, eff.interval);
           this.applyAura(hotTarget, {
             id: ability.id,
             name: ability.name,
             kind: 'hot',
             remaining: eff.duration,
             duration: eff.duration,
-            value: Math.max(1, Math.round(eff.total / (eff.duration / eff.interval))),
+            value: hotBase + hotSp,
             tickInterval: eff.interval,
             tickTimer: eff.interval,
             sourceId: p.id,
@@ -13765,6 +13778,10 @@ export class Sim {
         s.staPct += e.staPct ?? 0;
         s.armorPct += e.armorPct ?? 0;
         s.maxHpPct += e.maxHpPct ?? 0;
+        s.strPct += e.strPct ?? 0;
+        s.agiPct += e.agiPct ?? 0;
+        s.intPct += e.intPct ?? 0;
+        s.spiPct += e.spiPct ?? 0;
       }
       if (eff.global) {
         const g = m.global,
@@ -13782,6 +13799,7 @@ export class Sim {
             costPct: 0,
             cooldownPct: 0,
             castPct: 0,
+            buffPct: 0,
           };
         }
         const cur = m.abilities[am.ability];
@@ -13790,6 +13808,7 @@ export class Sim {
         cur.costPct += am.costPct ?? 0;
         cur.cooldownPct += am.cooldownPct ?? 0;
         cur.castPct += am.castPct ?? 0;
+        cur.buffPct += am.buffPct ?? 0;
       }
       if (eff.grant) m.grants.push({ ability: eff.grant.ability, rank: eff.grant.rank ?? 1 });
     }

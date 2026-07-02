@@ -286,7 +286,14 @@ import { restView } from './rest_indicator';
 import { rovingTarget } from './roving_index';
 import { localizeServerText, localizeZone } from './server_i18n';
 import { localizeSimAuraName, localizeSimText } from './sim_i18n';
-import { buildStatTooltip, type StatId, type StatTooltipModel, weaponDps } from './stat_tooltip';
+import {
+  type BuffStatSource,
+  buildStatTooltip,
+  type GearStatSource,
+  type StatId,
+  type StatTooltipModel,
+  weaponDps,
+} from './stat_tooltip';
 import { type StatTooltipI18n, statCellHtml, statTooltipHtml } from './stat_tooltip_view';
 import { nearestSubzone } from './subzone';
 import { localizeTalentTitle, tTalent } from './talent_i18n';
@@ -2718,14 +2725,32 @@ export class Hud {
     const sim = this.sim;
     const p = sim.player;
     const wpn = sim.equipment.mainhand ? ITEMS[sim.equipment.mainhand] : null;
+    // Equipped items + active auras feed the upstream "Made up of:" source
+    // breakdown; names resolve the same way the buff bar resolves them.
+    const gear: GearStatSource[] = [];
+    for (const id of Object.values(sim.equipment)) {
+      const item = id ? ITEMS[id] : null;
+      if (!item || (!item.stats && !item.spellPower)) continue;
+      gear.push({ name: itemDisplayName(item), stats: item.stats, spellPower: item.spellPower });
+    }
+    const buffs: BuffStatSource[] = p.auras.map((a) => ({
+      kind: a.kind,
+      value: a.value,
+      name: ABILITIES[a.id]
+        ? abilityDisplayName(ABILITIES[a.id])
+        : auraDisplayNameFromSource(a.name),
+    }));
     return buildStatTooltip(stat, {
       cls: sim.cfg.playerClass,
       stats: p.stats,
       level: p.level,
       attackPower: p.attackPower,
+      spellPower: p.spellPower,
       critChance: p.critChance,
       dodgeChance: p.dodgeChance,
       dps: weaponDps(wpn?.weapon, p.attackPower),
+      gear,
+      buffs,
     });
   }
 
@@ -2831,9 +2856,12 @@ export class Hud {
     if (rangeLine) costLine.push(rangeLine);
     if (costLine.length) html += `<div class="tt-stat">${costLine.map(esc).join(' &nbsp; ')}</div>`;
     const castLine = [abilityCastLine(res)];
-    if (a.cooldown > 0)
+    // Use the RESOLVED cooldown (res.cooldown), not res.def.cooldown, so talents that
+    // reduce cooldown (Improved Mortal Strike, Barrage, Improved Fire Blast, ...) show
+    // their effect in the tooltip.
+    if (res.cooldown > 0)
       castLine.push(
-        t('abilityUi.tooltip.cooldownSeconds', { seconds: formatAbilityNumber(a.cooldown) }),
+        t('abilityUi.tooltip.cooldownSeconds', { seconds: formatAbilityNumber(res.cooldown) }),
       );
     html += `<div class="tt-stat">${castLine.map(esc).join(' &nbsp; ')}</div>`;
     html += `<div class="tt-desc">${esc(abilityDisplayDescription(a, damageText))}</div>`;
@@ -9803,18 +9831,21 @@ export class Hud {
       </div>
       <div class="equip-col equip-col-right" id="equip-col-right"></div>
     </div>`;
-    // Ten focusable stat cells, primaries down the left column and derived stats
-    // down the right. The cell markup, value formatting, and the visually-hidden
-    // aria breakdown all come from the pure, unit-tested stat_tooltip_view module;
-    // each cell's value is read from the model so it cannot drift from the tooltip
-    // it opens, and the post-render pass below attaches the floating breakdown.
+    // Eleven focusable stat cells: the five primaries down the left column and the
+    // derived stats (armor, attack power, Spell Power, dps, crit, dodge) down the
+    // right, dodge wrapping to the final row. The cell markup, value formatting, and
+    // the visually-hidden aria breakdown all come from the pure, unit-tested
+    // stat_tooltip_view module; each cell's value is read from the model so it cannot
+    // drift from the tooltip it opens, and the post-render pass below attaches the
+    // floating breakdown.
     const statCell = (stat: StatId) => statCellHtml(this.statModel(stat), STAT_VIEW_DEPS);
     html += `<div class="char-stats">
       ${statCell('str')}${statCell('armor')}
       ${statCell('agi')}${statCell('attackPower')}
-      ${statCell('sta')}${statCell('dps')}
-      ${statCell('int')}${statCell('critChance')}
-      ${statCell('spi')}${statCell('dodge')}
+      ${statCell('sta')}${statCell('spellPower')}
+      ${statCell('int')}${statCell('dps')}
+      ${statCell('spi')}${statCell('critChance')}
+      ${statCell('dodge')}
     </div>`;
     html += this.talentSummaryHtml();
     html += this.progressionHtml(p.level);
@@ -14945,9 +14976,10 @@ function describeAbilitySummary(known: ResolvedAbility, resourceType: ResourceTy
     );
   }
   parts.push(abilityCastLine(known));
-  if (known.def.cooldown > 0) {
+  // Resolved cooldown (after talent cooldown modifiers), not the base def cooldown.
+  if (known.cooldown > 0) {
     parts.push(
-      t('abilityUi.tooltip.cooldownSeconds', { seconds: formatAbilityNumber(known.def.cooldown) }),
+      t('abilityUi.tooltip.cooldownSeconds', { seconds: formatAbilityNumber(known.cooldown) }),
     );
   }
   return parts.join(' · ');

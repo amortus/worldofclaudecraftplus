@@ -35,7 +35,17 @@ type StatKey = keyof StatModEffect;
 type GlobalKey = keyof GlobalModEffect;
 
 interface TalentLocaleText {
-  statLabels: Record<StatKey | GlobalKey | 'damage' | 'cost' | 'cooldown' | 'castTime', string>;
+  // Primary-attribute multipliers (strPct/agiPct/intPct/spiPct) reuse their base stat
+  // label ("+10% Agility"), so locales don't repeat them here.
+  statLabels: Record<
+    | Exclude<StatKey, 'strPct' | 'agiPct' | 'intPct' | 'spiPct'>
+    | GlobalKey
+    | 'damage'
+    | 'cost'
+    | 'cooldown'
+    | 'castTime',
+    string
+  >;
   roleLabels: Record<'tank' | 'healer' | 'dps', string>;
   perRank: string;
   noEffect: string;
@@ -4263,9 +4273,15 @@ function effectDescription(effect: TalentEffect | undefined, maxRank: number, la
   if (effect.grant) parts.push(text.grant(abilityName(effect.grant.ability)));
 
   const stats = effect.stats ?? {};
+  const PRIMARY_PCT: Partial<Record<StatKey, 'str' | 'agi' | 'int' | 'spi'>> = {
+    strPct: 'str',
+    agiPct: 'agi',
+    intPct: 'int',
+    spiPct: 'spi',
+  };
   for (const [key, value] of Object.entries(stats) as [StatKey, number][]) {
     if (value === undefined || value === 0) continue;
-    const label = text.statLabels[key];
+    const label = text.statLabels[PRIMARY_PCT[key] ?? (key as keyof typeof text.statLabels)];
     parts.push(text.increase(label, statAmount(key, value, lang), perRank));
   }
 
@@ -4282,6 +4298,8 @@ function effectDescription(effect: TalentEffect | undefined, maxRank: number, la
     if (mod.costPct) parts.push((mod.costPct < 0 ? text.reduce : text.increase)(`${name} ${text.statLabels.cost}`, formatPercent(mod.costPct, lang), perRank));
     if (mod.cooldownPct) parts.push((mod.cooldownPct < 0 ? text.reduce : text.increase)(`${name} ${text.statLabels.cooldown}`, formatPercent(mod.cooldownPct, lang), perRank));
     if (mod.castPct) parts.push((mod.castPct < 0 ? text.reduce : text.increase)(`${name} ${text.statLabels.castTime}`, formatPercent(mod.castPct, lang), perRank));
+    // buffPct strengthens the named buff itself (e.g. "Increases Devotion Aura by 20%").
+    if (mod.buffPct) parts.push(text.increase(name, formatPercent(mod.buffPct, lang), perRank));
   }
 
   return parts.length > 0 ? parts.join(' ') : text.noEffect;
