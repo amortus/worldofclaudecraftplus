@@ -39,6 +39,7 @@ generators. Many more run directly via `node scripts/<name>.mjs`.
 | i18n pipeline | `i18n_build.mjs`+`i18n_admin_build.mjs` (resolved tables), `i18n_scan.mjs` (status registry), `i18n_resolved_hash.mjs` (game-table SHA gate); seed `i18n_blocked_seed.mjs` owns `V07_SLASH`/`COPIED_ALLOW_IDS`; `i18n_pseudo.mjs` (en_XA dev pseudo-locale), `i18n_modulepreload.mjs` (lazy-locale boot modulepreload) | `i18n:gen`; SHA via `i18n:hash` |
 | Data export | `export_loot_spreadsheet.mjs` (esbuild-bundles `src/sim` → loot sheet in `docs/`) | — |
 | Admin / dev utils | `grant_admin.mjs`, `create_gm.mjs` | `DATABASE_URL` |
+| Asset (FBX to GLB) | `assets/combine_fbx_to_glb.mjs` + `assets/combine_fbx_to_glb_entry.js` (merge rigged FBX files into one GLB with all clips; see `scripts/assets/CLAUDE.md`) | local Chrome via `browser_path.mjs` |
 | Local realms | `dev-realms.mjs` (launches built server processes) | built server (`npm run realms`) |
 | Helper | `browser_path.mjs` (resolves Chrome/Edge/Chromium; override `BROWSER_PATH=`) | — |
 

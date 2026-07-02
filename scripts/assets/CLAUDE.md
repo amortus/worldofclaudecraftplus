@@ -25,6 +25,15 @@ under `public/`. Run manually (not part of `npm run build`):
 - **`build_foliage.mjs`** is a superset for `foliage.json`: adds `weld + simplify`
   (target `ratio`), strips constant-white `COLOR_0`, and hue-rotates leaf textures
   via `recolor` rules. Use this only for foliage.
+- **`combine_fbx_to_glb.mjs`** (+ `combine_fbx_to_glb_entry.js`) is the FBX ingestion
+  step: merges a rigged character's FBX files (a mesh FBX plus per-action animation
+  FBXs, or one multi-take FBX) into a single GLB with all clips. Parses FBX with the
+  three.js FBXLoader in headless Chrome (needs a local Chrome/Edge via
+  `../browser_path.mjs`), grafts clips by bone name, exports via GLTFExporter, then
+  prune/dedup with gltf-transform. Run `node scripts/assets/combine_fbx_to_glb.mjs
+  --help` for options. For our shipping assets prefer the engine-agnostic default
+  output and feed it through a `build_assets.mjs` spec rather than the tool's own
+  `--meshopt`/`--webp` flags.
 
 ## Relationship to the rest
 - **Output → `public/`** (the GLB/texture/HDRI tree the game loads at runtime).

@@ -16,7 +16,9 @@
       "!src/ui/i18n.resolved.generated",
       "!src/admin/i18n.resolved.generated",
       "!src/ui/i18n.status.summary.json",
-      "!**/*.min.js"
+      "!**/*.min.js",
+      "!docs/design/professions-system",
+      "!docs/design/professions-system.html"
     ]
   },
   "formatter": {
