@@ -6382,6 +6382,16 @@ export class Sim {
     return best;
   }
 
+  // Tick a forced-target (taunt/growl) window down by one sim step and expire the
+  // forced target when it runs out, WITHOUT touching aggro. updateMobTarget does this
+  // inline on the acting path; this is the slice the stunned-mob path needs, since a
+  // stunned mob skips updateMobTarget entirely yet the taunt window is real-time and
+  // must keep counting (a stun must not stretch the taunt). Draws no rng.
+  private tickForcedTarget(mob: Entity): void {
+    if (mob.forcedTargetTimer > 0) mob.forcedTargetTimer -= DT;
+    if (mob.forcedTargetTimer <= 0) mob.forcedTargetId = null;
+  }
+
   // Classic pull-over rules, applied every AI tick while fighting: an attacker
   // takes aggro past 110% of the current target's threat in melee range of
   // the mob, or past 130% at range. A taunt forces the target outright.
@@ -6404,6 +6414,11 @@ export class Sim {
     const curThreat = mob.threat.get(cur.id) ?? 0;
     let best = cur;
     let bestT = curThreat;
+    // Melee vs ranged uses the mob's actual reach, floored at the classic 6yd
+    // (MELEE_RANGE * 1.2): normal mobs keep the 6yd boundary, while an oversized
+    // creature still counts a challenger standing at its feet as melee. The reach
+    // depends only on the mob, so compute it once outside the candidate loop.
+    const meleeReach = Math.max(MELEE_RANGE * 1.2, this.mobCombatProfile(mob).meleeRange);
     for (const [id, t] of mob.threat) {
       if (id === cur.id || t <= bestT) continue;
       const e = this.entities.get(id);
@@ -6411,7 +6426,7 @@ export class Sim {
         mob.threat.delete(id);
         continue;
       }
-      const inMelee = dist2d(mob.pos, e.pos) <= MELEE_RANGE * 1.2;
+      const inMelee = dist2d(mob.pos, e.pos) <= meleeReach;
       const needed = curThreat * (inMelee ? MELEE_SWITCH_MULT : RANGED_SWITCH_MULT);
       if (t > needed) {
         best = e;
@@ -6658,6 +6673,9 @@ export class Sim {
     }
 
     if (this.isStunned(mob)) {
+      // A taunt/growl window is real-time: keep it counting down even while the mob
+      // is stunned, since the stun path skips updateMobTarget where it normally ticks.
+      this.tickForcedTarget(mob);
       if (this.updateFearMovement(mob)) return;
       if (mob.auras.some((a) => a.kind === 'polymorph')) {
         mob.wanderTimer -= DT;
@@ -14484,7 +14502,10 @@ export class Sim {
     const listing = this.marketListings[idx];
     const def = ITEMS[listing.itemId];
     if (!def) {
-      this.marketListings.splice(idx, 1);
+      // The item id is no longer known (a content edit). Do not silently delete
+      // the listing: that destroys the seller's escrowed goods with no refund.
+      // Leave it intact so the owner can cancel/reclaim it; just refuse the buy.
+      this.error(meta.entityId, 'That listing is no longer available.');
       return;
     }
     if (this.marketListingBelongsTo(listing, meta)) {
@@ -14682,7 +14703,15 @@ export class Sim {
   loadMarket(save: MarketSave | null | undefined): void {
     if (!save) return;
     for (const l of save.listings ?? []) {
-      if (!l || typeof l.itemId !== 'string' || !ITEMS[l.itemId]) continue;
+      // Keep a listing whose item id is no longer in ITEMS (a content rename,
+      // retirement, or typo). Dropping it would silently destroy every escrowed
+      // copy on the next restart and never refund the seller. An unknown id is
+      // dormant, recoverable data (the owner can reclaim it into bags, exactly
+      // as the character load path keeps unknown ids verbatim); a re-added or
+      // corrected id rehydrates it. Display/buy paths already guard on ITEMS[id].
+      if (!l || typeof l.itemId !== 'string') continue;
+      if (!ITEMS[l.itemId])
+        console.warn(`market: keeping listing with unknown item id ${l.itemId}`);
       this.marketListings.push({
         id: l.id,
         sellerKey: String(l.sellerKey ?? ''),
@@ -14703,8 +14732,11 @@ export class Sim {
       if (!c || typeof c.key !== 'string') continue;
       this.marketCollections.set(c.key, {
         copper: Math.max(0, Math.floor(c.copper) || 0),
+        // Keep returned/expired-listing items even when their id is unknown, for
+        // the same reason as listings above: a content edit must not silently
+        // empty a player's pending pickups. The id stays dormant until corrected.
         items: (c.items ?? [])
-          .filter((s) => s && ITEMS[s.itemId])
+          .filter((s) => s && typeof s.itemId === 'string')
           .map((s) => ({ itemId: s.itemId, count: Math.max(1, s.count | 0) })),
       });
     }
