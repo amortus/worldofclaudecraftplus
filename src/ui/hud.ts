@@ -298,6 +298,8 @@ import { svgIcon } from './ui_icons';
 import { getUiScale } from './ui_scale';
 import { crestIdForEntity } from './unit_portrait';
 import { UnitPortraitPainter } from './unit_portrait_painter';
+import { lootSettingsView } from './loot_settings_view';
+import { renderLootSettingsWindow } from './loot_settings_window';
 import { buildVendorView } from './vendor_view';
 import { renderVendorWindow } from './vendor_window';
 import { nextVoicedYell, type VoicedYellState, voicedYellGain } from './voice_events';
@@ -897,6 +899,17 @@ export class Hud {
   // later absence from the mirror means the server resolved them (retire), not
   // that the mirror simply has not caught up to a just-shown event yet.
   private confirmedLootRolls = new Set<number>();
+  // Master-loot curate prompts shown to the master looter (parallel to activeLootRolls).
+  private activeMasterRolls = new Map<
+    number,
+    { event: Extract<SimEvent, { type: 'masterLoot' }>; receivedAt: number; durationMs: number }
+  >();
+  // Loot Settings window (party/raid): open flag, last painted signature (repaint only
+  // on change so the controls never churn under the cursor), and the leader-transition
+  // latch that auto-opens the window when the local player becomes party leader.
+  private lootSettingsOpen = false;
+  private lastLootSettingsSig = '';
+  private prevIsPartyLeader = false;
   private openVendorNpcId: number | null = null;
   private openDelveBoardNpcId: number | null = null;
   private lastDelveTrackerSig = '';
@@ -4244,6 +4257,7 @@ export class Hud {
       this.updateQuestTracker();
       this.updateDelveTracker();
       this.updatePartyFrames();
+      this.syncLootSettings();
       this.updateTradeWindow();
       this.updateArenaStatus();
       this.updateFiestaHud();
@@ -6587,6 +6601,10 @@ export class Hud {
           this.showLootRoll(ev);
           break;
         }
+        case 'masterLoot': {
+          this.showMasterRoll(ev);
+          break;
+        }
         case 'vendor': {
           if ($('#bags').style.display !== 'none') this.renderBags();
           if (this.openVendorNpcId !== null) this.renderVendor();
@@ -7378,6 +7396,8 @@ export class Hud {
       'You have nothing to collect.': 'itemUi.errors.nothingToCollect',
       "You can't assist yourself.": 'hud.errors.assistSelf',
       'Assist whom? Target a player or use /assist <name>.': 'hud.errors.assistWhom',
+      // Master loot: only the leader may switch the party loot method (sim.ts error).
+      'Only the party leader can change the loot method.': 'hudChrome.masterLoot.leaderOnly',
     };
     const key = exact[text];
     if (key) return t(key);
@@ -7469,6 +7489,8 @@ export class Hud {
       'Trade window opened.': 'hud.logs.tradeOpened',
       'Trade complete.': 'hud.logs.tradeComplete',
       'Trade cancelled.': 'hud.logs.tradeCancelled',
+      // Master loot: leader switched the party loot method to group loot (sim.ts log).
+      'Loot method set to group loot.': 'hudChrome.masterLoot.methodGroup',
     };
     const key = exact[text];
     if (key) return t(key);
@@ -7489,6 +7511,9 @@ export class Hud {
     if (match) return t('hud.logs.partyDecline', { name: match[1] });
     match = /^(.+) is now the party leader\.$/.exec(text);
     if (match) return t('hud.logs.partyLeader', { name: match[1] });
+    // Master loot: leader switched to master loot; {name} is the master looter.
+    match = /^Loot method set to master loot\. Master looter: (.+)\.$/.exec(text);
+    if (match) return t('hudChrome.masterLoot.methodMaster', { name: match[1] });
     match = /^You have challenged (.+) to a duel\.$/.exec(text);
     if (match) return t('hud.logs.duelChallengeSent', { name: match[1] });
     match = /^(.+) declines your challenge\.$/.exec(text);
@@ -7607,6 +7632,15 @@ export class Hud {
       return t('itemUi.logs.reclaimedItem', { item: itemStackDisplayName(match[1], match[2]) });
     match = /^You collect (.+) from the Merchant\.$/.exec(text);
     if (match) return t('itemUi.logs.collectedMoney', { money: this.localizeSimMoney(match[1]) });
+    // Master loot: the master looter directly assigned a threshold drop. {looter}
+    // and {target} are player names (verbatim); {item} localizes via the item table.
+    match = /^(.+) assigned (.+) to (.+)\.$/.exec(text);
+    if (match)
+      return t('hudChrome.masterLoot.assigned', {
+        looter: match[1],
+        item: itemDisplayNameFromSource(match[2]),
+        target: match[3],
+      });
     const server = localizeServerText(text);
     if (server !== null) return server;
     // Sim-emitted log/error/loot text (src/sim) is English at the source; localize it
@@ -8326,11 +8360,35 @@ export class Hud {
   }
 
   private showLootRoll(ev: Extract<SimEvent, { type: 'lootRoll' }>): void {
+    // A need/greed roll with this id supersedes any curate-phase master panel for the
+    // same drop (the master looter opened a subset roll, or it timed out to a roll).
+    this.activeMasterRolls.delete(ev.rollId);
     this.activeLootRolls.set(ev.rollId, {
       event: ev,
       receivedAt: performance.now(),
       durationMs: 30_000,
     });
+    this.renderLootRolls();
+  }
+
+  // The master looter's curate prompt: pick who is eligible, then Roll (1 selected
+  // grants directly, 2+ opens a need/greed roll for that subset). Server-authoritative:
+  // the client only sends the checked pids; the sim validates the looter and assigns.
+  private showMasterRoll(ev: Extract<SimEvent, { type: 'masterLoot' }>): void {
+    this.activeMasterRolls.set(ev.rollId, {
+      event: ev,
+      receivedAt: performance.now(),
+      // The curate window is 5 minutes (sim MASTER_LOOT_TIMEOUT), longer than a
+      // need/greed roll, so the countdown bar spans the full window.
+      durationMs: 300_000,
+    });
+    this.renderLootRolls();
+  }
+
+  private assignMasterRoll(rollId: number, pids: number[]): void {
+    if (pids.length === 0) return;
+    this.sim.assignMasterLoot(rollId, pids);
+    this.activeMasterRolls.delete(rollId);
     this.renderLootRolls();
   }
 
@@ -8388,7 +8446,7 @@ export class Hud {
   }
 
   private updateLootRollTimers(now: number): void {
-    if (this.activeLootRolls.size === 0) return;
+    if (this.activeLootRolls.size === 0 && this.activeMasterRolls.size === 0) return;
     let changed = false;
     for (const [rollId, roll] of this.activeLootRolls) {
       if (now - roll.receivedAt >= roll.durationMs) {
@@ -8397,12 +8455,20 @@ export class Hud {
         changed = true;
       }
     }
+    // The sim converts an uncurated master roll to a need/greed roll at
+    // MASTER_LOOT_TIMEOUT; drop the local curate panel when its window elapses.
+    for (const [rollId, roll] of this.activeMasterRolls) {
+      if (now - roll.receivedAt >= roll.durationMs) {
+        this.activeMasterRolls.delete(rollId);
+        changed = true;
+      }
+    }
     if (changed) this.renderLootRolls();
     const root = document.getElementById('loot-rolls');
     if (!root) return;
     for (const row of root.querySelectorAll<HTMLElement>('.loot-roll')) {
       const rollId = Number(row.dataset.rollId);
-      const roll = this.activeLootRolls.get(rollId);
+      const roll = this.activeLootRolls.get(rollId) ?? this.activeMasterRolls.get(rollId);
       if (!roll) continue;
       const remaining = Math.max(0, 1 - (now - roll.receivedAt) / roll.durationMs);
       row.style.setProperty('--loot-roll-frac', remaining.toFixed(3));
@@ -8420,13 +8486,14 @@ export class Hud {
 
   private renderLootRolls(): void {
     const root = this.lootRollRoot();
-    if (this.activeLootRolls.size === 0) {
+    if (this.activeLootRolls.size === 0 && this.activeMasterRolls.size === 0) {
       root.style.display = 'none';
       root.innerHTML = '';
       return;
     }
     root.style.display = 'flex';
     root.innerHTML = '';
+    for (const [rollId, roll] of this.activeMasterRolls) this.renderMasterRoll(root, rollId, roll);
     for (const [rollId, roll] of this.activeLootRolls) {
       const ev = roll.event;
       const item = ITEMS[ev.itemId];
@@ -8461,6 +8528,58 @@ export class Hud {
       });
       root.appendChild(row);
     }
+  }
+
+  // The master looter's curate panel: a checkbox per eligible candidate, a select-all,
+  // and a Roll button. Checking one and rolling grants directly; checking two or more
+  // opens a need/greed roll for that subset (both resolved server-side).
+  private renderMasterRoll(
+    root: HTMLElement,
+    rollId: number,
+    roll: { event: Extract<SimEvent, { type: 'masterLoot' }> },
+  ): void {
+    const ev = roll.event;
+    const item = ITEMS[ev.itemId];
+    const itemName = item ? itemDisplayName(item) : ev.itemName;
+    const quality = item?.quality ?? ev.quality ?? 'common';
+    const row = document.createElement('div');
+    row.className = 'loot-roll master panel';
+    row.dataset.rollId = String(rollId);
+    row.style.setProperty('--loot-roll-frac', '1');
+    const candidateRows = ev.candidates
+      .map(
+        (c) =>
+          `<label class="ml-cand"><input type="checkbox" class="ml-check" data-pid="${c.pid}"><span>${esc(c.name)}</span></label>`,
+      )
+      .join('');
+    row.innerHTML = `
+      <div class="loot-roll-item">
+        ${item ? this.itemIcon(item) : `<img class="item-icon q-${quality}" src="${iconDataUrl('item', ev.itemId)}" alt="" draggable="false">`}
+        <div class="loot-roll-copy">
+          <div class="loot-roll-title">${esc(t('hudChrome.masterLoot.title'))}</div>
+          <div class="loot-roll-name" style="color:${QUALITY_COLOR[quality] ?? '#fff'}">${esc(itemName)}</div>
+        </div>
+      </div>
+      <div class="loot-roll-timer" aria-hidden="true"><span></span></div>
+      <label class="ml-cand ml-all"><input type="checkbox" class="ml-select-all"><span>${esc(t('hudChrome.masterLoot.selectAll'))}</span></label>
+      <div class="ml-cands">${candidateRows}</div>
+      <div class="loot-roll-actions">
+        <button type="button" class="loot-roll-btn need" data-ml-roll>${esc(t('hudChrome.masterLoot.rollButton'))}</button>
+      </div>`;
+    if (item)
+      this.attachTooltip(row.querySelector('.loot-roll-item') as HTMLElement, () =>
+        this.itemTooltip(item),
+      );
+    const checks = Array.from(row.querySelectorAll<HTMLInputElement>('.ml-check'));
+    const selectAll = row.querySelector<HTMLInputElement>('.ml-select-all');
+    selectAll?.addEventListener('change', () => {
+      for (const c of checks) c.checked = selectAll.checked;
+    });
+    row.querySelector<HTMLButtonElement>('[data-ml-roll]')?.addEventListener('click', () => {
+      const pids = checks.filter((c) => c.checked).map((c) => Number(c.dataset.pid));
+      this.assignMasterRoll(rollId, pids);
+    });
+    root.appendChild(row);
   }
 
   openLoot(mobId: number, screenX: number, screenY: number): void {
@@ -12131,6 +12250,60 @@ export class Hud {
   }
 
   // -------------------------------------------------------------------------
+  // Loot Settings window (party/raid): leader edits the loot method + threshold,
+  // members get a read-only view. Opened from the self/group context menu and
+  // auto-opened when the local player becomes party leader. The pure model lives
+  // in loot_settings_view.ts and the painter in loot_settings_window.ts; the Hud
+  // is only the orchestrator (open/close + per-change repaint).
+  // -------------------------------------------------------------------------
+
+  openLootSettings(): void {
+    if (!this.sim.partyInfo) return;
+    this.lootSettingsOpen = true;
+    this.lastLootSettingsSig = '';
+    this.renderLootSettings();
+    $('#loot-settings-window').style.display = 'block';
+  }
+
+  closeLootSettings(): void {
+    this.lootSettingsOpen = false;
+    this.lastLootSettingsSig = '';
+    $('#loot-settings-window').style.display = 'none';
+    this.hideTooltip();
+  }
+
+  private renderLootSettings(): void {
+    if (!this.lootSettingsOpen) return;
+    const info = this.sim.partyInfo;
+    if (!info) {
+      this.closeLootSettings();
+      return;
+    }
+    const model = lootSettingsView(info, this.sim.playerId);
+    // Repaint only when the visible model changes, so an open <select> never
+    // rebuilds under the cursor and the view stays synced to authoritative state.
+    const sig = `${model.isLeader ? 1 : 0}:${model.enabled ? 1 : 0}:${model.threshold}:${model.looterPid}:${model.looterName}:${model.memberOptions.map((m) => `${m.pid}/${m.name}`).join(',')}`;
+    if (sig === this.lastLootSettingsSig) return;
+    this.lastLootSettingsSig = sig;
+    renderLootSettingsWindow($('#loot-settings-window'), model, {
+      onChange: (enabled, looter, threshold) =>
+        this.sim.setPartyLootMaster(enabled, looter, threshold),
+      onClose: () => this.closeLootSettings(),
+    });
+  }
+
+  // Per-frame: auto-open the window on becoming party leader (create / promote /
+  // succession), close it when you leave the group, and keep an open window synced.
+  private syncLootSettings(): void {
+    const info = this.sim.partyInfo;
+    const isLeader = !!info && info.leader === this.sim.playerId;
+    if (isLeader && !this.prevIsPartyLeader) this.openLootSettings();
+    this.prevIsPartyLeader = isLeader;
+    if (!info && this.lootSettingsOpen) this.closeLootSettings();
+    else if (this.lootSettingsOpen) this.renderLootSettings();
+  }
+
+  // -------------------------------------------------------------------------
   // Context menu on players
   // -------------------------------------------------------------------------
 
@@ -12146,6 +12319,9 @@ export class Hud {
       html += `<div class="ctx-item" data-act="convert-raid">${esc(t('hud.chat.context.convertToRaid'))}</div>`;
     if (canUnconvert)
       html += `<div class="ctx-item" data-act="convert-party">${esc(t('hud.chat.context.convertToParty'))}</div>`;
+    // Loot Settings: available to every group member (leader edits, members read-only).
+    if (party)
+      html += `<div class="ctx-item" data-act="loot-settings">${esc(t('hudChrome.lootSettings.menuItem'))}</div>`;
     html += `<div class="ctx-item" data-act="close">${esc(t('hud.chat.context.cancel'))}</div>`;
     el.innerHTML = html;
     hydratePortraits(el);
@@ -12161,7 +12337,7 @@ export class Hud {
         this.sim.convertRaidToParty();
         this.socialTab = 'raid';
         if ($('#social-window').classList.contains('open')) this.renderSocial();
-      }
+      } else if (act === 'loot-settings') this.openLootSettings();
     });
   }
 
@@ -12206,8 +12382,10 @@ export class Hud {
     )}</div>`;
     if (this.reportHooks && pid !== this.sim.playerId)
       html += `<div class="ctx-item" data-act="report">${esc(t('hud.chat.context.report'))}</div>`;
-    if (isLeader && isMember && pid !== this.sim.playerId)
+    if (isLeader && isMember && pid !== this.sim.playerId) {
+      html += `<div class="ctx-item" data-act="promote">${esc(t('hudChrome.party.promoteLeader'))}</div>`;
       html += `<div class="ctx-item" data-act="kick">${esc(t('hud.chat.context.removeParty'))}</div>`;
+    }
     html += `<div class="ctx-item" data-act="close">${esc(t('hud.chat.context.cancel'))}</div>`;
     el.innerHTML = html;
     hydratePortraits(el);
@@ -12226,6 +12404,7 @@ export class Hud {
           ignored ? this.sim.blockRemove(name) : this.sim.blockAdd(name);
         } else this.toggleChatIgnore(name);
       } else if (act === 'report') this.openReportWindow({ pid, name });
+      else if (act === 'promote') this.sim.partyPromote(pid);
       else if (act === 'kick') this.sim.partyKick(pid);
     });
   }

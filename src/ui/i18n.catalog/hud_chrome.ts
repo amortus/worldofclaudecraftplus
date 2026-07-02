@@ -610,6 +610,48 @@ export const hudChromeStrings = {
     searchAria: 'Search bag items by name',
     noMatch: 'No items match your filters.',
   },
+  // Party leadership: the right-click "Promote to Leader" handoff action shown on a
+  // party member's context menu to the current leader. Lives in the English-only
+  // hud_chrome domain so an English-only PR compiles; the new-leader announcement
+  // itself is a sim emit re-localized through localizeSystemText (hud.logs.partyLeader).
+  party: {
+    promoteLeader: 'Promote to Leader',
+  },
+  // Master loot: the assignment prompt shown to the master looter (curate panel),
+  // the threshold labels, and the sim-emitted log/error/loot lines re-localized
+  // through the hud matchers (localizeLootText / localizeSystemText / localizeErrorText).
+  // Lives in the English-only hud_chrome domain so an English-only PR compiles.
+  masterLoot: {
+    title: 'Master Loot',
+    looterLabel: 'Master looter',
+    leaderOption: 'Party leader',
+    thresholdLabel: 'Threshold',
+    thresholdUncommon: 'Uncommon and up',
+    thresholdRare: 'Rare and up',
+    thresholdEpic: 'Epic and up',
+    assignPrompt: 'Assign {item}',
+    assignAria: 'Assign {item} to {name}',
+    rollButton: 'Roll',
+    selectAll: 'Select all',
+    methodMaster: 'Loot method set to master loot. Master looter: {name}.',
+    methodGroup: 'Loot method set to group loot.',
+    assigned: '{looter} assigned {item} to {target}.',
+    leaderOnly: 'Only the party leader can change the loot method.',
+  },
+  // Loot Settings window (party/raid): the leader edits the loot method + roll
+  // threshold, members get a read-only view. Opened from the self/group context menu
+  // and auto-opened when you become party leader.
+  lootSettings: {
+    title: 'Loot Settings',
+    close: 'Close loot settings',
+    menuItem: 'Loot Settings',
+    method: 'Loot Method',
+    rollThreshold: 'Roll Threshold',
+    groupLoot: 'Group Loot',
+    valueMaster: 'Master Loot',
+    leaderOption: 'Master Looter: Leader (You)',
+    masterOption: 'Master Looter: {name}',
+  },
   // Raid -> party demotion (Social panel raid tab). The sim emits these in English;
   // src/ui/sim_i18n.ts re-localizes them through these keys. Mirrors the existing
   // convert-to-raid messages (which live in sim_i18n's RAID_EXTRA table). Lives here

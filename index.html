@@ -1479,6 +1479,53 @@
     outline: 3px solid var(--color-border-focus) !important;
     outline-offset: 2px !important;
   }
+  /* master-loot curate panel (shares .loot-roll chrome) */
+  .loot-roll.master .loot-roll-actions { grid-template-columns: 1fr; }
+  .ml-cands { display: flex; flex-direction: column; gap: 3px; margin: 4px 0 7px; }
+  .ml-cand {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 30px;
+    font-size: 12px;
+    color: #e7d8b6;
+    cursor: var(--cursor-point);
+  }
+  .ml-cand.ml-all { color: #d5c19a; border-bottom: 1px solid #3b2e19; padding-bottom: 4px; }
+  .ml-cand input { width: 16px; height: 16px; flex: none; }
+
+  /* Loot Settings window (party/raid): docks below the party frames, top-left */
+  #loot-settings-window {
+    position: fixed;
+    left: 12px;
+    top: 232px;
+    width: 232px;
+    max-width: calc(100vw - 24px);
+    display: none;
+    z-index: 40;
+  }
+  #loot-settings-window .ls-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+  }
+  #loot-settings-window .ls-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  #loot-settings-window .ls-lbl { color: #d5c19a; font-size: 12px; }
+  #loot-settings-window .ls-val { color: #e7d8b6; font-size: 12px; text-align: right; }
+  #loot-settings-window select {
+    min-height: 30px;
+    max-width: 140px;
+    background: #12100b;
+    color: #e7d8b6;
+    border: 1px solid #6b5426;
+    border-radius: 4px;
+  }
 
   .item-icon { width: 28px; height: 28px; border-radius: 4px; flex: none; display: block;
     object-fit: cover; background: #0d0d13; border: 1px solid #888; }
@@ -9020,6 +9067,7 @@
     <div id="emote-editor" class="window panel"></div>
     <div id="social-window" class="window panel"></div>
     <div id="report-window" class="window panel"></div>
+    <div id="loot-settings-window" class="window panel"></div>
     <div id="side-buttons">
       <button type="button" class="micro-btn" id="mm-char" data-i18n-title="hud.keybinds.actions.char" data-i18n-aria="hud.keybinds.actions.char" title="Character" aria-label="Character" data-icon="character"><span class="keybind">c</span></button>
       <button type="button" class="micro-btn" id="mm-spell" data-i18n-title="abilityUi.spellbook.title" data-i18n-aria="abilityUi.spellbook.title" title="Spellbook" aria-label="Spellbook" data-icon="spellbook"><span class="keybind">p</span></button>

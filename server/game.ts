@@ -1742,6 +1742,9 @@ export class GameServer {
       case 'pkick':
         if (typeof msg.id === 'number') sim.partyKick(msg.id, pid);
         break;
+      case 'ppromote':
+        if (typeof msg.id === 'number') sim.partyPromote(msg.id, pid);
+        break;
       case 'praid':
         sim.convertPartyToRaid(pid);
         break;
@@ -1751,6 +1754,23 @@ export class GameServer {
       case 'pmoveRaid':
         if (typeof msg.id === 'number' && (msg.group === 1 || msg.group === 2))
           sim.moveRaidMember(msg.id, msg.group, pid);
+        break;
+      case 'setLootMaster':
+        if (
+          typeof msg.enabled === 'boolean' &&
+          typeof msg.looter === 'number' &&
+          (msg.threshold === 'uncommon' || msg.threshold === 'rare' || msg.threshold === 'epic')
+        )
+          sim.setPartyLootMaster(msg.enabled, msg.looter, msg.threshold, pid);
+        break;
+      case 'masterAssign':
+        if (
+          typeof msg.rollId === 'number' &&
+          Array.isArray(msg.pids) &&
+          msg.pids.length > 0 &&
+          msg.pids.every((p: unknown) => typeof p === 'number')
+        )
+          sim.assignMasterLoot(msg.rollId, msg.pids, pid);
         break;
       // raid/target markers
       case 'setMarker':
@@ -2377,6 +2397,7 @@ export class GameServer {
     return {
       leader: party.leader,
       raid: party.raid,
+      master: { ...party.lootStrategies.master },
       members: party.members
         .map((mPid) => {
           const meta = this.sim.meta(mPid);

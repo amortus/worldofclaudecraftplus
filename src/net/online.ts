@@ -26,6 +26,7 @@ import {
   type InvSlot,
   type LootRollChoice,
   type LootRollPrompt,
+  type MasterLootThreshold,
   type MoveInput,
   type PlayerClass,
   type QuestProgress,
@@ -1624,6 +1625,9 @@ export class ClientWorld implements IWorld {
   partyKick(targetPid: number): void {
     this.cmd({ cmd: 'pkick', id: targetPid });
   }
+  partyPromote(targetPid: number): void {
+    this.cmd({ cmd: 'ppromote', id: targetPid });
+  }
   convertPartyToRaid(): void {
     this.cmd({ cmd: 'praid' });
   }
@@ -1632,6 +1636,12 @@ export class ClientWorld implements IWorld {
   }
   moveRaidMember(targetPid: number, group: 1 | 2): void {
     this.cmd({ cmd: 'pmoveRaid', id: targetPid, group });
+  }
+  setPartyLootMaster(enabled: boolean, looter: number, threshold: MasterLootThreshold): void {
+    this.cmd({ cmd: 'setLootMaster', enabled, looter, threshold });
+  }
+  assignMasterLoot(rollId: number, targetPids: number[]): void {
+    this.cmd({ cmd: 'masterAssign', rollId, pids: targetPids });
   }
   // raid/target markers
   markerFor(entityId: number): number | null {

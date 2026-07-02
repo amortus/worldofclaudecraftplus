@@ -24,6 +24,7 @@ describe('party frame member selection', () => {
     const info: PartyInfo = {
       leader: 1,
       raid: true,
+      master: { enabled: false, looter: 0, threshold: 'uncommon' },
       members: [
         member(1, 1),
         member(2, 1),
@@ -48,6 +49,7 @@ describe('party frame member selection', () => {
     const info: PartyInfo = {
       leader: 1,
       raid: true,
+      master: { enabled: false, looter: 0, threshold: 'uncommon' },
       members: [member(1, 1), member(6, 2), member(2, 1), member(7, 2), member(3, 1), member(4, 1)],
     };
 
@@ -60,6 +62,7 @@ describe('party frame member selection', () => {
     const info: PartyInfo = {
       leader: 1,
       raid: true,
+      master: { enabled: false, looter: 0, threshold: 'uncommon' },
       members: [member(1, 1), member(2, 2, 150, 0)],
     };
 
