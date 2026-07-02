@@ -53,12 +53,17 @@ try {
   check('focus moved to main', await page.evaluate(() => document.activeElement?.id === 'guide-main'));
 
   // Built section pages render real content (not the placeholder).
-  for (const sub of ['how-to-play', 'reference/combat', 'reference/controls', 'reference/glossary', 'faq']) {
+  for (const sub of ['how-to-play', 'reference/combat', 'reference/controls', 'reference/glossary', 'delves', 'faq']) {
     await page.goto(`${BASE}/wiki/${sub}`, { waitUntil: 'networkidle0' });
     await page.waitForSelector('.guide-article h1');
     const placeholder = await page.$('.guide-placeholder');
     check(`content page renders: ${sub}`, !placeholder);
   }
+
+  // Delves page surfaces at least one delve card from the generated roster.
+  await page.goto(`${BASE}/wiki/delves`, { waitUntil: 'networkidle0' });
+  await page.waitForSelector('.guide-dungeon-card');
+  check('delves page lists at least one delve', (await page.$$('.guide-dungeon-card')).length >= 1);
   await page.goto(`${BASE}/wiki/how-to-play`, { waitUntil: 'networkidle0' });
   await page.waitForSelector('.guide-steps li');
   await page.screenshot({ path: 'tmp/wiki-howtoplay.png', fullPage: true });
@@ -70,8 +75,12 @@ try {
   await page.goto(`${BASE}/wiki/classes`, { waitUntil: 'networkidle0' });
   await page.waitForSelector('.guide-class-card');
   check('classes index lists nine classes', (await page.$$('.guide-class-card')).length === 9);
-  const crestSrc = await page.$eval('.guide-class-crest', (el) => el.getAttribute('src') || '');
-  check('class crest is a procedural data URL', crestSrc.startsWith('data:image'));
+  const cardImg = await page.$eval('.guide-class-card img', (el) => el.getAttribute('src') || '');
+  check(
+    'class card shows the character still (crest fallback)',
+    cardImg.includes('/guide-stills/') || cardImg.startsWith('data:image'),
+    cardImg.slice(0, 48),
+  );
   await page.screenshot({ path: 'tmp/wiki-classes.png', fullPage: true });
 
   await page.goto(`${BASE}/wiki/classes/warrior`, { waitUntil: 'networkidle0' });
@@ -79,7 +88,10 @@ try {
   check('class page hero renders', (await page.$eval('.guide-class-hero-name', (el) => el.textContent.trim())).length > 0);
   check('class page shows specs', (await page.$$('.guide-spec-card')).length >= 1);
   check('class page shows signature abilities', (await page.$$('.guide-kit-item')).length >= 1);
-  check('class page title is the class name', /Warrior/i.test(await page.title()));
+  // The title carries the localized class name (our default locale is pt_BR), so compare
+  // against the rendered hero name instead of hardcoding the English proper noun.
+  const heroName = await page.$eval('.guide-class-hero-name', (el) => el.textContent.trim());
+  check('class page title is the class name', (await page.title()).includes(heroName), await page.title());
   await page.screenshot({ path: 'tmp/wiki-class-warrior.png', fullPage: true });
 
   await page.goto(`${BASE}/wiki/classes/notaclass`, { waitUntil: 'networkidle0' });
@@ -95,7 +107,7 @@ try {
 
   await page.goto(`${BASE}/wiki/world`, { waitUntil: 'networkidle0' });
   await page.waitForSelector('.guide-zone-card');
-  check('world shows three zones', (await page.$$('.guide-zone-card')).length === 3);
+  check('world shows four zones', (await page.$$('.guide-zone-card')).length === 4);
 
   await page.goto(`${BASE}/wiki/quests`, { waitUntil: 'networkidle0' });
   await page.waitForSelector('.guide-article h1');
@@ -117,8 +129,9 @@ try {
   const allVisible = await page.$$eval('.guide-class-card', (els) => els.filter((e) => !e.hidden).length);
   check('chooser clear restores all nine', allVisible === 9);
 
-  // Site search.
-  await page.type('#guide-search-input', 'warrior');
+  // Site search. Query a sim proper noun (delve name), which stays English in every
+  // locale (our default locale is pt_BR, so localized class labels would not match).
+  await page.type('#guide-search-input', 'reliquary');
   await page.waitForSelector('.guide-search-opt');
   check('search returns results', (await page.$$('.guide-search-opt')).length > 0);
 
