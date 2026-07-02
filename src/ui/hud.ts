@@ -130,6 +130,7 @@ import {
   OVERHEAD_EMOTES,
   type OverheadEmoteId,
 } from '../world_api';
+import { type AbilityScaling, abilityDamageBonus } from './ability_damage';
 import { absorbBarView } from './absorb_bar';
 import { claimAdReward, showRewardedAd } from './ads';
 import { abilityStartsAutoAttack, hasAutoAttackTarget } from './attack_on_ability';
@@ -2809,7 +2810,12 @@ export class Hud {
 
   private abilityTooltip(res: ResolvedAbility): string {
     const a = res.def;
-    const damageText = abilityEffectText(res.effects);
+    const p = this.sim.player;
+    const damageText = abilityEffectText(res, {
+      spellPower: p.spellPower,
+      rangedPower: p.rangedPower,
+      attackPower: p.attackPower,
+    });
     let html = `<div class="tt-title">${esc(abilityDisplayName(a))}</div>`;
     html += `<div class="tt-sub">${esc(t('abilityUi.tooltip.rank', { rank: formatAbilityNumber(res.rank) }))}</div>`;
     const costLine: string[] = [];
@@ -15217,7 +15223,21 @@ function abilityRequirementLines(def: AbilityDef): string[] {
   return lines;
 }
 
-function abilityEffectText(effects: AbilityEffect[]): string {
+// Builds the `$d` damage string for an ability tooltip. When `scaling` (the live
+// character's Spell Power / Ranged AP / Attack Power) is given, the BASE damage is
+// shown with the scaling contribution called out as a "(+N)" suffix, e.g.
+// "66 to 74 (+29)", so a caster sees both the base and exactly what their Spell
+// Power adds, and watches it climb as gear changes.
+function abilityEffectText(res: ResolvedAbility, scaling?: AbilityScaling): string {
+  const effects = res.effects;
+  // " (+N)" callout for the scaling contribution (Spell Power / Attack Power),
+  // omitted when there is none. Punctuation + formatted number only (no words).
+  const suffix = (eff: AbilityEffect) => {
+    const b = scaling ? abilityDamageBonus(res, eff, scaling) : 0;
+    return b > 0
+      ? ` ${t('hudChrome.abilityScaling.bonus', { value: formatAbilityNumber(b) })}`
+      : '';
+  };
   const primary = effects.find(
     (eff) =>
       eff.type === 'directDamage' ||
@@ -15236,15 +15256,17 @@ function abilityEffectText(effects: AbilityEffect[]): string {
       case 'aoeDamage':
       case 'aoeRoot':
       case 'drainTick':
-        return abilityAmountRange(primary.min, primary.max);
+        return abilityAmountRange(primary.min, primary.max) + suffix(primary);
       case 'weaponDamage':
       case 'weaponStrike':
         return formatAbilityNumber(primary.bonus);
       case 'finisherDamage':
-        return t('abilityUi.tooltip.finisherDamage', {
-          base: formatAbilityNumber(primary.base),
-          perCombo: formatAbilityNumber(primary.perCombo),
-        });
+        return (
+          t('abilityUi.tooltip.finisherDamage', {
+            base: formatAbilityNumber(primary.base),
+            perCombo: formatAbilityNumber(primary.perCombo),
+          }) + suffix(primary)
+        );
     }
   }
 
@@ -15255,6 +15277,7 @@ function abilityEffectText(effects: AbilityEffect[]): string {
   if (!secondary) return '';
   switch (secondary.type) {
     case 'dot':
+      return formatAbilityNumber(secondary.total) + suffix(secondary);
     case 'hot':
       return formatAbilityNumber(secondary.total);
     case 'absorb':

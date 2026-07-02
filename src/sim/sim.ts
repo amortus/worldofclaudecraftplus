@@ -156,6 +156,12 @@ import { questFallbackGrants } from './quest_fallback';
 import { sanitizeRemovedZone1Content } from './removed_zone1_content';
 import { Rng } from './rng';
 import { SpatialGrid } from './spatial';
+import {
+  abilityScalingPower,
+  channelTickBonus,
+  directHitBonus,
+  dotTickBonus,
+} from './spell_scaling';
 import { orderTabTargets, TAB_QUERY_RADIUS } from './tab_target';
 import {
   addThreat,
@@ -668,6 +674,8 @@ type GroundAoE = {
   tickTimer: number;
   school: string;
   ability: string;
+  // Spell Power added per tick, snapshotted at cast time (caster ground AoEs).
+  spBonus?: number;
 };
 
 export type { ArenaFormat } from './types';
@@ -3146,7 +3154,7 @@ export class Sim {
     });
     for (const target of this.hostilesInRadius(source, effect.pos, effect.radius)) {
       if (!this.hasLineOfSight(source, target)) continue;
-      const dmg = Math.round(this.rng.range(effect.min, effect.max));
+      const dmg = Math.round(this.rng.range(effect.min, effect.max) + (effect.spBonus ?? 0));
       this.dealDamage(
         source,
         target,
@@ -3552,14 +3560,17 @@ export class Sim {
       school: res.def.school,
       fx: 'projectile',
     });
+    // Spell Power added to each channel tick (e.g. each Arcane Missile / Mind Flay),
+    // the channel coefficient split across its ticks.
+    const channelSp = channelTickBonus(abilityScalingPower(p, res.def), res.def);
     for (const eff of res.effects) {
       if (eff.type === 'directDamage') {
         const crit = this.rng.chance(this.spellCrit(p));
-        let dmg = this.rng.range(eff.min, eff.max);
+        let dmg = this.rng.range(eff.min, eff.max) + channelSp;
         if (crit) dmg *= 1.5;
         this.dealDamage(p, target, Math.round(dmg), crit, res.def.school, res.def.name, 'hit');
       } else if (eff.type === 'drainTick') {
-        const dmg = Math.round(this.rng.range(eff.min, eff.max));
+        const dmg = Math.round(this.rng.range(eff.min, eff.max) + channelSp);
         this.dealDamage(p, target, dmg, false, res.def.school, res.def.name, 'hit');
         if (!p.dead) {
           const healed = Math.min(Math.round(dmg * eff.healFrac), p.maxHp - p.hp);
@@ -3829,6 +3840,11 @@ export class Sim {
           if (!target) break;
           const critChance = isSpell ? this.spellCrit(p) : p.critChance;
           let dmg = this.rng.range(eff.min, eff.max);
+          // The flat rider scales with the school's rating: Spell Power for spells,
+          // Ranged AP for hunter shots, melee Attack Power for physical specials.
+          // abilityScalingPower picks the rating; powerScale (inside directHitBonus)
+          // applies the AP scale-down. A non-scaling effect just contributes 0.
+          dmg += directHitBonus(abilityScalingPower(p, ability), ability, res.castTime);
           const crit = this.rng.chance(critChance);
           if (crit) dmg *= isSpell ? 1.5 : 2;
           if (!isSpell) dmg *= 1 - armorReduction(this.effectiveArmor(target), p.level);
@@ -3971,7 +3987,10 @@ export class Sim {
           const seal = p.auras[sealIdx];
           p.auras.splice(sealIdx, 1);
           this.emit({ type: 'aura', targetId: p.id, name: seal.name, gained: false });
-          let dmg = this.rng.range(seal.value2 ?? 10, seal.value3 ?? 15);
+          // Judgement is an instant holy nuke; scale it with Spell Power too.
+          let dmg =
+            this.rng.range(seal.value2 ?? 10, seal.value3 ?? 15) +
+            directHitBonus(p.spellPower, ability, res.castTime);
           const crit = this.rng.chance(this.spellCrit(p));
           if (crit) dmg *= 1.5;
           this.dealDamage(p, target, Math.round(dmg), crit, 'holy', ability.name, 'hit');
@@ -4014,13 +4033,29 @@ export class Sim {
         }
         case 'dot': {
           if (!target || target.dead) break;
+          // Snapshot Spell Power (or Ranged AP) into the per-tick value at cast time,
+          // vanilla-style: the total DoT coefficient spread across its ticks. A DoT
+          // that RIDES a direct/AoE nuke (Fireball, Pyroblast, Immolate) does NOT also
+          // scale here: the direct component already took the cast-time coefficient, so
+          // scaling the rider too would double-dip and over-reward hybrids. Only pure
+          // DoTs (Corruption, SW:P, Serpent Sting) scale through this path.
+          const hybrid = res.effects.some(
+            (e) => e.type === 'directDamage' || e.type === 'aoeDamage' || e.type === 'aoeRoot',
+          );
+          const dotBase = Math.max(1, Math.round(eff.total / (eff.duration / eff.interval)));
+          // Physical bleeds (Rend, Rupture, Garrote, Rip) scale off melee Attack
+          // Power here just like a spell DoT scales off Spell Power; `hybrid` still
+          // suppresses the rider on a DoT that trails its own direct nuke.
+          const dotSp = !hybrid
+            ? dotTickBonus(abilityScalingPower(p, ability), ability, eff.duration, eff.interval)
+            : 0;
           this.applyAura(target, {
             id: ability.id,
             name: ability.name,
             kind: 'dot',
             remaining: eff.duration,
             duration: eff.duration,
-            value: Math.max(1, Math.round(eff.total / (eff.duration / eff.interval))),
+            value: dotBase + dotSp,
             tickInterval: eff.interval,
             tickTimer: eff.interval,
             sourceId: p.id,
@@ -4132,9 +4167,15 @@ export class Sim {
             school: ability.school,
             fx: 'nova',
           });
+          const aoeSpBonus = directHitBonus(
+            abilityScalingPower(p, ability),
+            ability,
+            res.castTime,
+            true,
+          );
           for (const m of this.hostilesInRadius(p, p.pos, eff.radius)) {
             if (!this.hasLineOfSight(p, m)) continue;
-            let dmg = this.rng.range(eff.min, eff.max);
+            let dmg = this.rng.range(eff.min, eff.max) + aoeSpBonus;
             // Armor only mitigates physical damage, mirroring the single-target
             // path above — spell-school AoE (Arcane Explosion, Consecration) is
             // not reduced by the target's armor.
@@ -4165,6 +4206,9 @@ export class Sim {
             tickTimer: eff.interval,
             school: ability.school,
             ability: ability.name,
+            // Each pulse is an AoE hit; scale per tick off the school's rating
+            // (Spell Power, Ranged AP, or melee Attack Power for physical pulses).
+            spBonus: directHitBonus(abilityScalingPower(p, ability), ability, res.castTime, true),
           };
           this.emit({
             type: 'spellfx',
@@ -4221,9 +4265,15 @@ export class Sim {
             school: ability.school,
             fx: 'nova',
           });
+          const aoeRootSp = directHitBonus(
+            abilityScalingPower(p, ability),
+            ability,
+            res.castTime,
+            true,
+          );
           for (const m of this.hostilesInRadius(p, p.pos, eff.radius)) {
             if (!this.hasLineOfSight(p, m)) continue;
-            const dmg = this.rng.range(eff.min, eff.max);
+            const dmg = this.rng.range(eff.min, eff.max) + aoeRootSp;
             this.dealDamage(p, m, Math.round(dmg), false, ability.school, ability.name, 'hit');
             if (!m.dead && this.isHostileTo(p, m)) {
               this.applyRootAura(

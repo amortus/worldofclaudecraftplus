@@ -120,6 +120,12 @@ export const hudChromeStrings = {
   rest: {
     resting: 'Resting',
   },
+  // The Spell Power / Attack Power contribution called out on an ability tooltip,
+  // e.g. "66 to 74 (+29)". Locale-neutral by design: punctuation plus a formatted
+  // number, no words, so it needs no per-locale translation.
+  abilityScaling: {
+    bonus: '(+{value})',
+  },
   // On-screen / mobile control labels and their accessible names. char/bags/music
   // reuse existing keys (hud.keybinds.actions.*, hud.options.music) at the call site.
   mobile: {

@@ -363,6 +363,7 @@ function dynamicFields(e: Entity): Record<string, unknown> {
     out.pt = round2(e.petTauntTimer);
     if (e.petAutoTaunt) out.pa = 1;
   }
+  if (e.rangedPower) out.rp = e.rangedPower;
   // top hate-table entries so the party threat meter shows real numbers
   if (e.kind === 'mob' && !e.dead && e.threat.size > 0) out.thr = threatEntries(e, 8);
   if (e.auras.length > 0) {
@@ -2580,6 +2581,7 @@ export class GameServer {
       auto: p.autoAttack,
       queued: p.queuedOnSwing,
       ap: p.attackPower,
+      sp: p.spellPower,
       crit: p.critChance,
       dodge: p.dodgeChance,
       eat: p.eating ? { remaining: round2(p.eating.remaining) } : null,
