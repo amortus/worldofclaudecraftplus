@@ -1967,7 +1967,8 @@ export async function pruneClientPerfReports(retentionDays: number): Promise<num
 // ---------------------------------------------------------------------------
 // World state: a tiny key→JSONB store for shared, global game state that isn't
 // tied to one character. The World Market (the Merchant's auction house) lives
-// here under the 'market' key — listings + per-seller collections.
+// here under the per-realm `market:<realm>` key, listings plus per-seller
+// collections. See loadMarketState/saveMarketState below.
 // ---------------------------------------------------------------------------
 
 export async function loadWorldState<T>(key: string): Promise<T | null> {
@@ -1983,12 +1984,54 @@ export async function saveWorldState(key: string, data: unknown): Promise<void> 
   );
 }
 
+// The World Market is realm-scoped like characters, friends, guilds and
+// presence: each realm process keeps its own listings under `market:<realm>`.
+// Before this scoping the market lived in a single bare 'market' row shared by
+// every realm pointed at the same DATABASE_URL, so two realms silently
+// overwrote each other's listings and proceeds (and stomped nextListingId).
+const LEGACY_MARKET_KEY = 'market';
+
+export function marketStateKey(realm: string): string {
+  return `market:${realm}`;
+}
+
 export async function loadMarketState(): Promise<MarketSave | null> {
-  return loadWorldState<MarketSave>('market');
+  const key = marketStateKey(REALM);
+  const own = await loadWorldState<MarketSave>(key);
+  if (own !== null) return own;
+  // One-time GLOBAL migration: the first realm to boot after this scoping
+  // lands adopts the pre-scoping shared row into its own key, then deletes
+  // the legacy row so no later-added realm can re-adopt (and thereby
+  // duplicate) the same listings. The claiming SELECT ... FOR UPDATE plus
+  // the delete run in one transaction, so only one realm ever wins the row
+  // even if several boot at once.
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const res = await client.query('SELECT data FROM world_state WHERE key = $1 FOR UPDATE', [
+      LEGACY_MARKET_KEY,
+    ]);
+    const legacy = (res.rows[0]?.data as MarketSave) ?? null;
+    if (legacy !== null) {
+      await client.query(
+        `INSERT INTO world_state (key, data, updated_at) VALUES ($1, $2, now())
+         ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`,
+        [key, JSON.stringify(legacy)],
+      );
+      await client.query('DELETE FROM world_state WHERE key = $1', [LEGACY_MARKET_KEY]);
+    }
+    await client.query('COMMIT');
+    return legacy;
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 export async function saveMarketState(save: MarketSave): Promise<void> {
-  await saveWorldState('market', save);
+  await saveWorldState(marketStateKey(REALM), save);
 }
 
 // ---------------------------------------------------------------------------

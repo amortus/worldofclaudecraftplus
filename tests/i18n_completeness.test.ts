@@ -191,6 +191,7 @@ describe('i18n CLDR pluralization', () => {
     expect(bases.sort()).toEqual([
       'characterCount',
       'guildMembers',
+      'playersMatching',
       'playersOnline',
       'secondsRemaining',
     ]);

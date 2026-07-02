@@ -204,6 +204,7 @@ const RULES: Rule[] = [
   { re: /^You are muted from chat for (\d+) more minutes?\.(?: Reason: (.+))?$/, build: (m) => tServer(m[1] === '1' ? 'chat.mutedOne' : 'chat.muted', { minutes: m[1], reason: m[2] ? tServer('chat.muteReason', { reason: m[2] }) : '' }) },
   { re: /^Chat is on cooldown for (.+)s\.$/, build: (m) => tServer('chat.onCooldown', { seconds: m[1] }) },
   { re: /^Who: (\d+) (?:player|players) online on (.+)\.$/, build: (m) => tPlural('hudChrome.plurals.playersOnline', Number(m[1]), { count: m[1], realm: m[2] }) },
+  { re: /^Who: (\d+) (?:player|players) matching "(.+)" on (.+)\.$/, build: (m) => tPlural('hudChrome.plurals.playersMatching', Number(m[1]), { count: m[1], query: m[2], realm: m[3] }) },
   { re: /^\.\.\.and (\d+) more\.$/, build: (m) => tServer('who.more', { count: m[1] }) },
   { re: /^(.+) - level (\d+) (\w+) - (.+?)(?: \(([^)]+)\))?$/, build: (m) => tServer('who.row', { name: m[1], level: m[2], className: localizeClass(m[3]), zone: localizeZone(m[4]), status: m[5] ? ` (${localizeStatus(m[5])})` : '' }) },
 ];

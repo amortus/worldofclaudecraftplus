@@ -2,7 +2,15 @@ import type { WebSocket } from 'ws';
 import { createBotDetector } from '#bot-detector';
 import { verifyChallenge } from '../src/sim/client_challenge';
 import { MECH_CHROMAS, mechChromaItemId, mechChromaSkinIndex } from '../src/sim/content/skins';
-import { DELVES, DUNGEONS, zoneAt } from '../src/sim/data';
+import {
+  DELVES,
+  DUNGEON_X_THRESHOLD,
+  DUNGEONS,
+  delveAt,
+  dungeonAt,
+  isDelvePos,
+  zoneAt,
+} from '../src/sim/data';
 import { parseMoveInputFrame } from '../src/sim/move_input';
 import type { PlayerMeta } from '../src/sim/sim';
 import { MAX_CHAT_MESSAGE_LEN, Sim } from '../src/sim/sim';
@@ -38,6 +46,7 @@ import {
   saveMarketState,
   walletForAccount,
 } from './db';
+import { forEachGuarded, runGuarded } from './guarded_iter';
 import { IpBlockList } from './ip_block';
 import { loadActiveBlockedIps } from './ip_block_db';
 import { nextRaidResetMs } from './raid_reset';
@@ -46,6 +55,7 @@ import type { Presence, PresenceStatus, SocialActor, SocialTransport } from './s
 import { SocialService } from './social';
 import { PgSocialDb } from './social_db';
 import { holderInfoForPubkey } from './woc_balance';
+import { isBackpressureExceeded } from './ws_backpressure';
 
 const WORLD_SEED = 20061;
 const ALDRIC_METEOR_QUEST_ID = 'q_aldrics_fallen_star';
@@ -490,16 +500,32 @@ export class GameServer {
     return ciCount === 1 ? ci : null;
   }
 
-  // Live location + activity of an online character, for friend/guild rosters.
+  // The instance (dungeon OR delve) an entity is inside, named as its own zone,
+  // or null when the entity is in the overworld (or an arena, which is not a
+  // dungeon). Resolved in order: an explicit dungeonId portal field, then a
+  // delve position, then any other far-off instance-space x as a dungeon. A
+  // failed lookup returns null so callers fall back to the overworld zone
+  // rather than ever surfacing a raw id.
+  private instanceZoneName(e: Entity, pos: { x: number; z: number } = e.pos): string | null {
+    if (e.dungeonId) return DUNGEONS[e.dungeonId]?.name ?? e.dungeonId;
+    if (isDelvePos(pos.x)) return delveAt(pos.x)?.name ?? null;
+    if (pos.x > DUNGEON_X_THRESHOLD) return dungeonAt(pos.x)?.name ?? null;
+    return null;
+  }
+
+  // Live location + activity of an online character, for friend/guild rosters
+  // and /who. A player inside any instance (dungeon or delve) reports the
+  // instance name and the 'dungeon' status, not the overworld zone the instance
+  // coordinates happen to fall under.
   private presenceOf(session: ClientSession): Presence {
     const e = this.sim.entities.get(session.pid);
     if (!e) return { zone: 'Unknown', status: 'online' };
+    const instanceZone = this.instanceZoneName(e);
     let status: PresenceStatus = 'online';
     if (e.dead) status = 'dead';
-    else if (e.dungeonId) status = 'dungeon';
+    else if (instanceZone != null) status = 'dungeon';
     else if (e.inCombat) status = 'combat';
-    const zone = e.dungeonId ? (DUNGEONS[e.dungeonId]?.name ?? e.dungeonId) : zoneAt(e.pos.z).name;
-    return { zone, status, x: e.pos.x, z: e.pos.z };
+    return { zone: instanceZone ?? zoneAt(e.pos.z).name, status, x: e.pos.x, z: e.pos.z };
   }
 
   private socialTransport(): SocialTransport {
@@ -578,36 +604,47 @@ export class GameServer {
     let last = process.hrtime.bigint();
     let acc = 0;
     this.interval = setInterval(() => {
-      const now = process.hrtime.bigint();
-      let dt = Number(now - last) / 1e9;
-      last = now;
-      if (dt > 0.5) dt = 0.5;
-      acc += dt;
-      // Feed the authoritative UTC day to the sim so the delve daily reset (FR-5.1)
-      // works without the sim reading the wall clock itself (determinism invariant).
-      this.sim.utcDay = new Date().toISOString().slice(0, 10);
-      while (acc >= DT) {
-        this.clearStaleInputs();
-        const events = this.sim.tick();
-        this.routeEvents(events);
-        this.runAntibotTick();
-        acc -= DT;
-      }
-      this.broadcastSnapshots();
-      this.socialPosTimer += dt;
-      if (this.socialPosTimer >= 1) {
-        this.socialPosTimer = 0;
-        this.broadcastSocialPositions();
-      }
-      const tickMs = Number(process.hrtime.bigint() - now) / 1e6;
-      this.tickMsAvg =
-        this.tickMsAvg === 0 ? tickMs : this.tickMsAvg + TICK_EMA_ALPHA * (tickMs - this.tickMsAvg);
-      this.saveTimer += dt;
-      if (this.saveTimer >= AUTOSAVE_SECONDS) {
-        this.saveTimer = 0;
-        void this.saveAll('autosave');
-        void this.saveMarket();
-      }
+      // The whole tick body runs guarded: an unguarded throw here (sim tick, a
+      // broadcast, an autosave kick-off) would unwind the callback and skip the
+      // rest of this tick for everyone. Log and let the next tick self-heal so a
+      // transient fault never starves the loop (server/CLAUDE.md).
+      runGuarded(
+        () => {
+          const now = process.hrtime.bigint();
+          let dt = Number(now - last) / 1e9;
+          last = now;
+          if (dt > 0.5) dt = 0.5;
+          acc += dt;
+          // Feed the authoritative UTC day to the sim so the delve daily reset (FR-5.1)
+          // works without the sim reading the wall clock itself (determinism invariant).
+          this.sim.utcDay = new Date().toISOString().slice(0, 10);
+          while (acc >= DT) {
+            this.clearStaleInputs();
+            const events = this.sim.tick();
+            this.routeEvents(events);
+            this.runAntibotTick();
+            acc -= DT;
+          }
+          this.broadcastSnapshots();
+          this.socialPosTimer += dt;
+          if (this.socialPosTimer >= 1) {
+            this.socialPosTimer = 0;
+            this.broadcastSocialPositions();
+          }
+          const tickMs = Number(process.hrtime.bigint() - now) / 1e6;
+          this.tickMsAvg =
+            this.tickMsAvg === 0
+              ? tickMs
+              : this.tickMsAvg + TICK_EMA_ALPHA * (tickMs - this.tickMsAvg);
+          this.saveTimer += dt;
+          if (this.saveTimer >= AUTOSAVE_SECONDS) {
+            this.saveTimer = 0;
+            void this.saveAll('autosave');
+            void this.saveMarket();
+          }
+        },
+        (err) => console.error('[tick] guarded tick body threw, skipping this tick:', err),
+      );
     }, 50);
     // Refresh every online player's $WOC holder-tier flair off the 20 Hz loop:
     // an RPC call per wallet (cached for minutes inside holderInfoForPubkey) has
@@ -1112,9 +1149,7 @@ export class GameServer {
       const e = this.sim.entities.get(session.pid);
       const meta = this.sim.meta(session.pid);
       if (!e || !meta) continue;
-      const zone = e.dungeonId
-        ? (DUNGEONS[e.dungeonId]?.name ?? e.dungeonId)
-        : zoneAt(e.pos.z).name;
+      const zone = this.instanceZoneName(e) ?? zoneAt(e.pos.z).name;
       const moveSpeedMultiplier = round2((this.sim as any).moveSpeedMult(e));
       players.push({
         pid: session.pid,
@@ -1596,8 +1631,19 @@ export class GameServer {
         if (this.isChatMuted(session)) break;
         if (!this.consumeChatToken(session)) break;
         const text = msg.text.trim();
-        if (/^\/who(?:\s|$)/i.test(text)) {
-          this.sendWhoRoster(session);
+        const whoMatch = /^\/who(?:\s+([\s\S]+))?$/i.exec(text);
+        if (whoMatch) {
+          // Optional filter: "/who Mr" lists only players whose name OR zone
+          // contains "Mr" (case-insensitive). Zone names carry spaces
+          // ("Thornpeak Heights"), so keep spaces: strip only double-quotes
+          // and control chars, collapse internal whitespace, and cap the
+          // length, so the echoed query stays a clean, single-line token.
+          const filter = (whoMatch[1] ?? '')
+            .replace(/[\p{Cc}"]/gu, '')
+            .trim()
+            .replace(/\s+/g, ' ')
+            .slice(0, 32);
+          this.sendWhoRoster(session, filter || undefined);
           break;
         }
         // Hard-word + mute enforcement gate, applied to every channel before the
@@ -1922,6 +1968,30 @@ export class GameServer {
         }
         break;
       }
+      case 'dev_complete_quest': {
+        if (process.env.ALLOW_DEV_COMMANDS === '1' && typeof msg.quest === 'string') {
+          const beforeDone = sim.meta(pid)?.questsDone.has(msg.quest) ?? false;
+          sim.completeQuestForDev(msg.quest, pid);
+          const afterDone = sim.meta(pid)?.questsDone.has(msg.quest) ?? false;
+          if (!beforeDone && afterDone && msg.quest === ALDRIC_METEOR_QUEST_ID) {
+            this.noteAccountQuestComplete(session, msg.quest);
+          }
+          this.resyncQuests(session);
+        }
+        break;
+      }
+      case 'dev_complete_all_quests': {
+        if (process.env.ALLOW_DEV_COMMANDS === '1') {
+          const beforeDone = sim.meta(pid)?.questsDone.has(ALDRIC_METEOR_QUEST_ID) ?? false;
+          sim.completeCurrentQuestsForDev(pid);
+          const afterDone = sim.meta(pid)?.questsDone.has(ALDRIC_METEOR_QUEST_ID) ?? false;
+          if (!beforeDone && afterDone) {
+            this.noteAccountQuestComplete(session, ALDRIC_METEOR_QUEST_ID);
+          }
+          this.resyncQuests(session);
+        }
+        break;
+      }
       // dungeons ('enter_crypt'/'leave_crypt' kept as aliases for older bots)
       case 'enter_crypt':
       case 'enter_dungeon': {
@@ -2036,74 +2106,82 @@ export class GameServer {
     if (this.clients.size === 0) return;
     const tick = this.sim.tickCount;
     const head = `{"t":"snap","tick":${tick},"time":${round2(this.sim.time)}`;
-    for (const session of this.clients.values()) {
-      const p = this.sim.entities.get(session.pid);
-      const meta = this.sim.meta(session.pid);
-      if (!p || !meta) continue;
-      const ents = this._bcastEnts;
-      const keep = this._bcastKeep;
-      const present = this._bcastPresent;
-      ents.length = 0;
-      keep.length = 0;
-      present.clear();
-      this.sim.grid.forEachInRadius(p.pos.x, p.pos.z, INTEREST_QUERY_RADIUS, (e, d2) => {
-        if (e.id === session.pid) return;
-        if (!this.canObserveEntity(p, e, d2)) return;
-        const known = session.sentEnts.get(e.id);
-        // the viewer's current target stays in interest to the widest drop
-        // radius so its unit frame doesn't vanish mid-chase
-        const limitSq =
-          p.targetId === e.id
-            ? NPC_DROP_RADIUS * NPC_DROP_RADIUS
-            : interestLimitSq(e, known !== undefined);
-        if (d2 > limitSq) return;
-        present.add(e.id);
-        const cache = this.wireCacheFor(e);
-        if (known === undefined) {
-          // first sight carries the at-rest state exactly, so no settle
-          // record is owed until it moves again
-          ents.push(cache.fullJson);
-          session.sentEnts.set(e.id, {
-            idVer: cache.idVer,
-            dynVer: cache.dynVer,
-            sentAtTick: tick,
-            settled: true,
-          });
-          return;
-        }
-        if (known.idVer !== cache.idVer) {
-          ents.push(cache.fullJson);
-          known.idVer = cache.idVer;
+    // Each session's snapshot is built and sent in isolation: a throw while
+    // serializing one player's state must skip only that session, never starve
+    // the rest of the roster of their snapshot (server/CLAUDE.md).
+    forEachGuarded(
+      this.clients.values(),
+      (session) => {
+        const p = this.sim.entities.get(session.pid);
+        const meta = this.sim.meta(session.pid);
+        if (!p || !meta) return;
+        const ents = this._bcastEnts;
+        const keep = this._bcastKeep;
+        const present = this._bcastPresent;
+        ents.length = 0;
+        keep.length = 0;
+        present.clear();
+        this.sim.grid.forEachInRadius(p.pos.x, p.pos.z, INTEREST_QUERY_RADIUS, (e, d2) => {
+          if (e.id === session.pid) return;
+          if (!this.canObserveEntity(p, e, d2)) return;
+          const known = session.sentEnts.get(e.id);
+          // the viewer's current target stays in interest to the widest drop
+          // radius so its unit frame doesn't vanish mid-chase
+          const limitSq =
+            p.targetId === e.id
+              ? NPC_DROP_RADIUS * NPC_DROP_RADIUS
+              : interestLimitSq(e, known !== undefined);
+          if (d2 > limitSq) return;
+          present.add(e.id);
+          const cache = this.wireCacheFor(e);
+          if (known === undefined) {
+            // first sight carries the at-rest state exactly, so no settle
+            // record is owed until it moves again
+            ents.push(cache.fullJson);
+            session.sentEnts.set(e.id, {
+              idVer: cache.idVer,
+              dynVer: cache.dynVer,
+              sentAtTick: tick,
+              settled: true,
+            });
+            return;
+          }
+          if (known.idVer !== cache.idVer) {
+            ents.push(cache.fullJson);
+            known.idVer = cache.idVer;
+            known.dynVer = cache.dynVer;
+            known.sentAtTick = tick;
+            known.settled = false;
+            return;
+          }
+          if (
+            !isUpdateDue(tick, e, d2, p, known.sentAtTick) ||
+            (known.dynVer === cache.dynVer && known.settled)
+          ) {
+            // not due at this distance tier yet, or unchanged and already
+            // settled: a bare id keeps it alive on the client
+            keep.push(e.id);
+            return;
+          }
+          // due, and either changed or owing its one settle record
+          known.settled = known.dynVer === cache.dynVer;
           known.dynVer = cache.dynVer;
           known.sentAtTick = tick;
-          known.settled = false;
-          return;
+          ents.push(cache.liteJson);
+        });
+        // forget entities that left interest, so a re-entry sends identity again
+        for (const id of session.sentEnts.keys()) {
+          if (!present.has(id)) session.sentEnts.delete(id);
         }
-        if (
-          !isUpdateDue(tick, e, d2, p, known.sentAtTick) ||
-          (known.dynVer === cache.dynVer && known.settled)
-        ) {
-          // not due at this distance tier yet, or unchanged and already
-          // settled: a bare id keeps it alive on the client
-          keep.push(e.id);
-          return;
-        }
-        // due, and either changed or owing its one settle record
-        known.settled = known.dynVer === cache.dynVer;
-        known.dynVer = cache.dynVer;
-        known.sentAtTick = tick;
-        ents.push(cache.liteJson);
-      });
-      // forget entities that left interest, so a re-entry sends identity again
-      for (const id of session.sentEnts.keys()) {
-        if (!present.has(id)) session.sentEnts.delete(id);
-      }
-      const keepJson = keep.length > 0 ? `,"keep":[${keep.join(',')}]` : '';
-      this.sendRaw(
-        session,
-        `${head},"self":${this.selfWireJson(session, p, meta)},"ents":[${ents.join(',')}]${keepJson}}`,
-      );
-    }
+        const keepJson = keep.length > 0 ? `,"keep":[${keep.join(',')}]` : '';
+        this.sendRaw(
+          session,
+          `${head},"self":${this.selfWireJson(session, p, meta)},"ents":[${ents.join(',')}]${keepJson}}`,
+        );
+      },
+      (err, session) =>
+        console.error(`[snap] failed to build snapshot for pid ${session.pid}, skipping:`, err),
+    );
     // >= rather than a modulo check: catch-up broadcasts can skip ticks
     if (tick - this.lastWireSweepTick >= WIRE_CACHE_SWEEP_TICKS) {
       this.lastWireSweepTick = tick;
@@ -2322,44 +2400,51 @@ export class GameServer {
   private routeEvents(events: SimEvent[]): void {
     if (events.length === 0 || this.clients.size === 0) return;
     const eventTime = Date.now();
-    for (const session of this.clients.values()) {
-      const p = this.sim.entities.get(session.pid);
-      if (!p) continue;
-      const mine: SimEvent[] = [];
-      for (const ev of events) {
-        // ignore list: drop chat originating from a character this player has
-        // blocked, before it ever reaches their client
-        if (
-          ev.type === 'chat' &&
-          session.blockedIds.size > 0 &&
-          this.isBlockedSender(session, ev.fromPid)
-        )
-          continue;
-        if (ev.pid !== undefined) {
-          if (ev.pid === session.pid) {
-            mine.push(ev);
-            // remember the last person to whisper us, for /r reply (the
-            // recipient copy of a whisper has no `to`; the sender echo does)
-            if (
-              ev.type === 'chat' &&
-              ev.channel === 'whisper' &&
-              ev.to === undefined &&
-              ev.fromPid !== session.pid
-            ) {
-              session.lastWhisperFrom = ev.from;
+    // Each session's event routing runs in isolation: a throw while filtering
+    // for one player must skip only that session, never the rest (server/CLAUDE.md).
+    forEachGuarded(
+      this.clients.values(),
+      (session) => {
+        const p = this.sim.entities.get(session.pid);
+        if (!p) return;
+        const mine: SimEvent[] = [];
+        for (const ev of events) {
+          // ignore list: drop chat originating from a character this player has
+          // blocked, before it ever reaches their client
+          if (
+            ev.type === 'chat' &&
+            session.blockedIds.size > 0 &&
+            this.isBlockedSender(session, ev.fromPid)
+          )
+            continue;
+          if (ev.pid !== undefined) {
+            if (ev.pid === session.pid) {
+              mine.push(ev);
+              // remember the last person to whisper us, for /r reply (the
+              // recipient copy of a whisper has no `to`; the sender echo does)
+              if (
+                ev.type === 'chat' &&
+                ev.channel === 'whisper' &&
+                ev.to === undefined &&
+                ev.fromPid !== session.pid
+              ) {
+                session.lastWhisperFrom = ev.from;
+              }
+              this.botDetector.observeEvent(session.botTrackingContext, ev, eventTime);
             }
-            this.botDetector.observeEvent(session.botTrackingContext, ev, eventTime);
+            continue;
           }
-          continue;
+          // world events: only those near this player
+          const anchor = this.eventAnchor(ev);
+          if (anchor === null || dist2d(p.pos, anchor) <= EVENT_RADIUS) {
+            mine.push(ev);
+          }
         }
-        // world events: only those near this player
-        const anchor = this.eventAnchor(ev);
-        if (anchor === null || dist2d(p.pos, anchor) <= EVENT_RADIUS) {
-          mine.push(ev);
-        }
-      }
-      if (mine.length > 0) this.send(session, { t: 'events', list: mine });
-    }
+        if (mine.length > 0) this.send(session, { t: 'events', list: mine });
+      },
+      (err, session) =>
+        console.error(`[events] failed to route events for pid ${session.pid}, skipping:`, err),
+    );
   }
 
   // Maps a chat event's source pid to its character id and checks the
@@ -2609,7 +2694,7 @@ export class GameServer {
     return `You are muted from chat for ${minutes} more minute${minutes === 1 ? '' : 's'}.${reason}`;
   }
 
-  private sendWhoRoster(session: ClientSession): void {
+  private sendWhoRoster(session: ClientSession, filter?: string): void {
     if (!session.blockListLoaded) {
       this.send(session, {
         t: 'events',
@@ -2619,12 +2704,21 @@ export class GameServer {
       });
       return;
     }
-    const rows = this.whoRosterFor(session);
+    let rows = this.whoRosterFor(session);
+    if (filter) {
+      const q = filter.toLowerCase();
+      rows = rows.filter(
+        (row) => row.name.toLowerCase().includes(q) || row.zone.toLowerCase().includes(q),
+      );
+    }
     const total = rows.length;
+    const header = filter
+      ? `Who: ${total} ${total === 1 ? 'player' : 'players'} matching "${filter}" on ${REALM}.`
+      : `Who: ${total} ${total === 1 ? 'player' : 'players'} online on ${REALM}.`;
     const list: { type: 'log'; text: string; color: string }[] = [
       {
         type: 'log',
-        text: `Who: ${total} ${total === 1 ? 'player' : 'players'} online on ${REALM}.`,
+        text: header,
         color: '#7fd4ff',
       },
     ];
@@ -2701,8 +2795,23 @@ export class GameServer {
   }
 
   private sendRaw(session: ClientSession, payload: string): void {
-    if (session.ws.readyState === 1) {
-      session.ws.send(payload);
+    if (session.ws.readyState !== 1) return;
+    // A client that has stopped draining its socket lets ws.bufferedAmount grow
+    // without bound (send() never blocks); left unchecked one stuck reader OOMs
+    // the process and starves everyone. Terminate the offender instead. close()
+    // would try to flush the already-huge buffer, so destroy the socket: the
+    // 'close' handler funnels into the idempotent leave() for normal cleanup.
+    if (isBackpressureExceeded(session.ws.bufferedAmount)) {
+      if (!session.left) {
+        try {
+          session.ws.terminate();
+        } catch {
+          /* socket already torn down */
+        }
+        void this.leave(session, 'backpressure');
+      }
+      return;
     }
+    session.ws.send(payload);
   }
 }

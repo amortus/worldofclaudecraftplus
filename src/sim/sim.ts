@@ -10889,6 +10889,18 @@ export class Sim {
       return;
     }
 
+    this.turnInQuestCore(questId, quest, meta);
+  }
+
+  // Shared turn-in reward core: consumes the collect items, marks the quest done, and
+  // grants the copper/item/xp/reputation rewards plus the questDone + completion log.
+  // The caller MUST have already verified the quest is in the log and 'ready'
+  // (turnInQuest does the state + NPC-proximity checks; the /dev completer forces the
+  // objectives ready). Both the NPC turn-in and the dev quest completer go through
+  // here so the reward math cannot drift.
+  private turnInQuestCore(questId: string, quest: QuestDef, meta: PlayerMeta): void {
+    const qp = meta.questLog.get(questId);
+    if (!qp) return;
     for (const obj of quest.objectives) {
       if (obj.type === 'collect' && obj.itemId)
         this.removeItem(obj.itemId, obj.count, meta.entityId);
@@ -10916,6 +10928,96 @@ export class Sim {
       color: '#ff0',
       pid: meta.entityId,
     });
+  }
+
+  // /dev quest-completion cheats (gated by devCommands / ALLOW_DEV_COMMANDS). They
+  // force a quest to completion for testing: accept it if needed, satisfy its
+  // objectives, then turn it in. The accept and turn-in reward steps reuse the shared
+  // authoritative cores (finalizeQuestAccept / turnInQuestCore), so a /dev completion
+  // grants exactly what a normal NPC turn-in would and cannot drift from it.
+
+  private satisfyTrackedQuestForDev(quest: QuestDef, qp: QuestProgress, meta: PlayerMeta): void {
+    let collectChanged = false;
+    quest.objectives.forEach((obj, index) => {
+      if (obj.type === 'collect' && obj.itemId) {
+        const have = this.countItem(obj.itemId, meta.entityId);
+        if (have < obj.count) {
+          this.addItem(obj.itemId, obj.count - have, meta.entityId);
+          collectChanged = true;
+        }
+        return;
+      }
+      const next = Math.max(qp.counts[index] ?? 0, obj.count);
+      if (next !== qp.counts[index]) {
+        meta.counters.questProgress += next - (qp.counts[index] ?? 0);
+        qp.counts[index] = next;
+        this.emit({
+          type: 'questProgress',
+          questId: qp.questId,
+          text: `${obj.label}: ${qp.counts[index]}/${obj.count}`,
+          pid: meta.entityId,
+        });
+      }
+    });
+    if (collectChanged) this.onInventoryChangedForQuests(meta);
+    this.checkQuestReady(qp, meta);
+  }
+
+  private trackedQuestForDev(
+    questId: string,
+    meta: PlayerMeta,
+  ): { quest: QuestDef; qp: QuestProgress } | null {
+    const active = meta.questLog.get(questId);
+    const quest = QUESTS[questId];
+    if (active && quest) return { quest, qp: active };
+    if (!quest) {
+      this.error(meta.entityId, 'That quest is not available.');
+      return null;
+    }
+    if (this.questState(questId, meta.entityId) !== 'available') {
+      this.error(meta.entityId, 'That quest is not available.');
+      return null;
+    }
+    this.finalizeQuestAccept(questId, quest, meta);
+    const qp = meta.questLog.get(questId);
+    if (!qp) {
+      this.error(meta.entityId, 'That quest is not in your log.');
+      return null;
+    }
+    return { quest, qp };
+  }
+
+  private completeTrackedQuestForDev(questId: string, meta: PlayerMeta): boolean {
+    const tracked = this.trackedQuestForDev(questId, meta);
+    if (!tracked) return false;
+    this.satisfyTrackedQuestForDev(tracked.quest, tracked.qp, meta);
+    if (tracked.qp.state !== 'ready') {
+      this.error(meta.entityId, 'That quest is not complete.');
+      return false;
+    }
+    this.turnInQuestCore(questId, tracked.quest, meta);
+    return meta.questsDone.has(questId);
+  }
+
+  completeQuestForDev(questId: string, pid?: number): boolean {
+    const r = this.resolve(pid);
+    if (!r) return false;
+    return this.completeTrackedQuestForDev(questId, r.meta);
+  }
+
+  completeCurrentQuestsForDev(pid?: number): number {
+    const r = this.resolve(pid);
+    if (!r) return 0;
+    const ids = [...r.meta.questLog.keys()];
+    if (ids.length === 0) {
+      this.error(r.meta.entityId, 'Your quest log is empty.');
+      return 0;
+    }
+    let completed = 0;
+    for (const questId of ids) {
+      if (this.completeTrackedQuestForDev(questId, r.meta)) completed++;
+    }
+    return completed;
   }
 
   // No-op in offline mode
@@ -11124,8 +11226,21 @@ export class Sim {
       this.addItem(itemId, count, pid);
       return null;
     }
+    const questM = /^\/(?:dev\s+quest|devquest)\s+(\S+)\s*$/i.exec(raw);
+    if (questM) {
+      this.completeQuestForDev(questM[1], pid);
+      return null;
+    }
+    const questAllM = /^\/(?:dev\s+(?:quests|questall)|devquestall)\s*$/i.exec(raw);
+    if (questAllM) {
+      this.completeCurrentQuestsForDev(pid);
+      return null;
+    }
     if (/^\/dev(?:\s|$)/i.test(raw)) {
-      this.error(pid, 'Dev commands: /dev level N, /dev tp X Z, /dev give itemId [count]');
+      this.error(
+        pid,
+        'Dev commands: /dev level N, /dev tp X Z, /dev give itemId [count], /dev quest questId, /dev quests',
+      );
       return null;
     }
     return undefined;
