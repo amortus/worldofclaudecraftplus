@@ -27,6 +27,23 @@ describe("server-sent message localization", () => {
     "Server restart in 30 seconds.",
     "Server restart in 10 seconds.",
     "Server restarting now.",
+    // In-game moderation notices (RULE-matched placeholdered confirmations + usage,
+    // and EXACT-matched no-placeholder notices).
+    "Kicked Mira.",
+    "Killed Mira.",
+    "Required Mira to rename.",
+    "Muted Mira for 5 minutes.",
+    "Suspended Mira for 30 minutes.",
+    "Banned Mira.",
+    "Now spectating Mira.",
+    "Mira is no longer online; spectate ended.",
+    "No online player named 'Mira'.",
+    'Usage: /spectate <name>',
+    "You can't moderate that player.",
+    "This account has been banned.",
+    "You are not spectating anyone.",
+    "Stopped spectating.",
+    "Local chat is unavailable while spectating.",
   ];
 
   it("recognizes and localizes every sample in every non-English locale", async () => {

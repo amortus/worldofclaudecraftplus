@@ -8,12 +8,13 @@ import {
   DUNGEONS,
   delveAt,
   dungeonAt,
+  instanceOrigin,
   isDelvePos,
   zoneAt,
 } from '../src/sim/data';
 import { sanitizeMarketQuery } from '../src/sim/market_query';
 import { parseMoveInputFrame } from '../src/sim/move_input';
-import type { PlayerMeta } from '../src/sim/sim';
+import type { PetState, PlayerMeta } from '../src/sim/sim';
 import { MAX_CHAT_MESSAGE_LEN, Sim } from '../src/sim/sim';
 import { stealthDetectionRadius, threatEntries } from '../src/sim/threat';
 import {
@@ -47,9 +48,17 @@ import {
   saveMarketState,
   walletForAccount,
 } from './db';
+import { formatDuration } from './duration';
 import { forEachGuarded, runGuarded } from './guarded_iter';
 import { IpBlockList } from './ip_block';
 import { loadActiveBlockedIps } from './ip_block_db';
+import {
+  forceCharacterRename,
+  moderateAccount,
+  muteAccountChat as muteAccountChatDb,
+  recordInGameAction,
+} from './moderation_db';
+import { type ModerationHost, ModerationService } from './moderation_service';
 import { nextRaidResetMs } from './raid_reset';
 import { REALM, REALM_RESET_TIME_ZONE } from './realm';
 import type { Presence, PresenceStatus, SocialActor, SocialTransport } from './social';
@@ -82,6 +91,13 @@ const QUARTER_RATE_DIVISOR = 4;
 // cached wire fragments of despawned entities are swept once a minute
 const WIRE_CACHE_SWEEP_TICKS = 1200;
 const EVENT_RADIUS = 90;
+// A moderator entering /spectate is parked far outside any play space (GM, pet
+// stowed) while their snapshots re-anchor to the observed player.
+const SPECTATE_LIMBO_X = -10_000;
+const SPECTATE_LIMBO_Z = -10_000;
+// Max yards from an overworld point-of-interest for the admin live-location table to
+// name it as the player's nearest landmark.
+const ADMIN_LOCATION_POI_RADIUS = 32;
 const AUTOSAVE_SECONDS = 30;
 const SAVE_CONCURRENCY = 4;
 // Valid lockpicking action enums accepted from the client (anti-cheat: reject
@@ -172,6 +188,16 @@ export interface ClientSession {
   clientSeed: string;
   // Behavioral bot-detection state. Ephemeral — reset on every join.
   botTrackingContext: BotTrackingContext;
+  // Moderator spectate state: while set, this session's own entity is parked in
+  // limbo (GM, pet stowed) and its snapshots/events re-anchor to the observed
+  // character. Null when not spectating. Never persisted.
+  spectating: {
+    characterId: number;
+    name: string;
+    savedPos: { x: number; y: number; z: number };
+    priorGm: boolean;
+    stowedPet: PetState | null;
+  } | null;
 }
 
 interface SentEntityVersions {
@@ -206,6 +232,18 @@ export interface AdminLiveAura {
   duration: number;
 }
 
+export interface AdminLiveLocation {
+  kind: 'overworld' | 'dungeon' | 'delve';
+  zoneId: string | null;
+  zone: string;
+  instanceId: string | null;
+  instance: string | null;
+  instanceSlot: number | null;
+  poiIndex: number | null;
+  poi: string | null;
+  poiDistance: number | null;
+}
+
 export interface AdminLivePlayer {
   pid: number;
   accountId: number;
@@ -218,6 +256,7 @@ export interface AdminLivePlayer {
   x: number;
   z: number;
   zone: string;
+  location: AdminLiveLocation;
   sessionSeconds: number;
   lastSaveSecondsAgo: number;
   moveSpeedMultiplier: number;
@@ -414,18 +453,6 @@ function logSocialErr(err: unknown): void {
   console.error('social command failed:', err);
 }
 
-// Human-readable mute duration for player-facing notices ("10 minutes").
-function formatDuration(seconds: number): string {
-  const s = Math.max(1, Math.round(seconds));
-  if (s < 60) return `${s} second${s === 1 ? '' : 's'}`;
-  const m = Math.round(s / 60);
-  if (m < 60) return `${m} minute${m === 1 ? '' : 's'}`;
-  const h = Math.round(m / 60);
-  if (h < 24) return `${h} hour${h === 1 ? '' : 's'}`;
-  const d = Math.round(h / 24);
-  return `${d} day${d === 1 ? '' : 's'}`;
-}
-
 // Best-effort channel label for the violation log: the hard-word gate runs
 // before the message is routed, so infer the channel from its command prefix
 // (falling back to the player's last-used channel).
@@ -457,6 +484,7 @@ export class GameServer {
   private readonly ipBlockList = new IpBlockList();
   private readonly socialDb = new PgSocialDb(pool);
   readonly social: SocialService;
+  private readonly moderation: ModerationService<ClientSession>;
   private wireCache = new Map<number, EntityWireCache>();
   private lastWireSweepTick = 0;
   private interval: NodeJS.Timeout | null = null;
@@ -492,6 +520,13 @@ export class GameServer {
       raidResetMs: (nowMs) => nextRaidResetMs(nowMs, REALM_RESET_TIME_ZONE),
     });
     this.social = new SocialService(this.socialDb, this.socialTransport());
+    this.moderation = new ModerationService(this.moderationHost(), {
+      recordAction: (input) => recordInGameAction(input),
+      mute: (input) => muteAccountChatDb(input),
+      ban: (input) => moderateAccount({ ...input, action: 'ban' }),
+      suspend: (input) => moderateAccount({ ...input, action: 'suspend' }),
+      forceRename: (input) => forceCharacterRename(input),
+    });
   }
 
   // Returns the number of currently active WS sessions from the given IP.
@@ -542,6 +577,84 @@ export class GameServer {
     return null;
   }
 
+  // Live effects for the in-game moderation commands. Every action here is already
+  // gated on isAdmin twice (at the chat/cmd intercept AND inside the service), so
+  // the host itself trusts the caller. All account sanctions (ban/suspend/mute/
+  // forcerename) persist through moderation_db; kick/kill are audit-only.
+  private moderationHost(): ModerationHost<ClientSession> {
+    return {
+      sessionByName: (name) => this.sessionByName(name),
+      notice: (session, text) => this.sendChatNotice(session, text),
+      systemNotice: (session, text) => this.sendSystemNotice(session, text),
+      kick: (target) => {
+        void this.kickSession(target, 'moderation action', 'moderation action');
+      },
+      muteLive: (accountId, untilISO, reason) => this.muteAccountChat(accountId, untilISO, reason),
+      disconnect: (accountId, reason) => this.disconnectAccount(accountId, reason),
+      killEntity: (entityId) => {
+        const target = this.sim.entities.get(entityId);
+        if (!target || target.dead) return;
+        this.sim.dealDamage(null, target, target.maxHp + 1, false, 'physical', null, 'hit', true);
+      },
+      enterSpectate: (moderator, target) => this.enterSpectate(moderator, target),
+      exitSpectate: (moderator) => this.exitSpectate(moderator),
+    };
+  }
+
+  private enterSpectate(moderator: ClientSession, target: ClientSession): void {
+    const moderatorEntity = this.sim.entities.get(moderator.pid);
+    if (!moderatorEntity) return;
+
+    if (moderator.spectating) {
+      // Already spectating: re-target without a second stow/limbo round-trip.
+      moderator.spectating.characterId = target.characterId;
+      moderator.spectating.name = target.name;
+    } else {
+      const savedPos = { ...moderatorEntity.pos };
+      const priorGm = !!moderatorEntity.gm;
+      const stowedPet = this.sim.stowPetForSpectate(moderator.pid);
+      const limbo = this.sim.groundPos(SPECTATE_LIMBO_X, SPECTATE_LIMBO_Z);
+      moderatorEntity.pos = limbo;
+      moderatorEntity.prevPos = { ...limbo };
+      this.sim.grid.update(moderatorEntity);
+      this.sim.playerGrid.update(moderatorEntity);
+      this.sim.setGm(moderator.pid);
+      const meta = this.sim.meta(moderator.pid);
+      if (meta) Object.assign(meta.moveInput, emptyMoveInput());
+      moderator.spectating = { characterId: target.characterId, name: target.name, savedPos, priorGm, stowedPet };
+    }
+
+    // Force a fresh full snapshot from the new anchor's point of view.
+    moderator.lastSent = {};
+    moderator.sentEnts.clear();
+    this.send(moderator, { t: 'spectate', name: target.name });
+    this.sendSystemNotice(moderator, `Now spectating ${target.name}.`);
+  }
+
+  private exitSpectate(moderator: ClientSession, announce = true): void {
+    const state = moderator.spectating;
+    if (!state) {
+      if (announce) this.sendChatNotice(moderator, 'You are not spectating anyone.');
+      return;
+    }
+    const moderatorEntity = this.sim.entities.get(moderator.pid);
+    if (moderatorEntity) {
+      moderatorEntity.pos = { ...state.savedPos };
+      moderatorEntity.prevPos = { ...state.savedPos };
+      this.sim.grid.update(moderatorEntity);
+      this.sim.playerGrid.update(moderatorEntity);
+      // Restore the prior GM flag, or a spectating admin would stay permanently
+      // invulnerable after leaving spectate.
+      this.sim.setGm(moderator.pid, state.priorGm);
+      this.sim.restorePetAfterSpectate(moderator.pid, state.stowedPet);
+    }
+    moderator.spectating = null;
+    moderator.lastSent = {};
+    moderator.sentEnts.clear();
+    this.send(moderator, { t: 'spectate', name: null });
+    if (announce) this.sendSystemNotice(moderator, 'Stopped spectating.');
+  }
+
   // Live location + activity of an online character, for friend/guild rosters
   // and /who. A player inside any instance (dungeon or delve) reports the
   // instance name and the 'dungeon' status, not the overworld zone the instance
@@ -549,12 +662,15 @@ export class GameServer {
   private presenceOf(session: ClientSession): Presence {
     const e = this.sim.entities.get(session.pid);
     if (!e) return { zone: 'Unknown', status: 'online' };
-    const instanceZone = this.instanceZoneName(e);
+    // While spectating, the moderator's entity sits in limbo; report the saved
+    // pre-spectate position so friend/guild rosters never surface the GM void.
+    const pos = session.spectating?.savedPos ?? e.pos;
+    const instanceZone = this.instanceZoneName(e, pos);
     let status: PresenceStatus = 'online';
     if (e.dead) status = 'dead';
     else if (instanceZone != null) status = 'dungeon';
     else if (e.inCombat) status = 'combat';
-    return { zone: instanceZone ?? zoneAt(e.pos.z).name, status, x: e.pos.x, z: e.pos.z };
+    return { zone: instanceZone ?? zoneAt(pos.z).name, status, x: pos.x, z: pos.z };
   }
 
   private socialTransport(): SocialTransport {
@@ -934,6 +1050,7 @@ export class GameServer {
       isAdmin: meta.isAdmin ?? false,
       clientSeed: meta.clientSeed ?? '',
       botTrackingContext,
+      spectating: null,
     };
     this.ipSessionCounts.set(sessionIp, (this.ipSessionCounts.get(sessionIp) ?? 0) + 1);
     this.clients.set(pid, session);
@@ -1021,6 +1138,9 @@ export class GameServer {
 
   async leave(session: ClientSession, _reason: string): Promise<void> {
     if (session.left || !this.clients.has(session.pid)) return;
+    // Restore the moderator's own position/GM/pet before teardown so the save below
+    // persists the real character, not the limbo placeholder.
+    if (session.spectating) this.exitSpectate(session, false);
     session.left = true;
     this.clients.delete(session.pid);
     this.botDetector.releaseTrackingContext(session.botTrackingContext);
@@ -1074,6 +1194,12 @@ export class GameServer {
       const state = this.sim.serializeCharacter(session.pid);
       const e = this.sim.entities.get(session.pid);
       if (state && e) {
+        // An autosave taken mid-spectate would otherwise persist the limbo position
+        // and a null pet; write the saved pre-spectate position and stowed pet.
+        if (session.spectating) {
+          state.pos = { x: session.spectating.savedPos.x, z: session.spectating.savedPos.z };
+          state.pet = session.spectating.stowedPet;
+        }
         // Use the SERIALIZED level (not e.level): during a 2v2 Fiesta bout e.level
         // is temporarily 20, but serializeCharacter reports the real level — so the
         // character-list/leaderboard `level` column never reflects the temp state.
@@ -1171,6 +1297,84 @@ export class GameServer {
     };
   }
 
+  // Structured, admin-friendly location of an online character for the dashboard:
+  // classify overworld/dungeon/delve, resolve the zone, the instance name + stacked
+  // slot, and the nearest overworld point-of-interest within ADMIN_LOCATION_POI_RADIUS.
+  // Substitutes this-fork's data helpers for upstream's sim.instanceInfoAt (absent here):
+  // dungeonAt for the dungeon x-band, delveRunForPlayer for the authoritative delve run,
+  // and instances + instanceOrigin to recover which stacked dungeon slot the position is in.
+  private liveLocationFor(e: Entity): AdminLiveLocation {
+    const dungeonId = e.dungeonId ?? dungeonAt(e.pos.x)?.id ?? null;
+    if (dungeonId) {
+      const dungeon = DUNGEONS[dungeonId];
+      const zone = dungeon ? zoneAt(dungeon.doorPos.z) : zoneAt(e.pos.z);
+      // Dungeon instances of the same dungeon stack 500u apart in z (instanceOrigin);
+      // find the slot whose origin z is within half that spacing of the player.
+      let instanceSlot: number | null = null;
+      if (dungeon) {
+        for (const inst of this.sim.instances) {
+          if (inst.dungeonId !== dungeonId) continue;
+          if (Math.abs(instanceOrigin(dungeon.index, inst.slot).z - e.pos.z) <= 250) {
+            instanceSlot = inst.slot;
+            break;
+          }
+        }
+      }
+      return {
+        kind: 'dungeon',
+        zoneId: zone.id,
+        zone: zone.name,
+        instanceId: dungeonId,
+        instance: dungeon?.name ?? dungeonId,
+        instanceSlot,
+        poiIndex: null,
+        poi: null,
+        poiDistance: null,
+      };
+    }
+
+    const delveRun = this.sim.delveRunForPlayer(e.id);
+    if (delveRun) {
+      const delve = DELVES[delveRun.delveId];
+      const zone = delve ? zoneAt(delve.doorPos.z) : zoneAt(e.pos.z);
+      return {
+        kind: 'delve',
+        zoneId: zone.id,
+        zone: zone.name,
+        instanceId: delveRun.delveId,
+        instance: delve?.name ?? delveRun.delveId,
+        instanceSlot: delveRun.slot,
+        poiIndex: null,
+        poi: null,
+        poiDistance: null,
+      };
+    }
+
+    const zone = zoneAt(e.pos.z);
+    let bestIndex: number | null = null;
+    let bestDistance = ADMIN_LOCATION_POI_RADIUS;
+    for (let i = 0; i < zone.pois.length; i++) {
+      const poi = zone.pois[i];
+      const distance = Math.hypot(e.pos.x - poi.x, e.pos.z - poi.z);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestIndex = i;
+      }
+    }
+    const poi = bestIndex === null ? null : zone.pois[bestIndex];
+    return {
+      kind: 'overworld',
+      zoneId: zone.id,
+      zone: zone.name,
+      instanceId: null,
+      instance: null,
+      instanceSlot: null,
+      poiIndex: bestIndex,
+      poi: poi?.label ?? null,
+      poiDistance: poi ? round2(bestDistance) : null,
+    };
+  }
+
   liveSessions(): AdminLivePlayer[] {
     const now = Date.now();
     const players: AdminLivePlayer[] = [];
@@ -1178,7 +1382,8 @@ export class GameServer {
       const e = this.sim.entities.get(session.pid);
       const meta = this.sim.meta(session.pid);
       if (!e || !meta) continue;
-      const zone = this.instanceZoneName(e) ?? zoneAt(e.pos.z).name;
+      const location = this.liveLocationFor(e);
+      const zone = location.instance ?? location.zone;
       const moveSpeedMultiplier = round2((this.sim as any).moveSpeedMult(e));
       players.push({
         pid: session.pid,
@@ -1192,6 +1397,7 @@ export class GameServer {
         x: round2(e.pos.x),
         z: round2(e.pos.z),
         zone,
+        location,
         sessionSeconds: Math.round((now - session.joinedAt) / 1000),
         lastSaveSecondsAgo: Math.round((now - session.lastSave) / 1000),
         moveSpeedMultiplier,
@@ -1483,6 +1689,9 @@ export class GameServer {
     const sim = this.sim;
     const pid = session.pid;
     if (msg.t === 'input') {
+      // A spectating moderator's own entity is parked in limbo; ignore its movement
+      // intent so it never drifts (the client also suppresses input while spectating).
+      if (session.spectating) return;
       const meta = sim.meta(pid);
       const e = sim.entities.get(pid);
       if (!meta || !e) return;
@@ -1506,6 +1715,18 @@ export class GameServer {
         receivedAtMs,
       );
       return;
+    }
+    // While spectating, the only command a moderator may issue is chat: a
+    // moderation command (admin only), otherwise a blocked local-chat notice. Every
+    // other command (cast, target, move, trade, ...) is dropped server-side.
+    if (session.spectating) {
+      if (msg.cmd !== 'chat' || typeof msg.text !== 'string') return;
+      const text = msg.text.trim();
+      if (session.isAdmin && this.moderation.handleChatCommand(session, text)) return;
+      if (this.isSpectateLocalChat(session, text)) {
+        this.sendChatNotice(session, 'Local chat is unavailable while spectating.');
+        return;
+      }
     }
     this.botDetector.observeCommand(
       session.botTrackingContext,
@@ -1657,9 +1878,12 @@ export class GameServer {
         break;
       case 'chat': {
         if (typeof msg.text !== 'string') break;
+        const text = msg.text.trim();
+        // In-game moderation commands are intercepted before the mute / rate-limit
+        // gates (so an admin's own mute can't block a /kick) and are admin-only.
+        if (session.isAdmin && this.moderation.handleChatCommand(session, text)) break;
         if (this.isChatMuted(session)) break;
         if (!this.consumeChatToken(session)) break;
-        const text = msg.text.trim();
         const whoMatch = /^\/who(?:\s+([\s\S]+))?$/i.exec(text);
         if (whoMatch) {
           // Optional filter: "/who Mr" lists only players whose name OR zone
@@ -2173,60 +2397,85 @@ export class GameServer {
         const p = this.sim.entities.get(session.pid);
         const meta = this.sim.meta(session.pid);
         if (!p || !meta) return;
+        // A spectating moderator sees the world from the observed player's point of
+        // view: interest, self-wire and (below) events all re-anchor onto the target.
+        // If the target has gone, spectate ends and the moderator snaps back to self.
+        let anchorEntity = p;
+        let anchorMeta = meta;
+        let anchorSession = session;
+        if (session.spectating) {
+          const spectateName = session.spectating.name;
+          const target = this.sessionByCharacterId(session.spectating.characterId);
+          const targetEntity = target ? this.sim.entities.get(target.pid) : null;
+          const targetMeta = target ? this.sim.meta(target.pid) : null;
+          if (!target || target.left || !targetEntity || !targetMeta) {
+            this.exitSpectate(session, false);
+            this.sendChatNotice(session, `${spectateName} is no longer online; spectate ended.`);
+          } else {
+            anchorEntity = targetEntity;
+            anchorMeta = targetMeta;
+            anchorSession = target;
+          }
+        }
         const ents = this._bcastEnts;
         const keep = this._bcastKeep;
         const present = this._bcastPresent;
         ents.length = 0;
         keep.length = 0;
         present.clear();
-        this.sim.grid.forEachInRadius(p.pos.x, p.pos.z, INTEREST_QUERY_RADIUS, (e, d2) => {
-          if (e.id === session.pid) return;
-          if (!this.canObserveEntity(p, e, d2)) return;
-          const known = session.sentEnts.get(e.id);
-          // the viewer's current target stays in interest to the widest drop
-          // radius so its unit frame doesn't vanish mid-chase
-          const limitSq =
-            p.targetId === e.id
-              ? NPC_DROP_RADIUS * NPC_DROP_RADIUS
-              : interestLimitSq(e, known !== undefined);
-          if (d2 > limitSq) return;
-          present.add(e.id);
-          const cache = this.wireCacheFor(e);
-          if (known === undefined) {
-            // first sight carries the at-rest state exactly, so no settle
-            // record is owed until it moves again
-            ents.push(cache.fullJson);
-            session.sentEnts.set(e.id, {
-              idVer: cache.idVer,
-              dynVer: cache.dynVer,
-              sentAtTick: tick,
-              settled: true,
-            });
-            return;
-          }
-          if (known.idVer !== cache.idVer) {
-            ents.push(cache.fullJson);
-            known.idVer = cache.idVer;
+        this.sim.grid.forEachInRadius(
+          anchorEntity.pos.x,
+          anchorEntity.pos.z,
+          INTEREST_QUERY_RADIUS,
+          (e, d2) => {
+            if (e.id === anchorEntity.id) return;
+            if (!this.canObserveEntity(anchorEntity, e, d2)) return;
+            const known = session.sentEnts.get(e.id);
+            // the viewer's current target stays in interest to the widest drop
+            // radius so its unit frame doesn't vanish mid-chase
+            const limitSq =
+              anchorEntity.targetId === e.id
+                ? NPC_DROP_RADIUS * NPC_DROP_RADIUS
+                : interestLimitSq(e, known !== undefined);
+            if (d2 > limitSq) return;
+            present.add(e.id);
+            const cache = this.wireCacheFor(e);
+            if (known === undefined) {
+              // first sight carries the at-rest state exactly, so no settle
+              // record is owed until it moves again
+              ents.push(cache.fullJson);
+              session.sentEnts.set(e.id, {
+                idVer: cache.idVer,
+                dynVer: cache.dynVer,
+                sentAtTick: tick,
+                settled: true,
+              });
+              return;
+            }
+            if (known.idVer !== cache.idVer) {
+              ents.push(cache.fullJson);
+              known.idVer = cache.idVer;
+              known.dynVer = cache.dynVer;
+              known.sentAtTick = tick;
+              known.settled = false;
+              return;
+            }
+            if (
+              !isUpdateDue(tick, e, d2, anchorEntity, known.sentAtTick) ||
+              (known.dynVer === cache.dynVer && known.settled)
+            ) {
+              // not due at this distance tier yet, or unchanged and already
+              // settled: a bare id keeps it alive on the client
+              keep.push(e.id);
+              return;
+            }
+            // due, and either changed or owing its one settle record
+            known.settled = known.dynVer === cache.dynVer;
             known.dynVer = cache.dynVer;
             known.sentAtTick = tick;
-            known.settled = false;
-            return;
-          }
-          if (
-            !isUpdateDue(tick, e, d2, p, known.sentAtTick) ||
-            (known.dynVer === cache.dynVer && known.settled)
-          ) {
-            // not due at this distance tier yet, or unchanged and already
-            // settled: a bare id keeps it alive on the client
-            keep.push(e.id);
-            return;
-          }
-          // due, and either changed or owing its one settle record
-          known.settled = known.dynVer === cache.dynVer;
-          known.dynVer = cache.dynVer;
-          known.sentAtTick = tick;
-          ents.push(cache.liteJson);
-        });
+            ents.push(cache.liteJson);
+          },
+        );
         // forget entities that left interest, so a re-entry sends identity again
         for (const id of session.sentEnts.keys()) {
           if (!present.has(id)) session.sentEnts.delete(id);
@@ -2234,7 +2483,7 @@ export class GameServer {
         const keepJson = keep.length > 0 ? `,"keep":[${keep.join(',')}]` : '';
         this.sendRaw(
           session,
-          `${head},"self":${this.selfWireJson(session, p, meta)},"ents":[${ents.join(',')}]${keepJson}}`,
+          `${head},"self":${this.selfWireJson(session, anchorEntity, anchorMeta, anchorSession)},"ents":[${ents.join(',')}]${keepJson}}`,
         );
       },
       (err, session) =>
@@ -2303,7 +2552,15 @@ export class GameServer {
     }
   }
 
-  private selfWireJson(session: ClientSession, p: Entity, meta: PlayerMeta): string {
+  // `session` owns the wire (delta tracking, the socket); `p`/`meta`/`anchorSession`
+  // are the character being presented as self, which differs from `session` only
+  // while it spectates (then p/meta/anchorSession are the observed player's).
+  private selfWireJson(
+    session: ClientSession,
+    p: Entity,
+    meta: PlayerMeta,
+    anchorSession: ClientSession = session,
+  ): string {
     const self = wireEntity(p);
     Object.assign(self, {
       res: Math.round(p.resource * 10) / 10,
@@ -2328,7 +2585,8 @@ export class GameServer {
       eat: p.eating ? { remaining: round2(p.eating.remaining) } : null,
       drk: p.drinking ? { remaining: round2(p.drinking.remaining) } : null,
       opUntil: p.overpowerUntil > this.sim.time ? 1 : 0,
-      ack: session.lastInputSeq,
+      // A spectator sends no input, so ack 0 keeps its client's echo latency math idle.
+      ack: session.spectating ? 0 : anchorSession.lastInputSeq,
     });
     const json = JSON.stringify(self);
     // heavy, rarely-changing fields ride along only when their serialized
@@ -2346,7 +2604,7 @@ export class GameServer {
     maybe('inv', meta.inventory);
     maybe('buyback', meta.vendorBuyback);
     maybe('equip', meta.equipment);
-    maybe('cosmetics', session.accountCosmetics);
+    maybe('cosmetics', anchorSession.accountCosmetics);
     maybe('qlog', [...meta.questLog.values()]);
     maybe('qdone', [...meta.questsDone]);
     maybe('rep', meta.reputation);
@@ -2362,23 +2620,23 @@ export class GameServer {
     maybe('cds', Object.fromEntries([...p.cooldowns.entries()].map(([k, v]) => [k, round2(v)])));
     maybe('stats', p.stats);
     maybe('weapon', p.weapon);
-    maybe('party', this.partyWire(session.pid));
-    maybe('marks', this.markersWire(session.pid));
-    maybe('trade', this.tradeWire(session.pid));
-    maybe('duel', this.duelWire(session.pid));
-    maybe('arena', this.sim.arenaInfoFor(session.pid));
+    maybe('party', this.partyWire(anchorSession.pid));
+    maybe('marks', this.markersWire(anchorSession.pid));
+    maybe('trade', this.tradeWire(anchorSession.pid));
+    maybe('duel', this.duelWire(anchorSession.pid));
+    maybe('arena', this.sim.arenaInfoFor(anchorSession.pid));
     // market info is null unless the player is standing at the Merchant, so it
     // only rides the wire for players actually browsing the World Market
-    maybe('market', this.sim.marketInfoFor(session.pid));
+    maybe('market', this.sim.marketInfoFor(anchorSession.pid));
     // open need-greed rolls this player can still answer, so a client that
     // missed the transient lootRoll event re-shows the prompt from state
-    maybe('lroll', this.sim.activeLootRolls(session.pid));
-    maybe('drun', this.sim.delveRunWire(session.pid));
-    maybe('dcompanion', this.sim.delveCompanionWire(session.pid));
-    maybe('dmarks', this.sim.delveMarksFor(session.pid));
-    maybe('dcomp', this.sim.companionUpgradesFor(session.pid));
-    maybe('dclears', this.sim.delveClearsFor(session.pid));
-    maybe('delveDaily', this.sim.delveDailyWire(session.pid));
+    maybe('lroll', this.sim.activeLootRolls(anchorSession.pid));
+    maybe('drun', this.sim.delveRunWire(anchorSession.pid));
+    maybe('dcompanion', this.sim.delveCompanionWire(anchorSession.pid));
+    maybe('dmarks', this.sim.delveMarksFor(anchorSession.pid));
+    maybe('dcomp', this.sim.companionUpgradesFor(anchorSession.pid));
+    maybe('dclears', this.sim.delveClearsFor(anchorSession.pid));
+    maybe('delveDaily', this.sim.delveDailyWire(anchorSession.pid));
     // talents/spec/loadouts ride the wire only when they change (PR-5: never
     // every snapshot). The client recomputes its known abilities from this.
     maybe('tal', {
@@ -2402,7 +2660,10 @@ export class GameServer {
         .map((mPid) => {
           const meta = this.sim.meta(mPid);
           const e = this.sim.entities.get(mPid);
-          return meta && e
+          // A party member who is spectating sits in limbo; show their saved
+          // pre-spectate position on the map instead of the GM void.
+          const pos = this.clients.get(mPid)?.spectating?.savedPos ?? e?.pos;
+          return meta && e && pos
             ? {
                 pid: mPid,
                 name: meta.name,
@@ -2413,8 +2674,8 @@ export class GameServer {
                 res: Math.round(e.resource),
                 mres: e.maxResource,
                 rtype: e.resourceType,
-                x: round2(e.pos.x),
-                z: round2(e.pos.z),
+                x: round2(pos.x),
+                z: round2(pos.z),
                 dead: e.dead ? 1 : 0,
                 inCombat: e.inCombat ? 1 : 0,
                 group: party.raidGroups.get(mPid) ?? 1,
@@ -2466,18 +2727,57 @@ export class GameServer {
       (session) => {
         const p = this.sim.entities.get(session.pid);
         if (!p) return;
+        // While spectating, world/target events anchor on the observed player. The
+        // moderator still receives their OWN private chat (whisper/party/guild) but
+        // NOT the target's private chat: only the target's public say/yell is shown.
+        let anchorPid = session.pid;
+        let anchorPos = p.pos;
+        if (session.spectating) {
+          const target = this.sessionByCharacterId(session.spectating.characterId);
+          const targetEntity = target ? this.sim.entities.get(target.pid) : null;
+          if (!target || target.left || !targetEntity) return;
+          anchorPid = target.pid;
+          anchorPos = targetEntity.pos;
+        }
         const mine: SimEvent[] = [];
         for (const ev of events) {
           // ignore list: drop chat originating from a character this player has
           // blocked, before it ever reaches their client
           if (
+            !session.spectating &&
             ev.type === 'chat' &&
             session.blockedIds.size > 0 &&
             this.isBlockedSender(session, ev.fromPid)
           )
             continue;
           if (ev.pid !== undefined) {
-            if (ev.pid === session.pid) {
+            // The moderator's own private chat still reaches them while spectating
+            // (their public say/yell would go nowhere from limbo, so it is dropped).
+            if (
+              session.spectating &&
+              ev.pid === session.pid &&
+              ev.type === 'chat' &&
+              ev.channel !== 'say' &&
+              ev.channel !== 'yell'
+            ) {
+              if (this.isBlockedSender(session, ev.fromPid)) continue;
+              mine.push(ev);
+              if (ev.channel === 'whisper' && ev.to === undefined && ev.fromPid !== session.pid) {
+                session.lastWhisperFrom = ev.from;
+              }
+              this.botDetector.observeEvent(session.botTrackingContext, ev, eventTime);
+              continue;
+            }
+            if (ev.pid === anchorPid) {
+              // Never leak the observed player's private chat to the moderator.
+              if (
+                session.spectating &&
+                ev.type === 'chat' &&
+                ev.channel !== 'say' &&
+                ev.channel !== 'yell'
+              ) {
+                continue;
+              }
               mine.push(ev);
               // remember the last person to whisper us, for /r reply (the
               // recipient copy of a whisper has no `to`; the sender echo does)
@@ -2485,17 +2785,20 @@ export class GameServer {
                 ev.type === 'chat' &&
                 ev.channel === 'whisper' &&
                 ev.to === undefined &&
-                ev.fromPid !== session.pid
+                ev.fromPid !== session.pid &&
+                !session.spectating
               ) {
                 session.lastWhisperFrom = ev.from;
               }
-              this.botDetector.observeEvent(session.botTrackingContext, ev, eventTime);
+              if (!session.spectating) {
+                this.botDetector.observeEvent(session.botTrackingContext, ev, eventTime);
+              }
             }
             continue;
           }
-          // world events: only those near this player
+          // world events: only those near this player (the observed player while spectating)
           const anchor = this.eventAnchor(ev);
-          if (anchor === null || dist2d(p.pos, anchor) <= EVENT_RADIUS) {
+          if (anchor === null || dist2d(anchorPos, anchor) <= EVENT_RADIUS) {
             mine.push(ev);
           }
         }
@@ -2615,6 +2918,21 @@ export class GameServer {
   // client already renders for rate-limit / cooldown messages).
   private sendChatNotice(session: ClientSession, text: string): void {
     this.send(session, { t: 'events', list: [{ type: 'error', text }] });
+  }
+
+  // Gold system-log line for moderation confirmations (mirrors the classic system
+  // message color). The text is server English re-localized client-side via server_i18n.
+  private sendSystemNotice(session: ClientSession, text: string): void {
+    this.send(session, { t: 'events', list: [{ type: 'log', text, color: '#ffd100' }] });
+  }
+
+  // True when a spectating moderator's chat would target local (say/yell) chat,
+  // which is unavailable from limbo: an explicit /s|/say|/y|/yell, or plain text
+  // while their remembered channel is say/yell.
+  private isSpectateLocalChat(session: ClientSession, text: string): boolean {
+    if (/^\/(?:s|say|y|yell)(?:\s|$)/i.test(text)) return true;
+    if (text.startsWith('/')) return false;
+    return session.rememberedChat.channel === 'say' || session.rememberedChat.channel === 'yell';
   }
 
   /**

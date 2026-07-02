@@ -66,6 +66,18 @@ export interface Overview {
   usage: ProviderUsageSnapshot;
 }
 
+export interface LivePlayerLocation {
+  kind: 'overworld' | 'dungeon' | 'delve';
+  zoneId: string | null;
+  zone: string;
+  instanceId: string | null;
+  instance: string | null;
+  instanceSlot: number | null;
+  poiIndex: number | null;
+  poi: string | null;
+  poiDistance: number | null;
+}
+
 export interface LivePlayer {
   pid: number;
   accountId: number;
@@ -78,6 +90,7 @@ export interface LivePlayer {
   x: number;
   z: number;
   zone: string;
+  location?: LivePlayerLocation;
   sessionSeconds: number;
   lastSaveSecondsAgo: number;
   moveSpeedMultiplier: number;

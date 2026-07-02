@@ -1,5 +1,6 @@
 import { escapeHtml, fmtCopper, fmtDate, fmtDuration, fmtNumber, fmtPercent, fmtRelative } from './format';
 import { classLabel, zoneLabel, t } from './i18n';
+import { locationDisplay } from './location';
 import type {
   AccountDetail, AccountRow, BlockedIpsData, BlockedIpRow, BugReportRow, CharacterRow, ChatFilterData, ChatModeratedAccount,
   ChatModerationDetail, FilterWord, LivePlayer, ModerationAccountDetail, ModerationQueueRow,
@@ -9,6 +10,20 @@ import type {
 // Pure HTML-string renderers for the dashboard tables. All dynamic values go
 // through escapeHtml — usernames and character names are player-controlled.
 
+// Location cell: user-friendly coords with a hover tooltip breaking down type/zone/
+// instance/slot/nearest-landmark/distance. Every dynamic value (labels can fall back
+// to raw server strings) passes through escapeHtml.
+function renderLocationCell(p: LivePlayer): string {
+  const display = locationDisplay({ location: p.location, x: p.x, z: p.z, zone: p.zone });
+  const details = display.details.map((d) => `<span>${escapeHtml(d)}</span>`).join('');
+  return `<td class="num">
+      <span class="location-cell" aria-label="${escapeHtml(display.details.join('. '))}">
+        <span class="location-coords">${escapeHtml(display.secondary)}</span>
+        <span class="location-tooltip">${details}</span>
+      </span>
+    </td>`;
+}
+
 export function renderOnlineTable(players: LivePlayer[]): string {
   if (players.length === 0) return `<div class="empty">${t('online.empty')}</div>`;
   const rows = players.map((p) => `
@@ -17,7 +32,7 @@ export function renderOnlineTable(players: LivePlayer[]): string {
       <td>${escapeHtml(classLabel(p.class))}</td>
       <td class="num">${p.level}</td>
       <td>${escapeHtml(zoneLabel(p.zone))}</td>
-      <td class="num">${Math.round(p.x)}, ${Math.round(p.z)}</td>
+      ${renderLocationCell(p)}
       <td class="num">${p.hp}/${p.maxHp}</td>
       <td class="num">${fmtDuration(p.sessionSeconds)}</td>
       <td class="num">${fmtDuration(p.lastSaveSecondsAgo)} ${t('common.ago')}</td>

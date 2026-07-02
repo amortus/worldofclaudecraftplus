@@ -13,7 +13,7 @@ import {
   type TalentAllocation,
   talentPointsAtLevel,
 } from '../sim/content/talents';
-import { abilitiesKnownAt, NPCS, resolveDelveShopOffers } from '../sim/data';
+import { abilitiesKnownAt, CLASSES, NPCS, resolveDelveShopOffers } from '../sim/data';
 import { LEADERBOARD_PAGE_SIZE } from '../sim/leaderboard_page';
 import type { Ante, PickAction } from '../sim/lockpick';
 import type { MarketQuery } from '../sim/market_query';
@@ -726,6 +726,14 @@ export class ClientWorld implements IWorld {
     return (this._entityGrid ??= new SpatialGrid());
   }
   playerId = -1;
+  // The moderator's OWN player id/class, preserved across spectate so clearing
+  // spectate can restore self identity immediately. playerId itself follows the
+  // observed player while spectating.
+  private ownPlayerId = -1;
+  private readonly ownPlayerClass: PlayerClass;
+  // Name of the character this client is spectating, or null. Presented to the UI
+  // (spectate badge); while set, input/commands are suppressed and self is the target.
+  spectating: string | null = null;
   moveInput: MoveInput = emptyMoveInput();
   inventory: InvSlot[] = [];
   vendorBuyback: InvSlot[] = [];
@@ -806,12 +814,17 @@ export class ClientWorld implements IWorld {
   private pendingInputSeqSentAt = new Map<number, number>();
   private ackedInputSeq = 0;
   private inputEchoSamples: number[] = [];
+  // On a spectate start (or a target respawn), seed the camera yaw from the target's
+  // facing once so the moderator does not snap to a stale heading.
+  private spectateFacingPending = false;
+  private pendingSpectateFacing: number | null = null;
 
   constructor(token: string, characterId: number, cls: PlayerClass, base = '', clientSeed = '') {
     this.characterId = characterId;
     this.token = token;
     this.base = normalizeOrigin(base) || NATIVE_API_ORIGIN;
     this.clientSeed = clientSeed;
+    this.ownPlayerClass = cls;
     this.cfg = { seed: 20061, playerClass: cls };
     // when a realm was picked, connect to that realm's origin; otherwise the
     // page's own host
@@ -867,6 +880,14 @@ export class ClientWorld implements IWorld {
     return samples;
   }
 
+  // One-shot camera yaw to apply when spectate starts or the target respawns, so the
+  // moderator's camera faces the observed player's heading instead of a stale one.
+  consumeSpectateFacing(): number | null {
+    const facing = this.pendingSpectateFacing;
+    this.pendingSpectateFacing = null;
+    return facing;
+  }
+
   // -----------------------------------------------------------------------
   // Socket
   // -----------------------------------------------------------------------
@@ -888,7 +909,14 @@ export class ClientWorld implements IWorld {
   }
 
   private sendInput(now = performance.now(), changedOnly = false): boolean {
-    if (!this.connected || this.ws.readyState !== WebSocket.OPEN) return false;
+    // A spectating moderator streams no movement intent; the server ignores it anyway.
+    if (
+      typeof this.spectating === 'string' ||
+      !this.connected ||
+      this.ws.readyState !== WebSocket.OPEN
+    ) {
+      return false;
+    }
     const sig = this.inputSignature();
     if (changedOnly) {
       if (sig === this.lastInputSig) return false;
@@ -927,6 +955,9 @@ export class ClientWorld implements IWorld {
   }
 
   private cmd(payload: Record<string, unknown>): void {
+    // While spectating, only chat may be sent (moderation commands / blocked-local
+    // notice); every other command is dropped client-side too (server also rejects).
+    if (typeof this.spectating === 'string' && payload.cmd !== 'chat') return;
     if (!this.canSendCommand()) return;
     this.ws.send(JSON.stringify({ t: 'cmd', ...payload }));
   }
@@ -945,6 +976,7 @@ export class ClientWorld implements IWorld {
     }
     if (msg.t === 'hello') {
       this.playerId = msg.pid;
+      this.ownPlayerId = msg.pid;
       this.cfg.seed = msg.seed;
       if (typeof msg.realm === 'string') this.realm = msg.realm;
       if (Array.isArray(msg.softWords)) {
@@ -954,6 +986,22 @@ export class ClientWorld implements IWorld {
         this.profanityDirty = true;
       }
       this.connected = true;
+      return;
+    }
+    if (msg.t === 'spectate') {
+      // Server toggles spectate on/off. On start, self becomes the observed player
+      // (playerId follows snap.self.id); on clear, restore our own id and class.
+      this.spectating = typeof msg.name === 'string' ? msg.name : null;
+      this.spectateFacingPending = true;
+      this.pendingSpectateFacing = null;
+      this.pendingInputSeqSentAt.clear();
+      this.inputEchoSamples = [];
+      if (typeof this.spectating !== 'string') {
+        this.playerId = this.ownPlayerId;
+        this.cfg.playerClass = this.ownPlayerClass;
+      }
+      Object.assign(this.moveInput, emptyMoveInput());
+      this.mouselookFacing = null;
       return;
     }
     if (msg.t === 'censor') {
@@ -1040,6 +1088,12 @@ export class ClientWorld implements IWorld {
 
   private applySnapshot(snap: any): void {
     const now = performance.now();
+    // While spectating, the server presents the observed player's entity as self;
+    // adopt its id so all the self-anchored logic below (facing follow, self render)
+    // tracks the target rather than our own limbo entity.
+    if (typeof this.spectating === 'string' && typeof snap.self?.id === 'number') {
+      this.playerId = snap.self.id;
+    }
     // the interpolation alpha the render loop reached on its last frame
     // (same formula and caps as main.ts); used below to re-anchor the new
     // interpolation segment at the pose currently on screen
@@ -1056,6 +1110,7 @@ export class ClientWorld implements IWorld {
     const seen = new Set<number>();
     const prevSelf = this.entities.get(this.playerId);
     const prevSelfFacing = prevSelf?.facing;
+    const prevSelfDead = prevSelf?.dead ?? false;
 
     const applyWire = (w: any): Entity | null => {
       let e = this.entities.get(w.id);
@@ -1232,6 +1287,18 @@ export class ClientWorld implements IWorld {
     const s = snap.self;
     const e = s ? applyWire(s) : null;
     if (s && e) {
+      // Mirror the observed player's class so their abilities/UI render correctly.
+      if (typeof this.spectating === 'string' && e.kind === 'player' && e.templateId in CLASSES) {
+        this.cfg.playerClass = e.templateId as PlayerClass;
+      }
+      // Seed the camera yaw from the target's facing on spectate start, and again
+      // when the observed player respawns (was dead, now alive).
+      if (this.spectateFacingPending) {
+        this.pendingSpectateFacing = e.facing;
+        this.spectateFacingPending = false;
+      } else if (typeof this.spectating === 'string' && prevSelf && prevSelfDead && !e.dead) {
+        this.pendingSpectateFacing = e.facing;
+      }
       seen.add(s.id);
       if (typeof s.ack === 'number' && s.ack > this.ackedInputSeq) {
         for (let seq = this.ackedInputSeq + 1; seq <= s.ack; seq++) {
@@ -1343,6 +1410,12 @@ export class ClientWorld implements IWorld {
     const missingSince = this.missingSince;
     for (const [id, e] of this.entities) {
       if (id === this.playerId) continue;
+      // Keep the moderator's own entity alive (never pruned) while a different player
+      // is presented as self, so clearing spectate can restore self instantly.
+      if (typeof this.spectating === 'string' && id === this.ownPlayerId) {
+        missingSince.delete(id);
+        continue;
+      }
       if (seen.has(id)) {
         missingSince.delete(id);
         continue;

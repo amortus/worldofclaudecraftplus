@@ -792,6 +792,11 @@ export class Renderer {
   private cullCharacters = false;
   private selfRenderPosition = new THREE.Vector3();
   private selfRenderPositionReady = false;
+  // The player id treated as "self" last frame. When it changes (a moderator
+  // entering/leaving spectate swaps the presented-self entity), the smoothed
+  // self-render position and facing override must reset so the camera does not
+  // interpolate across the teleport between two different characters.
+  private lastSelfId: number | null = null;
   // Last yaw applied to the local player while the camera was driving its facing
   // (mouselook / mouse-camera). Null when the override is disengaged, so the next
   // engage re-seeds from the live interpolated facing instead of snapping. See
@@ -3667,6 +3672,11 @@ export class Renderer {
     sharedUniforms.uTime.value = this.time;
     const sim = this.sim;
     const p = sim.player;
+    if (this.lastSelfId !== p.id) {
+      this.lastSelfId = p.id;
+      this.selfRenderPositionReady = false;
+      this.selfFacingOverride = null;
+    }
     const now = performance.now();
     const selfPos = this.updateSelfRenderPosition(alpha, dt, selfAlphaLead);
     markPhase('setup');
@@ -3749,6 +3759,16 @@ export class Renderer {
       const cdx = e.pos.x - p.pos.x,
         cdz = e.pos.z - p.pos.z;
       const d2 = cdx * cdx + cdz * cdz;
+      const isSelf = id === p.id;
+      if (isSelf) {
+        // The presented-self rig always renders near, shadowed, and un-culled — while
+        // spectating the observed player IS self, so its distance from the parked own
+        // entity is irrelevant.
+        v.group.visible = true;
+        v.isFar = false;
+        v.visual?.setShadow(true);
+        v.visual?.setProxyShadow(false);
+      }
       if (id !== p.id) {
         // Per-frame visibility uses the SAME 80/96 hysteresis as view
         // create/destroy (above) so a rig hovering right at the 80yd draw edge
@@ -3791,7 +3811,6 @@ export class Renderer {
       // each interpolates on its own clock so they move smoothly instead of
       // freezing and dashing once per update (self keeps the global alpha
       // the camera follow uses)
-      const isSelf = e.id === p.id;
       const ea =
         e.id !== p.id && e.netUpdatedAt !== undefined && e.netInterval !== undefined
           ? Math.min(1.25, (now - e.netUpdatedAt) / Math.max(20, e.netInterval))

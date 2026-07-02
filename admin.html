@@ -111,6 +111,13 @@
   tbody tr:hover { background: var(--row-hover); }
   tr.clickable { cursor: pointer; }
   td.num, th.num { text-align: right; }
+  /* online-players live location cell: coords with a hover detail tooltip */
+  .location-cell { position: relative; display: inline-flex; flex-direction: column; align-items: flex-end; min-width: 78px; cursor: help; }
+  .location-coords { color: var(--text); font-variant-numeric: tabular-nums; }
+  .location-tooltip { position: absolute; right: 0; top: calc(100% + 7px); z-index: 4; display: none; flex-direction: column; gap: 3px; min-width: 210px; max-width: 280px; padding: 8px 10px; text-align: left; white-space: normal; color: var(--text); background: #0d0d14; border: 1px solid var(--border); border-radius: 4px; box-shadow: 0 8px 18px #000c; }
+  .location-tooltip::before { content: ""; position: absolute; top: -5px; right: 14px; width: 8px; height: 8px; background: #0d0d14; border-left: 1px solid var(--border); border-top: 1px solid var(--border); transform: rotate(45deg); }
+  .location-cell:hover .location-tooltip, .location-tooltip:hover { display: flex; }
+  @media (max-width: 760px) { .location-cell { min-width: 70px; } }
   .table-scroll { overflow-x: auto; }
   .usage-table { min-width: 720px; }
   .usage-section + .usage-section { margin-top: 14px; }

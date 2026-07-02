@@ -2039,9 +2039,9 @@ export class Sim {
 
   // Mark a player as a GM: invulnerable (see dealDamage). Server-side only —
   // set at join time from the characters.is_gm column.
-  setGm(pid?: number): void {
+  setGm(pid?: number, enabled = true): void {
     const r = this.resolve(pid);
-    if (r) r.e.gm = true;
+    if (r) r.e.gm = enabled;
   }
 
   // Dev/test convenience: jump a player to a level (learns abilities, recalcs stats).
@@ -16342,6 +16342,23 @@ export class Sim {
     const e = this.entities.get(pid);
     if (!e || this.petOf(pid, true)) return;
     this.restorePet(e, state);
+  }
+
+  // Moderator spectate pet-park: despawn the moderator's pet while they observe a
+  // player, returning the snapshot for the GameServer session to hold (not the
+  // delvePetStash, which the delve round-trip owns). Deterministic and server-only.
+  stowPetForSpectate(ownerPid: number): PetState | null {
+    const pet = this.petOf(ownerPid, true);
+    if (!pet) return null;
+    const state = this.serializePet(ownerPid);
+    this.despawnPersistentPet(pet);
+    return state;
+  }
+
+  restorePetAfterSpectate(ownerPid: number, state: PetState | null): void {
+    if (!state || this.petOf(ownerPid, true)) return;
+    const owner = this.entities.get(ownerPid);
+    if (owner) this.restorePet(owner, state);
   }
 
   private canEnterDelve(pid: number): string | null {

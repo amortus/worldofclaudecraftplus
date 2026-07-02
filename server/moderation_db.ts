@@ -2,7 +2,7 @@ import { pool } from './db';
 
 export const REPORT_REASONS = ['harassment', 'spam', 'cheating', 'offensive_name_or_chat', 'other'] as const;
 export type ReportReason = typeof REPORT_REASONS[number];
-export type ModerationAction = 'ignore' | 'suspend' | 'ban' | 'unban';
+export type ModerationAction = 'ignore' | 'kick' | 'kill' | 'suspend' | 'ban' | 'unban';
 
 const REPORT_DETAILS_MAX = 1000;
 const ACTION_REASON_MAX = 500;
@@ -360,6 +360,26 @@ export async function moderateAccount(input: {
   } finally {
     client.release();
   }
+}
+
+// Audit-only record for an in-game action whose live effect is owned by the
+// GameServer (kick/kill). Unlike ban/suspend it changes no persistent account
+// state, so it is a single additive INSERT: no account update, no report
+// resolution, expires_at NULL. account_moderation_actions.action is free-text SQL,
+// so the new 'kick'/'kill' values are back-compat (no reader enumerates the column).
+export async function recordInGameAction(input: {
+  action: 'kick' | 'kill';
+  accountId: number;
+  adminAccountId: number;
+  reason: unknown;
+}): Promise<void> {
+  const reason = cleanText(input.reason, ACTION_REASON_MAX);
+  if (!reason) throw new Error('moderation reason is required');
+  await pool.query(
+    `INSERT INTO account_moderation_actions (account_id, admin_account_id, action, reason, expires_at)
+     VALUES ($1, $2, $3, $4, NULL)`,
+    [input.accountId, input.adminAccountId, input.action, reason],
+  );
 }
 
 export async function muteAccountChat(input: {
