@@ -225,16 +225,15 @@ import { lowResourceView } from './low_resource';
 import { overworldDungeonPortals } from './map_dungeon_portals';
 import { type MapRegion, mapCanvasHeight, paintTerrainRows } from './map_terrain';
 import {
-  filterMarketListings,
   MARKET_ARMOR_TYPE_FILTERS,
   MARKET_ITEM_TYPE_FILTERS,
   MARKET_PAGE_SIZE,
   MARKET_RARITY_FILTERS,
   MARKET_WEAPON_TYPE_FILTERS,
   type MarketItemTypeFilter,
+  type MarketQuery,
   type MarketRarityFilter,
   type MarketSubtypeFilter,
-  paginateMarketListings,
 } from './market_filters';
 import { Meters } from './meters';
 import {
@@ -8606,7 +8605,7 @@ export class Hud {
     this.marketBrowsePage = 0;
     this.marketSellItem = null;
     this.marketSearchQuery = '';
-    this.sim.marketSearch('');
+    this.pushMarketQuery();
     this.lastMarketSig = '';
     this.renderMarket();
     $('#market-window').style.display = 'flex';
@@ -8639,6 +8638,25 @@ export class Hud {
 
   private bagCount(itemId: string): number {
     return this.sim.inventory.filter((s) => s.itemId === itemId).reduce((n, s) => n + s.count, 0);
+  }
+
+  /** The current browse query (search + filters + page) the UI sends to the server. */
+  private currentMarketQuery(): MarketQuery {
+    return {
+      search: this.marketSearchQuery,
+      itemType: this.marketItemTypeFilter,
+      subtype: this.marketSubtypeFilter,
+      rarity: this.marketRarityFilter,
+      page: this.marketBrowsePage,
+    };
+  }
+
+  // Push the current query to the server, which filters + paginates the whole market
+  // and streams back the matching page. Offline (Sim) this resolves synchronously, so
+  // the snapshot is up to date by the next render; online it round-trips and the
+  // per-frame refreshMarket repaints when the new page arrives.
+  private pushMarketQuery(): void {
+    this.sim.marketSearch(this.currentMarketQuery());
   }
 
   private marketItemTypeLabelKey(filter: MarketItemTypeFilter): TranslationKey {
@@ -8865,6 +8883,7 @@ export class Hud {
         } else {
           return;
         }
+        this.pushMarketQuery(); // filtering is server-side now, so the query must round-trip
         this.lastMarketSig = '';
         audio.click();
         this.renderMarket();
@@ -8889,6 +8908,8 @@ export class Hud {
       info?.listings,
       info?.totalCount,
       info?.filter,
+      info?.page,
+      info?.pageCount,
       info?.collectionCopper,
       info?.collectionItems,
     ]);
@@ -8935,7 +8956,7 @@ export class Hud {
         if (!search) return;
         this.marketSearchQuery = search.value;
         this.marketBrowsePage = 0;
-        this.sim.marketSearch(search.value);
+        this.pushMarketQuery();
       });
       body.appendChild(search);
       list = document.createElement('div');
@@ -8947,39 +8968,51 @@ export class Hud {
       search.value = this.marketSearchQuery;
     }
     list.innerHTML = '';
-    if (info.listings.length === 0) {
+    // The server already filtered (search + type/subtype/rarity) and paginated, so
+    // info.listings IS the page to show: the viewer's own listings (always wired, for
+    // reclaim) plus one page of other sellers' listings. Drop any listing whose item we
+    // no longer know before counting/rendering.
+    const rows: { l: MarketInfo['listings'][number]; item: ItemDef }[] = [];
+    for (const l of info.listings) {
+      const item = ITEMS[l.itemId];
+      if (!item) continue;
+      rows.push({ l, item });
+    }
+    if (rows.length === 0) {
+      this.marketBrowsePage = 0;
+      const filtersActive =
+        this.marketItemTypeFilter !== 'all' ||
+        this.marketSubtypeFilter !== 'all' ||
+        this.marketRarityFilter !== 'all';
       const empty = document.createElement('div');
       empty.className = 'mkt-empty';
       empty.textContent = info.filter.trim()
         ? t('itemUi.market.emptySearch')
-        : t('itemUi.market.emptyBrowse');
+        : filtersActive
+          ? t('itemUi.market.emptyFiltered')
+          : t('itemUi.market.emptyBrowse');
       list.appendChild(empty);
       return;
     }
-    const listings = filterMarketListings(info.listings, {
-      itemType: this.marketItemTypeFilter,
-      subtype: this.marketSubtypeFilter,
-      rarity: this.marketRarityFilter,
-    });
-    if (listings.length === 0) {
-      this.marketBrowsePage = 0;
-      const empty = document.createElement('div');
-      empty.className = 'mkt-empty';
-      empty.textContent = t('itemUi.market.emptyFiltered');
-      list.appendChild(empty);
-      return;
+    this.marketBrowsePage = info.page;
+    // The range note describes the paged OTHER listings; the viewer's own listings ride
+    // on top of every page and are not counted in the range, so subtracting them from
+    // totalCount (mine + others) yields the true count of paged others. On a page with
+    // no others (e.g. only the viewer's own listings match) the note is skipped.
+    const othersOnPage = rows.reduce((n, r) => n + (r.l.mine ? 0 : 1), 0);
+    const mineOnPage = rows.length - othersOnPage;
+    const othersTotal = info.totalCount - mineOnPage;
+    const start = info.page * MARKET_PAGE_SIZE;
+    const end = start + othersOnPage;
+    if (end > start) {
+      const note = document.createElement('div');
+      note.className = 'mkt-note';
+      const shown = `${formatNumber(start + 1, { maximumFractionDigits: 0 })}-${formatNumber(end, { maximumFractionDigits: 0 })}`;
+      const total = formatNumber(othersTotal, { maximumFractionDigits: 0 });
+      note.textContent = t('itemUi.market.pageRange', { shown, total });
+      list.appendChild(note);
     }
-    const page = paginateMarketListings(listings, this.marketBrowsePage, MARKET_PAGE_SIZE);
-    this.marketBrowsePage = page.page;
-    const note = document.createElement('div');
-    note.className = 'mkt-note';
-    const shown = `${formatNumber(page.start + 1, { maximumFractionDigits: 0 })}-${formatNumber(page.end, { maximumFractionDigits: 0 })}`;
-    const total = formatNumber(page.total, { maximumFractionDigits: 0 });
-    note.textContent = t('itemUi.market.pageRange', { shown, total });
-    list.appendChild(note);
-    for (const l of page.items) {
-      const item = ITEMS[l.itemId];
-      if (!item) continue;
+    for (const { l, item } of rows) {
       const qColor = QUALITY_COLOR[item.quality ?? 'common'] ?? '#fff';
       const row = document.createElement('div');
       row.className = 'mkt-row';
@@ -9019,19 +9052,23 @@ export class Hud {
     // Encode any not-yet-cached item icons during idle and swap them in, so a 50-row
     // page open is a cheap placeholder paint instead of a synchronous toDataURL burst.
     this.fillAsyncIcons(list);
-    if (page.pageCount > 1) {
+    if (info.pageCount > 1) {
       const pager = document.createElement('div');
       pager.className = 'mkt-page';
-      const pageNumber = formatNumber(page.page + 1, { maximumFractionDigits: 0 });
-      const pageCount = formatNumber(page.pageCount, { maximumFractionDigits: 0 });
+      const pageNumber = formatNumber(info.page + 1, { maximumFractionDigits: 0 });
+      const pageCount = formatNumber(info.pageCount, { maximumFractionDigits: 0 });
       pager.innerHTML =
-        `<button type="button" class="mkt-page-btn" data-market-page="prev"${page.page <= 0 ? ' disabled' : ''} aria-label="${esc(t('itemUi.market.pagePrevAria'))}">${esc(t('itemUi.market.pagePrev'))}</button>` +
+        `<button type="button" class="mkt-page-btn" data-market-page="prev"${info.page <= 0 ? ' disabled' : ''} aria-label="${esc(t('itemUi.market.pagePrevAria'))}">${esc(t('itemUi.market.pagePrev'))}</button>` +
         `<span class="mkt-page-info">${esc(t('itemUi.market.pageStatus', { current: pageNumber, total: pageCount }))}</span>` +
-        `<button type="button" class="mkt-page-btn" data-market-page="next"${page.page >= page.pageCount - 1 ? ' disabled' : ''} aria-label="${esc(t('itemUi.market.pageNextAria'))}">${esc(t('itemUi.market.pageNext'))}</button>`;
+        `<button type="button" class="mkt-page-btn" data-market-page="next"${info.page >= info.pageCount - 1 ? ' disabled' : ''} aria-label="${esc(t('itemUi.market.pageNextAria'))}">${esc(t('itemUi.market.pageNext'))}</button>`;
       pager.querySelectorAll<HTMLButtonElement>('[data-market-page]').forEach((button) => {
         button.addEventListener('click', () => {
           if (button.disabled) return;
-          this.marketBrowsePage += button.dataset.marketPage === 'next' ? 1 : -1;
+          this.marketBrowsePage = Math.max(
+            0,
+            this.marketBrowsePage + (button.dataset.marketPage === 'next' ? 1 : -1),
+          );
+          this.pushMarketQuery(); // the server returns the requested page of listings
           this.lastMarketSig = '';
           audio.click();
           this.renderMarketContent(info);

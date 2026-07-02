@@ -1,6 +1,7 @@
 import type { Role, SavedLoadout, TalentAllocation } from './sim/content/talents';
 import type { LeaderboardPage } from './sim/leaderboard_page';
 import type { Ante, LootTier, PickAction, VisibleCell } from './sim/lockpick';
+import type { MarketQuery } from './sim/market_query';
 import type { ResolvedAbility } from './sim/sim';
 import {
   type ArenaCombatant,
@@ -313,9 +314,14 @@ export interface MarketListingView {
 }
 
 export interface MarketInfo {
+  // The viewer's own listings (always wired, for reclaim) followed by ONE page of
+  // other sellers' listings matching the active query. The server filters + paginates
+  // authoritatively, so paging walks the whole market, not just a single wire window.
   listings: MarketListingView[];
-  totalCount: number; // listings matching the active filter, before the wire cap
-  filter: string; // the active browse filter (echoed back from the server)
+  totalCount: number; // all listings matching the active filter (mine + others)
+  filter: string; // the active search string (echoed back from the server)
+  page: number; // current browse page (of other sellers' listings), 0-based
+  pageCount: number; // total browse pages of other sellers' listings (>= 1)
   collectionCopper: number; // proceeds waiting to be collected
   collectionItems: InvSlot[]; // returned/expired items waiting to be collected
   cutPct: number; // the Merchant's cut on a sale, as a percentage
@@ -463,8 +469,9 @@ export interface IWorld {
   arenaQueueLeave(): void;
   // 2v2 Fiesta: lock in one of the augments currently on offer
   arenaAugmentPick(augmentId: string): void;
-  // World Market
-  marketSearch(query: string): void;
+  // World Market. The browse query (search + type/subtype/rarity filters + page) is
+  // sent to the server, which filters and paginates; marketInfo mirrors the result.
+  marketSearch(query: MarketQuery): void;
   marketList(itemId: string, count: number, price: number): void;
   marketBuy(listingId: number): void;
   marketCancel(listingId: number): void;

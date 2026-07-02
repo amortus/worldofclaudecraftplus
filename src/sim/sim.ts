@@ -124,6 +124,13 @@ import {
   paginateLeaderboard,
 } from './leaderboard_page';
 import {
+  defaultMarketQuery,
+  MARKET_PAGE_SIZE,
+  type MarketQuery,
+  marketItemMatches,
+  sanitizeMarketQuery,
+} from './market_query';
+import {
   ANTE_TO_PAGES,
   ANTE_TO_STEP_TIMEOUT_MS,
   ANTE_TO_TIER,
@@ -861,11 +868,11 @@ export interface PlayerMeta {
   // Session-only: name of the last player who whispered us, for "/r" replies.
   // Never persisted — a fresh login starts with no reply target.
   lastWhisperFrom?: string;
-  // Session-only World Market browse filter. The market is capped at
-  // MARKET_WIRE_LIMIT listings per snapshot to bound wire cost, so this
-  // server-side substring filter (matched against item names) is how a player
-  // reaches goods past the cap. Never persisted — resets on login.
-  marketFilter: string;
+  // Session-only World Market browse query: the search string, the type / subtype /
+  // rarity filters, and the page index. The server filters + paginates against this,
+  // so the player can page through and filter the WHOLE market a window at a time.
+  // Never persisted, resets on login.
+  marketQuery: MarketQuery;
   // Delve meta progression (persisted in CharacterState).
   delveMarks: number;
   delveClears: Record<string, number>;
@@ -1148,7 +1155,10 @@ export class Sim {
   marketListings: MarketListing[] = [];
   private marketCollections = new Map<string, MarketCollection>();
   private nextListingId = 1;
-  private merchantId = -1;
+  // Entity ids of every NPC with `market: true`. The World Market is a single shared
+  // book, so any of these auctioneers is a valid place to stand and deal; a player can
+  // use the auction house at whichever one is closest.
+  private merchantIds: number[] = [];
   /** When true, /dev level|tp|give chat commands are accepted (local dev only). */
   readonly devCommands: boolean;
   private pendingMobRespawns: PendingMobRespawn[] = [];
@@ -1174,7 +1184,7 @@ export class Sim {
       const safe = this.findSafePos(npcDef.pos.x, npcDef.pos.z, WATER_LEVEL + 0.6);
       const npc = createNpc(this.nextId++, npcDef, this.groundPos(safe.x, safe.z));
       this.addEntity(npc);
-      if (npcDef.market) this.merchantId = npc.id; // the World Market is anchored here
+      if (npcDef.market) this.merchantIds.push(npc.id); // every auctioneer anchors the shared World Market
     }
     this.seedHouseListings();
 
@@ -1446,7 +1456,7 @@ export class Sim {
       activeLoadout: -1,
       raidLockouts: new Map(),
       away: null,
-      marketFilter: '',
+      marketQuery: defaultMarketQuery(),
       delveMarks: 0,
       delveClears: {},
       companionUpgrades: {},
@@ -14434,14 +14444,12 @@ export class Sim {
   // The World Market — the Merchant's auction house
   // -------------------------------------------------------------------------
 
-  private merchantEntity(): Entity | null {
-    const e = this.entities.get(this.merchantId);
-    return e && e.kind === 'npc' ? e : null;
-  }
-
   private nearMerchant(e: Entity): boolean {
-    const m = this.merchantEntity();
-    return !!m && dist2d(e.pos, m.pos) <= MARKET_RANGE;
+    for (const id of this.merchantIds) {
+      const m = this.entities.get(id);
+      if (m && m.kind === 'npc' && dist2d(e.pos, m.pos) <= MARKET_RANGE) return true;
+    }
+    return false;
   }
 
   private marketSellerKey(meta: PlayerMeta): string {
@@ -14550,15 +14558,13 @@ export class Sim {
     }
   }
 
-  // List a stack from your bags for sale. The goods are escrowed (pulled from
-  // your bags immediately) and held by the Merchant until bought or reclaimed.
-  // Set the player's session-only World Market browse filter. Purely a
-  // display/query narrowing — no gameplay effect — so it needs no proximity or
-  // liveness gate; the next marketInfoFor snapshot reflects it.
-  marketSearch(query: string, pid?: number): void {
+  // Set the player's session-only World Market browse query (search + type/subtype/
+  // rarity filters + page). Purely a display/query narrowing, no gameplay effect, so
+  // it needs no proximity or liveness gate; the next marketInfoFor snapshot reflects it.
+  marketSearch(query: MarketQuery, pid?: number): void {
     const r = this.resolve(pid);
     if (!r) return;
-    r.meta.marketFilter = (query ?? '').slice(0, 40);
+    r.meta.marketQuery = sanitizeMarketQuery(query);
   }
 
   marketList(itemId: string, count: number, price: number, pid?: number): void {
@@ -14767,33 +14773,31 @@ export class Sim {
     // the World Market is a place you visit — only stream it while standing by
     // the Merchant, which also bounds the per-snapshot wire cost
     if (!this.nearMerchant(e)) return null;
-    // Server-side browse filter: a substring match on item name (and id) lets a
-    // player reach goods past MARKET_WIRE_LIMIT without lifting the wire cap.
-    const filter = meta.marketFilter.trim().toLowerCase();
-    const matched = filter
-      ? this.marketListings.filter((l) => {
-          const name = (ITEMS[l.itemId]?.name ?? l.itemId).toLowerCase();
-          return name.includes(filter) || l.itemId.toLowerCase().includes(filter);
-        })
-      : this.marketListings;
+    // Server-side browse: filter the WHOLE book by the player's query (search
+    // substring + type/subtype/rarity), sort, then paginate. Doing this here (not on
+    // the client over a single wire window) is what lets a player page through and
+    // filter every listing, not just the first MARKET_WIRE_LIMIT.
+    const query: MarketQuery = meta.marketQuery;
+    const matched = this.marketListings.filter((l) => marketItemMatches(l.itemId, query));
     const sorted = [...matched].sort((a, b) => {
       const na = ITEMS[a.itemId]?.name ?? a.itemId;
       const nb = ITEMS[b.itemId]?.name ?? b.itemId;
       return na.localeCompare(nb) || a.price - b.price;
     });
-    // Always wire the seller their own listings first, then fill the rest of the
-    // wire budget with everyone else's. Without this, on a busy shared market a
-    // seller's goods can sort past MARKET_WIRE_LIMIT and never reach them — the
-    // SELL tab would then read "12/12" while only a handful of their listings
-    // are visible. MARKET_MAX_LISTINGS (12) ≪ MARKET_WIRE_LIMIT (120), so a
-    // seller's own goods always fit alongside a healthy slice of the market.
+    // The viewer's own listings are always wired (so they can reclaim from the Browse
+    // tab without hunting for the right page); other sellers' listings are paged. Own
+    // count (<= MARKET_MAX_LISTINGS = 12) plus one page (MARKET_PAGE_SIZE = 50) stays
+    // well under MARKET_WIRE_LIMIT, which remains a hard safety bound on wire size.
     const isMine = (l: MarketListing) => this.marketListingBelongsTo(l, meta);
     const mineSorted = sorted.filter(isMine);
     const others = sorted.filter((l) => !isMine(l));
-    const wired = [
-      ...mineSorted,
-      ...others.slice(0, Math.max(0, MARKET_WIRE_LIMIT - mineSorted.length)),
-    ];
+    const pageCount = Math.max(1, Math.ceil(others.length / MARKET_PAGE_SIZE));
+    const page = Math.max(0, Math.min(pageCount - 1, query.page));
+    const othersPage = others.slice(
+      page * MARKET_PAGE_SIZE,
+      page * MARKET_PAGE_SIZE + MARKET_PAGE_SIZE,
+    );
+    const wired = [...mineSorted, ...othersPage].slice(0, MARKET_WIRE_LIMIT);
     const listings = wired.map((l) => ({
       id: l.id,
       sellerName: isMine(l) ? meta.name : l.sellerName,
@@ -14810,8 +14814,12 @@ export class Sim {
     );
     return {
       listings,
+      // Every listing matching the filter (the viewer's own plus all others), so the
+      // SELL/notes read true counts; `pageCount` below paginates the others.
       totalCount: matched.length,
-      filter: meta.marketFilter,
+      filter: query.search,
+      page,
+      pageCount,
       collectionCopper: col?.copper ?? 0,
       collectionItems: col ? col.items.map((s) => ({ ...s })) : [],
       cutPct: Math.round(MARKET_CUT * 100),

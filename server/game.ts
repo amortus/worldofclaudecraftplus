@@ -11,6 +11,7 @@ import {
   isDelvePos,
   zoneAt,
 } from '../src/sim/data';
+import { sanitizeMarketQuery } from '../src/sim/market_query';
 import { parseMoveInputFrame } from '../src/sim/move_input';
 import type { PlayerMeta } from '../src/sim/sim';
 import { MAX_CHAT_MESSAGE_LEN, Sim } from '../src/sim/sim';
@@ -1946,7 +1947,16 @@ export class GameServer {
         break;
       // World Market (the Merchant's auction house)
       case 'market_search':
-        if (typeof msg.q === 'string') sim.marketSearch(msg.q, pid);
+        sim.marketSearch(
+          sanitizeMarketQuery({
+            search: typeof msg.q === 'string' ? msg.q : '',
+            itemType: msg.itemType,
+            subtype: msg.subtype,
+            rarity: msg.rarity,
+            page: typeof msg.page === 'number' ? msg.page : 0,
+          }),
+          pid,
+        );
         break;
       case 'market_list':
         if (

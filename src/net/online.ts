@@ -16,6 +16,7 @@ import {
 import { abilitiesKnownAt, NPCS, resolveDelveShopOffers } from '../sim/data';
 import { LEADERBOARD_PAGE_SIZE } from '../sim/leaderboard_page';
 import type { Ante, PickAction } from '../sim/lockpick';
+import type { MarketQuery } from '../sim/market_query';
 import { normalizeMoveFacing, sanitizeMoveInput } from '../sim/move_input';
 import { computeQuestState, type ResolvedAbility } from '../sim/sim';
 import {
@@ -1731,8 +1732,15 @@ export class ClientWorld implements IWorld {
   arenaAugmentPick(augmentId: string): void {
     this.cmd({ cmd: 'arena_augment', augment: augmentId });
   }
-  marketSearch(query: string): void {
-    this.cmd({ cmd: 'market_search', q: query });
+  marketSearch(query: MarketQuery): void {
+    this.cmd({
+      cmd: 'market_search',
+      q: query.search,
+      itemType: query.itemType,
+      subtype: query.subtype,
+      rarity: query.rarity,
+      page: query.page,
+    });
   }
   marketList(itemId: string, count: number, price: number): void {
     this.cmd({ cmd: 'market_list', item: itemId, count, price });
