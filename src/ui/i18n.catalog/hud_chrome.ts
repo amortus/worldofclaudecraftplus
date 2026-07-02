@@ -154,6 +154,21 @@ export const hudChromeStrings = {
     heading: 'Heading',
     minimapZoom: 'Minimap zoom',
   },
+  // High-score board chrome: the Players / Guilds tab bar labels, the guild-board
+  // column headers, and the guild-tab empty state. (The shared, translated column
+  // labels rank/name/level/etc. live under game.leaderboard.)
+  leaderboard: {
+    // High-score board tabs: the per-character board and the per-guild board.
+    tabsLabel: 'High-score boards',
+    tabPlayers: 'Players',
+    tabGuilds: 'Guilds',
+    // Guild-board column headers + the guild-tab empty state.
+    guildName: 'Guild',
+    members: 'Members',
+    topLevel: 'Top',
+    guildXp: 'Total XP',
+    guildEmpty: 'No ranked guilds yet.',
+  },
   // Raid-lockout badge on the minimap rim + its hover/tap panel: the title, the
   // accessible label, the "all ready" line, and the unlock-countdown templates
   // (digits run through formatNumber; the units reorder per locale).

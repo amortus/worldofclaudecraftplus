@@ -121,6 +121,7 @@ import {
   type ArenaFormat,
   type DelveRunInfo,
   type FriendInfo,
+  type GuildLeaderboardPage,
   type IWorld,
   isOverheadEmoteId,
   type LeaderboardEntry,
@@ -180,6 +181,11 @@ import { computeDropdownPlacement } from './dropdown_position';
 import { emoteIconUrl } from './emote_icons';
 import { itemDisplayName, tEntity } from './entity_i18n';
 import { esc } from './esc';
+import {
+  buildGuildLeaderboardView,
+  type GuildLeaderboardRow,
+  type LeaderboardPager,
+} from './guild_leaderboard_view';
 import {
   holderTierBadgeDataUrl,
   holderTierByIndex,
@@ -276,6 +282,7 @@ import { QuestTracking } from './quest_tracking';
 import { lockoutParts, lockoutShape } from './raid_lockout';
 import { type RaidLockoutI18n, raidLockoutPanelHtml } from './raid_lockout_view';
 import { restView } from './rest_indicator';
+import { rovingTarget } from './roving_index';
 import { localizeServerText, localizeZone } from './server_i18n';
 import { localizeSimAuraName, localizeSimText } from './sim_i18n';
 import { buildStatTooltip, type StatId, type StatTooltipModel, weaponDps } from './stat_tooltip';
@@ -973,6 +980,10 @@ export class Hud {
   private marketRarityFilter: MarketRarityFilter = 'all';
   private marketBrowsePage = 0;
   private leaderboardPage = 0;
+  // Which high-score board the leaderboard window is showing, plus a page index
+  // PER board (kept independent so each tab keeps its own scroll position).
+  private leaderboardBoard: 'players' | 'guilds' = 'players';
+  private leaderboardGuildPage = 0;
   private marketSellItem: string | null = null; // bag item staged for listing
   private marketSearchQuery = ''; // active browse search term (sent to the server)
   private lastMarketSig = '';
@@ -11333,20 +11344,32 @@ export class Hud {
       return;
     }
     this.closeOtherWindows('#leaderboard-window');
+    this.leaderboardBoard = 'players';
     this.leaderboardPage = 0;
+    this.leaderboardGuildPage = 0;
     el.style.display = 'block';
     void this.renderLeaderboard();
   }
 
-  async renderLeaderboard(): Promise<void> {
+  async renderLeaderboard(focus: 'tab' | null = null): Promise<void> {
     const el = $('#leaderboard-window');
     const myName = this.sim.player.name;
     el.innerHTML =
       `<div class="panel-title"><span>${t('game.leaderboard.title')} <span style="color:#998d6a;font-size:11px">${t('game.leaderboard.subtitle')}${this.sim.realm ? ` &middot; ${this.sim.realm}` : ''}</span></span><span class="x-btn" data-close>${svgIcon('close')}</span></div>` +
-      `<div class="lb-body"><div class="lb-loading">${t('game.leaderboard.loading')}</div></div>`;
+      this.leaderboardTabsHtml() +
+      `<div class="lb-body" id="lb-body-panel" role="tabpanel"><div class="lb-loading">${t('game.leaderboard.loading')}</div></div>`;
     el.querySelector('[data-close]')?.addEventListener('click', () => {
       el.style.display = 'none';
     });
+    this.wireLeaderboardTabs(el);
+    // A tab switch rebuilt the strip and would drop keyboard focus to <body>, so
+    // put the roving focus back on the now-active tab (selection-follows-focus).
+    if (focus === 'tab') (el.querySelector('.lb-tab-active') as HTMLElement | null)?.focus();
+
+    if (this.leaderboardBoard === 'guilds') {
+      await this.renderGuildLeaderboard(el);
+      return;
+    }
 
     let result: LeaderboardPage | null = null;
     try {
@@ -11411,6 +11434,125 @@ export class Hud {
       `<button type="button" class="lb-page-btn" data-leaderboard-page="prev"${page.page <= 0 ? ' disabled' : ''}>${esc(t('itemUi.market.pagePrev'))}</button>` +
       `<span class="lb-page-status">${esc(status)}</span>` +
       `<button type="button" class="lb-page-btn" data-leaderboard-page="next"${page.page >= page.pageCount - 1 ? ' disabled' : ''}>${esc(t('itemUi.market.pageNext'))}</button>` +
+      `</div>`
+    );
+  }
+
+  // The Players / Guilds tab bar above the board: a WAI-ARIA role=tablist of two
+  // tabs with a roving tabindex (0 on the active tab, -1 on the rest) and
+  // aria-selected, controlling the shared #lb-body-panel tabpanel (matching
+  // tal-tabs / char-tabs). The keyboard handler is wired in wireLeaderboardTabs.
+  private leaderboardTabsHtml(): string {
+    const tab = (board: 'players' | 'guilds', label: string): string => {
+      const active = this.leaderboardBoard === board;
+      return (
+        `<button type="button" role="tab" class="lb-tab${active ? ' lb-tab-active' : ''}" ` +
+        `data-lb-tab="${board}" aria-selected="${active ? 'true' : 'false'}" ` +
+        `tabindex="${active ? '0' : '-1'}" aria-controls="lb-body-panel">${esc(label)}</button>`
+      );
+    };
+    return (
+      `<div class="lb-tabs" role="tablist" aria-label="${esc(t('hudChrome.leaderboard.tabsLabel'))}">` +
+      tab('players', t('hudChrome.leaderboard.tabPlayers')) +
+      tab('guilds', t('hudChrome.leaderboard.tabGuilds')) +
+      `</div>`
+    );
+  }
+
+  private wireLeaderboardTabs(el: HTMLElement): void {
+    const tabs = Array.from(el.querySelectorAll<HTMLButtonElement>('[data-lb-tab]'));
+    // Switch the board and re-render with focus:'tab' so the rebuilt strip puts
+    // focus back on the now-active tab instead of letting the innerHTML swap drop
+    // it to <body>. A no-op when the board is unchanged.
+    const switchBoard = (next: 'players' | 'guilds'): void => {
+      if (next === this.leaderboardBoard) return;
+      this.leaderboardBoard = next;
+      void this.renderLeaderboard('tab');
+    };
+    tabs.forEach((button, i) => {
+      const board = button.dataset.lbTab as 'players' | 'guilds';
+      button.addEventListener('click', () => switchBoard(board));
+      button.addEventListener('keydown', (e) => {
+        const ke = e as KeyboardEvent;
+        // Arrow / Home / End rove between the two tabs (WAI-ARIA tablist).
+        const target = rovingTarget(ke.key, i, tabs.length, 'horizontal');
+        if (target !== null) {
+          ke.preventDefault();
+          const next = tabs[target];
+          if (next) switchBoard(next.dataset.lbTab as 'players' | 'guilds');
+          return;
+        }
+        // Enter / Space activate the focused tab (preventDefault suppresses the
+        // synthesized click so the board switches and refocuses exactly once).
+        this.keyboardActivate(ke, () => switchBoard(board));
+      });
+    });
+  }
+
+  // The guild tab: same async + page-control shape as the player board, but it
+  // awaits the guild board and renders guild rows (the pure core decides the
+  // state). Guilds are server-only, so offline this always resolves the empty
+  // state; a rejection or offline-unavailable call maps to the error state.
+  private async renderGuildLeaderboard(el: HTMLElement): Promise<void> {
+    let result: GuildLeaderboardPage | null = null;
+    try {
+      result = await this.sim.guildLeaderboard(this.leaderboardGuildPage, LEADERBOARD_PAGE_SIZE);
+    } catch {
+      result = null;
+    }
+    // panel may have been closed while the fetch was in flight
+    if (el.style.display !== 'block') return;
+    const body = el.querySelector('.lb-body')!;
+    const view = buildGuildLeaderboardView(
+      result === null ? { kind: 'error' } : { kind: 'page', page: result },
+    );
+    if (view.kind === 'error') {
+      body.innerHTML = `<div class="lb-empty">${t('game.leaderboard.retry')}</div>`;
+      return;
+    }
+    if (view.kind === 'empty') {
+      body.innerHTML = `<div class="lb-empty">${t('hudChrome.leaderboard.guildEmpty')}</div>`;
+      return;
+    }
+    if (view.kind !== 'ranked') return;
+    // The server clamps the requested page; mirror its answer back.
+    this.leaderboardGuildPage = view.page;
+    const header =
+      `<div class="lb-row lb-row-guild lb-head"><span class="lb-rank">${t('game.leaderboard.rank')}</span>` +
+      `<span class="lb-name">${t('hudChrome.leaderboard.guildName')}</span>` +
+      `<span class="lb-members">${t('hudChrome.leaderboard.members')}</span>` +
+      `<span class="lb-vlvl">${t('hudChrome.leaderboard.topLevel')}</span>` +
+      `<span class="lb-xp">${t('hudChrome.leaderboard.guildXp')}</span></div>`;
+    const rowHtml = (r: GuildLeaderboardRow): string =>
+      `<div class="lb-row lb-row-guild"><span class="lb-rank">${r.rank}</span>` +
+      `<span class="lb-name">${esc(r.name)}</span>` +
+      `<span class="lb-members">${formatNumber(r.memberCount, { maximumFractionDigits: 0 })}</span>` +
+      `<span class="lb-vlvl">${r.topLevel}</span>` +
+      `<span class="lb-xp">${formatXp(r.totalLifetimeXp)}</span></div>`;
+    body.innerHTML =
+      header + view.rows.map(rowHtml).join('') + this.leaderboardGuildPagerHtml(view.pager);
+    body.querySelectorAll<HTMLButtonElement>('[data-leaderboard-page]').forEach((button) => {
+      button.addEventListener('click', () => {
+        if (button.disabled) return;
+        this.leaderboardGuildPage += button.dataset.leaderboardPage === 'next' ? 1 : -1;
+        if (this.leaderboardGuildPage < 0) this.leaderboardGuildPage = 0;
+        void this.renderLeaderboard();
+      });
+    });
+  }
+
+  // Prev/Next pager for the guild board. Same generic, fully-localized page
+  // strings as the player pager; takes the pure core's pager state directly.
+  private leaderboardGuildPagerHtml(pager: LeaderboardPager | null): string {
+    if (!pager) return '';
+    const current = formatNumber(pager.page + 1, { maximumFractionDigits: 0 });
+    const total = formatNumber(pager.pageCount, { maximumFractionDigits: 0 });
+    const status = t('itemUi.market.pageStatus', { current, total });
+    return (
+      `<div class="lb-pager">` +
+      `<button type="button" class="lb-page-btn" data-leaderboard-page="prev"${pager.prevDisabled ? ' disabled' : ''}>${esc(t('itemUi.market.pagePrev'))}</button>` +
+      `<span class="lb-page-status">${esc(status)}</span>` +
+      `<button type="button" class="lb-page-btn" data-leaderboard-page="next"${pager.nextDisabled ? ' disabled' : ''}>${esc(t('itemUi.market.pageNext'))}</button>` +
       `</div>`
     );
   }

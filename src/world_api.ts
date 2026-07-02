@@ -1,5 +1,5 @@
 import type { Role, SavedLoadout, TalentAllocation } from './sim/content/talents';
-import type { LeaderboardPage } from './sim/leaderboard_page';
+import type { GuildLeaderboardPage, LeaderboardPage } from './sim/leaderboard_page';
 import type { Ante, LootTier, PickAction, VisibleCell } from './sim/lockpick';
 import type { MarketQuery } from './sim/market_query';
 import type { ResolvedAbility } from './sim/sim';
@@ -25,7 +25,7 @@ import {
   type ResourceType,
 } from './sim/types';
 
-export type { LeaderboardPage } from './sim/leaderboard_page';
+export type { GuildLeaderboardPage, LeaderboardPage } from './sim/leaderboard_page';
 
 export interface PartyMemberInfo {
   pid: number;
@@ -210,6 +210,20 @@ export interface LeaderboardEntry {
   lifetimeXp: number;
   prestigeRank: number;
   realm?: string; // present on the global (cross-realm) home-page board
+}
+
+// One ranked row of the GUILD high-score board. A guild's score is the SUM of
+// every member's lifetimeXp; memberCount and topLevel are shown alongside. Like
+// LeaderboardEntry it is always computed server-side (guilds live only in the
+// server social DB, never in the deterministic sim), so the offline Sim ranks no
+// guilds and the client only displays what the server ranked.
+export interface GuildLeaderboardEntry {
+  rank: number;
+  name: string;
+  memberCount: number;
+  totalLifetimeXp: number;
+  topLevel: number;
+  realm?: string; // present on the global (cross-realm) board
 }
 
 export type { ArenaCombatant, ArenaFormat, ArenaStanding };
@@ -512,6 +526,10 @@ export interface IWorld {
   // opt-in cosmetic prestige action. Paged server-side (a realm can hold far
   // more than one page of max-level players); page is 0-based.
   leaderboard(page?: number, pageSize?: number): Promise<LeaderboardPage>;
+  // The realm-scoped guild high-score board (guilds ranked by summed member
+  // lifetime XP), paged server-side the same way as the player board. Guilds are
+  // a server-only social system, so the offline Sim resolves an empty page.
+  guildLeaderboard(page?: number, pageSize?: number): Promise<GuildLeaderboardPage>;
   prestige(): void;
   // Talents & Specializations. State is server-authoritative; the client stages
   // edits locally and commits via applyTalents (the server re-validates).
