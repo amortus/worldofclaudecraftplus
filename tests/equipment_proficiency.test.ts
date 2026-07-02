@@ -4,6 +4,9 @@ import { Sim } from '../src/sim/sim';
 function equip(cls: Parameters<Sim['addPlayer']>[0], itemId: string) {
   const sim = new Sim({ seed: 42, playerClass: cls, noPlayer: true, autoEquip: false });
   const pid = sim.addPlayer(cls, `${cls}-${itemId}`);
+  // Max level so the per-quality level gate (item_level_req.ts) never fires:
+  // these cases test CLASS/armor proficiency in isolation, not the level gate.
+  sim.setPlayerLevel(20, pid);
   sim.addItem(itemId, 1, pid);
   sim.equipItem(itemId, pid);
   return sim.meta(pid)!;

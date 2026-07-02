@@ -9,7 +9,7 @@
 
 import { esc } from './esc';
 import { itemDisplayName } from './entity_i18n';
-import { formatMoney as formatLocalizedMoney, t } from './i18n';
+import { formatMoney as formatLocalizedMoney, formatNumber, t } from './i18n';
 import { repRequirementText } from './reputation_labels';
 import { svgIcon } from './ui_icons';
 import type { ItemDef } from '../sim/types';
@@ -49,12 +49,26 @@ export function renderVendorWindow(
   const scrollTop = el.scrollTop;
   el.innerHTML = `<div class="panel-title"><span>${esc(t('itemUi.vendor.goodsTitle', { name: vendorName }))}</span><button type="button" class="x-btn" data-close aria-label="${esc(t('itemUi.vendor.close'))}">${svgIcon('close')}</button></div>`;
 
-  for (const { itemId, item, price: priceCopper, locked, reqStanding, reqFaction } of view.goods) {
+  for (const {
+    itemId,
+    item,
+    price: priceCopper,
+    quantity,
+    locked,
+    reqStanding,
+    reqFaction,
+  } of view.goods) {
     const row = document.createElement('button');
     row.type = 'button';
     row.className = locked ? 'vendor-item vendor-item-locked' : 'vendor-item';
     const price = formatLocalizedMoney(priceCopper);
     const itemName = itemDisplayName(item);
+    // Staple stack badge: food/drink are sold in a stack (vendor_stack.ts), so
+    // the row shows "x5" next to the name and folds it into the buy aria-label.
+    const stack =
+      quantity > 1
+        ? ` ${t('itemUi.bags.stackCount', { count: formatNumber(quantity, { maximumFractionDigits: 0 }) })}`
+        : '';
     // Rep gate: show the required standing inline (and grey out / disable the row
     // until the player earns it), so it is clear why the purchase is unavailable.
     const reqText = reqStanding && reqFaction ? repRequirementText(reqFaction, reqStanding) : '';
@@ -63,10 +77,12 @@ export function renderVendorWindow(
       : '';
     row.setAttribute(
       'aria-label',
-      locked && reqText ? `${itemName}, ${reqText}` : t('itemUi.vendor.buyAria', { item: itemName, price }),
+      locked && reqText
+        ? `${itemName}${stack}, ${reqText}`
+        : t('itemUi.vendor.buyAria', { item: `${itemName}${stack}`, price }),
     );
     if (locked) row.setAttribute('aria-disabled', 'true');
-    row.innerHTML = `${deps.itemIcon(item)}<span class="vi-name">${esc(itemName)}${reqHtml}</span><span class="vi-price">${deps.moneyHtml(priceCopper)}</span>`;
+    row.innerHTML = `${deps.itemIcon(item)}<span class="vi-name">${esc(itemName)}${esc(stack)}${reqHtml}</span><span class="vi-price">${deps.moneyHtml(priceCopper)}</span>`;
     row.addEventListener('click', () => {
       if (!locked) deps.onBuy(itemId);
     });

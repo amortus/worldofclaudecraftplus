@@ -16,6 +16,7 @@ import {
   MAX_LEVEL,
   meleeMissChance,
   mobXpValue,
+  POTION_COOLDOWN,
   rageConversion,
   rageFromDealing,
   rageFromTaking,
@@ -785,6 +786,30 @@ describe('food, drink, vendor', () => {
     expect(sim.countItem('minor_mana_potion')).toBe(1); // not consumed
   });
 
+  it('the shared potion cooldown is the classic 2 minutes and ticks down for the HUD', () => {
+    const sim = makeSim('mage');
+    sim.addItem('minor_mana_potion', 2);
+    sim.player.resource = 10;
+
+    sim.useItem('minor_mana_potion');
+    // the shared cooldown is the classic 2 minutes, armed off the sim clock, and the
+    // remaining time is materialized for the action-bar swipe.
+    expect(POTION_COOLDOWN).toBe(120);
+    expect(sim.player.potionCooldownUntil).toBeCloseTo(sim.time + POTION_COOLDOWN, 5);
+    expect(sim.player.potionCdRemaining).toBe(POTION_COOLDOWN);
+
+    // a DIFFERENT potion is refused while the shared cooldown runs (not consumed).
+    sim.useItem('minor_mana_potion');
+    expect(sim.countItem('minor_mana_potion')).toBe(1);
+
+    // updateTimers counts the materialized remaining down each tick.
+    sim.tick();
+    expect(sim.player.potionCdRemaining).toBeLessThan(POTION_COOLDOWN);
+    expect(sim.player.potionCdRemaining).toBeGreaterThan(0);
+    for (let i = 0; i < 20; i++) sim.tick(); // one more second
+    expect(sim.player.potionCdRemaining).toBeCloseTo(POTION_COOLDOWN - 1.05, 5);
+  });
+
   it('a mana potion is not wasted (consumed + put on cooldown) at full mana', () => {
     const sim = makeSim('mage');
     sim.addItem('minor_mana_potion', 1);
@@ -855,14 +880,46 @@ describe('food, drink, vendor', () => {
     const sim = makeSim('warrior');
     const wilkes = [...sim.entities.values()].find((e) => e.templateId === 'trader_wilkes')!;
     teleportTo(sim, wilkes.pos.x + 2, wilkes.pos.z);
-    sim.copper = 100;
+    sim.copper = 200;
     sim.buyItem(wilkes.id, 'baked_bread');
-    expect(sim.countItem('baked_bread')).toBe(1);
-    expect(sim.copper).toBe(75);
+    expect(sim.countItem('baked_bread')).toBe(5); // food is sold in a stack of 5
+    expect(sim.copper).toBe(75); // 200 - 125 (buyValue 25 per unit x the stack of 5)
     sim.addItem('wolf_fang', 2);
     sim.sellItem('wolf_fang');
     expect(sim.copper).toBe(79);
     expect(sim.countItem('wolf_fang')).toBe(1);
+  });
+
+  it('vendor sells drink in a stack of 5 but other goods one at a time, all at per-unit pricing', () => {
+    const sim = makeSim('warrior');
+    const wilkes = [...sim.entities.values()].find((e) => e.templateId === 'trader_wilkes')!;
+    teleportTo(sim, wilkes.pos.x + 2, wilkes.pos.z);
+    sim.copper = 1000;
+
+    sim.buyItem(wilkes.id, 'spring_water');
+    expect(sim.countItem('spring_water')).toBe(5); // drink is a staple stack
+    expect(sim.copper).toBe(875); // 1000 - 125 (buyValue 25 per unit x the stack of 5)
+
+    sim.buyItem(wilkes.id, 'minor_healing_potion');
+    expect(sim.countItem('minor_healing_potion')).toBe(1); // non-staples stay single
+  });
+
+  it('buying a food stack then selling it back is a net loss (no vendor arbitrage)', () => {
+    const sim = makeSim('warrior');
+    const wilkes = [...sim.entities.values()].find((e) => e.templateId === 'trader_wilkes')!;
+    teleportTo(sim, wilkes.pos.x + 2, wilkes.pos.z);
+    sim.copper = 500;
+    const before = sim.copper;
+
+    // baked_bread: buyValue 25 per unit, sellValue 6 per unit. A stack of 5 must cost
+    // more to buy (25 x 5 = 125) than it returns when sold back (6 x 5 = 30), or the
+    // vendor would print money. Regression guard for the flat-price stack exploit.
+    sim.buyItem(wilkes.id, 'baked_bread');
+    expect(sim.countItem('baked_bread')).toBe(5);
+    sim.sellItem('baked_bread', 5);
+    expect(sim.countItem('baked_bread')).toBe(0);
+    expect(sim.copper).toBe(before - 125 + 30); // 405: paid 125, recovered 30
+    expect(sim.copper).toBeLessThan(before);
   });
 
   it('vendor buyback restores recently sold gear for the sale price', () => {

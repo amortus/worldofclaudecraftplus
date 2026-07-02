@@ -10,6 +10,9 @@ export const TURN_SPEED = Math.PI; // rad/sec keyboard turning
 export const MELEE_RANGE = 5; // yards
 export const INTERACT_RANGE = 5;
 export const GCD = 1.5; // seconds
+// Shared cooldown across ALL combat potions (classic-era potion sickness): one
+// potion locks every other potion for this long (#103). 2 minutes, vanilla value.
+export const POTION_COOLDOWN = 120; // seconds
 export const CAST_PUSHBACK_SEC = 0.5; // vanilla: each hit delays a cast by 0.5s
 export const CHANNEL_PUSHBACK_FRACTION = 0.25; // vanilla: each hit shaves 25% off a channel
 export const FISHING_CAST_ID = 'fishing';
@@ -237,6 +240,10 @@ export interface ItemDef {
   elixir?: { aura: string; kind: AuraKind; value: number; duration: number };
   quality?: 'poor' | 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'; // gray/white/green/blue/purple/orange name colors
   requiredClass?: PlayerClass[];
+  // Minimum character level needed to equip this piece. When omitted, the level
+  // is DERIVED from `quality` (see src/sim/item_level_req.ts); set this only to
+  // override the per-quality default for a specific item.
+  requiredLevel?: number;
 }
 
 export interface InvSlot {
@@ -1209,6 +1216,10 @@ export interface Entity {
   comboTargetId: number | null;
   overpowerUntil: number; // sim-time until which overpower is usable
   potionCooldownUntil: number; // sim-time until a combat potion can be used again (#103)
+  // Same shared potion cooldown as REMAINING seconds, materialized per tick (like
+  // gcdRemaining) so the action bar can paint a cooldown swipe without a client
+  // clock. Derived from potionCooldownUntil.
+  potionCdRemaining: number;
   // warrior charge: forced run toward the target along a pathfound route
   chargeTargetId: number | null;
   chargeTimeLeft: number; // seconds; failsafe so a blocked charge can't run forever
@@ -1555,6 +1566,10 @@ export interface SimConfig {
   noPlayer?: boolean; // multiplayer server: start with an empty world and addPlayer() later
   devCommands?: boolean; // local dev: /dev level|tp|give chat cheats
   lockoutNowMs?: () => number; // host wall-clock for persisted raid lockouts
+  // Host-computed next raid-reset instant for a given lockout "now" (epoch ms). The
+  // authoritative server uses its realm-local 3 AM daily reset; offline/headless omit
+  // this and fall back to a flat 24h day. Keeps the time zone out of the sim core.
+  raidResetMs?: (nowMs: number) => number;
 }
 
 export function emptyMoveInput(): MoveInput {

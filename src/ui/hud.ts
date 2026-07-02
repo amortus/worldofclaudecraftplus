@@ -79,6 +79,7 @@ import {
 } from '../sim/data';
 import { DELVE_MODULE_LAYOUTS, type DelveModuleId } from '../sim/delve_layout';
 import { armorTypeForItem, weaponArchetypeForItem } from '../sim/equipment_rules';
+import { requiredLevelFor } from '../sim/item_level_req';
 import { LEADERBOARD_PAGE_SIZE } from '../sim/leaderboard_page';
 import type { Ante, PickAction } from '../sim/lockpick';
 import { PICK_ACTIONS } from '../sim/lockpick';
@@ -108,6 +109,7 @@ import {
   MAX_LEVEL,
   MELEE_RANGE,
   MILESTONES,
+  POTION_COOLDOWN,
   type SimEvent,
   virtualLevel,
   xpUntilNextPrestige,
@@ -2625,6 +2627,14 @@ export class Hud {
     if (item.requiredClass && !armorTypeForItem(item) && !weaponArchetypeForItem(item)) {
       html += `<div class="tt-sub">${esc(t('itemUi.tooltip.classes', { classes: item.requiredClass.map(classDisplayName).join(', ') }))}</div>`;
     }
+    // Classic "Requires Level N" line for equippable gear gated above level 1.
+    // Red when the viewer is below the requirement (cannot equip yet), otherwise
+    // a normal sub line. Level math/data lives in the pure sim leaf.
+    const req = requiredLevelFor(item);
+    if ((item.kind === 'weapon' || item.kind === 'armor') && req > 1) {
+      const meets = this.sim.player.level >= req;
+      html += `<div class="${meets ? 'tt-sub' : 'tt-red'}">${esc(t('hudChrome.itemTooltip.requiresLevel', { level: itemNumber(req) }))}</div>`;
+    }
     if (item.sellValue > 0)
       html += `<div class="tt-sub">${esc(t('itemUi.tooltip.sellPrice', { money: formatLocalizedMoney(item.sellValue) }))}</div>`;
     if (compare) html += this.itemCompareBlock(item);
@@ -4023,8 +4033,14 @@ export class Hud {
         }
         const count = this.inventoryCount(item.id);
         this.setText(ab.countEl, String(count));
-        if (ab.cdOverlay.style.height !== '0%') ab.cdOverlay.style.height = '0%';
-        this.setText(ab.cdText, '');
+        // Potions share one global cooldown, so any potion slot paints the same
+        // swipe; other items have no cooldown.
+        const potionCd = item.kind === 'potion' ? p.potionCdRemaining : 0;
+        const potionCdHeight =
+          potionCd > 0 ? `${Math.min(100, (potionCd / POTION_COOLDOWN) * 100)}%` : '0%';
+        if (ab.cdOverlay.style.height !== potionCdHeight)
+          ab.cdOverlay.style.height = potionCdHeight;
+        this.setText(ab.cdText, potionCd > 1 ? Math.ceil(potionCd).toString() : '');
         ab.btn.classList.toggle('unusable', count <= 0 || p.dead);
         ab.btn.classList.remove('oor', 'queued');
         continue;

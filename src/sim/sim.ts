@@ -117,6 +117,7 @@ import {
   recalcPlayerStats,
 } from './entity';
 import { canEquipItem } from './equipment_rules';
+import { meetsLevelRequirement, requiredLevelFor } from './item_level_req';
 import {
   LEADERBOARD_PAGE_SIZE,
   type LeaderboardPage,
@@ -212,6 +213,7 @@ import {
   type OverheadEmoteId,
   type PetMode,
   type PlayerClass,
+  POTION_COOLDOWN,
   type QuestDef,
   type QuestProgress,
   type QuestState,
@@ -231,6 +233,7 @@ import {
   xpForLevel,
   xpToReachLevel,
 } from './types';
+import { vendorStackSize } from './vendor_stack';
 import { groundHeight, WATER_LEVEL } from './world';
 
 const LEASH_DISTANCE = 45;
@@ -300,7 +303,10 @@ const NYTHRAXIS_DEATHLESS_CHANNEL = 5;
 const NYTHRAXIS_DEATHLESS_STUN = 5;
 const NYTHRAXIS_DEATHLESS_SOUL_REND_LOCKOUT = 15;
 const NYTHRAXIS_PHASE_TWO_SETTLE_DELAY = 5;
-const NYTHRAXIS_LOCKOUT_MS = 24 * 60 * 60 * 1000;
+// Host-agnostic raid-lockout fallback: when no host injects a reset boundary (offline
+// browser, headless RL env, tests), a kill locks for a flat 24h day. The authoritative
+// server overrides this with its realm-local 3 AM daily reset via SimConfig.raidResetMs.
+const DEFAULT_RAID_LOCKOUT_MS = 24 * 60 * 60 * 1000;
 const NYTHRAXIS_TRANSITION_DURATION = 21;
 const NYTHRAXIS_TRANSITION_STUN = 21.5;
 const NYTHRAXIS_FINAL_STAND_HP = 0.05;
@@ -525,7 +531,6 @@ const MAX_CLIMB_SLOPE = PLAYER_MAX_CLIMB_SLOPE; // rise/run above which a ground
 // Murlocs (the clustered water mobs players call "frogs") used to pull too much,
 // chain-aggroing the whole pond and making solo pulls impossible (#102). Tune
 // per family here; everything else falls back to the default.
-const POTION_COOLDOWN = 60; // seconds; shared cooldown across combat potions (#103)
 const DEFAULT_SOCIAL_PULL_RADIUS = 5;
 const SOCIAL_PULL_RADIUS: Partial<Record<MobFamily, number>> = {
   murloc: 8,
@@ -1159,6 +1164,7 @@ export class Sim {
       playerName: cfg.playerName ?? 'Adventurer',
       devCommands: this.devCommands,
       lockoutNowMs: cfg.lockoutNowMs ?? (() => Math.floor(this.time * 1000)),
+      raidResetMs: cfg.raidResetMs ?? ((nowMs: number) => nowMs + DEFAULT_RAID_LOCKOUT_MS),
     };
     this.rng = new Rng(cfg.seed);
 
@@ -1303,6 +1309,12 @@ export class Sim {
 
   private lockoutNowMs(): number {
     return this.cfg.lockoutNowMs?.() ?? Math.floor(this.time * 1000);
+  }
+
+  // The next raid-reset instant for a given lockout "now". The host owns the boundary
+  // (server: realm-local 3 AM daily reset); offline/headless fall back to a flat 24h day.
+  private raidResetMs(nowMs: number): number {
+    return this.cfg.raidResetMs(nowMs);
   }
 
   // -------------------------------------------------------------------------
@@ -2998,6 +3010,7 @@ export class Sim {
 
   private updateTimers(p: Entity): void {
     p.gcdRemaining = Math.max(0, p.gcdRemaining - DT);
+    p.potionCdRemaining = Math.max(0, p.potionCdRemaining - DT);
     p.fiveSecondRule += DT;
     p.combatTimer += DT;
     for (const [k, v] of p.cooldowns) {
@@ -9100,7 +9113,10 @@ export class Sim {
   }
 
   private grantNythraxisLockout(boss: Entity): void {
-    const until = this.lockoutNowMs() + NYTHRAXIS_LOCKOUT_MS;
+    // Daily raid reset: lock until the next reset boundary the host supplies through the
+    // lockout seam (the authoritative server uses its realm-local 3 AM daily reset, so a
+    // realm's raids share one boundary; offline/headless fall back to a flat 24h day).
+    const until = this.raidResetMs(this.lockoutNowMs());
     for (const meta of this.nythraxisRoomMetas(boss)) {
       meta.raidLockouts.set('nythraxis_boss_arena', until);
     }
@@ -9838,6 +9854,10 @@ export class Sim {
       this.error(meta.entityId, 'You cannot equip that.');
       return;
     }
+    if (!meetsLevelRequirement(p.level, def)) {
+      this.error(meta.entityId, `You must be level ${requiredLevelFor(def)} to equip that.`);
+      return;
+    }
     const slot = def.slot;
     const old = meta.equipment[slot];
     this.removeItem(itemId, 1, meta.entityId);
@@ -10017,7 +10037,7 @@ export class Sim {
         pid: meta.entityId,
       });
     } else if (def.kind === 'potion') {
-      // instant, usable in combat, on a shared 60s cooldown (#103)
+      // instant, usable in combat, on a shared 2-minute cooldown (#103)
       if (this.time < p.potionCooldownUntil) {
         this.error(meta.entityId, 'That potion is not ready yet.');
         return;
@@ -10036,6 +10056,7 @@ export class Sim {
       }
       this.removeItem(itemId, 1, meta.entityId);
       p.potionCooldownUntil = this.time + POTION_COOLDOWN;
+      p.potionCdRemaining = POTION_COOLDOWN; // materialized remaining for the action-bar swipe
       if (restoresHp) {
         const heal = Math.min(Math.round(def.potionHp! * this.healingTakenMult(p)), p.maxHp - p.hp);
         p.hp += heal;
@@ -10096,12 +10117,17 @@ export class Sim {
       this.error(meta.entityId, 'That item is not for sale.');
       return;
     }
-    if (meta.copper < def.buyValue) {
+    // Food and drink are handed over in a stack (vendorStackSize); the player pays
+    // the per-unit buyValue for every unit, so the per-unit price stays classic and
+    // vendor buy price stays above the per-unit sell value (no buy-low/sell-high loop).
+    const qty = vendorStackSize(def);
+    const cost = def.buyValue * qty;
+    if (meta.copper < cost) {
       this.error(meta.entityId, 'Not enough money.');
       return;
     }
-    meta.copper -= def.buyValue;
-    this.addItem(itemId, 1, meta.entityId);
+    meta.copper -= cost;
+    this.addItem(itemId, qty, meta.entityId);
     this.emit({ type: 'vendor', action: 'buy', itemId, pid: meta.entityId });
   }
 
@@ -10257,6 +10283,11 @@ export class Sim {
     const def = ITEMS[itemId];
     if (!def?.slot) return;
     if (!canEquipItem(meta.cls, def)) return;
+    // Skip silently (no error toast) if the piece is gated above the player's
+    // level: auto-equip is a convenience, the explicit equip path is where the
+    // "must be level N" message belongs.
+    const e = this.entities.get(meta.entityId);
+    if (e && !meetsLevelRequirement(e.level, def)) return;
     if (def.kind === 'weapon') {
       const cur = meta.equipment.mainhand ? ITEMS[meta.equipment.mainhand]?.weapon : null;
       const next = def.weapon;
@@ -15716,7 +15747,7 @@ export class Sim {
   }
   // Self-only readout of the shared combat-potion cooldown (#103). Distinct from
   // /cooldowns, which reads the per-ability Entity.cooldowns map and never shows
-  // this separate 60s potion timer. potionCooldownUntil is an absolute sim-time
+  // this separate 2-minute potion timer. potionCooldownUntil is an absolute sim-time
   // deadline, so the remaining time is computed against this.time.
   private potionReadout(e: Entity): string {
     const remaining = e.potionCooldownUntil - this.time;

@@ -40,7 +40,8 @@ import {
 } from './db';
 import { IpBlockList } from './ip_block';
 import { loadActiveBlockedIps } from './ip_block_db';
-import { REALM } from './realm';
+import { nextRaidResetMs } from './raid_reset';
+import { REALM, REALM_RESET_TIME_ZONE } from './realm';
 import type { Presence, PresenceStatus, SocialActor, SocialTransport } from './social';
 import { SocialService } from './social';
 import { PgSocialDb } from './social_db';
@@ -447,6 +448,9 @@ export class GameServer {
       noPlayer: true,
       devCommands: process.env.ALLOW_DEV_COMMANDS === '1',
       lockoutNowMs: () => Date.now(),
+      // Raid lockouts end at the next 3 AM (the classic daily reset) in this realm's civil
+      // time zone, so the whole realm shares one predictable reset (via REALM_RESET_TZ).
+      raidResetMs: (nowMs) => nextRaidResetMs(nowMs, REALM_RESET_TIME_ZONE),
     });
     this.social = new SocialService(this.socialDb, this.socialTransport());
   }
@@ -2175,6 +2179,7 @@ export class GameServer {
       prk: meta.prestigeRank,
       copper: meta.copper,
       gcd: round2(p.gcdRemaining),
+      pcd: round2(p.potionCdRemaining),
       swing: round2(p.swingTimer),
       combo: p.comboPoints,
       comboTgt: p.comboTargetId,

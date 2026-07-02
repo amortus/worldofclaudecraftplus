@@ -2,9 +2,20 @@ import { describe, expect, it } from 'vitest';
 import { buildVendorView } from '../src/ui/vendor_view';
 import type { InvSlot, ItemDef } from '../src/sim/types';
 
-// Minimal ItemDef fixtures: buildVendorView only reads id / buyValue / sellValue.
-function item(id: string, opts: { buyValue?: number; sellValue?: number } = {}): ItemDef {
-  return { id, name: id, quality: 'common', slot: 'trinket', sellValue: opts.sellValue ?? 0, buyValue: opts.buyValue } as unknown as ItemDef;
+// Minimal ItemDef fixtures: buildVendorView only reads id / kind / buyValue / sellValue.
+function item(
+  id: string,
+  opts: { buyValue?: number; sellValue?: number; kind?: ItemDef['kind'] } = {},
+): ItemDef {
+  return {
+    id,
+    name: id,
+    quality: 'common',
+    kind: opts.kind ?? 'junk',
+    slot: 'trinket',
+    sellValue: opts.sellValue ?? 0,
+    buyValue: opts.buyValue,
+  } as unknown as ItemDef;
 }
 
 function table(...items: ItemDef[]): Record<string, ItemDef> {
@@ -17,6 +28,18 @@ describe('buildVendorView goods', () => {
     const view = buildVendorView(['bread', 'water'], [], items);
     expect(view.goods.map((g) => g.itemId)).toEqual(['bread', 'water']);
     expect(view.goods.map((g) => g.price)).toEqual([5, 2]);
+  });
+
+  it('tags food/drink goods with a stack quantity of 5, other goods with 1', () => {
+    const items = table(
+      item('bread', { buyValue: 5, kind: 'food' }),
+      item('water', { buyValue: 2, kind: 'drink' }),
+      item('potion', { buyValue: 9, kind: 'potion' }),
+    );
+    const view = buildVendorView(['bread', 'water', 'potion'], [], items);
+    expect(view.goods.map((g) => g.quantity)).toEqual([5, 5, 1]);
+    // Price is the total for the purchase: per-unit buyValue times the stack quantity.
+    expect(view.goods.map((g) => g.price)).toEqual([25, 10, 9]);
   });
 
   it('skips items missing from the table', () => {

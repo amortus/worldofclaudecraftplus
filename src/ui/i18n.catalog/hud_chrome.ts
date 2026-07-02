@@ -478,6 +478,12 @@ export const hudChromeStrings = {
     unequipAria: 'Unequip {item}',
     unequipHint: 'Click ×, right-click, or drag to bags to unequip',
   },
+  // Item tooltip: the minimum character level needed to equip a piece (classic
+  // "Requires Level N"). Shown red when the viewer is below it. {level} runs
+  // through formatNumber.
+  itemTooltip: {
+    requiresLevel: 'Requires Level {level}',
+  },
   // Home-page account portal (the logged-in "Account" nav tab). Lives here in the
   // English-only hud_chrome domain so an English-only PR compiles; translations
   // live in the overlays like any other hudChrome.* key.

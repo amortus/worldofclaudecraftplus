@@ -11,6 +11,7 @@
 
 import type { InvSlot, ItemDef } from '../sim/types';
 import { atLeastStanding, type ReputationStanding } from '../sim/reputation';
+import { vendorStackSize } from '../sim/vendor_stack';
 
 /** A vendor's per-item reputation gate (mirrors NpcDef.vendorReqs entries). */
 export interface VendorReq {
@@ -21,8 +22,10 @@ export interface VendorReq {
 export interface VendorGoodsRow {
   itemId: string;
   item: ItemDef;
-  /** Copper the vendor sells this item for. Always > 0 for a goods row. */
+  /** Total copper for one purchase (per-unit buyValue times quantity). Always > 0. */
   price: number;
+  /** Units handed over per purchase: food/drink come in a stack, the rest are 1. */
+  quantity: number;
   /** Faction whose standing gates this item, if any. */
   reqFaction?: string;
   /** Standing required to buy it, if gated. */
@@ -64,10 +67,12 @@ export function buildVendorView(
     if (!item?.buyValue) continue;
     const req = vendorReqs?.[itemId];
     const locked = req ? !atLeastStanding(reputation?.[req.faction] ?? 0, req.standing) : false;
+    const quantity = vendorStackSize(item);
     goods.push({
       itemId,
       item,
-      price: item.buyValue,
+      price: item.buyValue * quantity,
+      quantity,
       reqFaction: req?.faction,
       reqStanding: req?.standing,
       locked,

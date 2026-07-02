@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { nextRaidResetMs } from '../server/raid_reset';
 import { Sim } from '../src/sim/sim';
 import { dist2d, type Aura, type Entity } from '../src/sim/types';
 import { DUNGEONS, ITEMS, MOBS, dungeonAt, instanceOrigin } from '../src/sim/data';
@@ -31,8 +32,8 @@ function isDamageEvent(event: TickEvent): event is DamageEvent {
   return event.type === 'damage';
 }
 
-function makeWorld(lockoutNowMs?: () => number) {
-  return new Sim({ seed: 42, playerClass: 'warrior', noPlayer: true, lockoutNowMs });
+function makeWorld(lockoutNowMs?: () => number, raidResetMs?: (nowMs: number) => number) {
+  return new Sim({ seed: 42, playerClass: 'warrior', noPlayer: true, lockoutNowMs, raidResetMs });
 }
 
 function teleport(sim: Sim, pid: number, x: number, z: number) {
@@ -2186,6 +2187,50 @@ describe('Nythraxis raid encounter', () => {
     now += 24 * 60 * 60 * 1000 + 1;
     sim.enterDungeon('nythraxis_boss_arena', tankPid);
     expect(tank.pos.x).toBeGreaterThan(3000);
+  });
+
+  it('locks raid members out of the Nythraxis arena until the next realm-local 3 AM reset', () => {
+    // 2025-06-29 12:00 EDT (16:00 UTC). With the server's realm-local reset injected
+    // through the lockout seam, the lockout expires at the next US Eastern 3 AM reset
+    // (2025-06-30 03:00 EDT == 07:00 UTC), not 24h from the kill.
+    let now = Date.UTC(2025, 5, 29, 16, 0, 0);
+    const reset = nextRaidResetMs(now);
+    const sim = makeWorld(
+      () => now,
+      (nowMs) => nextRaidResetMs(nowMs),
+    );
+    const tankPid = sim.addPlayer('warrior', 'Tank');
+    enterRaid(sim, tankPid);
+    const tank = sim.entities.get(tankPid)!;
+    const boss = mob(sim, 'nythraxis_scourge_of_thornpeak');
+    engage(boss, tank);
+    killMob(sim, boss, tank);
+    expect(sim.players.get(tankPid)?.raidLockouts.get('nythraxis_boss_arena')).toBe(reset);
+
+    sim.leaveDungeon(tankPid);
+    expect(tank.pos.x).toBeLessThan(3000);
+    sim.enterDungeon('nythraxis_boss_arena', tankPid);
+    expect(tank.pos.x).toBeLessThan(3000); // still locked before the reset
+
+    now = reset + 1; // just past the daily reset boundary
+    sim.enterDungeon('nythraxis_boss_arena', tankPid);
+    expect(tank.pos.x).toBeGreaterThan(3000); // lockout lifted, re-entry allowed
+  });
+
+  it('falls back to a flat 24h lockout when the host injects no reset boundary (offline/headless)', () => {
+    // The offline browser and the headless RL env omit raidResetMs, so a kill locks for
+    // a plain 24h day rather than a realm-local 3 AM reset (the server's behavior).
+    const now = 1_000_000;
+    const sim = makeWorld(() => now);
+    const tankPid = sim.addPlayer('warrior', 'Tank');
+    enterRaid(sim, tankPid);
+    const tank = sim.entities.get(tankPid)!;
+    const boss = mob(sim, 'nythraxis_scourge_of_thornpeak');
+    engage(boss, tank);
+    killMob(sim, boss, tank);
+    expect(sim.players.get(tankPid)?.raidLockouts.get('nythraxis_boss_arena')).toBe(
+      now + 24 * 60 * 60 * 1000,
+    );
   });
 
   it('does not allow dueling inside the Nythraxis boss arena', () => {
