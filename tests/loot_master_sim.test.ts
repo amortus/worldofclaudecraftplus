@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MOBS } from '../src/sim/data';
 import { createMob } from '../src/sim/entity';
+import { effectiveMasterLooter } from '../src/sim/loot_master';
 import { Sim } from '../src/sim/sim';
 import type { SimEvent } from '../src/sim/types';
 
@@ -209,5 +210,31 @@ describe('master loot: settings authority', () => {
       looter: 0,
       threshold: 'rare',
     });
+  });
+
+  it('clears the named master looter when they leave so it falls back to the leader', () => {
+    const { sim, a, b } = setup(); // setup seats a, b, c; the party survives b leaving
+    sim.setPartyLootMaster(true, b, 'uncommon', a); // b is a member, so it is kept
+    expect(sim.partyOf(a)!.lootStrategies.master.looter).toBe(b);
+
+    sim.partyLeave(b); // the named looter departs
+    const master = sim.partyOf(a)!.lootStrategies.master;
+    // the stale pid is cleared (not left pinned to a departed member) and the role
+    // falls back to the leader, so the leader's Loot Settings select stays coherent
+    expect(master.looter).toBe(0);
+    expect(master.enabled).toBe(true);
+    const party = sim.partyOf(a)!;
+    expect(effectiveMasterLooter(master, party.leader, party.members)).toBe(a);
+  });
+
+  it('clears the master looter when the leader who held the role leaves', () => {
+    const { sim, a, b } = setup();
+    sim.setPartyLootMaster(true, a, 'uncommon', a); // the leader names themselves
+    expect(sim.partyOf(a)!.lootStrategies.master.looter).toBe(a);
+
+    sim.partyLeave(a); // leadership passes and the stale looter must not persist
+    const party = sim.partyOf(b)!;
+    expect(party.lootStrategies.master.looter).toBe(0);
+    expect(party.leader).not.toBe(a);
   });
 });

@@ -1526,6 +1526,13 @@
     border: 1px solid #6b5426;
     border-radius: 4px;
   }
+  /* Touch: keep the loot-method select and each candidate row at the >=40px tap
+     floor (the global coarse floor only sets font-size, not target height). */
+  @media (pointer: coarse) {
+    #loot-settings-window select { min-height: 40px; }
+    .ml-cand { min-height: 40px; }
+    .ml-cand input { width: 22px; height: 22px; }
+  }
 
   .item-icon { width: 28px; height: 28px; border-radius: 4px; flex: none; display: block;
     object-fit: cover; background: #0d0d13; border: 1px solid #888; }

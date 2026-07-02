@@ -639,13 +639,10 @@ export const hudChromeStrings = {
   masterLoot: {
     title: 'Master Loot',
     looterLabel: 'Master looter',
-    leaderOption: 'Party leader',
     thresholdLabel: 'Threshold',
     thresholdUncommon: 'Uncommon and up',
     thresholdRare: 'Rare and up',
     thresholdEpic: 'Epic and up',
-    assignPrompt: 'Assign {item}',
-    assignAria: 'Assign {item} to {name}',
     rollButton: 'Roll',
     selectAll: 'Select all',
     methodMaster: 'Loot method set to master loot. Master looter: {name}.',

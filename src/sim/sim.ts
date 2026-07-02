@@ -12531,6 +12531,11 @@ export class Sim {
     party.members = party.members.filter((m) => m !== pid);
     party.raidGroups.delete(pid);
     this.partyByPid.delete(pid);
+    // If the departing member was the named master looter, clear the stale pid so
+    // the loot role falls back to the leader (effectiveMasterLooter) instead of
+    // pinning to a pid no option in the leader's Loot Settings can match. Covers
+    // the leader-was-looter hand-off below too. Harmless if the party disbands.
+    if (party.lootStrategies.master.looter === pid) party.lootStrategies.master.looter = 0;
     for (const mPid of [...party.members, pid]) {
       this.emit({
         type: 'log',
