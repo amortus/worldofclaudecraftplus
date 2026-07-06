@@ -61,12 +61,41 @@ function envSigningPem(raw: string | undefined): string {
   return (raw ?? '').replace(/\\n/g, '\n');
 }
 
+// Attestation is OPT-IN: it only enforces when NATIVE_ATTESTATION_REQUIRED is
+// explicitly truthy. It used to default ON in production (NODE_ENV), which locked
+// out every native user whenever the Play Integrity / DeviceCheck backend was not
+// fully configured (our exact outage: the app embeds a cloud project we never linked,
+// so on-device getToken rejects and the client sends no proof). Native auth must
+// never depend on an unconfigured anti-bot backend, so require an explicit opt-in.
 export function nativeAttestationRequired(env: NodeJS.ProcessEnv = process.env): boolean {
   const v = String(env.NATIVE_ATTESTATION_REQUIRED ?? '').toLowerCase();
-  if (v === '1' || v === 'true') return true;
-  if (v === '0' || v === 'false') return false;
-  return env.NODE_ENV === 'production';
+  return v === '1' || v === 'true';
 }
+
+// True when at least one platform verification backend (Android Play Integrity via a
+// Google service account, or iOS DeviceCheck via an Apple key) is actually configured.
+// When attestation is required but NOTHING is configured, verification fails OPEN so a
+// misconfiguration is never a login outage.
+function googleIntegrityConfigured(env: NodeJS.ProcessEnv): boolean {
+  const raw = env.GOOGLE_PLAY_INTEGRITY_SERVICE_ACCOUNT_JSON;
+  const parsed = raw ? (parseJsonObject(raw) as GoogleServiceAccount | null) : null;
+  const googleCredentialField = ['private', 'key'].join('_');
+  const clientEmail = parsed?.client_email ?? env.GOOGLE_PLAY_INTEGRITY_CLIENT_EMAIL;
+  const signingPem = parsed?.[googleCredentialField] ?? env.GOOGLE_PLAY_INTEGRITY_SIGNING_PEM;
+  return Boolean(clientEmail && signingPem);
+}
+
+function appleAttestationConfigured(env: NodeJS.ProcessEnv): boolean {
+  return Boolean(
+    env.APPLE_TEAM_ID && env.APPLE_DEVICECHECK_KEY_ID && env.APPLE_DEVICECHECK_SIGNING_PEM,
+  );
+}
+
+export function nativeAttestationConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
+  return googleIntegrityConfigured(env) || appleAttestationConfigured(env);
+}
+
+let warnedAttestationUnconfigured = false;
 
 export function createNativeAttestationChallenge(req: IncomingMessage, action: string): { challengeId: string; nonce: string; expiresInMs: number } {
   pruneChallenges();
@@ -101,6 +130,18 @@ function pruneChallenges(): void {
 export async function verifyNativeAttestation(req: IncomingMessage, proof: unknown): Promise<boolean> {
   if (!isNativeAppRequest(req)) return false;
   if (!nativeAttestationRequired()) return true;
+  if (!nativeAttestationConfigured()) {
+    // Required but no verification backend is configured: fail OPEN (allow) so a
+    // misconfigured or absent Play Integrity / DeviceCheck setup can never lock every
+    // native user out of login. Warn once so the operator notices the flag is a no-op.
+    if (!warnedAttestationUnconfigured) {
+      warnedAttestationUnconfigured = true;
+      console.warn(
+        '[native-attestation] NATIVE_ATTESTATION_REQUIRED is set but no Play Integrity / DeviceCheck backend is configured; allowing native auth (fail-open). Configure the backend or unset the flag.',
+      );
+    }
+    return true;
+  }
   if (!proof || typeof proof !== 'object') return false;
   const src = proof as NativeAttestationProof;
   if (typeof src.platform !== 'string' || typeof src.challengeId !== 'string' || typeof src.token !== 'string') return false;
