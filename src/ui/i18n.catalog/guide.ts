@@ -138,7 +138,7 @@ export const guideStrings = {
     // World teaser.
     world: {
       heading: 'Explore the world',
-      sub: 'One continuous land, three zones, from quiet valleys to frozen peaks.',
+      sub: 'One continuous land, four zones, from quiet valleys to frozen peaks.',
       levels: 'Levels {min} to {max}',
       cta: 'See the world',
       valeName: 'Eastbrook Vale',
@@ -594,11 +594,11 @@ export const guideStrings = {
   worldPage: {
     heading: 'The world',
     intro:
-      'World of ClaudeCraft is one continuous land you cross on foot, three zones laid south to north. There is no fast travel, so the journey is part of the adventure.',
+      'World of ClaudeCraft is one continuous land you cross on foot, four zones laid south to north. There is no fast travel, so the journey is part of the adventure.',
     hub: 'Home base',
     mapHeading: 'The road north',
     mapSub:
-      'Three zones, south to north, each a step higher in level. Follow the quest trail and the land carries you from the valley to the peaks.',
+      'Four zones, south to north, each a step higher in level. Follow the quest trail and the land carries you from the valley to the wastes.',
     places: 'Notable places',
     residents: 'Who you will meet',
     valeBlurb:

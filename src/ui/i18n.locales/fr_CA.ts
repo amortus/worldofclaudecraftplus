@@ -167,14 +167,4 @@ export const fr_CA: Partial<Record<TranslationKey, string>> = {
   'sim.lockpick.lockJammed':
     "La serrure est bloquée, impossible à crocheter : terminez l'excavation de nouveau pour une autre tentative.",
   'sim.lockpick.lockYields': 'La serrure cède! Butin {tier}.',
-  'hudChrome.loadingTips.map': "Appuyez sur M pour ouvrir la carte du monde et trouver les objectifs de quete.",
-  'hudChrome.loadingTips.quests': "Parlez aux villageois marques d'un ! pour obtenir des quetes.",
-  'hudChrome.loadingTips.inspect': "Clic droit sur un autre joueur pour inspecter son equipement.",
-  'hudChrome.loadingTips.camera': "Maintenez le clic droit pour pivoter la camera, et la molette pour zoomer.",
-  'hudChrome.loadingTips.chat': "Tapez /join world pour discuter avec tout le royaume, ou /join lfg pour trouver un groupe.",
-  'hudChrome.loadingTips.rested': "Se reposer en ville accumule de l'XP de repos : vous montez de niveau plus vite a votre retour.",
-  'hudChrome.loadingTips.talents': "Depensez des points de talent (N) en montant de niveau pour faconner votre build.",
-  'hudChrome.loadingTips.vendor': "Vendez le bric-a-brac aux marchands ; mettez les objets rares sur le Marche mondial pour les autres joueurs.",
-  'hudChrome.loadingTips.group': "Les combats et donjons difficiles sont plus faciles en groupe. Invitez les joueurs que vous croisez !",
-  'hudChrome.loadingTips.classes': "Chacune des neuf classes se joue differemment. Essayez-en quelques-unes pour trouver votre preferee.",
 };

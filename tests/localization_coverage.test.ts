@@ -88,7 +88,11 @@ describe('i18n Localization Key Coverage', () => {
     await Promise.all(supportedLanguages.map((lang) => ensureLocaleLoaded(lang)));
   });
 
-  const placeholderPattern = /\b(TODO|TBD|FIXME|PLACEHOLDER|TRANSLATE|LOREM)\b/i;
+  // Leftover placeholder markers are conventionally UPPERCASE tokens (TODO, FIXME, ...),
+  // so match case-sensitively. A case-insensitive match here produced false positives on
+  // real natural-language words that happen to spell a marker in lower case, e.g. the
+  // Spanish/Portuguese "todo" in "chatear con todo el reino" (hudChrome.loadingTips.chat).
+  const placeholderPattern = /\b(TODO|TBD|FIXME|PLACEHOLDER|TRANSLATE|LOREM)\b/;
   const shellKeys: TranslationKey[] = [
     'seo.title',
     'seo.description',
