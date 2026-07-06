@@ -5,8 +5,13 @@ import { isNativeAppRequest } from './web_login_guard';
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
 const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/playintegrity';
-const DEFAULT_PACKAGE_NAME = 'com.worldofclaudecraft';
-const DEFAULT_BUNDLE_ID = 'com.worldofclaudecraft';
+// Our fork's real applicationId / iOS bundle id (see capacitor.config.ts appId).
+// The upstream value was 'com.worldofclaudecraft'; the Brazilian fork ships as
+// '.brasil', so Play Integrity / DeviceCheck tokens report '.brasil' and the
+// verdict package check MUST compare against it or every native login is rejected.
+// Override per environment with GOOGLE_PLAY_INTEGRITY_PACKAGE_NAME / APPLE_BUNDLE_ID.
+const DEFAULT_PACKAGE_NAME = 'com.worldofclaudecraft.brasil';
+const DEFAULT_BUNDLE_ID = 'com.worldofclaudecraft.brasil';
 
 interface NativeChallenge {
   nonce: string;
