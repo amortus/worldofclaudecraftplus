@@ -4441,9 +4441,21 @@ export class Renderer {
       entry.d2 = dx * dx + dz * dz;
     }
     const lightBudget = this.effectivePointLights || GFX.maxPointLights;
-    if (ranked.length > lightBudget) ranked.sort((a, b) => a.d2 - b.d2);
+    // Keep the VISIBLE point-light COUNT constant (never toggle it as fires enter/leave
+    // range). Three.js bakes the visible-light count into every lit material's shader,
+    // so changing it recompiles ALL lit materials at once - a ~21-program, multi-second
+    // in-world freeze confirmed by the real-GPU profile (programDelta 21, tex/geo 0, on
+    // an RTX 3080). Keep the nearest `visibleCount` slots visible ALWAYS and gate the
+    // CONTRIBUTION via intensity (a zero-intensity light still counts in the shader but
+    // adds no light), so the shader light count is fixed and nothing recompiles at play.
+    const visibleCount = Math.min(GFX.maxPointLights, ranked.length);
+    if (ranked.length > visibleCount) ranked.sort((a, b) => a.d2 - b.d2);
     for (let i = 0; i < ranked.length; i++) {
-      ranked[i].light.visible = i < lightBudget && ranked[i].d2 < LIGHT_BUDGET_RANGE_SQ;
+      const entry = ranked[i];
+      entry.light.visible = i < visibleCount;
+      if (i < visibleCount && (i >= lightBudget || entry.d2 >= LIGHT_BUDGET_RANGE_SQ)) {
+        entry.light.intensity = 0;
+      }
     }
   }
 
