@@ -17,6 +17,11 @@ const botDetectorImpl = existsSync(privateBotDetector)
   : fileURLToPath(new URL('server/bot_detector/stub.ts', import.meta.url));
 const pkg = JSON.parse(readFileSync(new URL('package.json', import.meta.url), 'utf8')) as { version?: string };
 
+// The native/AAB build (`npm run build:native`) sets VITE_NATIVE_APP=1. The dev-only
+// marker map editor (editor.html) is a web/desktop authoring aid, so it is EXCLUDED
+// from the native input below: it must never ship inside the packaged mobile app.
+const isNativeBuild = process.env.VITE_NATIVE_APP === '1';
+
 function env(names: string[]): string | undefined {
   for (const name of names) {
     const value = process.env[name]?.trim();
@@ -75,6 +80,9 @@ const STATIC_PAGE_ALIASES = new Map([
   ['/support/', '/support.html'],
   ['/wiki', '/guide.html'],
   ['/wiki/', '/guide.html'],
+  // Dev-only marker map editor (noindex). Mirrors the server alias in server/main.ts.
+  ['/editor', '/editor.html'],
+  ['/editor/', '/editor.html'],
 ]);
 // The Guide is the site wiki: a client-routed SPA at /wiki. Deep paths like
 // /wiki/classes/warrior have no static file, so any extensionless /wiki* request falls
@@ -165,6 +173,9 @@ export default defineConfig({
         admin: fileURLToPath(new URL('admin.html', import.meta.url)),
         play: fileURLToPath(new URL('play.html', import.meta.url)),
         guide: fileURLToPath(new URL('guide.html', import.meta.url)),
+        // Dev-only marker editor: web/desktop authoring aid, kept out of the native
+        // build so the packaged mobile app never bundles it (see isNativeBuild).
+        ...(isNativeBuild ? {} : { editor: fileURLToPath(new URL('editor.html', import.meta.url)) }),
       },
       output: {
         manualChunks(id) {

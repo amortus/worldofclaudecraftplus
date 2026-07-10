@@ -184,6 +184,10 @@ const STATIC_PAGE_ALIASES = new Map([
   ['/support/', '/support.html'],
   ['/wiki', '/guide.html'],
   ['/wiki/', '/guide.html'],
+  // Dev-only marker map editor (noindex). Static paste-back authoring aid: it
+  // serves editor.html and touches nothing server-side, so no auth is needed.
+  ['/editor', '/editor.html'],
+  ['/editor/', '/editor.html'],
 ]);
 // How long chat logs are kept (0 = forever); pruned at boot and daily.
 const CHAT_LOG_RETENTION_DAYS = Number(process.env.CHAT_LOG_RETENTION_DAYS ?? 90);
