@@ -25,6 +25,8 @@ import {
   wocBalanceRateLimited,
   WOC_BALANCE_MAX_PER_MINUTE,
   resetWocBalanceRateLimits,
+  rateLimit429Headers,
+  RATE_LIMIT_WINDOW_SECONDS,
 } from '../server/ratelimit';
 
 function fakeReq(headers: Record<string, string>, remoteAddress: string) {
@@ -75,6 +77,27 @@ describe('websocket authentication', () => {
       character: 42,
       clientSeed: 'seed-123',
     });
+  });
+});
+
+describe('rateLimit429Headers (draft-11 structured fields)', () => {
+  it('builds Retry-After + RateLimit + RateLimit-Policy from the policy name and limit', () => {
+    const headers = rateLimit429Headers('woc_balance', WOC_BALANCE_MAX_PER_MINUTE);
+    const w = RATE_LIMIT_WINDOW_SECONDS;
+    expect(headers).toEqual({
+      'Retry-After': String(w),
+      RateLimit: `"woc_balance";r=0;t=${w}`,
+      'RateLimit-Policy': `"woc_balance";q=${WOC_BALANCE_MAX_PER_MINUTE};w=${w}`,
+    });
+    // The legacy X-RateLimit-* trio is deliberately never emitted.
+    expect(Object.keys(headers)).not.toContain('X-RateLimit-Limit');
+  });
+
+  it('advertises the caller-supplied quota per policy', () => {
+    const headers = rateLimit429Headers('card_upload', CARD_UPLOAD_MAX_PER_MINUTE);
+    expect(headers['RateLimit-Policy']).toBe(
+      `"card_upload";q=${CARD_UPLOAD_MAX_PER_MINUTE};w=${RATE_LIMIT_WINDOW_SECONDS}`,
+    );
   });
 });
 

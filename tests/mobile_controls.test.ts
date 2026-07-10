@@ -442,6 +442,27 @@ describe('MobileControls pointer lifecycle', () => {
     expect(lastMove).toBeNull();
   });
 
+  it('a move touchdown produces no movement intent until the finger moves (no edge drift)', () => {
+    // The move zone is much larger than the wheel, so a thumb can land far from
+    // the wheel's rest spot. The input origin must be the RAW touch point, so a
+    // touchdown alone never registers movement (rawX/rawY are 0 at the origin).
+    const { moveZone } = installMobileControlDom();
+    let lastMove: TouchMoveInput | null = null;
+    const input = {
+      setTouchMove: (move: TouchMoveInput) => { lastMove = move; },
+      clearTouchMove: () => { lastMove = null; },
+      setTouchLook: () => {},
+      setTouchLookVector: () => {},
+    } as unknown as Input;
+
+    new MobileControls(input, mobileCallbacks()).start();
+
+    // A touch near the far rim of the move zone: the old clamped-origin path would
+    // offset the origin from the thumb and register instant strafing (drift).
+    moveZone.dispatchEvent(pointerEvent('pointerdown', { pointerId: 7, clientX: 230, clientY: 230 }));
+    expect(lastMove).toEqual({ forward: false, back: false, strafeLeft: false, strafeRight: false });
+  });
+
   it('keeps updating camera look when the active pointer moves outside the joystick element', () => {
     const { cameraJoystick, windowTarget } = installMobileControlDom();
     let touchLookActive = false;

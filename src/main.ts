@@ -3443,6 +3443,9 @@ async function refreshCharacters(): Promise<void> {
   updateSortButtonLabel();
   const listEl = $('#char-list');
   listEl.innerHTML = `<li class="char-list-message">${escapeHtml(t('character.loading'))}</li>`;
+  // Clear any stale name from a previous realm; the default first-row selection
+  // below re-arms it (or it stays empty when the realm has no characters).
+  setCharselectPreviewName('');
   try {
     const chars = sortCharacters(await api.characters(), charSortMode);
     if (api.realm) $('#charselect-realm').textContent = api.realm;
@@ -3543,6 +3546,7 @@ async function refreshCharacters(): Promise<void> {
         row.setAttribute('aria-selected', 'true');
         renderClassDetails('charselect-class-details', c.class);
         characterPreview?.setSkin(c.skin ?? 0);
+        setCharselectPreviewName(c.name);
       };
 
       row.addEventListener('click', selectRow);
@@ -3648,6 +3652,15 @@ async function enterWorld(c: CharacterSummary, button?: HTMLButtonElement): Prom
 // can verify they never drift from the sim's class/ability definitions.
 
 const activeClassDetailsTimeouts: Record<string, number | null> = {};
+
+// The selected character's name, shown above the 3D preview on the char-select
+// stage so it is obvious which character you are about to play. textContent (not
+// innerHTML): names are player-supplied. The element lives only in the char-select
+// preview markup, so this is a harmless no-op on the create/offline panels.
+function setCharselectPreviewName(name: string): void {
+  const el = document.getElementById('charselect-preview-name');
+  if (el) el.textContent = name;
+}
 
 function renderClassDetails(panelId: string, className: PlayerClass): void {
   const panel = document.getElementById(panelId);

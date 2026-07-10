@@ -1,5 +1,6 @@
 import type { Input, TouchMoveInput } from './input';
 import { t } from '../ui/i18n';
+import { bindTouchTap } from '../ui/touch_tap';
 
 // Detects a genuinely touch-primary device (a phone or a hand-held tablet). The
 // primary test is a coarse primary pointer that cannot hover -- deliberately
@@ -16,6 +17,11 @@ import { t } from '../ui/i18n';
 // "(pointer: coarse) and ..." clauses fire there regardless of viewport size.
 export const PHONE_TOUCH_QUERY = '(pointer: coarse) and (hover: none), (pointer: coarse) and (max-width: 940px), (pointer: coarse) and (max-height: 760px)';
 const DEADZONE = 0.22;
+// How far the move wheel's DRAWN position may lean from its resting spot toward
+// the thumb (px), so a touch anywhere in the (much larger) move zone leans the
+// visible wheel toward it without teleporting it clear across the screen.
+// Cosmetic only: never fed into the input math (see onMoveDown).
+const MOVE_JOYSTICK_FLOAT_RADIUS = 48;
 const CAMERA_SENSITIVITY = 0.8;
 const SWIPE_LOOK_DEADZONE_PX = 6;
 // Pinch: each pixel the two fingers spread/close maps to this many yards of
@@ -287,13 +293,18 @@ export class MobileControls {
       }
     });
 
-    this.autorunButton?.addEventListener('click', (e) => {
-      if (!this.active) return;
-      e.preventDefault();
-      triggerHaptic(HAPTIC_TAP, this.hapticsOn);
-      const on = this.callbacks.onAutorun();
-      this.autorunButton?.classList.toggle('active', on);
-    });
+    // bindTouchTap (not a bare click): a bare click listener goes dead for any
+    // non-primary touch pointer, so this button stopped responding while a second
+    // finger steered the camera. The touch path now fires on raw pointer events.
+    if (this.autorunButton) {
+      bindTouchTap(this.autorunButton, (e) => {
+        if (!this.active) return;
+        e.preventDefault();
+        triggerHaptic(HAPTIC_TAP, this.hapticsOn);
+        const on = this.callbacks.onAutorun();
+        this.autorunButton?.classList.toggle('active', on);
+      });
+    }
 
     this.canvas?.addEventListener('pointerdown', (e) => {
       this.onPinchDown(e);
@@ -414,7 +425,10 @@ export class MobileControls {
       });
       return;
     }
-    button.addEventListener('click', run);
+    // bindTouchTap (not a bare click) so a non-primary touch pointer still fires:
+    // every HUD button bound here stayed responsive only for the primary finger,
+    // going dead the moment a second finger was steering the camera.
+    bindTouchTap(button, run);
   }
 
   private closeMoreModal(): void {
@@ -429,7 +443,9 @@ export class MobileControls {
     const button = document.getElementById(id);
     if (!button) return;
     this.syncHapticsButton(button);
-    button.addEventListener('click', (e) => {
+    // bindTouchTap (not a bare click) so the toggle still fires for a non-primary
+    // touch pointer while another finger steers.
+    bindTouchTap(button, (e) => {
       if (!this.active) return;
       e.preventDefault();
       this.hapticsOn = !this.hapticsOn;
@@ -508,18 +524,38 @@ export class MobileControls {
   private onMoveDown(e: PointerEvent): void {
     if (!this.active || this.joyPointer !== null || !this.moveJoystick) return;
     e.preventDefault();
+    // The wheel's RESTING center, read before any style.left/top from this touch
+    // applies (releaseMove clears both back to the CSS-authored rest spot, so a
+    // fresh touchdown always reads it here). Used only to clamp where the wheel is
+    // DRAWN below; never fed into the input math.
+    const restRect = this.moveJoystick.getBoundingClientRect();
+    const restCenterX = restRect.left + restRect.width / 2;
+    const restCenterY = restRect.top + restRect.height / 2;
     this.joyPointer = e.pointerId;
     triggerHaptic(HAPTIC_JOYSTICK, this.hapticsOn);
-    // Spawn the joystick base under the thumb, clamped so the circle stays
-    // on-screen, then pin the stick offset to that floating centre.
+    // The input origin IS the raw, UNCLAMPED touch point: a touchdown alone can
+    // never produce movement intent (rawX/rawY are 0 at the origin), so clamping
+    // the origin to keep the circle on-screen re-created the edge-touch input-drift
+    // regression (a touch near the move-zone rim registered instant movement). The
+    // DRAWN wheel is clamped separately below instead.
     const radius = Math.max(1, this.moveJoystick.offsetWidth / 2 || 61);
-    const zone = (this.moveZone ?? this.moveJoystick).getBoundingClientRect();
-    const origin = clampJoystickOrigin(e.clientX, e.clientY, radius, zone);
-    this.moveOriginX = origin.x;
-    this.moveOriginY = origin.y;
+    this.moveOriginX = e.clientX;
+    this.moveOriginY = e.clientY;
     this.moveRadius = radius;
-    this.moveJoystick.style.left = `${(origin.x - radius).toFixed(1)}px`;
-    this.moveJoystick.style.top = `${(origin.y - radius).toFixed(1)}px`;
+    // The wheel's DRAWN position floats toward the thumb but is clamped to stay
+    // within MOVE_JOYSTICK_FLOAT_RADIUS of its resting spot, so a touch anywhere in
+    // the (much larger) move zone no longer teleports the visible wheel across the
+    // screen; it just leans toward the thumb within a small radius. Purely cosmetic:
+    // moveOriginX/Y above (the input math) is untouched.
+    const floatDx = e.clientX - restCenterX;
+    const floatDy = e.clientY - restCenterY;
+    const floatDist = Math.hypot(floatDx, floatDy);
+    const floatScale =
+      floatDist > MOVE_JOYSTICK_FLOAT_RADIUS ? MOVE_JOYSTICK_FLOAT_RADIUS / floatDist : 1;
+    const drawnCenterX = restCenterX + floatDx * floatScale;
+    const drawnCenterY = restCenterY + floatDy * floatScale;
+    this.moveJoystick.style.left = `${(drawnCenterX - radius).toFixed(1)}px`;
+    this.moveJoystick.style.top = `${(drawnCenterY - radius).toFixed(1)}px`;
     this.moveJoystick.classList.add('floating', 'active');
     try { (this.moveZone ?? this.moveJoystick).setPointerCapture(e.pointerId); } catch { /* synthetic test event */ }
     this.onMoveMove(e);

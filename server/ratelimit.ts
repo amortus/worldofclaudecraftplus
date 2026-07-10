@@ -13,6 +13,29 @@ import * as net from 'node:net';
 // pin an explicit proxy list instead of the private-range default.
 const WINDOW_MS = 60_000;
 const MAX_TRACKED_IPS = 10_000;
+
+/** The shared sliding-window size in seconds: how long a rejected caller should
+ *  wait before retrying, and the window advertised in the rate-limit headers. */
+export const RATE_LIMIT_WINDOW_SECONDS = WINDOW_MS / 1000;
+
+/**
+ * The draft-11 rate-limit response headers a 429 carries, per
+ * draft-ietf-httpapi-ratelimit-headers-11 (structured fields per RFC 9651):
+ *   RateLimit:        "<policy>";r=<remaining>;t=<reset-seconds>
+ *   RateLimit-Policy: "<policy>";q=<quota>;w=<window-seconds>
+ * A rejected request has 0 remaining and resets at most one window out, so we
+ * advertise the whole window conservatively. A plain Retry-After (same value) is
+ * included for clients that don't parse the structured fields. The legacy
+ * X-RateLimit-* trio is deliberately never emitted (draft 11 supersedes it).
+ */
+export function rateLimit429Headers(policyName: string, limit: number): Record<string, string> {
+  const reset = String(RATE_LIMIT_WINDOW_SECONDS);
+  return {
+    'Retry-After': reset,
+    RateLimit: `"${policyName}";r=0;t=${reset}`,
+    'RateLimit-Policy': `"${policyName}";q=${limit};w=${RATE_LIMIT_WINDOW_SECONDS}`,
+  };
+}
 const BACKSTOP_EVICT_BATCH = 512;
 
 // The strictest (lowest) limit any caller passes to rateLimited(). The `attempts`

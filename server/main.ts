@@ -115,12 +115,16 @@ import { handleAvatar, handleCharacterSitemap, handleProfilePage } from './profi
 import { recordUsageCacheEvent, recordUsageMetric, setUsageCacheSize } from './provider_usage';
 import {
   authThrottled,
+  CARD_UPLOAD_MAX_PER_MINUTE,
   cardUploadRateLimited,
   clearAuthFailures,
+  PUBLIC_READ_MAX_PER_MINUTE,
   publicReadRateLimited,
+  rateLimit429Headers,
   rateLimited,
   recordAuthFailure,
   requestIp,
+  WOC_BALANCE_MAX_PER_MINUTE,
   wocBalanceRateLimited,
 } from './ratelimit';
 import {
@@ -131,6 +135,7 @@ import {
   REALM_ORIGINS,
 } from './realm';
 import { resolveReportTarget } from './report_target';
+import { withSecurityHeaders } from './security_headers';
 import { handleSitePresenceHeartbeat } from './site_presence';
 import { cacheControlFor, etagFor, isNotModified } from './static_cache';
 import { verifyTurnstile } from './turnstile';
@@ -631,6 +636,16 @@ function publicCors(res: http.ServerResponse): void {
   res.setHeader('Access-Control-Max-Age', '600');
 }
 
+// Send a 429 carrying the draft-11 rate-limit headers (Retry-After + RateLimit +
+// RateLimit-Policy) for a named policy. The headers go through res.setHeader, which
+// json()'s writeHead preserves (same path the security-header pass relies on).
+function sendRateLimited(res: http.ServerResponse, policyName: string, limit: number): void {
+  for (const [name, value] of Object.entries(rateLimit429Headers(policyName, limit))) {
+    res.setHeader(name, value);
+  }
+  json(res, 429, { error: 'rate limited' });
+}
+
 // Anti-bot: when enabled, /api/login + /api/register require a same-origin browser
 // request (a recognised Origin header), so only the web client can obtain a token.
 const REQUIRE_WEB_LOGIN = webLoginEnforced();
@@ -855,7 +870,8 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
     // come before generic /api routes; it never touches a bearer token.
     const publicSheetMatch = /^\/api\/public\/characters\/(.+)\/sheet$/.exec(url);
     if (req.method === 'GET' && publicSheetMatch) {
-      if (publicReadRateLimited(req)) return json(res, 429, { error: 'rate limited' });
+      if (publicReadRateLimited(req))
+        return sendRateLimited(res, 'public_read', PUBLIC_READ_MAX_PER_MINUTE);
       const rawName = decodeURIComponent(publicSheetMatch[1]);
       const target = await findCharacterReportTargetByName(rawName);
       if (!target) return json(res, 404, { error: 'character not found' });
@@ -1376,7 +1392,7 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
     if (req.method === 'GET' && url === '/api/woc/balance') {
       if (wocBalanceRateLimited(req)) {
         recordUsageMetric('woc.balance.rate_limited');
-        return json(res, 429, { error: 'rate limited' });
+        return sendRateLimited(res, 'woc_balance', WOC_BALANCE_MAX_PER_MINUTE);
       }
       // `fresh=1` is parsed AFTER the IP rate-limit above, so it can't be used to hammer the RPC.
       const { owner, fresh } = parseWocBalanceQuery(req.url ?? '');
@@ -1395,7 +1411,7 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
       if (accountId === null) return;
       if (cardUploadRateLimited(req, accountId)) {
         recordUsageMetric('card.publish.rate_limited');
-        return json(res, 429, { error: 'rate limited' });
+        return sendRateLimited(res, 'card_upload', CARD_UPLOAD_MAX_PER_MINUTE);
       }
       return handleCardUpload(req, res, accountId, (characterId) =>
         game.liveLevelForCharacter(characterId),
@@ -1507,6 +1523,15 @@ async function main(): Promise<void> {
     // origin so browser-origin companion apps can call them client-side; every
     // other /api route keeps the narrow realm/native allowlist.
     const publicCorsPath = isPublicCorsPath(path);
+    // Security headers FIRST, before CORS/preflight and any route dispatch, so
+    // every prefix and the OPTIONS-204 short-circuit below carry them. The public,
+    // embeddable RESOURCE surfaces (avatars, the public read API, and the shareable
+    // player-card image under /p/) get cross-origin CORP so an off-origin browser
+    // <img>/fetch still loads them (they carried no CORP before); everything else,
+    // including the /c/ profile HTML (a navigation, not a cross-origin embed), is
+    // locked to same-origin.
+    const corpCrossOrigin = publicCorsPath || path.startsWith('/p/');
+    withSecurityHeaders(req, res, { corpCrossOrigin });
     if (publicCorsPath) publicCors(res);
     else if (isApi) maybeCors(req, res);
     if (req.method === 'OPTIONS' && (isApi || publicCorsPath)) {

@@ -339,6 +339,7 @@ export const ZONE2_NPCS: Record<string, NpcDef> = {
       'lesser_healing_potion', 'lesser_mana_potion',
       'bogiron_mace', 'fenreed_staff', 'mirefen_skinner', 'bogiron_hauberk',
       'marshcloth_robe', 'reedwoven_jerkin', 'fenwalker_boots', 'reedwoven_trousers',
+      'simple_fishing_pole',
     ],
     greeting: 'Dry boots, dry bread, dry powder — at Fenbridge you get two of the three on a good day.',
   },

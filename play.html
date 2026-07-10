@@ -1796,6 +1796,18 @@
   /* Combat-text size — Interface > Combat Text Size (--fct-scale, default 1). */
   .fct { font-size: calc(17px * var(--fct-scale, 1)); }
   .fct.crit { font-size: calc(26px * var(--fct-scale, 1)); }
+  /* Floating combat text (mobile). The phone screen is small and the FCT stack
+     crowds the fight, so on touch we shrink the numbers and shorten the rise.
+     COSMETIC richness only (size + travel distance), never the number itself, so
+     it stays within the graphics-settings fairness rule. Duplicated -mobile
+     keyframes (font-size + animation-name are the only overrides, so weight,
+     shadow, colour and the centring transform all inherit); the higher specificity
+     wins with no !important. */
+  @keyframes fct-rise-mobile { from { opacity: 1; margin-top: 0; } to { opacity: 0; margin-top: -56px; } }
+  @keyframes fct-crit-mobile { 0% { opacity: 1; margin-top: 0; } 15% { transform: translate(-50%,-50%) scale(1.5); }
+    100% { opacity: 0; margin-top: -62px; transform: translate(-50%,-50%) scale(1); } }
+  body.mobile-touch .fct { font-size: calc(14px * var(--fct-scale, 1)); animation-name: fct-rise-mobile; }
+  body.mobile-touch .fct.crit { font-size: calc(20px * var(--fct-scale, 1)); animation-name: fct-crit-mobile; }
 
   /* ---------- Interface & Comfort settings ----------
      Each rule is driven by a CSS custom property set on :root from main.ts, or by
@@ -6245,6 +6257,35 @@
     height: 100% !important;
   }
 
+  /* The selected character's name, centred over the top of the 3D preview so it
+     is unmistakable which character you are about to play. Non-interactive
+     (pointer-events:none) so it never blocks the turntable; truncates rather than
+     wrapping. Only the char-select preview markup carries #charselect-preview-name,
+     so this styles it there alone; empty collapses it. */
+  .cs-preview-name {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    max-width: 90%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: center;
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: 1px;
+    color: var(--gold, #e8d9a8);
+    text-shadow:
+      0 2px 8px #000,
+      0 0 14px rgba(0, 0, 0, 0.55);
+    pointer-events: none;
+  }
+  .cs-preview-name:empty {
+    display: none;
+  }
+
   .char-input-group {
     position: relative;
     width: 100%;
@@ -8179,6 +8220,7 @@
             <!-- Right: selected character showcase -->
             <div class="cs-detail-col">
               <div class="char-preview-container cs-preview" id="online-preview-container">
+                <div class="cs-preview-name" id="charselect-preview-name" aria-live="polite"></div>
                 <canvas id="char-preview-canvas"></canvas>
               </div>
               <div id="charselect-class-details" class="class-details-panel" aria-live="polite"></div>
