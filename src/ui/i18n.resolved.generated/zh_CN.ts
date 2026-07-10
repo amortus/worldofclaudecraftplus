@@ -5583,6 +5583,12 @@ export const zh_CN: EnTranslations = {
       "nythraxis_scourge_of_thornpeak": {
         "name": "尼思拉克西斯，荆峰之灾"
       },
+      "thunzharr_waking_peak": {
+        "name": "桑扎尔，觉醒之峰"
+      },
+      "thunzharr_stormling": {
+        "name": "被惊醒的风暴元素"
+      },
       "reliquary_ledger_wraith": {
         "name": "名册幽魂"
       },

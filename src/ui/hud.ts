@@ -4427,7 +4427,12 @@ export class Hud {
     const i18n: RaidLockoutI18n = {
       title: t('hudChrome.raidLockout.title'),
       allReady: t('hudChrome.raidLockout.allReady'),
-      raidName: (id) => dungeonDisplayName(id),
+      // A world-boss lockout id is `worldboss:<mobId>` (WORLD_BOSS_LOCKOUT_PREFIX);
+      // resolve it to the boss's localized mob name, else it is a dungeon id.
+      raidName: (id) =>
+        id.startsWith('worldboss:')
+          ? mobDisplayName(id.slice('worldboss:'.length))
+          : dungeonDisplayName(id),
       duration: (ms) => this.formatLockoutDuration(ms),
     };
     return raidLockoutPanelHtml(this.sim.raidLockouts(), i18n);

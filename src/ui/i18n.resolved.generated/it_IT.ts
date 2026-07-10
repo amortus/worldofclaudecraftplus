@@ -5583,6 +5583,12 @@ export const it_IT: EnTranslations = {
       "nythraxis_scourge_of_thornpeak": {
         "name": "Nythraxis, Flagello di Thornpeak"
       },
+      "thunzharr_waking_peak": {
+        "name": "Thunzharr, il Picco Risvegliato"
+      },
+      "thunzharr_stormling": {
+        "name": "Elementale di tempesta ridestato"
+      },
       "reliquary_ledger_wraith": {
         "name": "Spettro del Registro"
       },

@@ -358,6 +358,18 @@ export interface MobTemplate {
   // Rare/miniboss controls.
   canSwim?: boolean;
   ccImmune?: boolean;
+  // World boss: an open-world raid-tier elite driven by the world-boss scheduler
+  // (src/sim/world_boss.ts) - participant-scaled HP, personal loot, a daily raid
+  // lockout keyed `worldboss:<mobId>`, and summoned adds that collapse on its death.
+  worldBoss?: boolean;
+  // Movement-slow immunity: player-applied snares (Frostbolt/Hamstring) do not stick.
+  // Separate from ccImmune (which blocks stun/root/incapacitate/polymorph); a raid
+  // boss cannot be perma-kited by a wall of slows. Self-sourced slows are exempt.
+  slowImmune?: boolean;
+  // Pathing override: every chase step walks the straight line through fences,
+  // buildings, and the waterline (moveToward phases the collider) so the mob can
+  // always go directly at its target and never wedges mid-chase on a prop.
+  phasesThroughObstacles?: boolean;
   respawnMult?: number;
   // Boss mechanic: periodic AoE pulse around the mob while in combat.
   aoePulse?: {
@@ -479,6 +491,43 @@ export interface MobTemplate {
     name: string;
     school?: Aura['school'];
   };
+  // Anti-kite snare ("Howling Gale"): a boss slams every player within `radius` with a
+  // movement slow to `mult` speed for `duration`s, re-slammed every `every`s. Unlike the
+  // other boss pulses this ONE also fires while the boss is chasing (the kite case), so a
+  // sub-run-speed boss cannot be held out of melee forever. Reuses the `slow` aura
+  // (moveSpeedMult already honors it); deals no damage and draws no rng.
+  aoeSlow?: {
+    radius: number;
+    mult: number;
+    duration: number;
+    every: number;
+    name: string;
+    school?: string;
+  };
+  // Telegraphed hardcast ("Stormcall"): a periodic big spell with a real cast bar. The
+  // cadence ticks like aoePulse; at zero the mob starts a `castTime`-second cast (visible
+  // on the client cast bar) while it keeps meleeing, then the spell lands as an AoE nova
+  // for min..max damage on every living player within `radius`. Optional `yell` barks as
+  // the cast begins.
+  bigCast?: {
+    castId: string;
+    name: string;
+    castTime: number;
+    every: number;
+    radius: number;
+    min: number;
+    max: number;
+    school?: string;
+    yell?: string;
+  };
+  // Boss barks: named yell lines fired at pull / add-summon / enrage. Delivered as
+  // 'yell'-channel chat to nearby players (see emitMobYell); carried at battleYells.range
+  // when the boss is "loud".
+  yells?: { engage?: string; summon?: string; enrage?: string };
+  // Loud battle cries: a "loud" boss bellows the next line in `lines` every `every`s while
+  // engaged, broadcast at the wide `range` (past the default yell range) so the whole zone
+  // knows it is awake. Cycles the lines in order (draws no rng).
+  battleYells?: { every: number; range: number; lines: string[] };
   // Melee mechanic: each landed swing also splashes onto other players near the
   // primary target for `mult` of the (pre-armor) hit. Classic-WoW Cleave.
   cleave?: { radius: number; mult: number; name?: string };
@@ -1281,6 +1330,16 @@ export interface Entity {
   summonedIds: number[]; // live adds this boss summoned; despawned on reset
   enraged: boolean; // enrage mechanic active
   healedThisPull: boolean; // desperation self-heal already used this pull
+  aoeSlowTimer: number; // anti-kite snare (Howling Gale) pulse countdown
+  loudYellTimer: number; // loud battle-cry cadence countdown
+  loudYellIndex: number; // next battleYells line to bark (cycles in order)
+  bigCastTimer: number; // telegraphed hardcast (Stormcall) cadence countdown
+  yelledEngage: boolean; // world-boss engage bark already fired this pull
+  // World-boss loot roster: every player (or pet owner) who has landed a hit since the
+  // boss was pulled. NEVER pruned when they die or drop off threat (unlike the hate
+  // table), so a raider who died to the boss still gets a personal drop. Cleared on
+  // evade-home reset and respawn. Only world-boss templates ever populate it.
+  bossDamagers: Set<number>;
   nythraxis?: NythraxisEncounterState; // sim-only state for the Nythraxis raid encounter
   spawnPos: Vec3;
   leashAnchor: Vec3 | null; // refreshed by hostile player/pet actions; spawnPos remains the true home
@@ -1598,6 +1657,10 @@ export interface SimConfig {
   playerName?: string;
   noPlayer?: boolean; // multiplayer server: start with an empty world and addPlayer() later
   devCommands?: boolean; // local dev: /dev level|tp|give chat cheats
+  // Live-server opt-in: the world boss rises on the first tick instead of one interval
+  // out, so a freshly (re)started realm has its boss up. Offline/headless/parity worlds
+  // omit it (nothing spawns at boot), keeping deterministic traces unperturbed.
+  worldBossAtBoot?: boolean;
   lockoutNowMs?: () => number; // host wall-clock for persisted raid lockouts
   // Host-computed next raid-reset instant for a given lockout "now" (epoch ms). The
   // authoritative server uses its realm-local 3 AM daily reset; offline/headless omit

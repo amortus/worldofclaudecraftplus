@@ -5173,4 +5173,6 @@ export const ru_RU: Partial<Record<TranslationKey, string>> = {
   'entities.npcs.auctioneer_voss.title': 'Хранитель мирового рынка',
   'entities.npcs.auctioneer_voss.greeting': 'Мировой рынок доступен и здесь, {className}. Покупайте у искателей приключений всего королевства или выставляйте свои товары.',
 
+  'entities.mobs.thunzharr_waking_peak.name': 'Тунзарр, Пробуждающийся пик',
+  'entities.mobs.thunzharr_stormling.name': 'Пробуждённый элементаль бури',
 };

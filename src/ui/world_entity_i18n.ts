@@ -73,6 +73,9 @@ const MOB_IDS = [
   'bound_guardian',
   'nythraxis_skeleton_warrior',
   'nythraxis_scourge_of_thornpeak',
+  // Thunzharr, the Waking Peak (world boss) + its summoned stormlings
+  'thunzharr_waking_peak',
+  'thunzharr_stormling',
   // Collapsed Reliquary delve mobs
   'reliquary_ledger_wraith',
   'reliquary_funeral_ringer',

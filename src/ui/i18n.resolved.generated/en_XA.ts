@@ -5583,6 +5583,12 @@ export const en_XA: EnTranslations = {
       "nythraxis_scourge_of_thornpeak": {
         "name": "[Ñýţĥŕáẋíš, Šçóúŕĝé óƒ Ţĥóŕñþéáķ]"
       },
+      "thunzharr_waking_peak": {
+        "name": "[Ţĥúñžĥáŕŕ, ţĥé Ŵáķíñĝ Þéáķ]"
+      },
+      "thunzharr_stormling": {
+        "name": "[Ŕóúšéð Šţóŕɱļíñĝ]"
+      },
       "reliquary_ledger_wraith": {
         "name": "[Ļéðĝéŕ Ŵŕáíţĥ]"
       },

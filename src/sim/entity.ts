@@ -83,6 +83,12 @@ function baseEntity(id: number, pos: Vec3): Entity {
     summonedIds: [],
     enraged: false,
     healedThisPull: false,
+    aoeSlowTimer: 0,
+    loudYellTimer: 0,
+    loudYellIndex: 0,
+    bigCastTimer: 0,
+    yelledEngage: false,
+    bossDamagers: new Set(),
     threat: new Map(),
     forcedTargetId: null,
     forcedTargetTimer: 0,
@@ -401,6 +407,11 @@ export function createMob(id: number, template: MobTemplate, level: number, pos:
   if (template.rally) e.rallyTimer = template.rally.every;
   // Telegraph the first War Cadence the same way: one full interval after engage.
   if (template.warcry) e.warcryTimer = template.warcry.every;
+  // Telegraph the anti-kite snare, loud battle cry, and hardcast the same way: one
+  // full interval after engage, so none fires the instant combat opens.
+  if (template.aoeSlow) e.aoeSlowTimer = template.aoeSlow.every;
+  if (template.battleYells) e.loudYellTimer = template.battleYells.every;
+  if (template.bigCast) e.bigCastTimer = template.bigCast.every;
   return e;
 }
 

@@ -5097,4 +5097,6 @@ export const de_DE: Partial<Record<TranslationKey, string>> = {
   'hudChrome.loadingTips.vendor': "Verkaufe Troedel an Haendler; biete seltene Funde auf dem Weltmarkt fuer andere Spieler an.",
   'hudChrome.loadingTips.group': "Schwere Kaempfe und Dungeons sind in einer Gruppe leichter. Lade Spieler ein, die du triffst!",
   'hudChrome.loadingTips.classes': "Jede der neun Klassen spielt sich anders. Probiere ein paar aus, um deine Lieblingsklasse zu finden.",
+  'entities.mobs.thunzharr_waking_peak.name': 'Thunzharr, der Erwachende Gipfel',
+  'entities.mobs.thunzharr_stormling.name': 'Geweckter Sturmling',
 };

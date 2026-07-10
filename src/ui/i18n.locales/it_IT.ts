@@ -5071,4 +5071,6 @@ export const it_IT: Partial<Record<TranslationKey, string>> = {
   'hudChrome.loadingTips.vendor': "Vendi cianfrusaglie ai mercanti; metti gli oggetti rari sul Mercato Mondiale per gli altri giocatori.",
   'hudChrome.loadingTips.group': "Scontri e dungeon difficili sono piu facili in gruppo. Invita i giocatori che incontri!",
   'hudChrome.loadingTips.classes': "Ognuna delle nove classi si gioca in modo diverso. Provane alcune per trovare la tua preferita.",
+  'entities.mobs.thunzharr_waking_peak.name': 'Thunzharr, il Picco Risvegliato',
+  'entities.mobs.thunzharr_stormling.name': 'Elementale di tempesta ridestato',
 };

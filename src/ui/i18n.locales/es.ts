@@ -5085,4 +5085,6 @@ export const es: Partial<Record<TranslationKey, string>> = {
   'hudChrome.loadingTips.vendor': "Vende basura a los vendedores; publica objetos raros en el Mercado Mundial para otros jugadores.",
   'hudChrome.loadingTips.group': "Las peleas y mazmorras dificiles son mas faciles en grupo. Invita a los jugadores que encuentres!",
   'hudChrome.loadingTips.classes': "Cada una de las nueve clases juega distinto. Prueba algunas para encontrar tu favorita.",
+  'entities.mobs.thunzharr_waking_peak.name': 'Thunzharr, el Pico Despierto',
+  'entities.mobs.thunzharr_stormling.name': 'Elemental de tormenta despierto',
 };

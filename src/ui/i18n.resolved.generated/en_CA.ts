@@ -5583,6 +5583,12 @@ export const en_CA: EnTranslations = {
       "nythraxis_scourge_of_thornpeak": {
         "name": "Nythraxis, Scourge of Thornpeak"
       },
+      "thunzharr_waking_peak": {
+        "name": "Thunzharr, the Waking Peak"
+      },
+      "thunzharr_stormling": {
+        "name": "Roused Stormling"
+      },
       "reliquary_ledger_wraith": {
         "name": "Ledger Wraith"
       },

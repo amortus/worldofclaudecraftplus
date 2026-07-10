@@ -515,6 +515,10 @@ export class GameServer {
       playerClass: 'warrior',
       noPlayer: true,
       devCommands: process.env.ALLOW_DEV_COMMANDS === '1',
+      // The live realm's world boss rises the moment the realm boots (and re-rises on the
+      // scheduler's interval thereafter, driven by the sim tick). Offline/headless worlds
+      // leave this off, so nothing spawns at boot and deterministic traces are unperturbed.
+      worldBossAtBoot: true,
       lockoutNowMs: () => Date.now(),
       // Raid lockouts end at the next 3 AM (the classic daily reset) in this realm's civil
       // time zone, so the whole realm shares one predictable reset (via REALM_RESET_TZ).

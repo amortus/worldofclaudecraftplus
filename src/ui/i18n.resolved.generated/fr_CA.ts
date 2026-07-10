@@ -5583,6 +5583,12 @@ export const fr_CA: EnTranslations = {
       "nythraxis_scourge_of_thornpeak": {
         "name": "Nythraxis, Fléau de Thornpeak"
       },
+      "thunzharr_waking_peak": {
+        "name": "Thunzharr, le Pic Éveillé"
+      },
+      "thunzharr_stormling": {
+        "name": "Élémentaire de tempête éveillé"
+      },
       "reliquary_ledger_wraith": {
         "name": "Spectre du registre"
       },

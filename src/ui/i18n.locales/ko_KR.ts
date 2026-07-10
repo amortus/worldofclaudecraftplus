@@ -5080,4 +5080,6 @@ export const ko_KR: Partial<Record<TranslationKey, string>> = {
   'entities.npcs.auctioneer_voss.title': '세계 시장 관리자',
   'entities.npcs.auctioneer_voss.greeting': '세계 시장은 이곳에서도 이용할 수 있습니다, {className}. 왕국의 모험가들에게서 물건을 사거나 자신의 물건을 내놓으십시오.',
 
+  'entities.mobs.thunzharr_waking_peak.name': '천자르, 깨어나는 봉우리',
+  'entities.mobs.thunzharr_stormling.name': '깨어난 폭풍 정령',
 };

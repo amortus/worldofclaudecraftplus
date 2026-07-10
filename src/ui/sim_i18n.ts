@@ -3935,6 +3935,14 @@ const RULES: Rule[] = [
     build: () => t('itemUi.tooltip.cannotMarket'),
   },
   { re: /^(.+) awakens!$/, build: (m) => tQuestExtra('awakens', { name: locMob(m[1]) }) },
+  // World-boss spawn announce. The sim emits stable English (`{name} rises over Thornpeak
+  // Heights!`); we re-localize the boss NAME via locMob (tEntity) and keep the fixed flavor
+  // frame (Thornpeak is a place name) in English, the same English-backstop precedent the
+  // boss chat yells ride. Recognized by the S3 guard; adds no registry-tracked key.
+  {
+    re: /^(.+) rises over Thornpeak Heights!$/,
+    build: (m) => `${locMob(m[1])} rises over Thornpeak Heights!`,
+  },
   {
     re: /^Fallen Captain Aldren yells, "None shall disturb the king's rest! For Thornpeak!"$/,
     build: () => tQuestExtra('aldrenYell', { name: locMob('Fallen Captain Aldren') }),

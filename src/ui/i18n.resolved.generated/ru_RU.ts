@@ -5583,6 +5583,12 @@ export const ru_RU: EnTranslations = {
       "nythraxis_scourge_of_thornpeak": {
         "name": "Нитраксис, Бич Торнпика"
       },
+      "thunzharr_waking_peak": {
+        "name": "Тунзарр, Пробуждающийся пик"
+      },
+      "thunzharr_stormling": {
+        "name": "Пробуждённый элементаль бури"
+      },
       "reliquary_ledger_wraith": {
         "name": "Книжный призрак"
       },

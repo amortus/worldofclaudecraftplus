@@ -5583,6 +5583,12 @@ export const es: EnTranslations = {
       "nythraxis_scourge_of_thornpeak": {
         "name": "Nythraxis, Azote de Thornpeak"
       },
+      "thunzharr_waking_peak": {
+        "name": "Thunzharr, el Pico Despierto"
+      },
+      "thunzharr_stormling": {
+        "name": "Elemental de tormenta despierto"
+      },
       "reliquary_ledger_wraith": {
         "name": "Espectro del registro"
       },

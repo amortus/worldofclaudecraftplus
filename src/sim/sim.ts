@@ -253,6 +253,15 @@ import {
   xpToReachLevel,
 } from './types';
 import { vendorStackSize } from './vendor_stack';
+import {
+  markWorldBossLooted,
+  rollWorldBossLoot,
+  scaleWorldBossHp,
+  WORLD_BOSS_CORPSE_SECONDS,
+  WORLD_BOSSES,
+  type WorldBossDef,
+  worldBossLootContributors,
+} from './world_boss';
 import { groundHeight, WATER_LEVEL } from './world';
 
 const LEASH_DISTANCE = 45;
@@ -1185,6 +1194,13 @@ export class Sim {
   readonly devCommands: boolean;
   private pendingMobRespawns: PendingMobRespawn[] = [];
   private groundAoEs: GroundAoE[] = [];
+  // World-boss scheduler, one slot per WORLD_BOSSES entry. `worldBossNextAt` is the next
+  // sim-time (seconds) a boss is due to rise; `worldBossEntityIds` is the live boss entity
+  // (null once none is alive). Driven by updateWorldBosses() in the tick prologue.
+  // Sim-time scheduling keeps it deterministic (no wall clock); on the live server the sim
+  // runs at 20 Hz wall speed, so the interval is real hours.
+  private worldBossNextAt: number[] = WORLD_BOSSES.map((b) => b.intervalSeconds);
+  private worldBossEntityIds: (number | null)[] = WORLD_BOSSES.map(() => null);
 
   constructor(cfg: SimConfig) {
     this.devCommands = cfg.devCommands ?? false;
@@ -1195,10 +1211,15 @@ export class Sim {
       autoEquip: cfg.autoEquip ?? false,
       playerName: cfg.playerName ?? 'Adventurer',
       devCommands: this.devCommands,
+      worldBossAtBoot: cfg.worldBossAtBoot ?? false,
       lockoutNowMs: cfg.lockoutNowMs ?? (() => Math.floor(this.time * 1000)),
       raidResetMs: cfg.raidResetMs ?? ((nowMs: number) => nowMs + DEFAULT_RAID_LOCKOUT_MS),
     };
     this.rng = new Rng(cfg.seed);
+    // Live-server opt-in (worldBossAtBoot): the first world-boss rise is due immediately
+    // instead of one interval out, so a freshly (re)started realm has its boss up. Draws
+    // no rng here; the spawn itself fires on the first tick through updateWorldBosses.
+    if (cfg.worldBossAtBoot) this.worldBossNextAt = WORLD_BOSSES.map(() => 0);
 
     // NPCs — nudged out of buildings and deep water if their data position is bad
     for (const npcDef of Object.values(NPCS)) {
@@ -1347,6 +1368,85 @@ export class Sim {
   // (server: realm-local 3 AM daily reset); offline/headless fall back to a flat 24h day.
   private raidResetMs(nowMs: number): number {
     return this.cfg.raidResetMs(nowMs);
+  }
+
+  // World-boss scheduler. Per WORLD_BOSSES slot: while a boss is up, grow its HP pool
+  // with the raid size (retail-style, up to the cap); once it dies, keep the lootable
+  // corpse for WORLD_BOSS_CORPSE_SECONDS (handleDeath set respawnTimer to Infinity so the
+  // normal in-place respawn never fires - this scheduler is the sole respawner), then
+  // remove the corpse and any stormlings it left. When the interval comes due, advance it
+  // and, if no boss is up, spawn a fresh one. Draws no rng and allocates no ids until a
+  // spawn actually fires (never inside the short parity scenarios), so determinism traces
+  // are unaffected.
+  private updateWorldBosses(): void {
+    for (let i = 0; i < WORLD_BOSSES.length; i++) {
+      const def = WORLD_BOSSES[i];
+      const liveId = this.worldBossEntityIds[i];
+      if (liveId !== null) {
+        const boss = this.entities.get(liveId);
+        if (!boss) {
+          this.worldBossEntityIds[i] = null;
+        } else if (!boss.dead) {
+          scaleWorldBossHp(this.entities, this.players, boss, def);
+        } else if (boss.corpseTimer <= 0) {
+          for (const addId of boss.summonedIds) this.dropEntity(addId);
+          this.dropEntity(liveId);
+          this.worldBossEntityIds[i] = null;
+        }
+      }
+      if (this.time >= this.worldBossNextAt[i]) {
+        this.worldBossNextAt[i] += def.intervalSeconds;
+        if (this.worldBossEntityIds[i] === null) {
+          this.worldBossEntityIds[i] = this.spawnWorldBoss(def);
+        }
+      }
+    }
+  }
+
+  // Spawn a world boss at its fixed point and announce it server-wide. Returns the new
+  // entity id, or null if the template is missing. Uses no rng (fixed level + facing) so
+  // the spawn does not perturb the shared draw stream. The pool starts at the def base
+  // rather than the template's level-formula HP (participant scaling grows it from there).
+  private spawnWorldBoss(def: WorldBossDef): number | null {
+    const template = MOBS[def.templateId];
+    if (!template) return null;
+    const pos = this.groundPos(def.pos.x, def.pos.z);
+    const mob = createMob(this.nextId++, template, template.maxLevel, pos);
+    mob.facing = 0;
+    mob.prevFacing = 0;
+    mob.maxHp = def.hpScale.base;
+    mob.hp = def.hpScale.base;
+    this.addEntity(mob);
+    // Anchorless log (no pid, no entityId) => routeEvents broadcasts to every connected
+    // player as a system notice. Localized by sim_i18n's worldBossSpawn matcher.
+    this.emit({
+      type: 'log',
+      text: `${template.name} rises over Thornpeak Heights!`,
+      color: '#ffd100',
+    });
+    return mob.id;
+  }
+
+  // Boss bark broadcast: deliver a mob's yell line as 'yell'-channel chat to every player
+  // within `range` (defaults to the standard yell radius; a "loud" boss widens it), one
+  // per-player event copy (pid-routed), mirroring the Nythraxis encounter's yells. The
+  // lines live on MobTemplate.yells / .bigCast.yell / .battleYells (data-as-code) and ship
+  // as sim-emitted English re-localized by the client (sim_i18n boss-yell matcher). Draws
+  // no rng.
+  private emitMobYell(mob: Entity, text: string, range = YELL_RANGE): void {
+    for (const meta of this.players.values()) {
+      const p = this.entities.get(meta.entityId);
+      if (!p || dist2d(p.pos, mob.pos) > range) continue;
+      this.emit({
+        type: 'chat',
+        fromPid: mob.id,
+        from: mob.name,
+        text,
+        channel: 'yell',
+        entityId: mob.id,
+        pid: meta.entityId,
+      });
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -2342,6 +2442,7 @@ export class Sim {
     this.tickCount++;
     this.updatePendingMobRespawns();
     this.updateGroundAoEs();
+    this.updateWorldBosses();
 
     const despawnIds: number[] = [];
     for (const e of this.entities.values()) {
@@ -3417,7 +3518,9 @@ export class Sim {
         if (eff.type === 'polymorph') {
           if (target.kind === 'mob') {
             const fam = MOBS[target.templateId]?.family;
-            if (fam === 'undead' || target.templateId === 'gorrak') {
+            // A cc-immune raid boss can never be sheeped: reject the cast outright so the
+            // polymorph effect (and its sheep full-heal side effect) never runs on him.
+            if (fam === 'undead' || target.templateId === 'gorrak' || MOBS[target.templateId]?.ccImmune) {
               this.error(p.id, 'This creature cannot be polymorphed.');
               return;
             }
@@ -4476,6 +4579,16 @@ export class Sim {
       this.isControlAura(aura.kind) &&
       aura.sourceId !== target.id &&
       !this.isNythraxisScriptedControl(target, aura)
+    )
+      return;
+    // Slow immunity: a raid boss shrugs off player-applied snares (Frostbolt/Hamstring)
+    // so it cannot be perma-kited. Self-sourced slows (a scripted mechanic on itself) are
+    // exempt. Separate from ccImmune, which does not cover the `slow` aura kind.
+    if (
+      target.kind === 'mob' &&
+      MOBS[target.templateId]?.slowImmune &&
+      aura.kind === 'slow' &&
+      aura.sourceId !== target.id
     )
       return;
     const existing = target.auras.findIndex(
@@ -5718,6 +5831,15 @@ export class Sim {
       else if (source.ownerId !== null) target.tappedById = source.ownerId;
     }
 
+    // World-boss loot roster: every player (or pet owner) who lands a hit on a world boss
+    // becomes a permanent loot contributor. Unlike the hate table, this set is NEVER
+    // pruned when they die or drop off threat, so a raider who died to the boss still gets
+    // their personal drop. Read at death by worldBossLootContributors.
+    if (source && amount > 0 && MOBS[target.templateId]?.worldBoss) {
+      const contributorId = source.kind === 'player' ? source.id : source.ownerId;
+      if (contributorId !== null) target.bossDamagers.add(contributorId);
+    }
+
     if (source && source.kind === 'player' && source.id !== target.id) {
       const meta = this.players.get(source.id);
       if (meta) meta.counters.damageDealt += amount;
@@ -5957,6 +6079,20 @@ export class Sim {
       e.corpseTimer = CORPSE_DURATION;
       e.respawnTimer =
         this.cfg.respawnSeconds * (template?.respawnMult ?? (template?.rare ? 4 : 1));
+      // World bosses: snapshot the contributor set from the damager roster + hate table
+      // BEFORE clearThreat below, keep a long lootable-corpse window so every contributor
+      // can loot, and never auto-respawn in place - the world-boss scheduler is the sole
+      // respawner (it drops the corpse once the window elapses). Summoned stormlings
+      // collapse with the boss: leaving them alive would harass looters for the whole
+      // window. Only worldBoss templates take this branch, so no parity rng change.
+      const worldBossContribs = template?.worldBoss
+        ? worldBossLootContributors(this.entities, this.players, e)
+        : null;
+      if (template?.worldBoss) {
+        e.corpseTimer = WORLD_BOSS_CORPSE_SECONDS;
+        e.respawnTimer = Infinity;
+        this.despawnSummonedAdds(e);
+      }
       e.aggroTargetId = null;
       clearThreat(e);
       if (e.ownerId !== null) {
@@ -6015,8 +6151,14 @@ export class Sim {
           if (xpGain > 0) this.grantXp(xpGain, member, { fromKill: true });
           this.onMobKilledForQuests(e, member);
         }
-        this.rollLoot(e, meta, eligible);
+        // World bosses use PERSONAL loot for every contributor (rolled below from the
+        // damager-roster snapshot), not the tapper/party shared-corpse roll.
+        if (!template?.worldBoss) this.rollLoot(e, meta, eligible);
       }
+      // Personal loot is independent of tap/party kill credit: it goes to everyone who
+      // damaged the boss, so it rolls outside the credited-player block above.
+      if (worldBossContribs)
+        rollWorldBossLoot(this.rng, e, worldBossContribs, this.lockoutNowMs());
     }
   }
 
@@ -6798,6 +6940,15 @@ export class Sim {
       const run = this.delveRunForPlayer(target.id);
       if (run) this.maybeCompanionBark(run, target.id, 'boss_pull');
     }
+    // Boss engage bark: once per pull, on the first player-driven aggro. A player-owned
+    // pet pull counts (a hunter opening with the pet still wakes the boss). yelledEngage
+    // resets with the other per-pull state on evade/respawn.
+    const engageYell = MOBS[mob.templateId]?.yells?.engage;
+    const playerPull = target.kind === 'player' || target.ownerId !== null;
+    if (engageYell && playerPull && !mob.yelledEngage) {
+      mob.yelledEngage = true;
+      this.emitMobYell(mob, engageYell, MOBS[mob.templateId]?.battleYells?.range);
+    }
     if (social) {
       const family = MOBS[mob.templateId]?.family;
       const pullRadius = (family && SOCIAL_PULL_RADIUS[family]) ?? DEFAULT_SOCIAL_PULL_RADIUS;
@@ -7026,6 +7177,10 @@ export class Sim {
           this.updateProfiledMobCombat(mob);
           break;
         }
+        // The anti-kite snare and loud battle cries fire once per engaged tick, from
+        // either engaged state (mid-chase is the kite case they exist for), BEFORE the
+        // range/leash logic that could break out of this case.
+        this.pulseWorldBossEngaged(mob);
         this.updateMobTarget(mob);
         const target = mob.aggroTargetId !== null ? this.entities.get(mob.aggroTargetId) : null;
         if (!target || target.dead) {
@@ -7069,6 +7224,10 @@ export class Sim {
           this.updateProfiledMobCombat(mob);
           break;
         }
+        // Anti-kite snare + loud battle cries fire from the attack state too, before the
+        // range check that can hand the mob back to the chase state (a player at the snare
+        // radius edge is still snared even as the boss decides to chase).
+        this.pulseWorldBossEngaged(mob);
         this.updateMobTarget(mob);
         const target = mob.aggroTargetId !== null ? this.entities.get(mob.aggroTargetId) : null;
         if (!target || target.dead) {
@@ -7229,6 +7388,46 @@ export class Sim {
             }
           }
         }
+        // Stormcall (bigCast): a telegraphed hardcast. The cadence ticks like aoePulse;
+        // at zero the mob starts a visible cast bar and keeps meleeing while it fills,
+        // then the spell lands as an AoE nova on every living player in radius. Only fires
+        // in melee (attack state), like the other boss mechanics.
+        const bigCast = MOBS[mob.templateId]?.bigCast;
+        if (bigCast) {
+          if (mob.castingAbility === bigCast.castId) {
+            mob.castRemaining = Math.max(0, mob.castRemaining - DT);
+            if (mob.castRemaining <= 0) {
+              mob.castingAbility = null;
+              mob.castTotal = 0;
+              mob.castRemaining = 0;
+              const school = (bigCast.school ?? 'nature') as Aura['school'];
+              this.emit({ type: 'spellfx', sourceId: mob.id, targetId: mob.id, school, fx: 'nova' });
+              this.emit({
+                type: 'log',
+                text: `${mob.name} unleashes ${bigCast.name}!`,
+                color: '#ff9933',
+                entityId: mob.id,
+              });
+              for (const meta of this.players.values()) {
+                const pe = this.entities.get(meta.entityId);
+                if (pe && !pe.dead && dist2d(pe.pos, mob.pos) <= bigCast.radius) {
+                  const dmg = Math.round(this.rng.range(bigCast.min, bigCast.max));
+                  this.dealDamage(mob, pe, dmg, false, school, bigCast.name, 'hit', true);
+                }
+              }
+            }
+          } else {
+            mob.bigCastTimer -= DT;
+            if (mob.bigCastTimer <= 0) {
+              mob.bigCastTimer = bigCast.every + bigCast.castTime;
+              mob.castingAbility = bigCast.castId;
+              mob.castTotal = bigCast.castTime;
+              mob.castRemaining = bigCast.castTime;
+              mob.channeling = false;
+              if (bigCast.yell) this.emitMobYell(mob, bigCast.yell);
+            }
+          }
+        }
         break;
       }
       case 'flee': {
@@ -7297,6 +7496,49 @@ export class Sim {
     }
   }
 
+  // Howling Gale (anti-kite snare) + loud battle cries: the two boss pulses that fire
+  // from EITHER engaged state (chase and attack), once per tick. The snare is the ONE
+  // boss mechanic that also fires mid-chase: the aoePulse/stomp/bigCast mechanics all gate
+  // on the boss being in melee, which is what lets a ranged kiter hold a sub-run-speed
+  // boss out of melee forever so none of them land. The snare closes that gap (moveSpeedMult
+  // already honors the slow aura). Deals no damage and draws no rng, so it is inert for
+  // every template without the fields and cannot perturb the parity gate.
+  private pulseWorldBossEngaged(mob: Entity): void {
+    const aoeSlow = MOBS[mob.templateId]?.aoeSlow;
+    if (aoeSlow) {
+      mob.aoeSlowTimer -= DT;
+      if (mob.aoeSlowTimer <= 0) {
+        mob.aoeSlowTimer = aoeSlow.every;
+        const school = (aoeSlow.school ?? 'nature') as Aura['school'];
+        this.emit({ type: 'spellfx', sourceId: mob.id, targetId: mob.id, school, fx: 'nova' });
+        for (const meta of this.players.values()) {
+          const pe = this.entities.get(meta.entityId);
+          if (!pe || pe.dead || dist2d(pe.pos, mob.pos) > aoeSlow.radius) continue;
+          this.applyAura(pe, {
+            id: 'aoe_slow',
+            name: aoeSlow.name,
+            kind: 'slow',
+            remaining: aoeSlow.duration,
+            duration: aoeSlow.duration,
+            value: aoeSlow.mult,
+            sourceId: mob.id,
+            school,
+          });
+        }
+      }
+    }
+    const loud = MOBS[mob.templateId]?.battleYells;
+    if (loud && loud.lines.length > 0) {
+      mob.loudYellTimer -= DT;
+      if (mob.loudYellTimer <= 0) {
+        mob.loudYellTimer = loud.every;
+        const line = loud.lines[mob.loudYellIndex % loud.lines.length];
+        mob.loudYellIndex = (mob.loudYellIndex + 1) % loud.lines.length;
+        this.emitMobYell(mob, line, loud.range);
+      }
+    }
+  }
+
   // An evading mob has reached its spawn (walking or phasing): drop the pull
   // entirely and return to idle at full health, ready to be pulled again.
   private resetEvadingMob(mob: Entity): void {
@@ -7322,6 +7564,21 @@ export class Sim {
     mob.stoneskinTimer = MOBS[mob.templateId]?.stoneskin?.every ?? 0;
     mob.rallyTimer = MOBS[mob.templateId]?.rally?.every ?? 0;
     mob.warcryTimer = MOBS[mob.templateId]?.warcry?.every ?? 0;
+    // World-boss per-pull state: reset the snare/loud-yell/hardcast cadences, drop a
+    // mid-flight cast bar, re-arm the engage bark, and CLEAR the damager roster (a raider
+    // from a wiped pull must not receive a personal slot from a later kill).
+    mob.aoeSlowTimer = MOBS[mob.templateId]?.aoeSlow?.every ?? 0;
+    mob.loudYellTimer = MOBS[mob.templateId]?.battleYells?.every ?? 0;
+    mob.loudYellIndex = 0;
+    const bigCastDef = MOBS[mob.templateId]?.bigCast;
+    mob.bigCastTimer = bigCastDef?.every ?? 0;
+    if (bigCastDef && mob.castingAbility === bigCastDef.castId) {
+      mob.castingAbility = null;
+      mob.castTotal = 0;
+      mob.castRemaining = 0;
+    }
+    mob.yelledEngage = false;
+    mob.bossDamagers.clear();
     mob.wanderTimer = this.rng.range(2, 8);
     if (mob.templateId === NYTHRAXIS_BOSS_ID) this.resetNythraxisEncounter(mob);
   }
@@ -8616,7 +8873,10 @@ export class Sim {
     const step = Math.min(speed * DT, d);
     const canSwim = this.mobCanSwim(MOBS[e.templateId]);
 
-    if (ignoreObstacles) {
+    // A world boss flagged phasesThroughObstacles walks the straight line through every
+    // collider and the waterline on every step (not just an evade), so it never wedges
+    // mid-chase and always goes directly at its target.
+    if (ignoreObstacles || MOBS[e.templateId]?.phasesThroughObstacles) {
       const nx = e.pos.x + Math.sin(desired) * step;
       const nz = e.pos.z + Math.cos(desired) * step;
       e.pos.x = nx;
@@ -8717,6 +8977,14 @@ export class Sim {
     mob.stoneskinTimer = MOBS[mob.templateId]?.stoneskin?.every ?? 0;
     mob.rallyTimer = MOBS[mob.templateId]?.rally?.every ?? 0;
     mob.warcryTimer = MOBS[mob.templateId]?.warcry?.every ?? 0;
+    // World-boss per-pull state (see resetEvadingMob): the damager roster never carries
+    // across lives, so the loot rights die with the boss.
+    mob.aoeSlowTimer = MOBS[mob.templateId]?.aoeSlow?.every ?? 0;
+    mob.loudYellTimer = MOBS[mob.templateId]?.battleYells?.every ?? 0;
+    mob.loudYellIndex = 0;
+    mob.bigCastTimer = MOBS[mob.templateId]?.bigCast?.every ?? 0;
+    mob.yelledEngage = false;
+    mob.bossDamagers.clear();
     mob.wanderTimer = this.rng.range(2, 8);
     if (mob.templateId === NYTHRAXIS_BOSS_ID) this.resetNythraxisEncounter(mob);
     for (const meta of this.players.values()) {
@@ -8851,6 +9119,7 @@ export class Sim {
       const thresholds = tmpl.summonAdds.atHpPct;
       while (mob.firedSummons < thresholds.length && hpFrac <= thresholds[mob.firedSummons]) {
         mob.firedSummons++;
+        if (tmpl.yells?.summon) this.emitMobYell(mob, tmpl.yells.summon, tmpl.battleYells?.range);
         const run = this.delveRunForMob(mob.id);
         if (
           run &&
@@ -8868,6 +9137,7 @@ export class Sim {
     const enrageAllowed = !enrageRun || enrageRun.tierId === 'heroic';
     if (tmpl.enrage && enrageAllowed && !mob.enraged && hpFrac <= tmpl.enrage.belowHpPct) {
       mob.enraged = true;
+      if (tmpl.yells?.enrage) this.emitMobYell(mob, tmpl.yells.enrage, tmpl.battleYells?.range);
       this.emit({ type: 'aura', targetId: mob.id, name: 'Enrage', gained: true });
       this.emit({
         type: 'log',
@@ -9851,11 +10121,15 @@ export class Sim {
     const [topThreatId] = threatEntries(boss, 1)[0] ?? [];
     const victimId = boss.aggroTargetId ?? topThreatId ?? null;
     const victim = victimId !== null ? this.entities.get(victimId) : null;
+    // World bosses erupt their adds from directly underneath them (a tight 1yd cluster,
+    // spread only enough not to stack on one point); ordinary summoners keep the wider
+    // 3.5yd ring beside the boss.
+    const spawnRadius = MOBS[boss.templateId]?.worldBoss ? 1 : 3.5;
     for (let k = 0; k < count; k++) {
       const ang = (k / count) * Math.PI * 2 + 0.7;
       const pos = this.groundPos(
-        boss.pos.x + Math.sin(ang) * 3.5,
-        boss.pos.z + Math.cos(ang) * 3.5,
+        boss.pos.x + Math.sin(ang) * spawnRadius,
+        boss.pos.z + Math.cos(ang) * spawnRadius,
       );
       const level = this.rng.int(template.minLevel, template.maxLevel);
       const add = createMob(this.nextId++, template, level, pos);
@@ -10576,8 +10850,16 @@ export class Sim {
         continue;
       }
       if (s.personalFor) {
+        const wasEligible = s.personalFor.includes(meta.entityId);
         this.addItem(s.itemId, 1, meta.entityId);
         s.personalFor = s.personalFor.filter((id) => id !== meta.entityId);
+        // Consume the world-boss daily lockout the moment this player actually LOOTS a
+        // personal slot (not at kill/roll time): a contributor who dies or never reaches
+        // the corpse keeps their lockout and can try again next spawn. This single write
+        // is both the eligibility gate and the rendered raid-lockout countdown.
+        if (wasEligible && MOBS[mob.templateId]?.worldBoss) {
+          markWorldBossLooted(meta, mob.templateId, this.raidResetMs(this.lockoutNowMs()));
+        }
         continue;
       }
       if (!hasSharedLootRights) continue;

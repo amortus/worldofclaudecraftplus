@@ -787,6 +787,160 @@ export const ZONE3_MOBS: Record<string, MobTemplate> = {
     scale: 1.3,
     color: 0xe8702a,
   },
+  // Thunzharr, the Waking Peak: the world boss of Thornpeak Heights. The mountain at
+  // Stormcrag is no mountain at all: a primordial storm elemental the Gravecallers'
+  // chanting keeps stirring loose. It rises on a fixed cadence (see
+  // src/sim/world_boss.ts), bellows a server-wide warning, and rewards every player who
+  // helps bring it down with personal loot (once per day). A genuine raid-tier overworld
+  // fight: Thunderclap nova, a quaking stomp, summoned stormlings, a crushing heave, a
+  // mountain-hide barrier, a Stormcall hardcast, and a hard enrage in the last fifth.
+  //
+  // BALANCE (maintainer review): every number below - hpBase/hpPerLevel, melee dmg,
+  // moveSpeed, the mechanic damage bands, the Howling Gale snare, and the enrage - is
+  // tuned to sit at our L20 raid tier (Nythraxis-parity melee dps) WITHOUT leapfrogging
+  // it. Re-check before shipping.
+  thunzharr_waking_peak: {
+    id: 'thunzharr_waking_peak',
+    name: 'Thunzharr, the Waking Peak',
+    minLevel: 20,
+    maxLevel: 20,
+    family: 'elemental',
+    worldBoss: true,
+    boss: true,
+    elite: true,
+    canSwim: false,
+    // The mountain does not path around camp furniture: every chase step walks the
+    // straight line through fences, buildings, and the waterline, so he can always go
+    // directly at his target and never wedges on a collider.
+    phasesThroughObstacles: true,
+    ccImmune: true,
+    // A raid boss cannot be perma-snared by a wall of Frostbolts / Hamstrings: slows do
+    // not stick to him (ccImmune already blocks stun/root/etc; slow is separate).
+    slowImmune: true,
+    // Raid-tier health: HP scaling is participant-based (world_boss.ts hpScale), so the
+    // pool starts at the def base (40k), not this level formula. hpBase/hpPerLevel are
+    // only a sane fallback if the boss is ever spawned outside the scheduler.
+    hpBase: 4000,
+    hpPerLevel: 800,
+    // Raid-tier melee, tuned to Nythraxis dps parity: at level 20 after createMob's 1.5x
+    // elite multiplier this averages ~375 per 2.4s swing, ~156 melee dps, so the pull
+    // needs a healed tank exactly like the raid.
+    dmgBase: 54,
+    dmgPerLevel: 10.3,
+    attackSpeed: 2.4,
+    armorPerLevel: 46,
+    // Faster than a player's base run speed (7, entity.ts): Thunzharr cannot be outrun on
+    // foot, so there is no kite even before the Howling Gale snare lands.
+    moveSpeed: 11.6,
+    aggroRadius: 18,
+    aoePulse: {
+      min: 36,
+      max: 50,
+      radius: 12,
+      every: 12,
+      name: 'Thunderclap',
+      school: 'nature',
+      fx: 'nova',
+    },
+    stomp: {
+      radius: 11,
+      every: 24,
+      // A short pin, not a shutdown: at 11.6 vs a base run of 7 the boss closes about 7yd
+      // in 1.5s, enough to be on top of anyone caught mid-flight without benching the raid.
+      duration: 1.5,
+      min: 18,
+      max: 28,
+      name: 'Seismic Stomp',
+      school: 'nature',
+    },
+    // Howling Gale: the anti-kite snare. Gale-force winds pin every player within 40yd to
+    // 70% move speed for 6s, re-slammed every 5s (permanent uptime while you stand in the
+    // storm). Fires while CHASING too, so a sprint-buffed runner cannot open a gap.
+    aoeSlow: {
+      radius: 40,
+      mult: 0.7,
+      duration: 6,
+      every: 5,
+      name: 'Howling Gale',
+      school: 'nature',
+    },
+    summonAdds: { mobId: 'thunzharr_stormling', count: 2, atHpPct: [0.66, 0.33] },
+    knockback: { chance: 0.3, distance: 7, name: 'Tectonic Heave' },
+    stoneskin: { amount: 500, every: 27, duration: 9, name: 'Mountainhide', school: 'nature' },
+    // Stormcall: the telegraphed hardcast. A 3.5s cast bar the whole raid can see (and the
+    // yell announces), then a heavy nature nova on everyone within 30yd, roughly double a
+    // Thunderclap pulse on a much longer cadence.
+    bigCast: {
+      castId: 'thunzharr_stormcall',
+      name: 'Stormcall',
+      castTime: 3.5,
+      every: 40,
+      radius: 30,
+      min: 70,
+      max: 90,
+      school: 'nature',
+      yell: 'The storm answers my call!',
+    },
+    yells: {
+      engage: 'You wake the mountain? Then be buried by it!',
+      summon: 'Rise, stormlings! Tear them loose from my slopes!',
+      enrage: 'The peak breaks, and the sky falls with it!',
+    },
+    // Loud: a mountain-sized voice. Every yell carries 350yd, far past the 100yd default,
+    // and he bellows one of these lines once a minute in combat.
+    battleYells: {
+      every: 60,
+      range: 350,
+      lines: [
+        'THUNDER ANSWERS! The peak has teeth again!',
+        'Run, little climbers! The mountain runs faster!',
+        'Every stone remembers your name, and none forgive!',
+        'I am the storm the summit swallowed!',
+      ],
+    },
+    enrage: { belowHpPct: 0.2, dmgMult: 1.5, hasteMult: 1.25 },
+    // Personal loot table: rolled INDEPENDENTLY for every contributor (see
+    // rollWorldBossLoot). A guaranteed storm trophy, plus AT MOST ONE epic set piece. The
+    // glove group rolls first; the belt group also rolls but the one-gear cap keeps it
+    // only when the glove roll missed. Keep the glove entries first if this is retuned.
+    loot: [
+      { itemId: 'inert_storm_shard', chance: 1 },
+      { itemId: 'crownforged_gauntlets', chance: 0.08, rollGroup: 'thunzharr_t2' },
+      { itemId: 'nighttalon_grips', chance: 0.08, rollGroup: 'thunzharr_t2' },
+      { itemId: 'soulflame_gloves', chance: 0.08, rollGroup: 'thunzharr_t2' },
+      { itemId: 'stormcallers_handguards', chance: 0.08, rollGroup: 'thunzharr_t2' },
+      { itemId: 'crownforged_girdle', chance: 0.08, rollGroup: 'thunzharr_t2_belt' },
+      { itemId: 'nighttalon_waistband', chance: 0.08, rollGroup: 'thunzharr_t2_belt' },
+      { itemId: 'soulflame_cord', chance: 0.08, rollGroup: 'thunzharr_t2_belt' },
+      { itemId: 'stormcallers_waistguard', chance: 0.08, rollGroup: 'thunzharr_t2_belt' },
+    ],
+    // A large, imposing world boss that reads on the skyline without being mountain-sized.
+    // Visual scale is DECOUPLED from combat reach (pinned to a scale-5 body in
+    // combatProfileForMob, mob_combat.ts): his move speed and Howling Gale, not a giant
+    // swing, keep him unkitable.
+    scale: 8,
+    color: 0x7d8a99,
+  },
+  // Stormlings: lesser storm elementals Thunzharr tears loose from itself at the health
+  // thresholds above. Fast, fragile, and meant to split a raid's attention.
+  thunzharr_stormling: {
+    id: 'thunzharr_stormling',
+    name: 'Roused Stormling',
+    minLevel: 19,
+    maxLevel: 20,
+    family: 'elemental',
+    hpBase: 70,
+    hpPerLevel: 24,
+    dmgBase: 13,
+    dmgPerLevel: 2.9,
+    attackSpeed: 2.0,
+    armorPerLevel: 22,
+    moveSpeed: 7.4,
+    aggroRadius: 12,
+    loot: [],
+    scale: 0.95,
+    color: 0x9fb3c8,
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -2614,6 +2768,107 @@ export const ZONE3_ITEMS: Record<string, ItemDef> = {
     kind: 'junk',
     quality: 'poor',
     sellValue: 35,
+  },
+  // --- Thunzharr, the Waking Peak (world boss): the guaranteed storm trophy plus four
+  // archetype gloves and four belts, one epic gear piece per contributor per kill (see
+  // rollWorldBossLoot). Named into thematic families (Bonewrought / Direfang / Wraithfire
+  // / Galecall) across the four armor archetypes.
+  //
+  // NOTE: upstream ships these as a set-bonus "Tier-2" with a 2-piece caster
+  // knockback-resist bonus, but our fork has no item-set-bonus system (no `set` field,
+  // no set_procs), so these ship as INDIVIDUAL epic pieces; the set bonus is out of scope
+  // until/unless the set system is ported.
+  //
+  // BALANCE (maintainer review): stats sit just under our matching L20 epic chest pieces
+  // (e.g. plate chest str8/sta10 armor270), slot-weighted down for gloves/belts. Re-check
+  // before shipping. The guaranteed storm trophy (inert_storm_shard) already exists above.
+  crownforged_gauntlets: {
+    id: 'crownforged_gauntlets',
+    name: 'Bonewrought Gauntlets',
+    kind: 'armor',
+    slot: 'gloves',
+    armorType: 'mail',
+    quality: 'epic',
+    stats: { armor: 180, str: 6, sta: 7 },
+    sellValue: 3600,
+    requiredClass: ['warrior', 'paladin'],
+  },
+  nighttalon_grips: {
+    id: 'nighttalon_grips',
+    name: 'Direfang Grips',
+    kind: 'armor',
+    slot: 'gloves',
+    armorType: 'leather',
+    quality: 'epic',
+    stats: { armor: 110, agi: 8, sta: 5 },
+    sellValue: 3600,
+    requiredClass: ['rogue', 'hunter', 'druid'],
+  },
+  soulflame_gloves: {
+    id: 'soulflame_gloves',
+    name: 'Wraithfire Gloves',
+    kind: 'armor',
+    slot: 'gloves',
+    armorType: 'cloth',
+    quality: 'epic',
+    stats: { armor: 60, int: 8, sta: 5 },
+    sellValue: 3600,
+    requiredClass: ['mage', 'priest', 'warlock', 'druid'],
+  },
+  stormcallers_handguards: {
+    id: 'stormcallers_handguards',
+    name: 'Galecall Handguards',
+    kind: 'armor',
+    slot: 'gloves',
+    armorType: 'mail',
+    quality: 'epic',
+    stats: { armor: 130, int: 8, sta: 5 },
+    sellValue: 3600,
+    requiredClass: ['shaman'],
+  },
+  crownforged_girdle: {
+    id: 'crownforged_girdle',
+    name: 'Bonewrought Girdle',
+    kind: 'armor',
+    slot: 'waist',
+    armorType: 'mail',
+    quality: 'epic',
+    stats: { armor: 150, str: 7, sta: 6 },
+    sellValue: 3600,
+    requiredClass: ['warrior', 'paladin'],
+  },
+  nighttalon_waistband: {
+    id: 'nighttalon_waistband',
+    name: 'Direfang Waistband',
+    kind: 'armor',
+    slot: 'waist',
+    armorType: 'leather',
+    quality: 'epic',
+    stats: { armor: 95, agi: 8, sta: 5 },
+    sellValue: 3600,
+    requiredClass: ['rogue', 'hunter', 'druid'],
+  },
+  soulflame_cord: {
+    id: 'soulflame_cord',
+    name: 'Wraithfire Cord',
+    kind: 'armor',
+    slot: 'waist',
+    armorType: 'cloth',
+    quality: 'epic',
+    stats: { armor: 50, int: 8, spi: 5 },
+    sellValue: 3600,
+    requiredClass: ['mage', 'priest', 'warlock', 'druid'],
+  },
+  stormcallers_waistguard: {
+    id: 'stormcallers_waistguard',
+    name: 'Galecall Waistguard',
+    kind: 'armor',
+    slot: 'waist',
+    armorType: 'mail',
+    quality: 'epic',
+    stats: { armor: 115, int: 8, spi: 5 },
+    sellValue: 3600,
+    requiredClass: ['shaman'],
   },
 };
 

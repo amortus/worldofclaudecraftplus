@@ -5069,4 +5069,6 @@ export const ja_JP: Partial<Record<TranslationKey, string>> = {
   'entities.npcs.auctioneer_voss.title': '世界市場の守り手',
   'entities.npcs.auctioneer_voss.greeting': '世界市場はここでも利用できます、{className}。王国中の冒険者から買うことも、自分の品を売ることもできます。',
 
+  'entities.mobs.thunzharr_waking_peak.name': 'サンザール、目覚めし峰',
+  'entities.mobs.thunzharr_stormling.name': '目覚めた嵐の精',
 };

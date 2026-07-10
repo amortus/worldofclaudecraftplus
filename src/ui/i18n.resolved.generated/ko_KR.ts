@@ -5583,6 +5583,12 @@ export const ko_KR: EnTranslations = {
       "nythraxis_scourge_of_thornpeak": {
         "name": "나이트락시스, 손피크의 재앙"
       },
+      "thunzharr_waking_peak": {
+        "name": "천자르, 깨어나는 봉우리"
+      },
+      "thunzharr_stormling": {
+        "name": "깨어난 폭풍 정령"
+      },
       "reliquary_ledger_wraith": {
         "name": "명부의 망령"
       },

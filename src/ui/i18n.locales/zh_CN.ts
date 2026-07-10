@@ -4831,4 +4831,6 @@ export const zh_CN: Partial<Record<TranslationKey, string>> = {
   'entities.npcs.auctioneer_voss.title': '世界市场守护者',
   'entities.npcs.auctioneer_voss.greeting': '世界市场在此亦可使用，{className}。从王国各地的冒险者手中购买，或出售你自己的货物。',
 
+  'entities.mobs.thunzharr_waking_peak.name': '桑扎尔，觉醒之峰',
+  'entities.mobs.thunzharr_stormling.name': '被惊醒的风暴元素',
 };

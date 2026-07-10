@@ -5096,4 +5096,6 @@ export const pt_BR: Partial<Record<TranslationKey, string>> = {
   'hudChrome.loadingTips.vendor': "Venda tralha para vendedores; anuncie itens raros no Mercado Global para outros jogadores.",
   'hudChrome.loadingTips.group': "Lutas e masmorras dificeis ficam mais faceis em grupo. Convide os jogadores que encontrar!",
   'hudChrome.loadingTips.classes': "Cada uma das nove classes joga de um jeito. Experimente algumas para achar sua favorita.",
+  'entities.mobs.thunzharr_waking_peak.name': 'Thunzharr, o Pico Desperto',
+  'entities.mobs.thunzharr_stormling.name': 'Elemental de tormenta desperto',
 };

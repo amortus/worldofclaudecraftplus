@@ -47,6 +47,16 @@ export function scaledDefaultMobMeleeRange(scale: number): number {
 export function combatProfileForMob(templateId: string, scale: number): MobCombatProfile {
   if (templateId === 'nythraxis_scourge_of_thornpeak') return NYTHRAXIS_BOSS_COMBAT_PROFILE;
   if (templateId === 'nythraxis_skeleton_warrior') return NYTHRAXIS_ADD_COMBAT_PROFILE;
+  // Thunzharr the world boss renders at a towering scale 8, but his melee reach is
+  // PINNED to a ~17yd scale-5 body: his move speed and the Howling Gale snare, not a
+  // giant swing, are what make him unkitable. Decoupling reach from visual scale keeps
+  // him from cleaving the whole raid from a giant's arm's length.
+  if (templateId === 'thunzharr_waking_peak') {
+    return {
+      ...DEFAULT_MOB_COMBAT_PROFILE,
+      meleeRange: scaledDefaultMobMeleeRange(5),
+    };
+  }
   return {
     ...DEFAULT_MOB_COMBAT_PROFILE,
     meleeRange: scaledDefaultMobMeleeRange(scale),

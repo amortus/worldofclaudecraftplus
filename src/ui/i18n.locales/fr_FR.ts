@@ -5114,4 +5114,6 @@ export const fr_FR: Partial<Record<TranslationKey, string>> = {
   'hudChrome.loadingTips.vendor': "Vendez le bric-a-brac aux marchands ; mettez les objets rares sur le Marche mondial pour les autres joueurs.",
   'hudChrome.loadingTips.group': "Les combats et donjons difficiles sont plus faciles en groupe. Invitez les joueurs que vous croisez !",
   'hudChrome.loadingTips.classes': "Chacune des neuf classes se joue differemment. Essayez-en quelques-unes pour trouver votre preferee.",
+  'entities.mobs.thunzharr_waking_peak.name': 'Thunzharr, le Pic Éveillé',
+  'entities.mobs.thunzharr_stormling.name': 'Élémentaire de tempête éveillé',
 };

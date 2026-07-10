@@ -5583,6 +5583,12 @@ export const de_DE: EnTranslations = {
       "nythraxis_scourge_of_thornpeak": {
         "name": "Nythraxis, Geißel von Thornpeak"
       },
+      "thunzharr_waking_peak": {
+        "name": "Thunzharr, der Erwachende Gipfel"
+      },
+      "thunzharr_stormling": {
+        "name": "Geweckter Sturmling"
+      },
       "reliquary_ledger_wraith": {
         "name": "Verzeichnisgespenst"
       },
