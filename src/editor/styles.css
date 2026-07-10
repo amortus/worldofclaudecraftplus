@@ -86,6 +86,37 @@ body {
   background: #0d1219;
 }
 
+.editor-prop-input {
+  flex: 0 0 auto;
+  width: 120px;
+  background: #10161f;
+  color: #e8eef4;
+  border: 1px solid #2f3b4a;
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 12px;
+}
+
+.editor-prop-input[aria-invalid='true'] {
+  border-color: #c0483f;
+}
+
+.editor-selactions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.editor-btn-danger {
+  border-color: #7a3a34;
+  color: #ffb3ab;
+}
+
+.editor-btn-danger:hover {
+  background: #3a2320;
+  border-color: #a04c43;
+}
+
 .editor-body {
   display: flex;
   flex: 1 1 auto;

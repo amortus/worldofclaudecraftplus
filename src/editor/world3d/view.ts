@@ -39,7 +39,7 @@ export class Editor3dView {
   private readonly webgl: THREE.WebGLRenderer;
   private readonly camera: THREE.PerspectiveCamera;
   private readonly world: EditorScene;
-  private readonly markers: MarkerHandles;
+  private markers: MarkerHandles;
   private readonly raycaster = new THREE.Raycaster();
   private readonly byKey = new Map<string, EditorEntity>();
 
@@ -231,6 +231,19 @@ export class Editor3dView {
 
   selectKey(key: string | null): void {
     this.select(key);
+  }
+
+  // Rebuild the gizmo layer after the app adds/removes/edits markers (clone, delete,
+  // radius change). The entity list is a fresh array sharing the same live points.
+  setEntities(entities: EditorEntity[]): void {
+    this.byKey.clear();
+    for (const e of entities) this.byKey.set(e.key, e);
+    this.world.scene.remove(this.markers.group);
+    this.markers.dispose();
+    this.markers = buildMarkers(entities, this.opts.seed);
+    this.world.scene.add(this.markers.group);
+    if (this.selectedKey && this.byKey.has(this.selectedKey)) this.markers.setSelected(this.selectedKey);
+    else this.selectedKey = null;
   }
 
   frameAll(): void {

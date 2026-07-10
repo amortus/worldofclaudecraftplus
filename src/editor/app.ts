@@ -11,12 +11,13 @@
 
 import { draw, KIND_COLOR } from './canvas';
 import {
+  type BaseRec,
   buildEntities,
-  diffMoved,
+  buildPatch,
   type EditorEntity,
   type EntityKind,
-  formatPatch,
-  snapshot,
+  renderPatch,
+  snapshotFull,
   type ZoneContent,
 } from './model';
 import { Camera, pickHandle, type ScreenPoint, type Vec2, type Viewport } from './view';
@@ -41,7 +42,7 @@ const KIND_LABEL: Record<EntityKind, string> = {
 export class EditorApp {
   private readonly content: ZoneContent;
   private entities: EditorEntity[];
-  private readonly base: Map<string, Vec2>;
+  private readonly base: Map<string, BaseRec>;
 
   private readonly canvas: HTMLCanvasElement;
   private readonly ctx: CanvasRenderingContext2D;
@@ -71,7 +72,7 @@ export class EditorApp {
   constructor(mount: HTMLElement, content: ZoneContent) {
     this.content = content;
     this.entities = buildEntities(content);
-    this.base = snapshot(this.entities);
+    this.base = snapshotFull(this.entities);
 
     mount.innerHTML = '';
     mount.classList.add('editor-root');
@@ -339,7 +340,6 @@ export class EditorApp {
     this.selInfo.innerHTML = '';
     const rows: [string, string][] = [
       ['Kind', KIND_LABEL[e.kind]],
-      ['Label', e.label],
       ['Zone', e.zoneId ?? '(unzoned)'],
       ['x', e.point.x.toFixed(2)],
       ['z', e.point.z.toFixed(2)],
@@ -355,11 +355,73 @@ export class EditorApp {
       row.append(kk, vv);
       this.selInfo.appendChild(row);
     }
+
+    // Editable properties.
+    for (const p of e.props) {
+      const row = document.createElement('label');
+      row.className = 'editor-selrow';
+      const kk = document.createElement('span');
+      kk.className = 'editor-selkey';
+      kk.textContent = p.label;
+      const input = document.createElement('input');
+      input.className = 'editor-prop-input';
+      input.type = p.type === 'number' ? 'number' : 'text';
+      input.value = p.get();
+      // Live: apply + refresh the patch as you type; commit (blur/enter) rebuilds so
+      // radius/label changes reflect in the 2D canvas and 3D markers.
+      input.addEventListener('input', () => {
+        const ok = p.set(input.value);
+        input.setAttribute('aria-invalid', ok ? 'false' : 'true');
+        if (ok) {
+          this.refreshPatch();
+          this.dirty = true;
+        }
+      });
+      input.addEventListener('change', () => {
+        if (p.set(input.value)) this.rebuild();
+      });
+      row.append(kk, input);
+      this.selInfo.appendChild(row);
+    }
+
+    // Clone / delete actions.
+    if (e.clone || e.removable) {
+      const actions = document.createElement('div');
+      actions.className = 'editor-selactions';
+      if (e.clone) {
+        actions.appendChild(this.button('Duplicate', () => {
+          e.clone?.();
+          this.rebuild();
+        }));
+      }
+      if (e.removable && e.remove) {
+        const del = this.button('Delete', () => {
+          e.remove?.();
+          this.selectedKey = null;
+          this.rebuild();
+        });
+        del.classList.add('editor-btn-danger');
+        actions.appendChild(del);
+      }
+      this.selInfo.appendChild(actions);
+    }
   }
 
   private refreshPatch(): void {
-    const moved = diffMoved(this.entities, this.base);
-    this.patchPre.textContent = formatPatch(moved);
+    this.patchPre.textContent = renderPatch(buildPatch(this.entities, this.base));
+  }
+
+  // Rebuild the entity list after a structural edit (clone/delete) or a committed
+  // property change, then re-sync every surface: 2D redraw, 3D markers, panels, patch.
+  private rebuild(): void {
+    this.entities = buildEntities(this.content);
+    if (this.selectedKey && !this.entities.some((e) => e.key === this.selectedKey)) {
+      this.selectedKey = null; // the selected marker was deleted
+    }
+    this.view3d?.setEntities(this.entities);
+    this.refreshSelInfo();
+    this.refreshPatch();
+    this.dirty = true;
   }
 
   private async copyPatch(): Promise<void> {
