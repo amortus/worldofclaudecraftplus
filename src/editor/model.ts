@@ -8,6 +8,7 @@
 // the source of truth and emits a patch a human pastes back into the zone files.
 
 import type { CampDef, GroundObjectDef, NpcDef, ZoneDef } from '../sim/types';
+import type { ApplyOp, PathVal } from './apply/types';
 import type { Vec2 } from './view';
 
 export type EntityKind = 'hub' | 'graveyard' | 'lake' | 'poi' | 'camp' | 'npc' | 'object';
@@ -425,4 +426,92 @@ export function renderPatch(patch: Patch): string {
 export function round(v: number, precision: number): number {
   const f = 10 ** precision;
   return Math.round(v * f) / f;
+}
+
+// ---- Apply ops for the dev-only write-back -----------------------------------------
+
+// The position property path per kind (the x/z live under this, [] = top-level x/z).
+const POS_PATH: Record<EntityKind, string[]> = {
+  camp: ['center'],
+  npc: ['pos'],
+  hub: [],
+  graveyard: [],
+  lake: [],
+  poi: [],
+  object: [],
+};
+
+// The original-value match that locates a record's source literal. Uses base (the
+// load-time values, i.e. what is still in the file) plus stable ids, never the edited
+// current values, so a record is found even after its fields were changed.
+function matchFor(kind: EntityKind, source: object, was: BaseRec): PathVal[] {
+  switch (kind) {
+    case 'npc':
+      return [{ path: ['id'], value: (source as NpcDef).id }];
+    case 'camp':
+      return [
+        { path: ['mobId'], value: was.fields.mobId },
+        { path: ['center', 'x'], value: was.x },
+        { path: ['center', 'z'], value: was.z },
+      ];
+    case 'poi':
+      return [{ path: ['label'], value: was.fields.label }, { path: ['x'], value: was.x }, { path: ['z'], value: was.z }];
+    case 'hub':
+      return [{ path: ['name'], value: was.fields.name }, { path: ['x'], value: was.x }, { path: ['z'], value: was.z }];
+    case 'lake':
+      return [{ path: ['x'], value: was.x }, { path: ['z'], value: was.z }, { path: ['radius'], value: Number(was.fields.radius) }];
+    default: // graveyard, object: located by their (unique-enough) coordinates
+      return [{ path: ['x'], value: was.x }, { path: ['z'], value: was.z }];
+  }
+}
+
+// Build the auto-appliable ops (position moves + scalar field edits) plus a list of
+// changes that must stay manual (adds/deletes, and the object name which lives on the
+// parent record, not the position literal). Pure: does no I/O.
+export function buildApplyOps(
+  entities: readonly EditorEntity[],
+  base: Map<string, BaseRec>,
+  precision = 2,
+): { ops: ApplyOp[]; skipped: { label: string; reason: string }[] } {
+  const ops: ApplyOp[] = [];
+  const skipped: { label: string; reason: string }[] = [];
+  const present = new Set<string>();
+
+  for (const e of entities) {
+    present.add(e.key);
+    const was = base.get(e.key);
+    if (!was) {
+      skipped.push({ label: e.label, reason: 'new record: append it manually from the patch text' });
+      continue;
+    }
+    const moved = round(e.point.x, precision) !== round(was.x, precision) || round(e.point.z, precision) !== round(was.z, precision);
+    const updates: PathVal[] = [];
+    if (moved) {
+      const p = POS_PATH[e.kind];
+      updates.push({ path: [...p, 'x'], value: round(e.point.x, precision) });
+      updates.push({ path: [...p, 'z'], value: round(e.point.z, precision) });
+    }
+    for (const prop of e.props) {
+      const now = prop.get();
+      if (was.fields[prop.key] === now) continue;
+      if (e.kind === 'object' && prop.key === 'name') {
+        skipped.push({ label: e.label, reason: 'object name lives on the parent record; apply it manually' });
+        continue;
+      }
+      updates.push({ path: [prop.key], value: prop.type === 'number' ? Number(now) : now });
+    }
+    if (updates.length) {
+      ops.push({ key: e.key, kind: e.kind, label: e.label, match: matchFor(e.kind, e.source, was), updates });
+    }
+  }
+
+  // Deletions (in base but no longer present) are never auto-removed: splicing a camp
+  // shifts the world-gen rng draw order (src/sim/data.ts). Report them as manual.
+  for (const [key, was] of base) {
+    if (!present.has(key)) {
+      skipped.push({ label: was.label, reason: 'deleted record: remove it manually (camp order feeds world-gen rng)' });
+    }
+  }
+
+  return { ops, skipped };
 }

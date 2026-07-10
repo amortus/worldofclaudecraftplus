@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  buildApplyOps,
   buildEntities,
   buildPatch,
   renderPatch,
@@ -128,5 +129,43 @@ describe('buildPatch', () => {
     const c = content();
     const ents = buildEntities(c);
     expect(renderPatch(buildPatch(ents, snapshotFull(ents)))).toBe('No changes.');
+  });
+});
+
+describe('buildApplyOps', () => {
+  it('locates an npc move by its stable id and updates pos', () => {
+    const c = content();
+    const base = snapshotFull(buildEntities(c));
+    buildEntities(c).find((e) => e.kind === 'npc')!.point.x = 50;
+    const { ops } = buildApplyOps(buildEntities(c), base);
+    const op = ops.find((o) => o.kind === 'npc')!;
+    expect(op.match).toEqual([{ path: ['id'], value: 'guard' }]);
+    expect(op.updates).toContainEqual({ path: ['pos', 'x'], value: 50 });
+  });
+
+  it('locates a camp edit by mobId + original center, updating the scalar field', () => {
+    const c = content();
+    const base = snapshotFull(buildEntities(c));
+    buildEntities(c).find((e) => e.kind === 'camp')!.props.find((p) => p.key === 'count')!.set('9');
+    const { ops } = buildApplyOps(buildEntities(c), base);
+    const op = ops.find((o) => o.kind === 'camp')!;
+    expect(op.match).toContainEqual({ path: ['mobId'], value: 'wolf' });
+    expect(op.match).toContainEqual({ path: ['center', 'x'], value: 30 });
+    expect(op.updates).toContainEqual({ path: ['count'], value: 9 });
+  });
+
+  it('keeps adds, deletes, and object-name edits as manual (skipped)', () => {
+    const c = content();
+    const base = snapshotFull(buildEntities(c));
+    buildEntities(c).find((e) => e.kind === 'poi')!.clone!(); // add
+    buildEntities(c).find((e) => e.kind === 'lake')!.remove!(); // delete
+    buildEntities(c).find((e) => e.kind === 'object')!.props[0].set('Renamed'); // name edit
+    const { ops, skipped } = buildApplyOps(buildEntities(c), base);
+    const reasons = skipped.map((s) => s.reason).join(' | ');
+    expect(reasons).toMatch(/new record/);
+    expect(reasons).toMatch(/deleted record/);
+    expect(reasons).toMatch(/object name/);
+    // the object-name edit produces no auto op
+    expect(ops.some((o) => o.kind === 'object')).toBe(false);
   });
 });

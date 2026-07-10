@@ -7,6 +7,9 @@ dist-env/
 dist-server/
 media-cache/
 
+# map-editor dev write-back backups (created by the /editor "Apply to files" endpoint)
+src/sim/content/*.bak
+
 # i18n per-locale emit crash leftovers (the build sweeps these; never commit one)
 src/ui/i18n.resolved.generated/*.tmp
 src/admin/i18n.resolved.generated/*.tmp

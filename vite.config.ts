@@ -6,6 +6,8 @@ import path from 'node:path';
 // Untyped zero-dep build helper (same convention as the other scripts/*.mjs tools).
 // vite.config.ts is outside tsconfig `include`, so this import is never type-checked.
 import { templateModulepreload } from './scripts/i18n_modulepreload.mjs';
+// Dev-only (`apply: 'serve'`) write-back endpoint for the map editor; never in a build.
+import { editorApplyPlugin } from './src/editor/apply/dev_plugin';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
 
@@ -134,7 +136,7 @@ function i18nModulepreloadPlugin() {
 
 export default defineConfig({
   base: '/',
-  plugins: [staticPageAliasPlugin(), i18nModulepreloadPlugin()],
+  plugins: [staticPageAliasPlugin(), i18nModulepreloadPlugin(), editorApplyPlugin()],
   resolve: { alias: { '#bot-detector': botDetectorImpl } },
   define: {
     __APP_VERSION__: JSON.stringify(appVersion),

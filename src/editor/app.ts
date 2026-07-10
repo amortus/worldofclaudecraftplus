@@ -12,6 +12,7 @@
 import { draw, KIND_COLOR } from './canvas';
 import {
   type BaseRec,
+  buildApplyOps,
   buildEntities,
   buildPatch,
   type EditorEntity,
@@ -90,6 +91,11 @@ export class EditorApp {
     this.mode3dBtn = this.button('3D view', () => void this.toggle3d());
     topbar.append(this.mode3dBtn);
     topbar.append(this.button('Copy patch', () => void this.copyPatch()));
+    // Write-back is dev-only: the endpoint lives in a vite serve-time plugin, so gate
+    // the button on DEV (vite strips this branch from the production bundle).
+    if (import.meta.env.DEV) {
+      topbar.append(this.button('Apply to files (dev)', () => void this.applyToFiles()));
+    }
 
     const body = document.createElement('div');
     body.className = 'editor-body';
@@ -432,6 +438,36 @@ export class EditorApp {
     } catch {
       // Clipboard may be unavailable (permissions/insecure context); the patch
       // stays visible in the panel for manual copy.
+    }
+  }
+
+  // Dev-only: POST the auto-appliable ops (moves + scalar edits) to the vite plugin,
+  // which rewrites the matching literals in src/sim/content (with a .bak backup).
+  // Adds/deletes stay manual (shown as skipped). Available only under `npm run dev`.
+  private async applyToFiles(): Promise<void> {
+    const { ops, skipped } = buildApplyOps(this.entities, this.base);
+    if (ops.length === 0 && skipped.length === 0) {
+      this.patchPre.textContent = 'No changes to apply.';
+      return;
+    }
+    try {
+      const res = await fetch('/editor/apply', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ops }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const report = (await res.json()) as { applied: number; files: string[]; skipped: { label: string; reason: string }[] };
+      const lines = [`Applied ${report.applied} change(s) to: ${report.files.join(', ') || '(none)'}.`];
+      const manual = [...skipped, ...(report.skipped ?? [])];
+      if (manual.length) {
+        lines.push('', 'Not auto-applied (do these by hand):');
+        for (const s of manual) lines.push(`  - ${s.label}: ${s.reason}`);
+      }
+      lines.push('', 'Reload the editor to continue from the saved state.');
+      this.patchPre.textContent = lines.join('\n');
+    } catch (err) {
+      this.patchPre.textContent = `Apply failed (the write-back endpoint only exists under npm run dev): ${String(err)}`;
     }
   }
 
