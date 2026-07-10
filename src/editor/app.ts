@@ -20,6 +20,13 @@ import {
   type ZoneContent,
 } from './model';
 import { Camera, pickHandle, type ScreenPoint, type Vec2, type Viewport } from './view';
+// Type-only: the 3D subsystem (Three.js + renderer modules) is loaded lazily via a
+// dynamic import() when the operator opens 3D, so the 2D editor stays lightweight.
+import type { Editor3dView } from './world3d';
+
+// Mirrors WORLD_SEED in src/main.ts (the persistent world's fixed seed). The 3D
+// editor must build terrain on the same seed so markers sit on the real surface.
+const WORLD_SEED = 20061;
 
 const KIND_LABEL: Record<EntityKind, string> = {
   hub: 'Hub',
@@ -53,6 +60,14 @@ export class EditorApp {
 
   private dirty = true;
 
+  // 3D view state. `stage` hosts either the 2D canvas or the 3D host; `view3d` is the
+  // live 3D editor (null in 2D mode). Both modes share `this.entities`, so a drag in
+  // either updates the same live points the patch exporter reads.
+  private stage!: HTMLElement;
+  private view3d: Editor3dView | null = null;
+  private entering3d = false;
+  private mode3dBtn!: HTMLButtonElement;
+
   constructor(mount: HTMLElement, content: ZoneContent) {
     this.content = content;
     this.entities = buildEntities(content);
@@ -71,6 +86,8 @@ export class EditorApp {
     hint.textContent = 'Drag markers to reposition. Emit a patch, then paste it into src/sim/content.';
     topbar.append(title, hint, this.button('Frame all', () => this.frameAll()));
     topbar.append(this.button('Reset view', () => this.resetView()));
+    this.mode3dBtn = this.button('3D view', () => void this.toggle3d());
+    topbar.append(this.mode3dBtn);
     topbar.append(this.button('Copy patch', () => void this.copyPatch()));
 
     const body = document.createElement('div');
@@ -78,6 +95,8 @@ export class EditorApp {
 
     const stage = document.createElement('div');
     stage.className = 'editor-stage';
+    stage.style.position = 'relative'; // lets the 3D host fill it via inset:0
+    this.stage = stage;
     this.canvas = document.createElement('canvas');
     stage.appendChild(this.canvas);
 
@@ -193,6 +212,7 @@ export class EditorApp {
 
   private attachEvents(stage: HTMLElement): void {
     stage.addEventListener('pointerdown', (ev) => {
+      if (this.view3d) return; // 3D host handles its own pointers
       const s = this.pointerAt(ev);
       this.lastPointer = s;
       const w = this.cam.screenToWorld(s, this.vp());
@@ -216,6 +236,7 @@ export class EditorApp {
     });
 
     stage.addEventListener('pointermove', (ev) => {
+      if (this.view3d) return;
       const s = this.pointerAt(ev);
       const dx = s.sx - this.lastPointer.sx;
       const dy = s.sy - this.lastPointer.sy;
@@ -261,6 +282,7 @@ export class EditorApp {
     stage.addEventListener(
       'wheel',
       (ev) => {
+        if (this.view3d) return;
         ev.preventDefault();
         const factor = Math.exp(-ev.deltaY * 0.0015);
         this.cam.zoomAt(this.pointerAt(ev), factor, this.vp());
@@ -270,6 +292,7 @@ export class EditorApp {
     );
 
     window.addEventListener('keydown', (ev) => {
+      if (this.view3d) return; // the 3D view owns its own key handling
       if (ev.key === 'Escape' && this.selectedKey) {
         this.selectedKey = null;
         this.refreshSelInfo();
@@ -293,7 +316,7 @@ export class EditorApp {
   // ---- render + panels ----------------------------------------------------------------
 
   private tick = (): void => {
-    if (this.dirty) {
+    if (this.dirty && !this.view3d) {
       draw(this.ctx, this.cam, this.vp(), {
         entities: this.entities,
         roads: this.content.roads ?? [],
@@ -348,5 +371,67 @@ export class EditorApp {
       // Clipboard may be unavailable (permissions/insecure context); the patch
       // stays visible in the panel for manual copy.
     }
+  }
+
+  // ---- 3D mode ------------------------------------------------------------------------
+
+  private async toggle3d(): Promise<void> {
+    if (this.view3d) {
+      this.exit3d();
+      return;
+    }
+    await this.enter3d();
+  }
+
+  private async enter3d(): Promise<void> {
+    if (this.view3d || this.entering3d) return; // guard re-entrancy during the awaits
+    this.entering3d = true;
+    this.mode3dBtn.disabled = true;
+    this.canvas.style.display = 'none';
+    const host = document.createElement('div');
+    host.className = 'editor3d-host';
+    host.style.cssText = 'position:absolute;inset:0';
+    const loading = document.createElement('div');
+    loading.className = 'editor3d-loading';
+    loading.textContent = 'Building world (loading assets)...';
+    host.appendChild(loading);
+    this.stage.appendChild(host);
+    try {
+      // Lazy chunk: pulls in Three.js + the renderer build modules only now; the
+      // factory awaits the GLB preload the build* modules need.
+      const mod = await import('./world3d');
+      const view = await mod.Editor3dView.create(host, {
+        seed: WORLD_SEED,
+        entities: this.entities,
+        onChange: () => this.refreshPatch(),
+        onSelect: (e) => {
+          this.selectedKey = e?.key ?? null;
+          this.refreshSelInfo();
+        },
+      });
+      loading.remove();
+      this.view3d = view;
+      this.mode3dBtn.textContent = '2D view';
+      this.mode3dBtn.classList.add('editor-btn-active');
+    } catch (err) {
+      // Keep the tool usable in 2D if the 3D world fails to build.
+      loading.textContent = `3D view failed to load: ${String(err)}`;
+      console.error('[editor3d] failed to enter 3D', err);
+    } finally {
+      this.entering3d = false;
+      this.mode3dBtn.disabled = false;
+    }
+  }
+
+  private exit3d(): void {
+    if (!this.view3d) return;
+    this.view3d.dispose();
+    this.view3d = null;
+    this.stage.querySelector('.editor3d-host')?.remove();
+    this.canvas.style.display = '';
+    this.mode3dBtn.textContent = '3D view';
+    this.mode3dBtn.classList.remove('editor-btn-active');
+    this.resize();
+    this.dirty = true;
   }
 }
