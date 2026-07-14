@@ -7144,7 +7144,10 @@
       padding-bottom: max(8px, env(safe-area-inset-bottom));
     }
     body.mobile-touch[data-start-panel="charselect-panel"] #homepage-views-container,
-    body.mobile-touch[data-start-panel="charcreate-panel"] #homepage-views-container {
+    body.mobile-touch[data-start-panel="charcreate-panel"] #homepage-views-container,
+    body.mobile-touch[data-start-panel="login-panel"] #homepage-views-container,
+    body.mobile-touch[data-start-panel="offline-select"] #homepage-views-container,
+    body.mobile-touch[data-start-panel="realm-panel"] #homepage-views-container {
       padding-top: max(8px, env(safe-area-inset-top));
       padding-bottom: max(8px, env(safe-area-inset-bottom));
     }
@@ -7156,12 +7159,18 @@
       min-height: calc(var(--app-vh) - 96px);
     }
     body.mobile-touch[data-start-panel="charselect-panel"] #hero-view,
-    body.mobile-touch[data-start-panel="charcreate-panel"] #hero-view {
+    body.mobile-touch[data-start-panel="charcreate-panel"] #hero-view,
+    body.mobile-touch[data-start-panel="login-panel"] #hero-view,
+    body.mobile-touch[data-start-panel="offline-select"] #hero-view,
+    body.mobile-touch[data-start-panel="realm-panel"] #hero-view {
       justify-content: flex-start;
       min-height: calc(var(--app-vh) - 86px);
     }
     body.mobile-touch[data-start-panel="charselect-panel"] #title-logo,
-    body.mobile-touch[data-start-panel="charcreate-panel"] #title-logo {
+    body.mobile-touch[data-start-panel="charcreate-panel"] #title-logo,
+    body.mobile-touch[data-start-panel="login-panel"] #title-logo,
+    body.mobile-touch[data-start-panel="offline-select"] #title-logo,
+    body.mobile-touch[data-start-panel="realm-panel"] #title-logo {
       display: none;
     }
     body.mobile-touch[data-start-panel="mode-select"] #title-logo {
@@ -7183,8 +7192,34 @@
       display: none;
     }
     body.mobile-touch[data-start-panel="charselect-panel"] .official-site-copy,
-    body.mobile-touch[data-start-panel="charcreate-panel"] .official-site-copy {
+    body.mobile-touch[data-start-panel="charcreate-panel"] .official-site-copy,
+    body.mobile-touch[data-start-panel="login-panel"] .official-site-copy,
+    body.mobile-touch[data-start-panel="offline-select"] .official-site-copy,
+    body.mobile-touch[data-start-panel="realm-panel"] .official-site-copy {
       display: none;
+    }
+    /* Simple form panels (login/register, realm) compress so the whole form,
+       including the submit button, fits a short landscape viewport instead of
+       spilling below the fold. */
+    body.mobile-touch[data-start-panel="login-panel"] #hero-view #login-panel,
+    body.mobile-touch[data-start-panel="realm-panel"] #hero-view #realm-panel {
+      margin-top: 0;
+    }
+    body.mobile-touch[data-start-panel="login-panel"] .auth-panel {
+      padding: 12px 16px;
+    }
+    body.mobile-touch[data-start-panel="login-panel"] .auth-title {
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+    /* Offline character select stacks its class grid + preview + create form, so in a
+       short landscape viewport it is far taller than the screen. Constrain it to the
+       viewport and scroll inside so every control stays reachable (nothing falls off). */
+    body.mobile-touch[data-start-panel="offline-select"] #offline-select {
+      height: min(560px, calc(var(--app-vh) - 92px));
+      max-height: calc(var(--app-vh) - 92px);
+      overflow-y: auto;
+      overflow-x: hidden;
     }
     body.mobile-touch .play-console {
       width: 100%;
@@ -8218,7 +8253,10 @@
 
   @media (orientation: landscape) {
     body.mobile-touch[data-start-panel="charselect-panel"] #homepage-views-container,
-    body.mobile-touch[data-start-panel="charcreate-panel"] #homepage-views-container {
+    body.mobile-touch[data-start-panel="charcreate-panel"] #homepage-views-container,
+    body.mobile-touch[data-start-panel="login-panel"] #homepage-views-container,
+    body.mobile-touch[data-start-panel="offline-select"] #homepage-views-container,
+    body.mobile-touch[data-start-panel="realm-panel"] #homepage-views-container {
       padding-top: max(8px, env(safe-area-inset-top));
       padding-bottom: max(8px, env(safe-area-inset-bottom));
     }
