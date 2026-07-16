@@ -181,6 +181,7 @@ import { computeDropdownPlacement } from './dropdown_position';
 import { emoteIconUrl } from './emote_icons';
 import { itemDisplayName, tEntity } from './entity_i18n';
 import { esc } from './esc';
+import { milestoneName } from './milestone_i18n';
 import {
   buildGuildLeaderboardView,
   type GuildLeaderboardRow,
@@ -6641,7 +6642,7 @@ export class Hud {
           break;
         }
         case 'milestoneUnlocked': {
-          const name = this.milestoneName(ev.milestoneId);
+          const name = milestoneName(ev.milestoneId);
           this.showBanner(`${t('game.milestone.unlocked')}: ${name}`);
           this.log(`${t('game.milestone.unlocked')}: ${name}`, '#ffd100');
           audio.levelUp();
@@ -11006,23 +11007,6 @@ export class Hud {
   // milestone badges, prestige dialog, and the lifetime-XP leaderboard panel.
   // -------------------------------------------------------------------------
 
-  private milestoneName(id: string): string {
-    switch (id) {
-      case 'veteran':
-        return t('game.milestone.veteran');
-      case 'champion':
-        return t('game.milestone.champion');
-      case 'paragon':
-        return t('game.milestone.paragon');
-      case 'mythic':
-        return t('game.milestone.mythic');
-      case 'eternal':
-        return t('game.milestone.eternal');
-      default:
-        return id;
-    }
-  }
-
   // Character-sheet summary of the current specialization, role, and Mastery
   // (FR-8.6). Reuses the progression-block styling.
   private talentSummaryHtml(): string {
@@ -11049,7 +11033,7 @@ export class Hud {
     const vlevel = virtualLevel(sim.lifetimeXp);
     const unlocked = new Set(sim.unlockedMilestones);
     const badges = MILESTONES.filter((m) => unlocked.has(m.id))
-      .map((m) => `<span class="ms-badge ms-${m.kind}">${this.milestoneName(m.id)}</span>`)
+      .map((m) => `<span class="ms-badge ms-${m.kind}">${milestoneName(m.id)}</span>`)
       .join('');
     let html = `<div class="cp-title">${t('game.progression.heading')}</div>`;
     html += `<div class="char-stats cp-stats">

@@ -224,6 +224,7 @@ import {
   MAX_LEVEL,
   MELEE_RANGE,
   MILESTONES,
+  wornTitleMilestone,
   type MobFamily,
   type MobTemplate,
   type MoveInput,
@@ -1608,6 +1609,7 @@ export class Sim {
       meta.restedXp = Math.max(0, s.restedXp ?? 0);
       if (s.unlockedMilestones)
         for (const id of s.unlockedMilestones) meta.unlockedMilestones.add(id);
+      this.syncWornTitle(meta, player); // wear it on load, not only on the next unlock
       meta.copper = s.copper;
       meta.equipment = { ...s.equipment };
       meta.inventory = s.inventory.map((i) => ({ ...i }));
@@ -6318,6 +6320,15 @@ export class Sim {
         this.emit({ type: 'milestoneUnlocked', milestoneId: m.id, pid: p.id });
       }
     }
+    this.syncWornTitle(meta, p);
+  }
+
+  // Mirror the worn title onto the entity so it rides the normal entity wire to every
+  // client that can see this player. Called on unlock AND on load: a character who
+  // already earned a title before this shipped must wear it without waiting for the
+  // next unlock (and `eternal` may never come).
+  private syncWornTitle(meta: PlayerMeta, p: Entity): void {
+    p.title = wornTitleMilestone(meta.unlockedMilestones);
   }
 
   // Opt-in cosmetic prestige: only at the cap. Resets the level XP

@@ -37,6 +37,7 @@ import {
   type SimEvent,
 } from '../sim/types';
 import { groundHeight, WATER_LEVEL, zoneBiomeAt } from '../sim/world';
+import { milestoneName } from '../ui/milestone_i18n';
 import { tEntity } from '../ui/entity_i18n';
 import {
   holderTierBadgeDataUrl,
@@ -471,6 +472,7 @@ interface EntityView {
   nameplate: HTMLDivElement;
   nameEl: HTMLDivElement;
   guildEl: HTMLDivElement; // <Guild> tag under the name (players only)
+  titleEl: HTMLDivElement; // earned milestone title above the name (players only)
   hpBar: HTMLDivElement;
   hpFill: HTMLDivElement;
   emoteEl: HTMLDivElement;
@@ -3154,6 +3156,10 @@ export class Renderer {
     const nameEl = document.createElement('div');
     nameEl.className = 'np-name';
     nameEl.textContent = e.kind === 'object' ? objectDisplayName(e) : e.name;
+    // earned milestone title above the name (players only); hidden until set
+    const titleEl = document.createElement('div');
+    titleEl.className = 'np-title';
+    titleEl.style.display = 'none';
     // guild tag under the name (players in a guild); hidden until set
     const guildEl = document.createElement('div');
     guildEl.className = 'np-guild';
@@ -3172,7 +3178,7 @@ export class Renderer {
     const castLabel = document.createElement('div');
     castLabel.className = 'np-castlabel';
     castBar.append(castFill, castLabel);
-    np.append(emoteEl, raidMark, comboRow, marker, tierEl, nameEl, guildEl, hpBar, castBar);
+    np.append(emoteEl, raidMark, comboRow, marker, tierEl, titleEl, nameEl, guildEl, hpBar, castBar);
     this.nameplateLayer.appendChild(np);
 
     // object views gate their own casters; character shadows live in visual
@@ -3192,6 +3198,7 @@ export class Renderer {
       nameplate: np,
       nameEl,
       guildEl,
+      titleEl,
       hpBar,
       hpFill,
       emoteEl,
@@ -4730,9 +4737,10 @@ export class Renderer {
         const nameDisplay = isSelf ? 'none' : '';
         const hpDisplay = e.dead || isSelf ? 'none' : '';
         const guild = isSelf ? '' : e.guild;
+        const title = isSelf ? '' : e.title;
         this.setNameplateStatic(
           v,
-          `player|${e.name}|${guild}|${nameDisplay}|${hpDisplay}|${opacity}`,
+          `player|${e.name}|${guild}|${title}|${nameDisplay}|${hpDisplay}|${opacity}`,
           e.name,
           '#7fb8ff',
           hpDisplay,
@@ -4741,6 +4749,7 @@ export class Renderer {
           opacity,
           '',
           guild,
+          title,
         );
         v.nameEl.style.display = nameDisplay;
         // $WOC holder-tier flair, shown on OTHER players (own nameplate is hidden).
@@ -4831,6 +4840,7 @@ export class Renderer {
     opacity: string,
     frame = '',
     guild = '',
+    title = '',
   ): void {
     if (sig === v.nameplateSig) return;
     v.nameplateSig = sig;
@@ -4848,6 +4858,14 @@ export class Renderer {
       v.guildEl.style.display = '';
     } else {
       v.guildEl.style.display = 'none';
+    }
+    // earned milestone title, resolved from its id here so the sim/wire stay
+    // language-agnostic. Rides the sig like the guild tag.
+    if (title) {
+      v.titleEl.textContent = milestoneName(title);
+      v.titleEl.style.display = '';
+    } else {
+      v.titleEl.style.display = 'none';
     }
   }
 

@@ -1243,6 +1243,9 @@ export interface Entity {
   name: string;
   level: number;
   guild: string;
+  // Worn title, as a MILESTONE ID ('' = none), never localized text: the sim and the
+  // wire stay language-agnostic and the client resolves the id through milestone_i18n.
+  title: string;
   pos: Vec3;
   prevPos: Vec3; // for render interpolation
   facing: number; // radians, 0 = +Z
@@ -1810,6 +1813,23 @@ export const MILESTONES: MilestoneDef[] = [
   { id: 'mythic', lifetimeXp: 2_500_000, kind: 'border' },
   { id: 'eternal', lifetimeXp: 5_000_000, kind: 'title' },
 ];
+
+// The title a player currently wears: the highest-threshold `title` milestone they have
+// unlocked, or '' for none. Border milestones are skipped (they are not worn as text).
+// Pure, so the sim, the wire and the client can all agree without passing state around.
+export function wornTitleMilestone(unlocked: Iterable<string>): string {
+  const have = new Set(unlocked);
+  let best = '';
+  let bestXp = -1;
+  for (const m of MILESTONES) {
+    if (m.kind !== 'title' || !have.has(m.id)) continue;
+    if (m.lifetimeXp > bestXp) {
+      bestXp = m.lifetimeXp;
+      best = m.id;
+    }
+  }
+  return best;
+}
 
 // Prestige cost. Each prestige rank requires a full level-cap bar's worth of
 // post-cap lifetime XP, so prestige rank is a pure function of XP actually

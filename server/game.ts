@@ -323,6 +323,9 @@ function identityFields(e: Entity): Record<string, unknown> {
   if (e.holderTier) out.ht = e.holderTier; // $WOC holder-tier flair (cosmetic)
   if (e.holderBalance) out.hb = Math.round(e.holderBalance); // exact $WOC, for inspect
   if (e.guild) out.gd = e.guild;
+  // Worn milestone title, as an id: the client localizes it. Rides the identity record
+  // like the guild tag, since it only changes on an unlock.
+  if (e.title) out.tt = e.title;
   if (e.dungeonId) out.dgn = e.dungeonId;
   if (e.objectItemId) out.obj = e.objectItemId;
   if (e.scale !== 1) out.sc = e.scale;

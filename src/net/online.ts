@@ -726,6 +726,7 @@ function blankEntity(id: number): Entity {
     mainhandItemId: null,
     equippedItems: {},
     guild: '',
+    title: '',
   };
 }
 
@@ -1155,6 +1156,7 @@ export class ClientWorld implements IWorld {
         e.dungeonId = w.dgn ?? null;
         e.objectItemId = w.obj ?? null;
         e.guild = w.gd ?? '';
+        e.title = w.tt ?? '';
         if (e.kind === 'npc') {
           const def = NPCS[e.templateId];
           e.questIds = def ? [...def.questIds] : [];

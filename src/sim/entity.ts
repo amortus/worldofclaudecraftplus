@@ -124,6 +124,7 @@ function baseEntity(id: number, pos: Vec3): Entity {
     mainhandItemId: null,
     equippedItems: {},
     guild: '',
+    title: '',
   };
 }
 
