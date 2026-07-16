@@ -4007,6 +4007,14 @@ export const zh_TW: EnTranslations = {
         "name": "狂暴之怒",
         "description": "進入狂暴之怒，產生 20 點怒氣。（戰士天賦）"
       },
+      "ironhold": {
+        "name": "Ironhold",
+        "description": "Brace behind your guard, reducing all damage taken by 40% for 8 sec."
+      },
+      "primal_reflexes": {
+        "name": "Primal Reflexes",
+        "description": "Your instincts sharpen, increasing your chance to dodge by 50% for 6 sec."
+      },
       "summon_imp": {
         "name": "召喚小鬼",
         "description": "召喚一隻聽從術士命令的小鬼。小鬼會從遠處向你的敵人投擲火焰箭。召喚新的惡魔會驅散你目前的惡魔。你同時只能擁有一隻惡魔。"

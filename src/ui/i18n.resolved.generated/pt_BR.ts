@@ -4007,6 +4007,14 @@ export const pt_BR: EnTranslations = {
         "name": "Raiva Berserker",
         "description": "Entra em raiva berserker e gera 20 de raiva. (talento de guerreiro)"
       },
+      "ironhold": {
+        "name": "Ironhold",
+        "description": "Brace behind your guard, reducing all damage taken by 40% for 8 sec."
+      },
+      "primal_reflexes": {
+        "name": "Primal Reflexes",
+        "description": "Your instincts sharpen, increasing your chance to dodge by 50% for 6 sec."
+      },
       "summon_imp": {
         "name": "Invocar diabrete",
         "description": "Invoca um Diabrete sob o comando do bruxo. O Diabrete arremessa Flechas de Fogo nos seus inimigos à distância. Invocar um novo demônio dispensa o atual. Você só pode ter um demônio por vez."

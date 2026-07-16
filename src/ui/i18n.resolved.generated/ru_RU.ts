@@ -4007,6 +4007,14 @@ export const ru_RU: EnTranslations = {
         "name": "Ярость берсерка",
         "description": "Впадаете в ярость берсерка и получаете 20 ярости. (талант воина)"
       },
+      "ironhold": {
+        "name": "Ironhold",
+        "description": "Brace behind your guard, reducing all damage taken by 40% for 8 sec."
+      },
+      "primal_reflexes": {
+        "name": "Primal Reflexes",
+        "description": "Your instincts sharpen, increasing your chance to dodge by 50% for 6 sec."
+      },
       "summon_imp": {
         "name": "Призыв беса",
         "description": "Призывает Беса под командование чернокнижника. Бес издалека мечет Огненные стрелы в ваших врагов. Призыв нового демона отпускает текущего. Одновременно у вас может быть только один демон."

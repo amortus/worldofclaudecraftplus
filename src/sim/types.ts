@@ -130,6 +130,9 @@ export type AuraKind =
   | 'hex'
   | 'tongues'
   | 'cost_tax'
+  // Flat mitigation wall (Ironhold): `value` is the fraction of incoming damage
+  // denied. Read in dealDamage, where the strongest one wins rather than stacking.
+  | 'shield_wall'
   | 'heal_absorb'
   | 'critvuln'
   | 'buff_spi'
@@ -1009,6 +1012,10 @@ export interface AbilityDef {
   // multiplier on the damage-threat (both scale with stance/form modifiers).
   threat?: { flat?: number; mult?: number };
   requiresForm?: 'bear' | 'cat'; // druid form kit (maul/growl/swipe/claw/bite)
+  // Castable while shapeshifted without belonging to a form's kit. Forms otherwise
+  // lock out everything that is not a form ability, which would make a druid tank
+  // cooldown unusable in the form it exists to defend (Primal Reflexes).
+  usableInForm?: boolean;
   requiresStealth?: boolean; // ambush
   requiresOutOfCombat?: boolean; // stealth
   learnLevel: number;

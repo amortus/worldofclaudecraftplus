@@ -3471,7 +3471,7 @@ export class Sim {
         );
         return;
       }
-    } else if (form && !isFormToggle(ability)) {
+    } else if (form && !isFormToggle(ability) && !ability.usableInForm) {
       this.error(p.id, "You can't do that while shapeshifted.");
       return;
     }
@@ -5630,6 +5630,17 @@ export class Sim {
       target.auras.some((a) => a.kind === 'defensive_stance')
     ) {
       amount = Math.round(amount * 0.9);
+    }
+
+    // Tank cooldown mitigation (Ironhold). The STRONGEST wall wins instead of the walls
+    // multiplying: stacking them would trend toward immunity, and a defensive cooldown
+    // is meant to be a timing decision, not something you layer.
+    if (amount > 0) {
+      let wall = 0;
+      for (const a of target.auras) {
+        if (a.kind === 'shield_wall' && a.value > wall) wall = a.value;
+      }
+      if (wall > 0) amount = Math.round(amount * (1 - wall));
     }
 
     // Expose: a cracked-guard debuff amplifies the physical damage the victim

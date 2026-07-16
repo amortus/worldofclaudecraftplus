@@ -4007,6 +4007,14 @@ export const ko_KR: EnTranslations = {
         "name": "광전사의 격노",
         "description": "광전사의 격노에 들어가 분노 20을 생성합니다. (전사 특성)"
       },
+      "ironhold": {
+        "name": "Ironhold",
+        "description": "Brace behind your guard, reducing all damage taken by 40% for 8 sec."
+      },
+      "primal_reflexes": {
+        "name": "Primal Reflexes",
+        "description": "Your instincts sharpen, increasing your chance to dodge by 50% for 6 sec."
+      },
       "summon_imp": {
         "name": "임프 소환",
         "description": "흑마법사의 명령을 따르는 임프를 소환합니다. 임프는 멀리서 적에게 화염 화살을 날립니다. 새로운 악마를 소환하면 현재 악마는 사라집니다. 한 번에 하나의 악마만 부릴 수 있습니다."

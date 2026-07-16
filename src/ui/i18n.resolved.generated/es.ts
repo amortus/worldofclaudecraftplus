@@ -4007,6 +4007,14 @@ export const es: EnTranslations = {
         "name": "Ira rabiosa",
         "description": "Entras en una ira rabiosa y generas 20 de ira. (talento de guerrero)"
       },
+      "ironhold": {
+        "name": "Ironhold",
+        "description": "Brace behind your guard, reducing all damage taken by 40% for 8 sec."
+      },
+      "primal_reflexes": {
+        "name": "Primal Reflexes",
+        "description": "Your instincts sharpen, increasing your chance to dodge by 50% for 6 sec."
+      },
       "summon_imp": {
         "name": "Invocar diablillo",
         "description": "Invoca a un Diablillo bajo el mando del brujo. El Diablillo lanza Descargas de Fuego a tus enemigos desde la distancia. Invocar un nuevo demonio descarta el actual. Solo puedes tener un demonio a la vez."

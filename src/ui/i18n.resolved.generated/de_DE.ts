@@ -4007,6 +4007,14 @@ export const de_DE: EnTranslations = {
         "name": "Berserkerwut",
         "description": "Ihr verfallt in Berserkerwut und erzeugt 20 Wut. (Krieger-Talent)"
       },
+      "ironhold": {
+        "name": "Ironhold",
+        "description": "Brace behind your guard, reducing all damage taken by 40% for 8 sec."
+      },
+      "primal_reflexes": {
+        "name": "Primal Reflexes",
+        "description": "Your instincts sharpen, increasing your chance to dodge by 50% for 6 sec."
+      },
       "summon_imp": {
         "name": "Wichtel beschwören",
         "description": "Beschwört einen Wichtel unter dem Befehl des Hexenmeisters. Der Wichtel schleudert aus der Ferne Feuerblitze auf Eure Feinde. Das Beschwören eines neuen Dämons entlässt Euren aktuellen. Ihr könnt nur einen Dämon zur Zeit haben."

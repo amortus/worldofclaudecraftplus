@@ -39,7 +39,7 @@ export const CLASSES: Record<PlayerClass, ClassDef> = {
     resourceType: 'rage',
     startWeapon: 'worn_sword',
     startChest: 'recruit_tunic',
-    abilities: ['heroic_strike', 'battle_shout', 'commanding_shout', 'charge', 'rend', 'thunder_clap', 'hamstring', 'bloodrage', 'overpower', 'execute', 'slam', 'cleave', 'defensive_stance', 'demoralizing_shout', 'sunder_armor', 'taunt'],
+    abilities: ['heroic_strike', 'battle_shout', 'commanding_shout', 'charge', 'rend', 'thunder_clap', 'hamstring', 'bloodrage', 'overpower', 'execute', 'slam', 'cleave', 'defensive_stance', 'demoralizing_shout', 'sunder_armor', 'taunt', 'ironhold'],
     color: 0xc79c6e,
   },
   mage: {
@@ -163,7 +163,7 @@ export const CLASSES: Record<PlayerClass, ClassDef> = {
     resourceType: 'mana',
     startWeapon: 'gnarled_staff',
     startChest: 'footpad_jerkin',
-    abilities: ['wrath', 'healing_touch', 'mark_of_the_wild', 'moonfire', 'rejuvenation', 'thorns', 'entangling_roots', 'bear_form', 'bear_charge', 'maul', 'growl', 'demoralizing_roar', 'cat_form', 'prowl', 'rake', 'claw', 'regrowth', 'ferocious_bite', 'barkskin', 'swipe', 'starfire', 'travel_form', 'enrage', 'bash', 'faerie_fire', 'hibernate', 'dash', 'pounce', 'insect_swarm', 'tigers_fury', 'rip'],
+    abilities: ['wrath', 'healing_touch', 'mark_of_the_wild', 'moonfire', 'rejuvenation', 'thorns', 'entangling_roots', 'bear_form', 'bear_charge', 'maul', 'growl', 'demoralizing_roar', 'cat_form', 'prowl', 'rake', 'claw', 'regrowth', 'ferocious_bite', 'barkskin', 'swipe', 'starfire', 'travel_form', 'enrage', 'bash', 'faerie_fire', 'hibernate', 'dash', 'pounce', 'insect_swarm', 'tigers_fury', 'rip', 'primal_reflexes'],
     color: 0xff7d0a,
   },
 };
@@ -1547,6 +1547,24 @@ export const ABILITIES: Record<string, AbilityDef> = {
     requiresTarget: true,
     effects: [{ type: 'aoeDamage', min: 30, max: 42, radius: 8 }],
     description: 'Spin in a deadly arc, striking all nearby enemies for $d. (Fury talent)',
+  },
+  // Warrior tank cooldown: a flat mitigation wall (the `shield_wall` aura, read in
+  // dealDamage, where the strongest wall wins rather than stacking).
+  ironhold: {
+    id: 'ironhold', name: 'Ironhold', class: 'warrior', learnLevel: 20,
+    cost: 10, castTime: 0, cooldown: 180, range: 0, school: 'physical',
+    requiresTarget: false, offGcd: true,
+    effects: [{ type: 'selfBuff', kind: 'shield_wall', value: 0.4, duration: 8 }],
+    description: 'Brace behind your guard, reducing all damage taken by 40% for 8 sec.',
+  },
+  // Druid tank cooldown: dodge-based, and usableInForm so it can be pressed in Bear
+  // Form, which is the form it exists to defend.
+  primal_reflexes: {
+    id: 'primal_reflexes', name: 'Primal Reflexes', class: 'druid', learnLevel: 20,
+    cost: 0, castTime: 0, cooldown: 60, range: 0, school: 'nature',
+    requiresTarget: false, offGcd: true, usableInForm: true,
+    effects: [{ type: 'selfBuff', kind: 'buff_dodge', value: 0.5, duration: 6 }],
+    description: 'Your instincts sharpen, increasing your chance to dodge by 50% for 6 sec.',
   },
   berserker_rage: {
     id: 'berserker_rage', name: 'Berserker Rage', class: 'warrior', learnLevel: 10,

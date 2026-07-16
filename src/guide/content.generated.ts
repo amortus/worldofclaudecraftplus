@@ -199,6 +199,10 @@ export const GUIDE_CLASSES: GuideClassInfo[] = [
       {
         "id": "taunt",
         "name": "Taunt"
+      },
+      {
+        "id": "ironhold",
+        "name": "Ironhold"
       }
     ],
     "model": "player_warrior",
@@ -1196,6 +1200,10 @@ export const GUIDE_CLASSES: GuideClassInfo[] = [
       {
         "id": "rip",
         "name": "Rip"
+      },
+      {
+        "id": "primal_reflexes",
+        "name": "Primal Reflexes"
       }
     ],
     "model": "player_druid",

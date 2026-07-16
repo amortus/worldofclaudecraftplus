@@ -4007,6 +4007,14 @@ export const fr_CA: EnTranslations = {
         "name": "Rage berserker",
         "description": "Entre dans une rage berserker et génère 20 rage. (talent de guerrier)"
       },
+      "ironhold": {
+        "name": "Ironhold",
+        "description": "Brace behind your guard, reducing all damage taken by 40% for 8 sec."
+      },
+      "primal_reflexes": {
+        "name": "Primal Reflexes",
+        "description": "Your instincts sharpen, increasing your chance to dodge by 50% for 6 sec."
+      },
       "summon_imp": {
         "name": "Invoquer un diablotin",
         "description": "Invoque un Diablotin sous le commandement du démoniste. Le Diablotin lance des Éclairs de feu sur vos ennemis à distance. Invoquer un nouveau démon renvoie celui que vous avez. Vous ne pouvez avoir qu'un démon à la fois."

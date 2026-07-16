@@ -10,6 +10,10 @@
 
 export const pending: Record<string, readonly string[]> = {
   "es": [
+    "entities.abilities.ironhold.description",
+    "entities.abilities.ironhold.name",
+    "entities.abilities.primal_reflexes.description",
+    "entities.abilities.primal_reflexes.name",
     "entities.npcs.auctioneer_voss.greeting",
     "entities.npcs.auctioneer_voss.name",
     "entities.npcs.auctioneer_voss.title",
@@ -167,6 +171,10 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.statInfo.sources.talents"
   ],
   "es_ES": [
+    "entities.abilities.ironhold.description",
+    "entities.abilities.ironhold.name",
+    "entities.abilities.primal_reflexes.description",
+    "entities.abilities.primal_reflexes.name",
     "entities.npcs.auctioneer_voss.greeting",
     "entities.npcs.auctioneer_voss.name",
     "entities.npcs.auctioneer_voss.title",
@@ -324,6 +332,10 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.statInfo.sources.talents"
   ],
   "fr_FR": [
+    "entities.abilities.ironhold.description",
+    "entities.abilities.ironhold.name",
+    "entities.abilities.primal_reflexes.description",
+    "entities.abilities.primal_reflexes.name",
     "entities.npcs.auctioneer_voss.greeting",
     "entities.npcs.auctioneer_voss.name",
     "entities.npcs.auctioneer_voss.title",
@@ -481,6 +493,10 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.statInfo.sources.talents"
   ],
   "fr_CA": [
+    "entities.abilities.ironhold.description",
+    "entities.abilities.ironhold.name",
+    "entities.abilities.primal_reflexes.description",
+    "entities.abilities.primal_reflexes.name",
     "entities.npcs.auctioneer_voss.greeting",
     "entities.npcs.auctioneer_voss.name",
     "entities.npcs.auctioneer_voss.title",
@@ -639,6 +655,10 @@ export const pending: Record<string, readonly string[]> = {
   ],
   "en_CA": [],
   "it_IT": [
+    "entities.abilities.ironhold.description",
+    "entities.abilities.ironhold.name",
+    "entities.abilities.primal_reflexes.description",
+    "entities.abilities.primal_reflexes.name",
     "entities.npcs.auctioneer_voss.greeting",
     "entities.npcs.auctioneer_voss.name",
     "entities.npcs.auctioneer_voss.title",
@@ -796,6 +816,10 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.statInfo.sources.talents"
   ],
   "de_DE": [
+    "entities.abilities.ironhold.description",
+    "entities.abilities.ironhold.name",
+    "entities.abilities.primal_reflexes.description",
+    "entities.abilities.primal_reflexes.name",
     "entities.npcs.auctioneer_voss.greeting",
     "entities.npcs.auctioneer_voss.name",
     "entities.npcs.auctioneer_voss.title",
@@ -953,6 +977,10 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.statInfo.sources.talents"
   ],
   "zh_CN": [
+    "entities.abilities.ironhold.description",
+    "entities.abilities.ironhold.name",
+    "entities.abilities.primal_reflexes.description",
+    "entities.abilities.primal_reflexes.name",
     "guide.delvesPage.companionFmt",
     "guide.delvesPage.keeperFmt",
     "guide.delvesPage.partyLabel",
@@ -977,6 +1005,10 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.masterLoot.thresholdRare"
   ],
   "zh_TW": [
+    "entities.abilities.ironhold.description",
+    "entities.abilities.ironhold.name",
+    "entities.abilities.primal_reflexes.description",
+    "entities.abilities.primal_reflexes.name",
     "guide.delvesPage.companionFmt",
     "guide.delvesPage.keeperFmt",
     "guide.delvesPage.partyLabel",
@@ -1001,6 +1033,10 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.masterLoot.thresholdRare"
   ],
   "ko_KR": [
+    "entities.abilities.ironhold.description",
+    "entities.abilities.ironhold.name",
+    "entities.abilities.primal_reflexes.description",
+    "entities.abilities.primal_reflexes.name",
     "guide.delvesPage.companionFmt",
     "guide.delvesPage.keeperFmt",
     "guide.delvesPage.partyLabel",
@@ -1025,6 +1061,10 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.masterLoot.thresholdRare"
   ],
   "ja_JP": [
+    "entities.abilities.ironhold.description",
+    "entities.abilities.ironhold.name",
+    "entities.abilities.primal_reflexes.description",
+    "entities.abilities.primal_reflexes.name",
     "guide.delvesPage.companionFmt",
     "guide.delvesPage.keeperFmt",
     "guide.delvesPage.partyLabel",
@@ -1049,6 +1089,10 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.masterLoot.thresholdRare"
   ],
   "pt_BR": [
+    "entities.abilities.ironhold.description",
+    "entities.abilities.ironhold.name",
+    "entities.abilities.primal_reflexes.description",
+    "entities.abilities.primal_reflexes.name",
     "entities.npcs.auctioneer_voss.greeting",
     "entities.npcs.auctioneer_voss.name",
     "entities.npcs.auctioneer_voss.title",
@@ -1171,6 +1215,10 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.statInfo.sources.talents"
   ],
   "ru_RU": [
+    "entities.abilities.ironhold.description",
+    "entities.abilities.ironhold.name",
+    "entities.abilities.primal_reflexes.description",
+    "entities.abilities.primal_reflexes.name",
     "guide.delvesPage.companionFmt",
     "guide.delvesPage.keeperFmt",
     "guide.delvesPage.partyLabel",

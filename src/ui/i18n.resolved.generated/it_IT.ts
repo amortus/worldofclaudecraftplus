@@ -4007,6 +4007,14 @@ export const it_IT: EnTranslations = {
         "name": "Rabbia del Berserker",
         "description": "Entri in una furia berserker e generi 20 rabbia. (talento del guerriero)"
       },
+      "ironhold": {
+        "name": "Ironhold",
+        "description": "Brace behind your guard, reducing all damage taken by 40% for 8 sec."
+      },
+      "primal_reflexes": {
+        "name": "Primal Reflexes",
+        "description": "Your instincts sharpen, increasing your chance to dodge by 50% for 6 sec."
+      },
       "summon_imp": {
         "name": "Evoca folletto",
         "description": "Evoca un Folletto al comando dello stregone. Il Folletto scaglia Dardi di fuoco contro i tuoi nemici a distanza. Evocare un nuovo demone congeda quello attuale. Puoi avere un solo demone alla volta."

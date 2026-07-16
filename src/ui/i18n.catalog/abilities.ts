@@ -714,6 +714,8 @@ const classAbilityNamesEn = {
       ["shield_slam", "Shield Slam", "Slam the target with your shield for {damage} and massive threat. (Protection signature)"],
       ["whirlwind", "Whirlwind", "Spin in a deadly arc, striking all nearby enemies for {damage}. (Fury talent)"],
       ["berserker_rage", "Berserker Rage", "Enter a berserker rage, generating 20 rage. (Warrior talent)"],
+      ["ironhold", "Ironhold", "Brace behind your guard, reducing all damage taken by 40% for 8 sec."],
+      ["primal_reflexes", "Primal Reflexes", "Your instincts sharpen, increasing your chance to dodge by 50% for 6 sec."],
       ["summon_imp", "Summon Imp", "Summons an Imp under the command of the Warlock. The Imp hurls Firebolts at your enemies from afar. Summoning a new demon dismisses your current one. You may have one demon at a time."],
       ["summon_voidwalker", "Summon Voidwalker", "Summons a Voidwalker under the command of the Warlock. The Voidwalker is a sturdy demon that taunts your enemies and soaks up punishment. Summoning a new demon dismisses your current one. You may have one demon at a time."],
       ["summon_succubus", "Summon Succubus", "Summons a Succubus under the command of the Warlock. The Succubus is a fragile demon that strikes quickly and hits hard in melee. Summoning a new demon dismisses your current one. You may have one demon at a time."],
