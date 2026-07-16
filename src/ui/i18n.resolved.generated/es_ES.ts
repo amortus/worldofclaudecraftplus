@@ -6743,7 +6743,7 @@ export const es_ES: EnTranslations = {
       },
       "q_nythraxis_bound_guardian": {
         "title": "El Guardián Vinculado",
-        "text": "Voss escribió que los supervivientes sellaron el Anillo del rey tras un guardián antiguo, para que nadie pudiera alcanzar la tumba de Nythraxis por accidente o ambición. Lleva la Piedra clave de la cripta al círculo ritual en el terreno llano al este de la cripta abandonada y al sureste de la tumba occidental. Úsala allí, rompe al guardián y trae el anillo.",
+        "text": "Voss escribió que los supervivientes sellaron el Anillo del rey tras un guardián antiguo, para que nadie pudiera alcanzar la tumba de Nythraxis por accidente o ambición. Lleva la Piedra clave de la cripta al círculo ritual en el terreno llano al noroeste de la cripta abandonada y al noreste de la tumba del sumo sacerdote Malric. Úsala allí, rompe al guardián y trae el anillo.",
         "completion": "Las tres reliquias cuentan la misma historia: Aldren luchó para defender a su rey, Malric rompió el límite de la muerte y Voss intentó detener lo que vino después. El sello se debilita, y este anillo es la llave de la tumba de Nythraxis. Ahora estás armonizado para entrar en La Cripta de Nythraxis. Vuelve a la cripta abandonada, abre la puerta real y enfrenta a Nythraxis antes de que la ira del viejo rey desborde Thornpeak.",
         "objectives": {
           "0": {

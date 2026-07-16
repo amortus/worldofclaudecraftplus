@@ -131,6 +131,7 @@ import {
 } from './ui/player_card_share';
 import { hydratePortraits, portraitChipHtml } from './ui/portrait_chip';
 import { tServer } from './ui/server_i18n';
+import { wireSkinPicker } from './ui/skin_picker';
 import { createSpectateBadge } from './ui/spectate_badge';
 import { type PresetId, type ThemeKnob, ThemeStore } from './ui/theme';
 import {
@@ -2372,6 +2373,7 @@ function renderSkinPicker(
   }
   if (picker) picker.style.display = '';
   row.style.setProperty('--class-color', `#${CLASSES[cls].color.toString(16).padStart(6, '0')}`);
+  const swatches: HTMLElement[] = [];
   for (let i = 0; i < count; i++) {
     const b = document.createElement('button');
     b.type = 'button';
@@ -2389,21 +2391,18 @@ function renderSkinPicker(
     } else {
       b.textContent = String(i + 1);
     }
-    b.addEventListener('click', () => {
-      row.querySelectorAll('.skin-swatch').forEach((x) => {
-        x.classList.remove('sel');
-      });
-      b.classList.add('sel');
-      onPick(i);
-    });
-    // Live-preview the chroma on the right avatar while hovering; revert on leave.
-    b.addEventListener('mouseenter', () => characterPreview?.setSkin(i));
-    b.addEventListener('mouseleave', () => {
-      const sel = row.querySelector('.skin-swatch.sel') as HTMLElement | null;
-      characterPreview?.setSkin(sel ? Number(sel.dataset.skin ?? 0) || 0 : current);
-    });
+    swatches.push(b);
     row.appendChild(b);
   }
+  // Live-preview the chroma on the avatar while hovering, commit on click, and
+  // revert to the committed selection when the pointer leaves the whole row.
+  // The revert is row-level, not per swatch, so hovering the swatch next to the
+  // selected one previews instead of being clobbered; see wireSkinPicker.
+  wireSkinPicker(row, swatches, current, {
+    onPreview: (i) => characterPreview?.setSkin(i),
+    onRevert: (i) => characterPreview?.setSkin(i),
+    onPick,
+  });
 }
 
 /** Give each class button a small portrait preview of that class (run once

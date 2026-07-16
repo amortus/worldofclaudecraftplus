@@ -2832,7 +2832,7 @@ export const zh_CN: Partial<Record<TranslationKey, string>> = {
   'entities.quests.q_nythraxis_sealed_crypt.objectives.2.label': '古老日记',
   'entities.quests.q_nythraxis_bound_guardian.title': '受缚守卫者',
   'entities.quests.q_nythraxis_bound_guardian.text':
-    '沃斯写道，幸存者把国王印戒封在一名古老守卫身后，免得任何人因偶然或野心抵达尼思拉克西斯的陵墓。把墓穴钥石带到废弃墓穴以东、西侧坟墓东南方平地上的仪式法阵。在那里使用它，击破守卫，并带回印戒。',
+    '沃斯写道，幸存者把国王印戒封在一名古老守卫身后，免得任何人因偶然或野心抵达尼思拉克西斯的陵墓。把墓穴钥石带到废弃墓穴西北、大祭司马尔里克之墓东北方平地上的仪式法阵。在那里使用它，击破守卫，并带回印戒。',
   'entities.quests.q_nythraxis_bound_guardian.completion':
     '三件遗物讲述着同一个故事：奥德伦为守护国王而战，马尔里克打破了死亡的界限，沃斯试图阻止随后发生的一切。封印正在减弱，而这枚印戒就是尼思拉克西斯陵墓的钥匙。你现在已经完成调谐，可以进入尼思拉克西斯墓穴。',
   'entities.quests.q_nythraxis_bound_guardian.objectives.0.label': '在仪式法阵使用墓穴钥石',

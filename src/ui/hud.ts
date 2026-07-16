@@ -79,7 +79,6 @@ import {
   zoneAt,
 } from '../sim/data';
 import { DELVE_MODULE_LAYOUTS, type DelveModuleId } from '../sim/delve_layout';
-import { armorTypeForItem, weaponArchetypeForItem } from '../sim/equipment_rules';
 import { requiredLevelFor } from '../sim/item_level_req';
 import { LEADERBOARD_PAGE_SIZE } from '../sim/leaderboard_page';
 import type { Ante, PickAction } from '../sim/lockpick';
@@ -194,6 +193,7 @@ import {
   holderTierForBalance,
 } from './holder_tier';
 import {
+  applyLoadoutBar as applyLoadoutBarActions,
   buildDefaultFormBar,
   classHasFormBars,
   clearHotbarSlot,
@@ -223,6 +223,7 @@ import {
 } from './i18n';
 import { iconDataUrl, iconDataUrlIfReady, QUALITY_COLOR, raidMarkerDataUrl } from './icons';
 import { warmIcons } from './icon_warm';
+import { requiredClassesForTooltip } from './item_class_restriction';
 import { itemStatDeltas } from './item_compare';
 import { PICK_ACTION_HOTKEYS } from './lockpick_panel';
 import { LockpickWindow } from './lockpick_window';
@@ -2686,8 +2687,9 @@ export class Hud {
       html += `<div class="tt-desc">${esc(t('itemUi.tooltip.useManaPotion', { amount: itemNumber(item.potionMana) }))}</div>`;
     if (item.kind === 'quest')
       html += `<div class="tt-desc">${esc(t('itemUi.tooltip.questItem'))}</div>`;
-    if (item.requiredClass && !armorTypeForItem(item) && !weaponArchetypeForItem(item)) {
-      html += `<div class="tt-sub">${esc(t('itemUi.tooltip.classes', { classes: item.requiredClass.map(classDisplayName).join(', ') }))}</div>`;
+    const requiredClasses = requiredClassesForTooltip(item);
+    if (requiredClasses) {
+      html += `<div class="tt-sub">${esc(t('itemUi.tooltip.classes', { classes: requiredClasses.map(classDisplayName).join(', ') }))}</div>`;
     }
     // Classic "Requires Level N" line for equippable gear gated above level 1.
     // Red when the viewer is below the requirement (cannot equip yet), otherwise
@@ -12231,11 +12233,19 @@ export class Hud {
 
   // Restore a saved loadout's action bar into the per-class slot map (reuses the
   // existing hotbar persistence; only places ids that resolve to real abilities).
+  // A saved loadout's bar is ability ids only (wireTalentFooter's saveStagedBuild
+  // strips item shortcuts before persisting), so this must not replace the WHOLE
+  // bar wholesale: that would also silently clear any potion/food/drink shortcut
+  // the player had placed, since the loadout never recorded it either way.
+  // applyLoadoutBarActions keeps an existing item slot wherever the loadout
+  // leaves that slot blank.
   private applyLoadoutBar(bar: (string | null)[]): void {
-    this.hotbarActions = Array.from({ length: Hud.BAR_ABILITY_SLOTS }, (_, i) => {
-      const v = bar[i];
-      return typeof v === 'string' && ABILITIES[v] ? { type: 'ability' as const, id: v } : null;
-    });
+    this.hotbarActions = applyLoadoutBarActions(
+      this.hotbarActions,
+      bar,
+      Hud.BAR_ABILITY_SLOTS,
+      (id) => !!ABILITIES[id],
+    );
     this.saveSlotMap();
   }
 

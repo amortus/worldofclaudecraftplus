@@ -6636,7 +6636,11 @@
     max-height: none;
     box-sizing: border-box;
     overflow: hidden;
-    z-index: 95;
+    /* !important is load-bearing: bringWindowToFront stamps an INLINE z-index
+       (51..89), which beats an unflagged rule, so a freshly focused Bags sheet
+       would sit under #loot-rolls (65) and the fullscreen sheet would look locked
+       behind the roll rail. Intermittent because normalizeWindowZ resets to 50. */
+    z-index: 95 !important;
   }
   body.mobile-touch #bags .bag-grid {
     min-height: 150px;

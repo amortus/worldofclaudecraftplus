@@ -18,7 +18,7 @@ import { LEADERBOARD_PAGE_SIZE } from '../sim/leaderboard_page';
 import type { Ante, PickAction } from '../sim/lockpick';
 import type { MarketQuery } from '../sim/market_query';
 import { normalizeMoveFacing, sanitizeMoveInput } from '../sim/move_input';
-import { computeQuestState, type ResolvedAbility } from '../sim/sim';
+import type { ResolvedAbility } from '../sim/sim';
 import {
   type Entity,
   type EquipSlot,
@@ -57,6 +57,7 @@ import {
   type SocialInfo,
   type TradeInfo,
 } from '../world_api';
+import { optimisticQuestState } from './quest_state_optimistic';
 
 // ---------------------------------------------------------------------------
 // REST
@@ -1464,15 +1465,13 @@ export class ClientWorld implements IWorld {
   // -----------------------------------------------------------------------
 
   questState(questId: string): QuestState {
-    const state = computeQuestState(questId, this.questLog, this.questsDone, this.player.level);
-    const pending = this.pendingQuestCommands?.get(questId);
-    if (
-      (pending === 'accept' && state === 'available') ||
-      (pending === 'turnin' && state === 'ready')
-    ) {
-      return 'active';
-    }
-    return state;
+    return optimisticQuestState(
+      questId,
+      this.questLog,
+      this.questsDone,
+      this.pendingQuestCommands,
+      this.player.level,
+    );
   }
 
   consumeInventoryChanged(): boolean {

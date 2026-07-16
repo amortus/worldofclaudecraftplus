@@ -2979,7 +2979,7 @@ export const pt_BR: Partial<Record<TranslationKey, string>> = {
   'entities.quests.q_nythraxis_sealed_crypt.objectives.2.label': 'Diário antigo',
   'entities.quests.q_nythraxis_bound_guardian.title': 'O Guardião Vinculado',
   'entities.quests.q_nythraxis_bound_guardian.text':
-    'Voss escreveu que os sobreviventes selaram o Anel-sinete do rei atrás de um guardião antigo, para que ninguém chegasse à tumba de Nythraxis por acidente ou ambição. Leve a Pedra-chave da cripta ao círculo ritual no terreno plano a leste da cripta abandonada e a sudeste da tumba oeste. Use-a ali, quebre o guardião e traga o anel.',
+    'Voss escreveu que os sobreviventes selaram o Anel-sinete do rei atrás de um guardião antigo, para que ninguém chegasse à tumba de Nythraxis por acidente ou ambição. Leve a Pedra-chave da cripta ao círculo ritual no terreno plano a noroeste da cripta abandonada e a nordeste do túmulo do sumo sacerdote Malric. Use-a ali, quebre o guardião e traga o anel.',
   'entities.quests.q_nythraxis_bound_guardian.completion':
     'As três relíquias contam a mesma história: Aldren lutou para defender seu rei, Malric rompeu a fronteira da morte e Voss tentou impedir o que veio depois. O selo está enfraquecendo, e este anel é a chave da tumba de Nythraxis. Agora você está sintonizado para entrar na Cripta de Nythraxis. Volte à cripta abandonada, destranque a porta real e enfrente Nythraxis antes que a fúria do velho rei transborde por Thornpeak.',
   'entities.quests.q_nythraxis_bound_guardian.objectives.0.label':

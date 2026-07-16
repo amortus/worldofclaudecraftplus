@@ -1109,7 +1109,10 @@ function isStealthToggle(ability: AbilityDef): boolean {
 }
 
 function preservesStealth(ability: AbilityDef): boolean {
-  return isStealthToggle(ability) || ability.id === 'sprint';
+  // Sap deals no damage (its only effect is `incapacitate`) and exists to be opened
+  // from stealth, so breaking stealth on cast made it self-defeating: you sapped one
+  // target and immediately lost the opener on everything else.
+  return isStealthToggle(ability) || ability.id === 'sprint' || ability.id === 'sap';
 }
 
 function isShamanShock(abilityId: string): boolean {

@@ -1,4 +1,4 @@
-import type { ItemDef, PlayerClass } from './types';
+import { ALL_CLASSES, type ItemDef, type PlayerClass } from './types';
 
 export type ArmorType = 'cloth' | 'leather' | 'mail';
 type WeaponArchetype = 'warrior' | 'caster' | 'rogue';
@@ -47,6 +47,17 @@ export function weaponArchetypeForItem(item: ItemDef): WeaponArchetype | null {
   return null;
 }
 
+// The full set of classes `canEquipItem` actually admits for a given armor weight,
+// i.e. every class whose max armor rank is at least `armorType`'s rank. Used to tell
+// a genuinely enforced armor class list (one that names exactly this set, e.g. mail
+// naming only warrior/paladin/shaman) apart from `requiredClass` values that are
+// narrower loot-targeting metadata `canEquipItem` never reads (armor short-circuits
+// on weight before it would reach `requiredClass`).
+export function classesThatCanEquipArmorType(armorType: ArmorType): PlayerClass[] {
+  const rank = ARMOR_RANK[armorType];
+  return ALL_CLASSES.filter((cls) => ARMOR_RANK[maxArmorTypeForClass(cls)] >= rank);
+}
+
 export function canEquipItem(cls: PlayerClass, item: ItemDef): boolean {
   const armorType = armorTypeForItem(item);
   if (armorType) return ARMOR_RANK[armorType] <= ARMOR_RANK[maxArmorTypeForClass(cls)];
@@ -56,4 +67,14 @@ export function canEquipItem(cls: PlayerClass, item: ItemDef): boolean {
   if (weaponArchetype === 'rogue') return ROGUE_WEAPON_CLASSES.has(cls);
   if (item.requiredClass) return item.requiredClass.includes(cls);
   return true;
+}
+
+// Every class `canEquipItem` actually admits for this item, in canonical class
+// order. Derived from `canEquipItem` itself rather than re-deriving the rule, so a
+// caller can never drift out of sync with what is really enforced: the archetype
+// DETECTION sets above (OLD_*) are deliberately narrower than the PROFICIENCY sets
+// canEquipItem enforces, so an item's `requiredClass` is not usable as a stand-in
+// for the admitted set.
+export function classesThatCanEquipItem(item: ItemDef): PlayerClass[] {
+  return ALL_CLASSES.filter((cls) => canEquipItem(cls, item));
 }
