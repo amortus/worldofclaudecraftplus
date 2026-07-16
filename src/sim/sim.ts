@@ -207,6 +207,7 @@ import {
   emptyMoveInput,
   FISHING_CAST_ID,
   FISHING_CAST_TIME,
+  CAST_QUEUE_WINDOW_SEC,
   GCD,
   INTERACT_RANGE,
   type InvSlot,
@@ -3319,6 +3320,7 @@ export class Sim {
         p.castingAbility = null;
         p.channeling = false;
         this.emit({ type: 'castStop', entityId: p.id, success: true });
+        this.fireQueuedCast(p);
       }
       return;
     }
@@ -3334,13 +3336,27 @@ export class Sim {
       }
       const res = this.resolvedAbility(castId, p.id);
       if (res) this.applyAbility(p, meta, res);
+      this.fireQueuedCast(p);
     }
+  }
+
+  // Fire whatever was queued during the tail of the cast that just landed. Consumed
+  // BEFORE casting so a rejection cannot re-enter, and routed through castAbility so the
+  // queued spell re-runs every gate (stun, silence, cooldown, gcd, resource, target) at
+  // fire time instead of trusting the state it was pressed in. A rejection just drops it.
+  private fireQueuedCast(p: Entity): void {
+    const queued = p.queuedCastAbility;
+    if (!queued) return;
+    p.queuedCastAbility = null;
+    if (p.dead) return;
+    this.castAbility(queued, p.id);
   }
 
   private cancelCast(p: Entity): void {
     p.castingAbility = null;
     p.castRemaining = 0;
     p.channeling = false;
+    p.queuedCastAbility = null;
     this.emit({ type: 'castStop', entityId: p.id, success: false });
   }
 
@@ -3394,6 +3410,18 @@ export class Sim {
       return;
     }
     if (p.castingAbility) {
+      // Pressing your next spell in the tail of the current cast queues it rather than
+      // eating a "busy" error, so a cast chain does not need frame-perfect timing. The
+      // fishing cast is excluded: it is not a spell (same carve-out as the silence and
+      // lockout checks in updateCast).
+      if (
+        p.castingAbility !== FISHING_CAST_ID &&
+        p.castRemaining > 0 &&
+        p.castRemaining <= CAST_QUEUE_WINDOW_SEC
+      ) {
+        p.queuedCastAbility = abilityId;
+        return;
+      }
       this.error(p.id, 'You are busy.');
       return;
     }
@@ -6013,6 +6041,7 @@ export class Sim {
     e.auras = [];
     e.ccDr.clear();
     e.castingAbility = null;
+    e.queuedCastAbility = null; // dying must not fire the spell you queued mid-cast
     this.emit({ type: 'death', entityId: e.id, killerId: killer?.id ?? -1 });
 
     // a dead mob keeps no raid marker — respawnMob reuses the same entity id,
@@ -10044,6 +10073,10 @@ export class Sim {
   private clearNythraxisWardChannelCast(p: Entity): void {
     if (p.castingAbility !== 'nythraxis_ward_channel') return;
     p.castingAbility = null;
+    // This force-clears the channel without going through cancelCast, so the queue has
+    // to be dropped by hand: otherwise a spell queued into the ward channel would fire
+    // off the back of a channel that was interrupted, not completed.
+    p.queuedCastAbility = null;
     p.channeling = false;
     p.castRemaining = 0;
     p.castTotal = 0;
@@ -13877,6 +13910,7 @@ export class Sim {
     e.autoAttack = false;
     e.queuedOnSwing = null;
     e.castingAbility = null;
+    e.queuedCastAbility = null;
     e.castRemaining = 0;
     e.channeling = false;
     e.comboPoints = 0;
@@ -14212,6 +14246,7 @@ export class Sim {
     e.auras = [];
     e.ccDr.clear();
     e.castingAbility = null;
+    e.queuedCastAbility = null; // going down must not fire a spell queued mid-cast
     e.castRemaining = 0;
     e.channeling = false;
     e.autoAttack = false;

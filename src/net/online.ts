@@ -658,6 +658,9 @@ function blankEntity(id: number): Entity {
     gcdRemaining: 0,
     cooldowns: new Map(),
     queuedOnSwing: null,
+    // Server-authoritative and never wired: the queue only ever resolves inside the
+    // server's Sim, so the mirror just needs the field to exist.
+    queuedCastAbility: null,
     fiveSecondRule: 99,
     comboPoints: 0,
     comboTargetId: null,

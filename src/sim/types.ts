@@ -10,6 +10,10 @@ export const TURN_SPEED = Math.PI; // rad/sec keyboard turning
 export const MELEE_RANGE = 5; // yards
 export const INTERACT_RANGE = 5;
 export const GCD = 1.5; // seconds
+// Press an ability inside this much of the end of a cast and it queues instead of being
+// rejected, firing the instant that cast lands. Long enough to absorb human reaction
+// time, short enough that an early press is still a real mistake.
+export const CAST_QUEUE_WINDOW_SEC = 0.4;
 // Shared cooldown across ALL combat potions (classic-era potion sickness): one
 // potion locks every other potion for this long (#103). 2 minutes, vanilla value.
 export const POTION_COOLDOWN = 120; // seconds
@@ -1283,6 +1287,10 @@ export interface Entity {
   gcdRemaining: number;
   cooldowns: Map<string, number>;
   queuedOnSwing: string | null; // heroic strike
+  // Ability pressed during the tail of an in-progress cast, fired the instant that cast
+  // lands (see CAST_QUEUE_WINDOW_SEC). One-shot and re-validated on fire, so it is
+  // dropped rather than replayed whenever the cast it was riding is cancelled.
+  queuedCastAbility: string | null;
   fiveSecondRule: number; // time since last mana spend
   comboPoints: number;
   comboTargetId: number | null;

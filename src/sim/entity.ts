@@ -54,6 +54,7 @@ function baseEntity(id: number, pos: Vec3): Entity {
     gcdRemaining: 0,
     cooldowns: new Map(),
     queuedOnSwing: null,
+    queuedCastAbility: null,
     fiveSecondRule: 99,
     comboPoints: 0,
     comboTargetId: null,
