@@ -1737,7 +1737,28 @@ async function main(): Promise<void> {
       // attached the permanent message handler. Without this the frames are
       // silently dropped (see ws_buffer.ts).
       const flush = bufferHandshakeMessages(ws);
-      void authenticateWebSocket(ws, String(data), req).finally(flush);
+      // A rejection in here (a database call failing under load, say) used to be an
+      // unhandled promise: the auth timer is already cleared above, so the socket
+      // stayed open with no error frame and no close and the client sat on a dead
+      // connection forever. We have no auto-reconnect, so that means a stuck loading
+      // screen until the player reloads. Fail the socket the same way the auth
+      // timeout does. (Transport diagnostics stay English by design, see main.ts's
+      // localizeApiError note.)
+      void authenticateWebSocket(ws, String(data), req)
+        .catch((err) => {
+          console.error('websocket auth handshake failed:', err);
+          try {
+            ws.send(JSON.stringify({ t: 'error', error: 'server error during authentication' }));
+          } catch {
+            /* socket already gone */
+          }
+          try {
+            ws.close();
+          } catch {
+            /* already closing */
+          }
+        })
+        .finally(flush);
     });
   }
 

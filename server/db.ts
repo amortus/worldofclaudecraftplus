@@ -34,7 +34,26 @@ export const DATABASE_URL =
     );
   })();
 
-export const pool = new Pool({ connectionString: DATABASE_URL, max: 10 });
+// connectionTimeoutMillis: without it a checkout waits forever when the pool is
+// saturated or Postgres is unreachable, so a database brownout surfaces as requests
+// that hang instead of failing. Callers (and the websocket auth handshake) can only
+// recover from an error, never from a hang.
+// NOTE: deliberately no statement_timeout here. Upstream sets one but exempts its
+// heavy reads through a wrapper we do not have; ours would start killing the
+// leaderboard queries and character saves. That needs a per-query audit first.
+export const pool = new Pool({
+  connectionString: DATABASE_URL,
+  max: 10,
+  connectionTimeoutMillis: 10_000,
+});
+
+// An idle client erroring (Postgres restart, network drop, admin terminate) emits
+// 'error' on the pool. With no listener, node treats it as an unhandled error event
+// and takes the whole process down, which would drop every online player over a
+// blip the pool can otherwise recover from on the next checkout.
+pool.on('error', (err) => {
+  console.error('postgres pool error (idle client):', err);
+});
 
 const REALM_SQL_DEFAULT = REALM.replace(/'/g, "''");
 const LIFETIME_XP_EXPR = "((state->>'lifetimeXp')::bigint)";
