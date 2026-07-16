@@ -7,6 +7,7 @@ import { roadDistance, terrainHeight, WATER_LEVEL, zoneBiomeAt } from '../sim/wo
 import { loadTexture } from './assets/loader';
 import { registerPreload } from './assets/preload';
 import { GFX } from './gfx';
+import { runIdleQueue } from './idle_queue';
 import { impactCraterTerrainBlend } from './impact_terrain';
 import { groundDetailTexture, groundSplatMaps, macroNoiseTexture } from './textures';
 
@@ -574,9 +575,77 @@ export interface TerrainView {
   group: THREE.Group;
   /** hides chunks that sit entirely past the fog far plane */
   update(camX: number, camZ: number, fogFar: number): void;
+  /**
+   * Resolves once every streamed-in far chunk (see buildTerrain) has been added
+   * to `group`. Only the near ring around the world's zone hubs is built
+   * synchronously; everything else streams in across idle slots so first paint
+   * isn't gated on the whole map's geometry. Most callers don't need this:
+   * `chunks` is a live array shared with update(), so the fog cull already sees
+   * streamed chunks as they arrive. Use it only when a caller needs the FULL map
+   * built before doing something else (e.g. a screenshot tour).
+   *
+   * This is safe because nothing about gameplay reads this mesh: ground height,
+   * collision, pathing and player motion all sample the pure math in
+   * `src/sim/world.ts`. A not-yet-streamed chunk is a visual gap, never a
+   * physics gap.
+   */
+  streamingDone: Promise<void>;
+  /** Stops any in-flight far-chunk streaming. Call before discarding this view. */
+  cancelStreaming(): void;
 }
 
-export function buildTerrain(seed: number): TerrainView {
+// Chunks farther than the near ring stream in this many at a time per idle slot.
+const STREAM_BATCH_SIZE = 4;
+// Idle-timeout budget. requestIdleCallback's timeout is a DEADLINE, not a delay:
+// while the main thread is genuinely idle (the common case right after login)
+// every queued callback runs in registration order anyway, so terrain still
+// streams promptly. The timeout only decides who gets FORCED through when the
+// thread stays busy, and there we deliberately rank last. We share the idle
+// queue with player-facing work upstream does not have: the HUD's world-map
+// terrain prewarm (timeout 2000) and minimap prewarm (timeout 1000) in
+// src/ui/hud.ts. Upstream's 200 would expire ~5x/second and force terrain ahead
+// of both, starving the prewarm and pushing map-open latency onto the player at
+// exactly the moment they log in. 3000 sits above both prewarms, so under
+// sustained load the order is minimap -> world map -> terrain. That is the right
+// ranking: an unpainted map is a stall the player waits on, while an unstreamed
+// far chunk is only distant scenery that is fog-culled anyway and never gates
+// movement (ground height is pure sim math, see TerrainView.streamingDone).
+const STREAM_TIMEOUT_MS = 3000;
+
+/** One deferred chunk build: the exact buildChunkGeometry inputs, plus its band. */
+export interface ChunkJob {
+  x0: number;
+  z0: number;
+  size: number;
+  spacing: number;
+  /** true for the densest, closest-to-a-hub band, which builds synchronously */
+  near: boolean;
+}
+
+/**
+ * Far-chunk stream order: nearest to `priorityPoint` first. A returning
+ * character can log out anywhere, not just at a zone hub, so the synchronous
+ * near ring alone can leave them standing on not-yet-streamed terrain. Ordering
+ * by distance to the actual entry point puts the chunk directly underfoot
+ * first, rather than wherever row-major order happens to reach it. Pure, and
+ * returns a new array (never mutates `jobs`); with no priority point the
+ * original row-major order stands.
+ */
+export function orderFarChunkJobs(
+  jobs: readonly ChunkJob[],
+  priorityPoint?: { x: number; z: number },
+): ChunkJob[] {
+  const ordered = jobs.slice();
+  if (!priorityPoint) return ordered;
+  const distSq = (job: ChunkJob): number => {
+    const dx = job.x0 + job.size / 2 - priorityPoint.x;
+    const dz = job.z0 + job.size / 2 - priorityPoint.z;
+    return dx * dx + dz * dz;
+  };
+  return ordered.sort((a, b) => distSq(a) - distSq(b));
+}
+
+export function buildTerrain(seed: number, priorityPoint?: { x: number; z: number }): TerrainView {
   const lowGfx = !GFX.terrainSplat || !hasTerrainSplatAssets();
   const mat = lowGfx ? buildLambertMaterial() : buildSplatMaterial(seed);
   const bands = lowGfx ? LOD_BANDS.low : LOD_BANDS.high;
@@ -603,11 +672,23 @@ export function buildTerrain(seed: number): TerrainView {
     const mesh = new THREE.Mesh(geo, mat);
     mesh.receiveShadow = true;
     group.add(mesh);
+    // A chunk's transform never changes after this point (its shape lives in the
+    // geometry, not the mesh matrix), so freeze it now: otherwise every chunk
+    // recomposes its world matrix every frame for the rest of the session.
+    mesh.updateMatrixWorld(true);
+    mesh.matrixAutoUpdate = false;
     chunks.push({
       mesh, x: x0 + size / 2, z: z0 + size / 2,
       half: size / 2,
     });
   };
+
+  // Collect every chunk to build as a job first, instead of building inline, so
+  // the near ring (around the zone hubs, i.e. where a fresh character actually
+  // stands) can build synchronously while the rest streams in across idle slots
+  // below. bandIndexAt returns 0 only for the densest, closest-to-a-hub band,
+  // which is what we treat as "near".
+  const jobs: ChunkJob[] = [];
 
   // far-LOD cells merge 2x2 into super-chunks: the far field is where draw
   // count hurts and culling granularity matters least
@@ -623,16 +704,46 @@ export function buildTerrain(seed: number): TerrainView {
         for (const [dx, dz] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
           built.add((cz + dz) * chunksX + (cx + dx));
         }
-        addChunk(-WORLD_MAX_X + cx * CHUNK_SIZE, WORLD_MIN_Z + cz * CHUNK_SIZE, CHUNK_SIZE * 2, bands[farBand].spacing);
+        // a merged super-chunk only forms from four far-band cells, so it is
+        // never near
+        jobs.push({
+          x0: -WORLD_MAX_X + cx * CHUNK_SIZE,
+          z0: WORLD_MIN_Z + cz * CHUNK_SIZE,
+          size: CHUNK_SIZE * 2,
+          spacing: bands[farBand].spacing,
+          near: false,
+        });
       } else {
         built.add(cz * chunksX + cx);
-        const band = bands[bandIndexAt(cx, cz)];
-        addChunk(-WORLD_MAX_X + cx * CHUNK_SIZE, WORLD_MIN_Z + cz * CHUNK_SIZE, CHUNK_SIZE, band.spacing);
+        const bandIdx = bandIndexAt(cx, cz);
+        jobs.push({
+          x0: -WORLD_MAX_X + cx * CHUNK_SIZE,
+          z0: WORLD_MIN_Z + cz * CHUNK_SIZE,
+          size: CHUNK_SIZE,
+          spacing: bands[bandIdx].spacing,
+          near: bandIdx === 0,
+        });
       }
     }
   }
+
+  for (const job of jobs) {
+    if (job.near) addChunk(job.x0, job.z0, job.size, job.spacing);
+  }
+  const farJobs = orderFarChunkJobs(jobs.filter((job) => !job.near), priorityPoint);
+  let cancelled = false;
+  const streamingDone = runIdleQueue(
+    farJobs,
+    (job) => addChunk(job.x0, job.z0, job.size, job.spacing),
+    { batchSize: STREAM_BATCH_SIZE, timeoutMs: STREAM_TIMEOUT_MS, cancelled: () => cancelled },
+  );
+
   return {
     group,
+    streamingDone,
+    cancelStreaming(): void {
+      cancelled = true;
+    },
     update(camX: number, camZ: number, fogFar: number): void {
       // fully-fogged chunks are pure overdraw; drop them before the frustum
       for (const chunk of chunks) {

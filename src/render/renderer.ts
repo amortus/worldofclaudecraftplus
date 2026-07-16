@@ -1146,7 +1146,12 @@ export class Renderer {
       this.scene.add(cl);
     }
 
-    this.terrainView = buildTerrain(this.sim.cfg.seed);
+    // The player's spawn/login position, not a hub, decides which far chunks
+    // stream in first: a returning character can log out anywhere on the map.
+    this.terrainView = buildTerrain(this.sim.cfg.seed, {
+      x: this.sim.player.pos.x,
+      z: this.sim.player.pos.z,
+    });
     setRenderCategory(this.terrainView.group, 'terrain');
     this.scene.add(this.terrainView.group);
     this.waterView = buildWater(this.sim.cfg.seed);

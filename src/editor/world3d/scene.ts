@@ -80,6 +80,10 @@ export function buildEditorScene(webgl: THREE.WebGLRenderer, seed: number): Edit
   };
 
   const dispose = (): void => {
+    // Terrain streams its far chunks in across idle slots, so an editor scene
+    // torn down mid-stream would keep meshing (and re-adding) chunks into a
+    // group nobody renders. Stop the queue before disposing what it writes to.
+    terrain.cancelStreaming();
     for (const rt of envRTs) rt.dispose();
     scene.traverse((o) => {
       const mesh = o as THREE.Mesh;
