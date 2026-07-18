@@ -229,6 +229,11 @@ export const hudChromeStrings = {
     clickMoveRight: 'Right Click',
     // Adaptive browser-effects tier control (Graphics panel). Auto detects the
     // browser engine/version + device; the rest pin the CSS-effects tier.
+    fpsLimit: 'FPS Limit',
+    fpsLimitAuto: 'Auto',
+    fpsLimit30: '30 FPS',
+    fpsLimit60: '60 FPS',
+    fpsLimitOff: 'Unlimited',
     browserEffects: 'Browser Effects',
     browserEffectsAuto: 'Auto',
     browserEffectsFull: 'Full',

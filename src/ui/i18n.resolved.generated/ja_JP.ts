@@ -322,6 +322,11 @@ export const ja_JP: EnTranslations = {
     "options": {
       "clickMoveLeft": "左クリック",
       "clickMoveRight": "右クリック",
+      "fpsLimit": "FPS Limit",
+      "fpsLimitAuto": "Auto",
+      "fpsLimit30": "30 FPS",
+      "fpsLimit60": "60 FPS",
+      "fpsLimitOff": "Unlimited",
       "browserEffects": "ブラウザエフェクト",
       "browserEffectsAuto": "自動",
       "browserEffectsFull": "フル",

@@ -322,6 +322,11 @@ export const ko_KR: EnTranslations = {
     "options": {
       "clickMoveLeft": "왼쪽 클릭",
       "clickMoveRight": "오른쪽 클릭",
+      "fpsLimit": "FPS Limit",
+      "fpsLimitAuto": "Auto",
+      "fpsLimit30": "30 FPS",
+      "fpsLimit60": "60 FPS",
+      "fpsLimitOff": "Unlimited",
       "browserEffects": "브라우저 효과",
       "browserEffectsAuto": "자동",
       "browserEffectsFull": "전체",

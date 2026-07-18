@@ -73,7 +73,12 @@ import { CharacterPreview } from './render/characters';
 import { skinCount } from './render/characters/manifest';
 import { playerPortraitDataUrl } from './render/characters/portrait';
 import { installWebGLContextRelease } from './render/context_release';
-import { firstRunGraphicsPreset, GFX } from './render/gfx';
+import {
+  firstRunGraphicsPreset,
+  GFX,
+  GFX_MIGRATION_VERSION,
+  migratedGraphicsPreset,
+} from './render/gfx';
 import { Renderer } from './render/renderer';
 import { navigatorSaveData } from './render/sky';
 import { pathCrossesFence } from './sim/colliders';
@@ -820,6 +825,22 @@ async function startGame(
   // renderer read it, so the 3D tier, the data-fx-level cadence (nameplates), and the options UI
   // all agree. A masked/inconclusive device resolves to medium and returns null, so it stays on
   // the medium default and re-detects next boot; only a CONCLUSIVE result is persisted + marked.
+  // Tier-ladder migration: when the stored marker is behind GFX_MIGRATION_VERSION and the
+  // player never picked a preset in Options (graphicsPresetChosen), re-run device detection
+  // and overwrite the stored preset. This is what rescues installs carrying a def-filled or
+  // historically-bad default (phones locked on medium by the save() def-fill; the June 2026
+  // window that persisted ULTRA as the default). Runs before the renderer reads the preset.
+  const migratedPreset = migratedGraphicsPreset(
+    settings.get('gfxMigration'),
+    settings.get('graphicsPresetChosen'),
+  );
+  if (migratedPreset !== null) {
+    settings.set('graphicsPreset', migratedPreset);
+    settings.set('graphicsDefaultApplied', true);
+  }
+  if (settings.get('gfxMigration') < GFX_MIGRATION_VERSION) {
+    settings.set('gfxMigration', GFX_MIGRATION_VERSION);
+  }
   const autoPreset = firstRunGraphicsPreset(settings.get('graphicsDefaultApplied'));
   if (autoPreset !== null) {
     settings.set('graphicsPreset', autoPreset);
@@ -1795,6 +1816,19 @@ async function startGame(
 
   let last = performance.now();
   let acc = 0;
+  // Frame limiter. 0 = no cap; otherwise the minimum ms between processed frames. On
+  // touch devices the auto default is 30fps: phones cannot hold panel rate, and an
+  // uncapped rAF on a 90/120Hz panel spends the whole battery producing dropped frames
+  // (every lightweight mobile MMO ships a 30fps floor tier). `last` only advances on
+  // PROCESSED frames, so frameDt spans the skipped ones and the sim loses no time.
+  let fpsCapStamp = 0;
+  function fpsCapIntervalMs(): number {
+    const mode = Math.round(settings.get('fpsLimit'));
+    if (mode === 1) return 1000 / 30;
+    if (mode === 2) return 1000 / 60;
+    if (mode === 3) return 0;
+    return document.body.classList.contains('mobile-touch') ? 1000 / 30 : 0;
+  }
   let onlineInputEchoMs = 0;
   // Smoothed input-echo jitter (mean absolute deviation of RTT samples) for the
   // perf overlay's Jitter row.
@@ -2025,6 +2059,10 @@ async function startGame(
 
   function frame(now: number): void {
     requestAnimationFrame(frame);
+    const capMs = fpsCapIntervalMs();
+    // The -1.5ms slack keeps a 33.3ms cap from skipping every other 16.7ms vsync beat.
+    if (capMs > 0 && now - fpsCapStamp < capMs - 1.5) return;
+    fpsCapStamp = now;
     let frameDt = (now - last) / 1000;
     last = now;
     if (frameDt > 0.25) frameDt = 0.25;
@@ -2061,6 +2099,11 @@ async function startGame(
 
     if (offlineSim) {
       acc += frameDt;
+      // Catch-up clamp: at very low FPS the accumulator would otherwise demand up to
+      // 5 sim ticks per rendered frame, which makes each frame slower still (the classic
+      // death spiral). Cap the backlog at 3 ticks; under sustained overload sim time
+      // slows slightly instead of the game freezing.
+      if (acc > DT * 3) acc = DT * 3;
       // Supply the UTC day for the delve daily reset (the sim never reads the wall
       // clock itself, to stay deterministic).
       offlineSim.utcDay = new Date().toISOString().slice(0, 10);

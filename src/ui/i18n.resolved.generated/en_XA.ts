@@ -322,6 +322,11 @@ export const en_XA: EnTranslations = {
     "options": {
       "clickMoveLeft": "[Ļéƒţ Çļíçķ]",
       "clickMoveRight": "[Ŕíĝĥţ Çļíçķ]",
+      "fpsLimit": "[ƑÞŠ Ļíɱíţ]",
+      "fpsLimitAuto": "[Áúţó]",
+      "fpsLimit30": "[30 ƑÞŠ]",
+      "fpsLimit60": "[60 ƑÞŠ]",
+      "fpsLimitOff": "[Úñļíɱíţéð]",
       "browserEffects": "[Ɓŕóŵšéŕ Éƒƒéçţš]",
       "browserEffectsAuto": "[Áúţó]",
       "browserEffectsFull": "[Ƒúļļ]",

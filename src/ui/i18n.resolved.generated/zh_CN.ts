@@ -322,6 +322,11 @@ export const zh_CN: EnTranslations = {
     "options": {
       "clickMoveLeft": "左键",
       "clickMoveRight": "右键",
+      "fpsLimit": "FPS Limit",
+      "fpsLimitAuto": "Auto",
+      "fpsLimit30": "30 FPS",
+      "fpsLimit60": "60 FPS",
+      "fpsLimitOff": "Unlimited",
       "browserEffects": "浏览器特效",
       "browserEffectsAuto": "自动",
       "browserEffectsFull": "完整",

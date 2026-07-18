@@ -14225,8 +14225,19 @@ export class Hud {
         { value: 4, label: t('hud.options.graphicsPresetUltra') },
         { value: 5, label: t('hud.options.graphicsPresetAdvanced') },
       ],
-      () => this.renderGraphics(),
+      () => {
+        // A preset change made HERE is the player's deliberate choice: mark it so the
+        // gfx tier-ladder migrations (gfxMigration) never re-detect over it.
+        this.optionsHooks?.settings.set('graphicsPresetChosen', true);
+        this.renderGraphics();
+      },
     );
+    this.settingChoice(body, t('hudChrome.options.fpsLimit'), 'fpsLimit', [
+      { value: 0, label: t('hudChrome.options.fpsLimitAuto') },
+      { value: 1, label: t('hudChrome.options.fpsLimit30') },
+      { value: 2, label: t('hudChrome.options.fpsLimit60') },
+      { value: 3, label: t('hudChrome.options.fpsLimitOff') },
+    ]);
     if (Math.round(this.optionsHooks?.settings.get('graphicsPreset') ?? 0) === 5) {
       this.settingChoice(body, t('hud.options.terrainDetail'), 'terrainDetail', [
         { value: 0, label: t('hud.options.terrainLow') },

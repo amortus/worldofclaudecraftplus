@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
+  classifyGpuRenderer,
   configureMaskedDoubleSidedVegetationMaterial,
   forcedTierFromSearch, graphicsPresetLabel, isConstrainedBrowser, isWeakIntegratedGpu,
-  shouldUseAutoGovernor, tierFromHints, GFX_BUDGETS, type GfxRuntimeHints,
+  migratedGraphicsPreset, shouldUseAutoGovernor, tierFromHints,
+  GFX_BUDGETS, GFX_MIGRATION_VERSION, type GfxRuntimeHints,
   GFX_BUCKET_BANDS, gfxInternalsForTest,
 } from '../src/render/gfx';
 
@@ -46,15 +48,51 @@ describe('graphics tier resolution', () => {
     expect(tierFromHints({ ...desktop, graphicsPreset: 0 }, false)).toBe('low');
     // Software GL with no explicit preset floors to low.
     expect(tierFromHints(desktop, true)).toBe('low');
-    // A phone-class device with no saved preset auto-lowers to medium (unknown GPU + mobile).
-    expect(tierFromHints({ ...desktop, maxTouchPoints: 1, coarsePointer: true }, false)).toBe('medium');
-    // deviceMemory alone (no touch) doesn't floor to low anymore — GPU class drives that.
-    expect(tierFromHints({ ...desktop, maxTouchPoints: 1, coarsePointer: true, deviceMemory: 4 }, false)).toBe('medium');
+    // PHONES: low is the baseline now. An unknown GPU on a touch device gets LOW (our
+    // medium is a desktop PBR profile no budget phone GPU holds at 30fps), and <=4GB
+    // demotes regardless of GPU class. Desktop-without-touch keeps the medium fallback.
+    expect(tierFromHints({ ...desktop, maxTouchPoints: 1, coarsePointer: true }, false)).toBe('low');
+    expect(tierFromHints({ ...desktop, maxTouchPoints: 1, coarsePointer: true, deviceMemory: 4 }, false)).toBe('low');
     expect(tierFromHints({ ...desktop, deviceMemory: 4 }, false)).toBe('medium');
     // An explicit Options preset or a forced URL tier still wins on those devices.
     expect(tierFromHints({ ...desktop, maxTouchPoints: 1, coarsePointer: true, graphicsPreset: 4 }, false)).toBe('ultra');
     expect(tierFromHints({ ...desktop, search: '?gfx=high', maxTouchPoints: 1, coarsePointer: true }, false)).toBe('high');
     expect(tierFromHints({ ...desktop, search: '?gfx=ultra' }, true)).toBe('ultra');
+  });
+
+  it('floors software GL to low even over a persisted preset (the WebView SwiftShader trap)', () => {
+    // A phone whose WebView fell back to SwiftShader used to render its PERSISTED tier
+    // (up to the June-2026 ultra default) entirely on the CPU. Software now outranks the
+    // preset; only the URL force (headless screenshot verification) stays above it.
+    expect(tierFromHints({ ...desktop, graphicsPreset: 4 }, true)).toBe('low');
+    expect(tierFromHints({ ...desktop, graphicsPreset: 2 }, true)).toBe('low');
+    expect(tierFromHints({ ...desktop, search: '?gfx=medium', graphicsPreset: 4 }, true)).toBe('medium');
+  });
+
+  it('classifies the budget phone fleet as weak -> low (Samsung A14 et al)', () => {
+    const phone = { ...desktop, maxTouchPoints: 5, coarsePointer: true, narrowViewport: true };
+    // A14 4G: Mali-G52 MC2. A14 5G: Mali-G57 (midMobile, but phones baseline low anyway).
+    expect(tierFromHints({ ...phone, gpuRenderer: 'ANGLE (ARM, Mali-G52 MC2, OpenGL ES 3.2)' }, false)).toBe('low');
+    expect(tierFromHints({ ...phone, gpuRenderer: 'ANGLE (ARM, Mali-G57 MC2, OpenGL ES 3.2)' }, false)).toBe('low');
+    // The Snapdragon 665/680/695 budget family (Adreno 610/612/619) used to land medium.
+    expect(classifyGpuRenderer('Adreno (TM) 610')).toBe('weak');
+    expect(classifyGpuRenderer('Adreno (TM) 619')).toBe('weak');
+    // PowerVR Rogue GE8320 (Helio A22/G35) used to fall through to unknown -> medium.
+    expect(classifyGpuRenderer('PowerVR Rogue GE8320')).toBe('weak');
+    // Mid Adreno 62x+ stays mid; flagship phones get MEDIUM (not high) as their default.
+    expect(classifyGpuRenderer('Adreno (TM) 640')).toBe('midMobile');
+    expect(tierFromHints({ ...phone, gpuRenderer: 'Adreno (TM) 740' }, false)).toBe('medium');
+    // Desktop resolution is unchanged by the phone rules.
+    expect(tierFromHints({ ...desktop, gpuRenderer: 'NVIDIA GeForce RTX 3080' }, false)).toBe('ultra');
+  });
+
+  it('re-detects a non-chosen preset once per migration version, never a chosen one', () => {
+    // Not chosen + behind the migration version -> re-detect (returns a preset).
+    expect(migratedGraphicsPreset(0, false)).not.toBeNull();
+    // Already migrated -> leave alone.
+    expect(migratedGraphicsPreset(GFX_MIGRATION_VERSION, false)).toBeNull();
+    // The player picked their preset in Options -> authoritative forever.
+    expect(migratedGraphicsPreset(0, true)).toBeNull();
   });
 
   it('honors persisted presets when the URL does not force a tier', () => {

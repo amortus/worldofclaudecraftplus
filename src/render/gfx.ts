@@ -91,6 +91,14 @@ export interface GfxSettings {
   readonly anisotropy: number;
   /** Build ONE shared IBL cubemap instead of one per biome (mobile VRAM + boot win). */
   readonly singleIbl: boolean;
+  /** Cheap radial-gradient ground discs under characters on tiers with no shadow map. */
+  readonly blobShadows: boolean;
+  /** Pooled vfx particle capacity (desktop 4096; phones shrink the pool + its per-frame uploads). */
+  readonly vfxPoolSize: number;
+  /** Max overhead nameplates rendered at once; 0 = unlimited (phones cap at the nearest few). */
+  readonly nameplateMax: number;
+  /** Throttle non-critical per-frame HUD DOM work (aura rows, etc.) to the 10Hz cadence. */
+  readonly hudThrottled: boolean;
 }
 
 export interface GfxRuntimeBudget {
@@ -285,10 +293,17 @@ export function configureMaskedDoubleSidedVegetationMaterial<T extends THREE.Mat
 
 function settingsFor(
   tier: GfxTier,
-  hints?: Pick<GfxRuntimeHints, 'search' | 'graphicsPreset' | 'terrainDetail' | 'foliageDensity' | 'effectsQuality' | 'shadowQuality' | 'gpuRenderer'>,
+  hints?: Partial<Pick<GfxRuntimeHints, 'search' | 'graphicsPreset' | 'terrainDetail' | 'foliageDensity' | 'effectsQuality' | 'shadowQuality' | 'gpuRenderer' | 'maxTouchPoints' | 'coarsePointer' | 'narrowViewport' | 'deviceMemory'>>,
 ): GfxSettings {
   const bucketBands = GFX_BUCKET_BANDS[tier];
   const weakIntegratedGpu = isWeakIntegratedGpu(hints?.gpuRenderer);
+  // Same touch+coarse/narrow signal isConstrainedBrowser uses: phone-class devices get
+  // tighter pixel caps below. A 1080x2400 panel at DPR 3 is ~2.6M CSS-to-device pixels;
+  // no phone GPU we target should shade more than ~1M of them (Krunker ships a 0.6
+  // default render scale on DESKTOP; RuneScape mobile exposes render scaling as one of
+  // its three core knobs).
+  const mobileHints =
+    (hints?.maxTouchPoints ?? 0) > 0 && ((hints?.coarsePointer ?? false) || (hints?.narrowViewport ?? false));
   let settings: GfxSettings = {
     graphicsConfigVersion: GFX_CONFIG_VERSION,
     tier,
@@ -301,18 +316,29 @@ function settingsFor(
     // it ~1ms-class on real GPUs; ultra gets full-res Medium
     ao: tier === 'high' || tier === 'ultra',
     msaaSamples: tier === 'high' || tier === 'ultra' ? 4 : 0,
-    pixelRatioCap: tier === 'low' ? 1.48 : tier === 'medium' ? 1.48 : tier === 'high' ? 1.75 : 2.5,
+    pixelRatioCap: mobileHints
+      ? tier === 'low' ? 1.2 : tier === 'medium' ? 1.4 : tier === 'high' ? 1.6 : 2.0
+      : tier === 'low' ? 1.48 : tier === 'medium' ? 1.48 : tier === 'high' ? 1.75 : 2.5,
     shadowMap: tier === 'low' ? 2048 : tier === 'medium' ? 2560 : 4096,
     standardMaterials: tier === 'medium' || tier === 'high' || tier === 'ultra',
     lowPlus: tier === 'low',
     leanFoliage: tier === 'low' || (tier === 'medium' && weakIntegratedGpu),
-    grassRadius: tier === 'low' ? 80 : tier === 'medium' ? 76 : 82,
+    // Phone low tier: no grass ring at all. It is a DoubleSide alpha-tested instanced
+    // field, the single worst overdraw source on a mobile tiler GPU, and the games that
+    // hold 30fps on budget Androids ship without one.
+    grassRadius: mobileHints && tier === 'low' ? 0 : tier === 'low' ? 80 : tier === 'medium' ? 76 : 82,
     grassStep: tier === 'low' ? 2.05 : tier === 'medium' ? 2.0 : 1.8,
     terrainSplat: tier === 'medium' || tier === 'high' || tier === 'ultra',
     windSway: true,
-    maxPointLights: 6,
+    maxPointLights: mobileHints && tier === 'low' ? 3 : 6,
     anisotropy: tier === 'low' ? 1 : tier === 'medium' ? 2 : 8,
     singleIbl: tier === 'low' || tier === 'medium',
+    // Grounding shadows for the tier that has no shadow map: a shared radial-gradient
+    // disc per character (one material, near-zero cost) so characters do not float.
+    blobShadows: tier === 'low',
+    vfxPoolSize: mobileHints ? 512 : 4096,
+    nameplateMax: mobileHints ? 8 : 0,
+    hudThrottled: mobileHints,
   };
   if (hints?.graphicsPreset === PRESET_ADVANCED) {
     if ((hints.terrainDetail ?? 1) < 0.5) settings = { ...settings, terrainSplat: false };
@@ -457,14 +483,18 @@ export function classifyGpuRenderer(name: string | undefined): GpuClass {
   if (/iris xe|iris plus|radeon(\(tm\))? ?(vega|graphics)|uhd graphics 7\d\d|intel.*xe/.test(n))
     return 'midIntegrated';
   // Mid mobile. The Mali clause excludes G50-G52 (entry-level Valhall parts the weak ladder
-  // below claims) so they fall through to LOW; G53+ stay mid.
+  // below claims) so they fall through to LOW; G53+ stay mid. The Adreno clause excludes
+  // the 60x/61x budget family (SD 439-750: Adreno 605-619, the dominant Brazilian budget
+  // fleet), which the weak ladder below claims; 62x+ stay mid.
   if (
-    /apple a1[1-3]|adreno \(tm\) (5\d\d|6[0-5]\d)|mali-g(5[3-9]|6\d|7[0-8])|powervr (gt|gm|b)/.test(n)
+    /apple a1[1-3]|adreno \(tm\) (5\d\d|6[2-5]\d)|mali-g(5[3-9]|6\d|7[0-8])|powervr (gt|gm|b)/.test(n)
   )
     return 'midMobile';
-  // Old / low mobile + old integrated.
+  // Old / low mobile + old integrated. PowerVR Rogue GE8xxx (Helio A22/G35 phones) was
+  // previously unmatched and fell through to unknown -> medium, a desktop-PBR profile on
+  // a 2-3GB phone.
   if (
-    /adreno \(tm\) [34]\d\d|mali-t|mali-4\d\d|mali-g(31|51|52)\b|powervr (sgx|g6)|apple a([5-9]|10)\b|(hd|uhd) graphics (\d{3}\b|[45]\d{2})|intel.*gma/.test(n)
+    /adreno \(tm\) [34]\d\d|adreno \(tm\) 6[01]\d|mali-t|mali-4\d\d|mali-g(31|51|52)\b|powervr (sgx|g6|ge|rogue)|apple a([5-9]|10)\b|(hd|uhd) graphics (\d{3}\b|[45]\d{2})|intel.*gma/.test(n)
   )
     return 'weak';
   return 'unknown';
@@ -492,11 +522,21 @@ export function resolveDefaultGraphicsPreset(hints: GfxRuntimeHints): number {
   if (gpu === 'software' || gpu === 'weak') return PRESET_LOW;
   if (gpu === 'strongDesktop' && !isMobile)
     return ampleOrUnknownMem ? PRESET_ULTRA : PRESET_HIGH;
-  if (gpu === 'flagshipMobile' || (gpu === 'strongDesktop' && isMobile)) return PRESET_HIGH;
+  // PHONES: the baseline is LOW, not medium. Our medium is a desktop PBR profile
+  // (IBL + PCFSoft shadow maps + splat terrain) that budget phone GPUs cannot hold at
+  // 30fps; the games that run well on phones (AQ3D, Hordes, Albion mobile) all treat
+  // the weak-Android tier as the design baseline and scale UP from it. A recognized
+  // flagship gets medium; everything else mobile gets low, and a phone reporting <=4GB
+  // is demoted regardless of its GPU class (deviceMemory is clamped to 8 by Chromium,
+  // and iOS omits it entirely, so this only ever fires on real low-RAM Androids).
+  if (isMobile) {
+    if (mem !== undefined && mem <= 4) return PRESET_LOW;
+    if (gpu === 'flagshipMobile' || gpu === 'strongDesktop') return PRESET_MEDIUM;
+    return PRESET_LOW;
+  }
   if (gpu === 'midIntegrated' || gpu === 'midMobile') return PRESET_MEDIUM;
   if (
     gpu === 'unknown' &&
-    !isMobile &&
     mem !== undefined &&
     mem >= AMPLE_DEVICE_MEMORY_GIB &&
     cores !== undefined &&
@@ -530,27 +570,35 @@ function tierFromPreset(preset: number): GfxTier {
   return 'low';
 }
 
-// Auto-detect the tier when the player has not explicitly chosen one. Phones,
-// the native app, and low-memory machines must never boot the full ultra
-// pipeline (post chain + 4k shadows + 2.5x DPR); a weak device (<=4 GB) drops
-// to low, any other constrained device to medium. Desktop browsers are NOT
-// "constrained" (fine pointer, ample memory), so they keep the ultra default
-// unchanged. A player who picks a preset in Options overrides this everywhere.
-export function autoTierForDevice(hints: GfxRuntimeHints): GfxTier {
-  if (!isConstrainedBrowser(hints)) return tierFromPreset(DEFAULT_PRESET);
-  return hints.deviceMemory !== undefined && hints.deviceMemory <= 4 ? 'low' : 'medium';
-}
-
 export function tierFromHints(hints: GfxRuntimeHints, softwareGl: boolean): GfxTier {
   const forced = forcedTierFromSearch(hints.search);
   if (forced) return forced;
-  // An explicit Options choice is authoritative on every device.
+  // Software GL (SwiftShader in a blocklisted WebView, llvmpipe in a VM) outranks even an
+  // explicit preset: no persisted choice makes a software rasterizer able to run medium+,
+  // and the preset check used to come first, which let phones whose WebView fell back to
+  // software render a persisted tier at DPR-capped resolution entirely on the CPU. The
+  // URL force above stays authoritative for headless screenshot verification.
+  if (softwareGl) return tierFromPreset(PRESET_LOW);
+  // An explicit Options choice is authoritative on every real GPU.
   if (hints.graphicsPreset !== undefined) return tierFromPreset(hints.graphicsPreset);
-  // No saved preset: resolve device-aware via resolveDefaultGraphicsPreset (medium fallback;
-  // recognized weak/software -> low, strong desktop -> high/ultra, unrecognized -> medium).
-  // Software GL with no explicit preset drops to the low floor.
-  const preset = softwareGl ? PRESET_LOW : resolveDefaultGraphicsPreset(hints);
-  return tierFromPreset(preset);
+  return tierFromPreset(resolveDefaultGraphicsPreset(hints));
+}
+
+// Bumped whenever the tier ladder above changes enough that previously-persisted
+// DEFAULTS are wrong (the June 2026 window even persisted ultra as the default on
+// phones). Settings.save() def-fills graphicsPreset the first time ANY setting is
+// stored, so almost every install carries a persisted preset the player never chose;
+// main.ts re-detects those on boot when its stored migration marker is behind this,
+// and leaves anyone whose graphicsPresetChosen flag proves a deliberate Options pick.
+export const GFX_MIGRATION_VERSION = 1;
+
+export function migratedGraphicsPreset(
+  migrationApplied: number,
+  presetChosen: boolean,
+): number | null {
+  if (presetChosen) return null;
+  if (migrationApplied >= GFX_MIGRATION_VERSION) return null;
+  return resolveDefaultGraphicsPreset(runtimeHints());
 }
 
 // Software GL (SwiftShader/llvmpipe — headless test runners, VMs) can't take

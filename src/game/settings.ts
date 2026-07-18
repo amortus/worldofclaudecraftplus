@@ -20,6 +20,17 @@ export const SETTING_RANGES = {
   // (resolveDefaultGraphicsPreset in gfx.ts). A masked/inconclusive device stays on medium
   // and keeps re-detecting on later boots (see graphicsDefaultApplied).
   graphicsPreset: { min: 1, max: 5, def: 2 },
+  // The gfx.ts tier-ladder migration marker (GFX_MIGRATION_VERSION). When behind, main.ts
+  // re-runs device detection ONCE and overwrites graphicsPreset, unless graphicsPresetChosen
+  // proves the player picked their preset deliberately. Exists because save() def-fills
+  // graphicsPreset on the first unrelated write, making "no stored preset" unrepresentable:
+  // without this, a bad historical default (the June 2026 ultra window) is locked in forever.
+  gfxMigration: { min: 0, max: 99, def: 0 },
+  // Frame-rate limit for the render loop. 0 = Auto (30fps on touch devices, uncapped on
+  // desktop), 1 = 30, 2 = 60, 3 = uncapped. Phones default capped: every lightweight mobile
+  // MMO ships a 30fps floor tier, and an uncapped loop on a 90/120Hz panel just converts
+  // the whole battery into dropped frames.
+  fpsLimit: { min: 0, max: 3, def: 0 },
   // Adaptive browser-effects tier for the DOM/CSS layer (distinct from the WebGL
   // graphicsPreset above). 0 = Auto: detect the engine (Chromium/WebKit/Gecko),
   // version and desktop-vs-mobile and tone down the most GPU-expensive CSS
@@ -116,6 +127,10 @@ export const BOOL_SETTINGS = {
   // time any setting is stored, so a non-false def would fake "applied" and defeat detection.
   // reset() clears it back to false so Reset to Defaults re-detects on next reload.
   graphicsDefaultApplied: { def: false },
+  // True ONLY when the player changed graphicsPreset in the Options menu themselves. This
+  // is what exempts an install from tier-ladder migrations (gfxMigration above): a def-filled
+  // preset is a default we may re-detect, a chosen one is authoritative forever.
+  graphicsPresetChosen: { def: false },
   // on by default: while a camera drag is active, pointer-lock the canvas so the
   // OS cursor cannot leave the window during rotation (otherwise it hits the
   // screen edge and the camera freezes, or slips onto a second monitor).

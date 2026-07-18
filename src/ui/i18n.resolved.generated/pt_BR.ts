@@ -322,6 +322,11 @@ export const pt_BR: EnTranslations = {
     "options": {
       "clickMoveLeft": "Clique esquerdo",
       "clickMoveRight": "Clique direito",
+      "fpsLimit": "FPS Limit",
+      "fpsLimitAuto": "Auto",
+      "fpsLimit30": "30 FPS",
+      "fpsLimit60": "60 FPS",
+      "fpsLimitOff": "Unlimited",
       "browserEffects": "Efeitos do navegador",
       "browserEffectsAuto": "Auto",
       "browserEffectsFull": "Completos",

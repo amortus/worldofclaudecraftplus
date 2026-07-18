@@ -322,6 +322,11 @@ export const ru_RU: EnTranslations = {
     "options": {
       "clickMoveLeft": "Левая кнопка",
       "clickMoveRight": "Правая кнопка",
+      "fpsLimit": "FPS Limit",
+      "fpsLimitAuto": "Auto",
+      "fpsLimit30": "30 FPS",
+      "fpsLimit60": "60 FPS",
+      "fpsLimitOff": "Unlimited",
       "browserEffects": "Эффекты браузера",
       "browserEffectsAuto": "Авто",
       "browserEffectsFull": "Полные",
