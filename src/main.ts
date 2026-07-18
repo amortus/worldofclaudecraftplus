@@ -861,6 +861,18 @@ async function startGame(
   try {
     renderer = new Renderer(world, canvas, nameplates);
     renderer.setAudioSink(sfx);
+    // Governor v2 stage 2: a phone that stayed under ~15fps for 20s straight despite
+    // every runtime lever persists a one-step tier demotion for the NEXT boot. A
+    // preset the player chose in Options is authoritative and never auto-demoted.
+    renderer.onSustainedOverload = () => {
+      if (settings.get('graphicsPresetChosen')) return;
+      const current = Math.round(settings.get('graphicsPreset'));
+      if (current > 1) {
+        settings.set('graphicsPreset', current - 1);
+        settings.set('graphicsDefaultApplied', true);
+        console.warn('[gfx] sustained overload: persisted one-tier demotion for next boot');
+      }
+    };
     // Dev-only: ?targetcone=1 draws the Tab-target front cone on the ground in
     // front of the player, for tuning the targeting angle/radius (tab_target.ts).
     if (import.meta.env.DEV && new URLSearchParams(location.search).get('targetcone') === '1') {

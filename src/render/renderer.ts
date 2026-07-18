@@ -37,6 +37,7 @@ import {
   type SimEvent,
 } from '../sim/types';
 import { groundHeight, WATER_LEVEL, zoneBiomeAt } from '../sim/world';
+import { buildBlobShadows, type BlobShadowsView } from './blob_shadow';
 import { milestoneName } from '../ui/milestone_i18n';
 import { tEntity } from '../ui/entity_i18n';
 import {
@@ -161,6 +162,9 @@ const SPARKLE_DRAW_RANGE_SQ = 40 * 40;
 // Keep the full rig just past nameplate range so nearby characters and held
 // weapons stay readable on low while the 80u draw cap still bounds total cost.
 const ENTITY_LOD_RANGE_SQ = 58 * 58;
+// Phones swap to the baked idle-pose far LOD much closer: animating a rig the size of
+// a coin on a 6" screen is pure cost (Sky proxies EVERY avatar beyond its session 8).
+const ENTITY_LOD_RANGE_MOBILE_SQ = 36 * 36;
 // Feet-above-terrain margin that counts as "airborne" for the jump pose. Mirrors
 // the sim's own 0.4u grounded tolerance (sim.ts), so walking slopes doesn't trip
 // it but a jump (apex ~1.1u) does. Needed because online snapshots don't carry
@@ -748,6 +752,8 @@ export class Renderer {
   // a group reused round-robin, so rapid clicking never allocates. A slot with
   // `elapsed >= lifetime` is free. See click_marker.ts for the animation curves.
   private clickMarkers: ClickMarkerSlot[] = [];
+  // Grounding discs for the no-shadow-map tier (GFX.blobShadows); one instanced draw.
+  private blobShadows: BlobShadowsView | null = null;
   private clickMarkerNext = 0;
   raycaster = new THREE.Raycaster();
   clickTargets: THREE.Object3D[] = [];
@@ -792,6 +798,16 @@ export class Renderer {
   private cullViewProj = new THREE.Matrix4();
   private cullSphere = new THREE.Sphere();
   private cullCharacters = false;
+  private shadowedCharacters = false;
+  // Sustained-overload ladder for phones (governor v2). The bucket governor can only
+  // trim grass/vfx/resolution; when a phone still cannot hold ~15fps for seconds on
+  // end, stage 1 kills the shadow map at runtime (the one big cost outside the
+  // governor's reach) and stage 2 asks the host to persist a one-step tier demotion
+  // for the next boot. Render-side only; the host decides what persisting means.
+  private overloadSeconds = 0;
+  private overloadShadowKilled = false;
+  private overloadDemotionFired = false;
+  onSustainedOverload: (() => void) | null = null;
   private selfRenderPosition = new THREE.Vector3();
   private selfRenderPositionReady = false;
   // The player id treated as "self" last frame. When it changes (a moderator
@@ -1051,8 +1067,14 @@ export class Renderer {
     this.scene.add(sun);
     this.scene.add(sun.target);
     this.sun = sun;
-    // characters can self-cull only where they cast no sun shadow (low/lean tier)
-    this.cullCharacters = !sun.castShadow;
+    // Characters always frustum-cull their color draws now. With shadows ON the cull
+    // used to be disabled entirely, so every character within the 80yd draw range
+    // submitted a full skinned draw even off-camera; but past ENTITY_SHADOW_RANGE
+    // (25yd) a character casts no sun shadow anyway (wantShadow below), so culling
+    // it off-screen loses nothing. Inside 25yd the per-entity check below skips the
+    // cull when shadows are on, so a just-off-frustum shadow still paints.
+    this.cullCharacters = true;
+    this.shadowedCharacters = sun.castShadow;
     this.sunDir.copy(SUN_DIR);
 
     // visible sun disc + bloom halo
@@ -1184,6 +1206,13 @@ export class Renderer {
     this.flames = props.flames;
     this.fireLights = props.fireLights;
     this.propsView = props;
+
+    if (GFX.blobShadows) {
+      // 48 discs covers every character the entity draw range admits; past the cap the
+      // farthest characters simply lack a disc, which is invisible in practice.
+      this.blobShadows = buildBlobShadows(48);
+      this.scene.add(this.blobShadows.mesh);
+    }
 
     // selection ring — a classic target reticle: a base ring plus four
     // inward-pointing ticks. The base ring is draped over the terrain each
@@ -1447,7 +1476,7 @@ export class Renderer {
   private initialEffectiveRenderScale(scale: number): number {
     const forcedTier = urlForcedTier();
     if (this.isMobileRuntime() && forcedTier !== 'high' && forcedTier !== 'ultra')
-      return Math.min(scale, 0.85);
+      return Math.min(scale, 0.75); // Krunker ships 0.6 by default; 0.75 is conservative
     return scale;
   }
 
@@ -3801,7 +3830,7 @@ export class Renderer {
         const inProxyBand = d2 < ENTITY_PROXY_SHADOW_RANGE_SQ;
         if (v.visual) {
           v.visual.setShadow(wantShadow);
-          v.isFar = d2 > ENTITY_LOD_RANGE_SQ;
+          v.isFar = d2 > (GFX.mobileProfile ? ENTITY_LOD_RANGE_MOBILE_SQ : ENTITY_LOD_RANGE_SQ);
           // past the articulated gate the static-pose proxy carries the
           // shadow; an active form's own rig keeps casting instead
           v.visual.setProxyShadow(
@@ -3892,7 +3921,7 @@ export class Renderer {
       // Decide visibility now from the real world position; applied at the end so
       // the rest of the per-entity work (animation, footstep audio) is unaffected.
       let charOnScreen = true;
-      if (this.cullCharacters && id !== p.id) {
+      if (this.cullCharacters && id !== p.id && (!this.shadowedCharacters || d2 > ENTITY_SHADOW_RANGE_SQ)) {
         this.cullSphere.center.set(x, y + v.height * 0.5 * e.scale, z);
         this.cullSphere.radius = (v.height * 0.7 + 1.5) * e.scale;
         charOnScreen = this.cullFrustum.intersectsSphere(this.cullSphere);
@@ -4318,6 +4347,20 @@ export class Renderer {
     this.updateChatBubbles();
     markPhase('nameplates');
     this.updateTravelSpeedFx(p, selfPos, dt);
+    if (this.blobShadows) {
+      // Re-place the discs from the views' final positions for this frame. Dead
+      // entities are skipped (a ghost floating over its own shadow reads wrong).
+      this.blobShadows.begin();
+      for (const [id, v] of this.views) {
+        if (!v.visual || !v.group.visible) continue;
+        const e = this.sim.entities.get(id);
+        if (!e || e.dead) continue;
+        const radius = Math.max(0.5, Math.min(1.6, v.height * v.liveScale * 0.42));
+        this.blobShadows.place(v.group.position.x, v.group.position.y, v.group.position.z, radius);
+      }
+      this.blobShadows.commit();
+    }
+    if (GFX.mobileProfile) this.updateOverloadLadder(dt);
     // Fiesta screen shake: trauma^2 jitter offsets the camera for the draw only.
     let shakeX = 0,
       shakeY = 0;
@@ -4623,10 +4666,59 @@ export class Renderer {
     }
   }
 
+  private updateOverloadLadder(dt: number): void {
+    // dt > 66ms means under ~15fps. Recover twice as fast as we accumulate so brief
+    // hitches (loading, GC) never trip the ladder; only sustained overload does.
+    if (dt > 1 / 15) this.overloadSeconds += dt;
+    else this.overloadSeconds = Math.max(0, this.overloadSeconds - dt * 2);
+    if (!this.overloadShadowKilled && this.overloadSeconds > 8 && this.webgl.shadowMap.enabled) {
+      this.overloadShadowKilled = true;
+      // One-time material recompile as the shadow uniforms drop out, then every later
+      // frame stops paying the depth pass + PCF taps entirely.
+      this.webgl.shadowMap.enabled = false;
+      this.sun.castShadow = false;
+      this.shadowedCharacters = false;
+      console.warn('[gfx] sustained overload: shadow map disabled at runtime');
+    }
+    if (!this.overloadDemotionFired && this.overloadSeconds > 20) {
+      this.overloadDemotionFired = true;
+      this.onSustainedOverload?.();
+    }
+  }
+
+  // Nearest-N nameplate budget for phones (GFX.nameplateMax): every visible plate is a
+  // composited DOM layer over the WebGL canvas, and a town square can float dozens.
+  // Sky caps full-detail avatars at 8 for the same reason. Urgent plates (your target,
+  // casters, doors) bypass the cap in the main loop below.
+  private plateCapIds = new Set<number>();
+  private plateCapScratch: { id: number; d2: number }[] = [];
+
+  private computePlateCap(capMax: number): void {
+    const p = this.sim.player;
+    const scratch = this.plateCapScratch;
+    scratch.length = 0;
+    for (const [id, v] of this.views) {
+      if (id === p.id || !v.visual) continue;
+      const e = this.sim.entities.get(id);
+      if (!e || (e.dead && !e.lootable)) continue;
+      const dx = e.pos.x - p.pos.x;
+      const dz = e.pos.z - p.pos.z;
+      const d2 = dx * dx + dz * dz;
+      if (d2 > NAMEPLATE_RANGE_SQ) continue;
+      scratch.push({ id, d2 });
+    }
+    scratch.sort((a, b) => a.d2 - b.d2);
+    this.plateCapIds.clear();
+    const n = Math.min(capMax, scratch.length);
+    for (let i = 0; i < n; i++) this.plateCapIds.add(scratch[i].id);
+  }
+
   private updateNameplates(fullPass: boolean): void {
     const sim = this.sim;
     const p = sim.player;
     const { width: w, height: h } = this.viewport;
+    const capMax = GFX.nameplateMax;
+    if (capMax > 0) this.computePlateCap(capMax);
     for (const [id, v] of this.views) {
       const e = sim.entities.get(id);
       if (!e) continue;
@@ -4651,7 +4743,11 @@ export class Renderer {
         // the sealed royal door inside the crypt carries no floating label —
         // it reads as part of the back wall, not a portal billboard
         (isDoor && e.dungeonId === 'nythraxis_boss_arena') ||
-        (!this.showNameplates && e.kind === 'mob' && !e.dead);
+        (!this.showNameplates && e.kind === 'mob' && !e.dead) ||
+        // phone plate budget: only the nearest N characters keep a plate; urgent ones
+        // (target, casting, close) and door/interact labels always pass
+        (capMax > 0 && !urgent && !isDoor && !delveInteractNear && v.visual !== null &&
+          !this.plateCapIds.has(id));
       if (hidden) {
         if (v.nameplateDisplay !== 'none') {
           v.nameplate.style.display = 'none';

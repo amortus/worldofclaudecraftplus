@@ -1088,6 +1088,17 @@ function emptyGrassStats(enabled: boolean, cacheLimit = 0): FoliagePerfStats {
 }
 
 function buildGrassRing(parent: THREE.Group, seed: number): GrassRing {
+  // Phone low tier ships without a grass ring at all (GFX.grassRadius 0): it is a
+  // DoubleSide alpha-tested instanced field, the worst overdraw source on a mobile
+  // tiler GPU. A radius of 0 alone would NOT disable it (the chunk loop pads by
+  // chunkHalfDiag and still builds a ring around the player), so return a no-op.
+  if (GFX.grassRadius <= 0) {
+    return {
+      update: () => {},
+      setQuality: () => {},
+      perfStats: () => emptyGrassStats(false),
+    };
+  }
   const baseRadius = GFX.grassRadius;
   const step = GFX.grassStep;
   const chunkCells = Math.ceil(GRASS_CHUNK_SIZE / step) + 3;

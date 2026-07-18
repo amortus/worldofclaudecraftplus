@@ -559,6 +559,12 @@ export function buildProps(seed: number, delveLabel?: (delveId: string) => strin
    * structure (and leaves the shadow pass untouched).
    */
   function registerHideable(g: THREE.Group, fp: Footprint): void {
+    // Phone low tier: skip hideable registration entirely so these buildings merge
+    // into the static bands (each registered structure is otherwise excluded from
+    // mergeStaticMeshes and costs its own draws). The camera-ghost feature this
+    // gives up is redundant there: the mobile chase camera already collision-pulls
+    // in front of walls (camera_collision.ts), it never sits inside a building.
+    if (GFX.mobileProfile && lowProps) return;
     const matMap = new Map<THREE.Material, ToggleMat>();
     g.traverse((o) => {
       const mesh = o as THREE.Mesh;

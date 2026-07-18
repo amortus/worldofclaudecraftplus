@@ -29,6 +29,7 @@ import {
   playerPortraitDataUrl,
   visualPortraitDataUrl,
 } from '../render/characters/portrait';
+import { GFX } from '../render/gfx';
 import type { Renderer } from '../render/renderer';
 import { type AugmentCategory, augmentCategory } from '../sim/content/augments';
 import {
@@ -732,6 +733,18 @@ function yellVoiceKey(text: string): string {
     .slice(0, 60)}`;
 }
 
+// Cheap "did the aura SET change" signature: ids plus stack counts only, no
+// durations. On throttled (mobile) HUD tiers the full aura repaint is held to
+// the 10Hz cadence, but this signature is compared every frame so a gained,
+// dropped, or restacked aura still paints on the very next frame; only the
+// steady-state duration-text churn waits for the cadence tick. Kept pure (no
+// DOM) so a unit test can pin the contract.
+export function auraSetSignature(auras: readonly { id: string; stacks?: number }[]): string {
+  let sig = '';
+  for (const a of auras) sig += `${a.id}x${a.stacks ?? 0}|`;
+  return sig;
+}
+
 export class Hud {
   private static readonly BAR_ABILITY_SLOTS = 11; // bar slots 1..11; slot 0 is the fixed Attack toggle
   private static readonly PET_AUTOCAST_TOUCH_HOLD_MS = 2000;
@@ -828,6 +841,26 @@ export class Hud {
   private actionbarEl = $('#actionbar');
   private xpFillEl = $('#xpbar .fill');
   private xpLabelEl = $('#xpbar .label');
+  // Frame-path elements resolved once at construction: update() runs every rAF,
+  // and on phone WebViews even cheap per-frame selector lookups add DOM work
+  // that serializes against WebGL in the compositor.
+  private xpbarEl = $('#xpbar');
+  private xpRestedEl = $('#xpbar .rested');
+  private playerFrameEl = $('#player-frame');
+  private pfAbsorbEl = $('#pf-absorb');
+  private tfAbsorbEl = $('#tf-absorb');
+  private swingbarEl = $('#swingbar');
+  private swingbarFillEl = this.swingbarEl.querySelector('.fill') as HTMLElement;
+  private swingbarLabelEl = this.swingbarEl.querySelector('.label') as HTMLElement;
+  private petbarEl = $('#petbar');
+  private spellbookEl = $('#spellbook');
+  private lowHealthVignetteEl = document.getElementById('low-health-vignette');
+  private mmTalentsEl = document.getElementById('mm-talents');
+  // Built by the mobile controls after the Hud, so it is resolved lazily.
+  private mobileTalentsEl: HTMLElement | null = null;
+  // Skips the per-frame xp-bar CSS-var/class writes while nothing changed
+  // (the fill only moves on xp gain, not every frame).
+  private lastXpBarSig = '';
   private deathOverlayEl = $('#death-overlay');
   private releaseSpiritBtnEl = $('#release-btn');
   private adReviveBtnEl = $('#ad-revive-btn') as HTMLButtonElement;
@@ -3575,7 +3608,7 @@ export class Hud {
   }
 
   private renderPetBar(): void {
-    const bar = $('#petbar') as HTMLElement;
+    const bar = this.petbarEl;
     const pet = this.ownPet();
     if (!pet || pet.dead) {
       bar.style.display = 'none';
@@ -3862,7 +3895,7 @@ export class Hud {
   // from the pure lowHealthVignette() curve; purely presentational (CSS vars on
   // a fixed overlay), works on every GFX tier since it's DOM, not a post pass.
   private updateLowHealthVignette(hp: number, maxHp: number): void {
-    const el = document.getElementById('low-health-vignette');
+    const el = this.lowHealthVignetteEl;
     if (!el) return;
     const v = lowHealthVignette(hp, maxHp);
     if (!v.active) {
@@ -3900,13 +3933,14 @@ export class Hud {
     // talent buttons glow while the player has unspent points (and a tree exists)
     const tp = sim.talentPoints();
     const talGlow = talentsFor(sim.cfg.playerClass) !== null && tp.spent < tp.total;
-    document.getElementById('mm-talents')?.classList.toggle('has-points', talGlow);
-    document.getElementById('mobile-talents')?.classList.toggle('has-points', talGlow);
+    this.mmTalentsEl?.classList.toggle('has-points', talGlow);
+    if (!this.mobileTalentsEl) this.mobileTalentsEl = document.getElementById('mobile-talents');
+    this.mobileTalentsEl?.classList.toggle('has-points', talGlow);
 
     // player frame
     this.setText(this.pfLevelEl, String(p.level));
     this.setTransform(this.pfHpEl, `scaleX(${p.hp / Math.max(1, p.maxHp)})`);
-    this.updateAbsorb('#pf-absorb', p);
+    this.updateAbsorb(this.pfAbsorbEl, p);
     this.setText(this.pfHpTextEl, `${p.hp} / ${p.maxHp}`);
     this.updateLowHealthVignette(p.hp, p.maxHp);
     const resFrac = p.resource / Math.max(1, p.maxResource);
@@ -3916,8 +3950,8 @@ export class Hud {
     if (this.pfResourceEl.className !== resClass) this.pfResourceEl.className = resClass;
     this.updateLowResource(p);
 
-    // buff bar (player buffs + debuffs)
-    this.renderAuras(this.buffBarEl, p, 'all');
+    // buff bar (player buffs + debuffs); 10Hz on throttled tiers, see the gate
+    this.renderAurasGated(this.buffBarEl, p, 'all', fastHud);
 
     // target frame
     const target = p.targetId !== null ? sim.entities.get(p.targetId) : null;
@@ -3931,7 +3965,7 @@ export class Hud {
       this.setText(this.targetNameEl, entityDisplayName(target));
       this.setText(this.targetLevelEl, MOBS[target.templateId]?.boss ? '☠' : String(target.level));
       this.setTransform(this.targetHpEl, `scaleX(${target.hp / Math.max(1, target.maxHp)})`);
-      this.updateAbsorb('#tf-absorb', target.dead ? null : target);
+      this.updateAbsorb(this.tfAbsorbEl, target.dead ? null : target);
       this.setText(
         this.targetHpTextEl,
         target.dead ? t('hud.core.dead') : `${target.hp} / ${target.maxHp}`,
@@ -3956,7 +3990,7 @@ export class Hud {
           );
         }
       }
-      this.renderAuras(this.targetDebuffsEl, target, 'debuffs');
+      this.renderAurasGated(this.targetDebuffsEl, target, 'debuffs', fastHud);
       // target/boss cast bar (e.g. Nythraxis' Deathless Rage) — shown under the
       // name + HP so the raid sees exactly when to channel the wardstones
       const tcb = castBarState(target);
@@ -4050,7 +4084,7 @@ export class Hud {
     // swing timer — fills between melee/ranged auto-attack swings. swingTimer
     // counts DOWN to 0 (ready); we recover the full interval from the reset
     // edge so the bar stays accurate under haste and for ranged weapons.
-    const sw = $('#swingbar');
+    const sw = this.swingbarEl;
     if (p.autoAttack && target && !target.dead && target.kind !== 'object') {
       if (p.swingTimer > this.lastSwingTimer + 1e-4 || this.swingPeriod <= 0) {
         this.swingPeriod = Math.max(p.swingTimer, p.weapon.speed);
@@ -4058,10 +4092,11 @@ export class Hud {
       this.lastSwingTimer = p.swingTimer;
       const frac =
         this.swingPeriod > 0 ? Math.min(1, Math.max(0, 1 - p.swingTimer / this.swingPeriod)) : 1;
-      sw.style.display = 'block';
-      (sw.querySelector('.fill') as HTMLElement).style.width = `${(frac * 100).toFixed(1)}%`;
+      this.setDisplay(sw, 'block');
+      this.setWidth(this.swingbarFillEl, `${(frac * 100).toFixed(1)}%`);
       sw.classList.toggle('ready', p.swingTimer <= 0);
-      (sw.querySelector('.label') as HTMLElement).textContent =
+      this.setText(
+        this.swingbarLabelEl,
         p.swingTimer <= 0
           ? t('hudChrome.swing.ready')
           : t('hudChrome.swing.seconds', {
@@ -4069,9 +4104,10 @@ export class Hud {
                 minimumFractionDigits: 1,
                 maximumFractionDigits: 1,
               }),
-            });
+            }),
+      );
     } else {
-      sw.style.display = 'none';
+      this.setDisplay(sw, 'none');
       this.lastSwingTimer = 0;
       this.swingPeriod = 0;
     }
@@ -4083,7 +4119,7 @@ export class Hud {
       'many-spells',
       this.hotbarActions.filter((action) => action !== null).length > 10,
     );
-    if ($('#spellbook').style.display === 'block') this.refreshSpellbookHotbarControls();
+    if (this.spellbookEl.style.display === 'block') this.refreshSpellbookHotbarControls();
     for (let i = 0; i < this.abilityButtons.length; i++) {
       const ab = this.abilityButtons[i];
       const slotLabel = formatAbilityNumber(i + 1);
@@ -4197,15 +4233,20 @@ export class Hud {
       showOverflow,
     });
     this.setWidth(this.xpFillEl, `${(bar.fillFrac * 100).toFixed(1)}%`);
-    $('#xpbar').style.setProperty('--xp-fill', bar.fillFrac.toFixed(4));
-    $('#player-frame').style.setProperty('--xp-fill', bar.fillFrac.toFixed(4));
-    // Rested overlay sits ahead of the fill (classic inn-rested bonus preview).
-    const restedEl = $('#xpbar .rested') as HTMLElement;
-    restedEl.style.left = `${(bar.fillFrac * 100).toFixed(1)}%`;
-    restedEl.style.width = `${(bar.restedFrac * 100).toFixed(1)}%`;
+    // The fill only moves on xp gain, so skip the CSS-var/class/rested writes
+    // on the frames (nearly all of them) where nothing changed.
+    const xpSig = `${bar.fillFrac.toFixed(4)}|${bar.restedFrac.toFixed(4)}|${bar.postCap}`;
+    if (xpSig !== this.lastXpBarSig) {
+      this.lastXpBarSig = xpSig;
+      this.xpbarEl.style.setProperty('--xp-fill', bar.fillFrac.toFixed(4));
+      this.playerFrameEl.style.setProperty('--xp-fill', bar.fillFrac.toFixed(4));
+      // Rested overlay sits ahead of the fill (classic inn-rested bonus preview).
+      this.xpRestedEl.style.left = `${(bar.fillFrac * 100).toFixed(1)}%`;
+      this.xpRestedEl.style.width = `${(bar.restedFrac * 100).toFixed(1)}%`;
+      this.xpbarEl.classList.toggle('overflow', bar.postCap);
+      this.xpbarEl.classList.toggle('rested', bar.restedFrac > 0);
+    }
     this.setText(this.xpLabelEl, bar.label);
-    $('#xpbar').classList.toggle('overflow', bar.postCap);
-    $('#xpbar').classList.toggle('rested', bar.restedFrac > 0);
 
     const deadInArena = p.dead && !!this.sim.arenaInfo?.match;
     this.setDisplay(this.deathOverlayEl, p.dead ? 'flex' : 'none');
@@ -4307,7 +4348,7 @@ export class Hud {
       music.setBossCombat(bossEngaged);
 
       // classic combat indicator: crossed swords + red ring on the player portrait
-      $('#player-frame').classList.toggle('combat', inCombat);
+      this.playerFrameEl.classList.toggle('combat', inCombat);
       // classic "resting" zZz on the player portrait while seated / recovering.
       // Reads the seated booleans IWorld exposes; works offline + online alike.
       const rest = restView({ sitting: !!p.sitting, eating: !!p.eating, drinking: !!p.drinking });
@@ -4379,10 +4420,9 @@ export class Hud {
 
   // Overlay the absorb-shield segment on a unit-frame health bar. A null entity
   // (no target / dead) hides it.
-  private updateAbsorb(sel: string, e: Entity | null): void {
-    const el = $(sel) as HTMLElement;
+  private updateAbsorb(el: HTMLElement, e: Entity | null): void {
     const v = e ? absorbBarView(e) : { fillFrac: 0, overshield: false, total: 0 };
-    el.style.transform = `scaleX(${v.fillFrac})`;
+    this.setTransform(el, `scaleX(${v.fillFrac})`);
     el.classList.toggle('overshield', v.overshield);
   }
 
@@ -4395,7 +4435,7 @@ export class Hud {
       maxResource: p.maxResource,
       resourceType: p.resourceType,
     });
-    const bar = $('#pf-resource') as HTMLElement;
+    const bar = this.pfResourceEl;
     // The resource className is rebuilt every frame just above this call, so the
     // `.low` flag must be re-applied every frame too. Only the expensive style /
     // label writes are diffed against the cached signature.
@@ -4456,6 +4496,28 @@ export class Hud {
       default:
         return t('hudChrome.raidLockout.lessThanMinute');
     }
+  }
+
+  // Aura repaint with the mobile HUD throttle. Desktop tiers repaint every
+  // frame exactly as before (renderAuras itself diffs on content). Throttled
+  // tiers hold the steady-state repaint (the once-per-second duration text) to
+  // the 10Hz HUD cadence, because on phones even the per-frame signature build
+  // plus the DOM rebuild serializes against WebGL in the compositor. A changed
+  // aura SET (gained/dropped/restacked, ids+stacks only) bypasses the cadence
+  // so it still paints on the very next frame.
+  private renderAurasGated(
+    el: HTMLElement,
+    e: Entity,
+    mode: 'all' | 'debuffs',
+    cadence: boolean,
+  ): void {
+    if (GFX.hudThrottled) {
+      const sig = auraSetSignature(e.auras);
+      // same per-element stash pattern as renderAuras' content signature
+      if (!cadence && (el as any).__setSig === sig) return;
+      (el as any).__setSig = sig;
+    }
+    this.renderAuras(el, e, mode);
   }
 
   private renderAuras(el: HTMLElement, e: Entity, mode: 'all' | 'debuffs'): void {

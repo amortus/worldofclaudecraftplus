@@ -99,6 +99,8 @@ export interface GfxSettings {
   readonly nameplateMax: number;
   /** Throttle non-critical per-frame HUD DOM work (aura rows, etc.) to the 10Hz cadence. */
   readonly hudThrottled: boolean;
+  /** Phone-class device (touch + coarse/narrow): the mobile render profile switches. */
+  readonly mobileProfile: boolean;
 }
 
 export interface GfxRuntimeBudget {
@@ -339,6 +341,7 @@ function settingsFor(
     vfxPoolSize: mobileHints ? 512 : 4096,
     nameplateMax: mobileHints ? 8 : 0,
     hudThrottled: mobileHints,
+    mobileProfile: mobileHints,
   };
   if (hints?.graphicsPreset === PRESET_ADVANCED) {
     if ((hints.terrainDetail ?? 1) < 0.5) settings = { ...settings, terrainSplat: false };

@@ -268,6 +268,16 @@ import { groundHeight, WATER_LEVEL } from './world';
 
 const LEASH_DISTANCE = 45;
 const DUNGEON_LEASH_DISTANCE = 70;
+// Mob AI activation: an idle open-world mob only runs its full AI (aggro scan,
+// wander, pathing) while some player is within this radius. Everything engaged
+// (combat, threat, aggro/forced target, fleeing, leashing) and every instance
+// mob stays active regardless of distance, and dead mobs always tick their
+// corpse/respawn timers so far-away kills still respawn. Dormancy keeps
+// per-tick CPU flat when one weak host (the offline phone client) simulates
+// all ~400 open-world mobs; the rule reads only deterministic sim state, so
+// all three hosts activate the exact same mobs on the same tick.
+const MOB_AI_ACTIVATION_RADIUS = 150; // yards
+const MOB_AI_ACTIVATION_RADIUS_SQ = MOB_AI_ACTIVATION_RADIUS * MOB_AI_ACTIVATION_RADIUS;
 // Classic "trivial con": a wild mob this many levels below the player goes
 // passive and will not auto-aggro from proximity (it still fights back if
 // attacked). Elites, rares, and bosses are never trivial.
@@ -1144,6 +1154,9 @@ export class Sim {
   readonly grid = new SpatialGrid();
   readonly playerGrid = new SpatialGrid();
   private engagedPids = new Set<number>();
+  // Flat [x, z, x, z, ...] of player positions, rebuilt once per tick for the
+  // mob-AI activation distance check; reused so the hot path never allocates.
+  private activationPlayerXZ: number[] = [];
   primaryId = -1; // the local/RL player in single-player contexts
   nextId = 1;
   events: SimEvent[] = [];
@@ -2489,9 +2502,21 @@ export class Sim {
       this.updateAuras(p);
     }
 
+    // Player positions collected once (players already moved this tick, so
+    // these are current); the per-mob activation check below runs squared
+    // distance tests against this flat list.
+    this.activationPlayerXZ.length = 0;
+    for (const meta of this.players.values()) {
+      const p = this.entities.get(meta.entityId);
+      if (p) this.activationPlayerXZ.push(p.pos.x, p.pos.z);
+    }
+
     for (const e of this.entities.values()) {
       if (e.kind === 'mob') {
-        this.updateMob(e);
+        // A dormant far-away open-world mob skips its AI entirely (and thus
+        // draws no rng this tick); an active mob runs the exact same code in
+        // the same order as before, so its rng sequence is untouched.
+        if (this.mobAiActive(e)) this.updateMob(e);
         this.updateAuras(e);
       } else if (e.kind === 'npc') {
         this.cleanseFriendlyNpcAuras(e);
@@ -7033,6 +7058,44 @@ export class Sim {
     const template = MOBS[mob.templateId];
     if (template.elite || template.rare || template.boss) return false;
     return player.level - mob.level >= TRIVIAL_LEVEL_GAP;
+  }
+
+  // Whether a mob gets its full updateMob AI this tick. Deterministic by
+  // construction: it reads only sim state (positions are deterministic), so the
+  // offline client, the server, and the RL env activate the exact same mobs on
+  // the exact same tick.
+  private mobAiActive(mob: Entity): boolean {
+    // Dead mobs always update: their updateMob branch is pure corpse/respawn
+    // bookkeeping, and a mob killed far from everyone must still respawn.
+    if (mob.dead) return true;
+    // Owned mobs (pets, delve companions, summons) act for a player and follow
+    // one around anyway; gating them would only risk stalling pet AI.
+    if (mob.ownerId !== null) return true;
+    // Instance mobs (dungeons, raids, delves, arenas all sit past
+    // DUNGEON_X_THRESHOLD) only exist around players and drive encounter
+    // scripts; never gate them.
+    if (mob.dungeonId !== null || mob.spawnPos.x > DUNGEON_X_THRESHOLD) return true;
+    // Anything engaged keeps thinking at any distance: in combat, holding
+    // threat or an aggro/forced target, fleeing, or leashing home (any
+    // non-idle aiState), so a kited boss or an evading mob never freezes.
+    if (
+      mob.inCombat ||
+      mob.aiState !== 'idle' ||
+      mob.aggroTargetId !== null ||
+      mob.forcedTargetId !== null ||
+      mob.fleeTimer > 0 ||
+      mob.threat.size > 0
+    )
+      return true;
+    // Otherwise: an idle open-world mob is active only near some player.
+    // Squared distances with an early-out keep this O(players) with no sqrt.
+    const xz = this.activationPlayerXZ;
+    for (let i = 0; i < xz.length; i += 2) {
+      const dx = mob.pos.x - xz[i];
+      const dz = mob.pos.z - xz[i + 1];
+      if (dx * dx + dz * dz <= MOB_AI_ACTIVATION_RADIUS_SQ) return true;
+    }
+    return false;
   }
 
   private updateMob(mob: Entity): void {

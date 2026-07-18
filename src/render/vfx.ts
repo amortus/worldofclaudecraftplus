@@ -13,11 +13,87 @@ import { GFX } from './gfx';
 // preserves them) so projectile cores, novas and heal pillars bloom; the low
 // tier keeps plain colors (same sprites, no HDR boost).
 
-const CAPACITY = 4096;
+// Pool capacity comes from GFX.vfxPoolSize (512 on mobile, 4096 on desktop):
+// phones paid for a fixed 4096-slot advance plus six attribute uploads every
+// frame even with zero live particles, so the pool is sized per device tier
+// and goes fully quiescent when empty (see VfxPoolLedger).
 
 // HDR multipliers (graphics-plan step 9); 1.0 on the no-composer path
 function hdr(k: number): number {
   return GFX.composer ? k : 1;
+}
+
+export type VfxUploadPhase = 'active' | 'flush' | 'skip';
+
+// Pure ring-pool bookkeeping for the particle cloud, kept free of THREE so it
+// can be unit-tested in Node (tests/vfx_pool.test.ts). It tracks three things:
+// the ring head (slot allocation), the live-particle count, and a high-water
+// mark bounding the advance loop. The mark only ever rises while particles are
+// alive: a ring wrap resets the head to 0 but never lowers the mark, so the
+// advance loop may rescan dead low slots after a wrap but can never miss a
+// live one. The mark resets only when the whole pool goes quiescent.
+export class VfxPoolLedger {
+  private head = 0;
+  private liveCount = 0;
+  private highWater = -1;
+  private quiescent = true;
+
+  constructor(readonly capacity: number) {}
+
+  // Slot the next acquire() will claim; callers peek it to check whether the
+  // ring is about to overwrite a still-live particle.
+  get nextSlot(): number {
+    return this.head;
+  }
+
+  get live(): number {
+    return this.liveCount;
+  }
+
+  // Claim the next ring slot for a fresh particle. slotWasLive: the previous
+  // occupant was still alive (the ring wrapped onto it), so replacing it must
+  // not grow the live count.
+  acquire(slotWasLive: boolean): number {
+    const i = this.head;
+    this.head = (this.head + 1) % this.capacity;
+    if (!slotWasLive) this.liveCount++;
+    if (i > this.highWater) this.highWater = i;
+    this.quiescent = false;
+    return i;
+  }
+
+  // One particle crossed from alive to dead this frame.
+  onDeath(): void {
+    this.liveCount = Math.max(0, this.liveCount - 1);
+  }
+
+  // Exclusive upper bound for the advance loop; 0 when there is nothing to scan.
+  scanBound(): number {
+    return this.highWater + 1;
+  }
+
+  // Decide this frame's GPU work, called after the advance loop.
+  // 'active': live particles moved, upload the attributes.
+  // 'flush': the pool just emptied; upload ONCE MORE so the zeroed sizes of
+  //   the last dead particles reach the GPU (skipping this would freeze their
+  //   final sprites on screen forever), then arm the quiescent state.
+  // 'skip': still empty and already flushed, do no upload at all.
+  endFrame(): VfxUploadPhase {
+    if (this.liveCount > 0) return 'active';
+    if (this.quiescent) return 'skip';
+    this.quiescent = true;
+    this.highWater = -1;
+    return 'flush';
+  }
+
+  // Full wipe (Vfx.clear). Leaves the ledger one flush away from quiescent so
+  // the next update() still uploads the zeroed buffers once before idling.
+  reset(): void {
+    this.head = 0;
+    this.liveCount = 0;
+    this.highWater = -1;
+    this.quiescent = false;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -132,7 +208,7 @@ export class Vfx {
   private alphaAttr: Float32Array;
   private spriteAttr: Float32Array;
   private rotAttr: Float32Array;
-  private head = 0;
+  private ledger: VfxPoolLedger;
   private projectiles: Projectile[] = [];
   private tmpColor = new THREE.Color();
   private tmpDir = new THREE.Vector3(); // homing-step scratch (per projectile per frame)
@@ -152,16 +228,20 @@ export class Vfx {
   private quality = 1;
 
   constructor(scene: THREE.Scene, private anchor: EntityAnchor) {
-    this.pos = new Float32Array(CAPACITY * 3);
-    this.vel = new Float32Array(CAPACITY * 3);
-    this.col = new Float32Array(CAPACITY * 3);
-    this.size = new Float32Array(CAPACITY);
-    this.life = new Float32Array(CAPACITY);
-    this.maxLife = new Float32Array(CAPACITY);
-    this.grav = new Float32Array(CAPACITY);
-    this.alphaAttr = new Float32Array(CAPACITY);
-    this.spriteAttr = new Float32Array(CAPACITY);
-    this.rotAttr = new Float32Array(CAPACITY);
+    // Sized once at build time from the device tier (512 mobile, 4096 desktop);
+    // the whole geometry is allocated to match, so this never changes later.
+    const capacity = GFX.vfxPoolSize;
+    this.ledger = new VfxPoolLedger(capacity);
+    this.pos = new Float32Array(capacity * 3);
+    this.vel = new Float32Array(capacity * 3);
+    this.col = new Float32Array(capacity * 3);
+    this.size = new Float32Array(capacity);
+    this.life = new Float32Array(capacity);
+    this.maxLife = new Float32Array(capacity);
+    this.grav = new Float32Array(capacity);
+    this.alphaAttr = new Float32Array(capacity);
+    this.spriteAttr = new Float32Array(capacity);
+    this.rotAttr = new Float32Array(capacity);
 
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
@@ -264,6 +344,9 @@ export class Vfx {
     this.life.fill(0);
     this.size.fill(0);
     this.alphaAttr.fill(0);
+    // reset() leaves the ledger one flush from quiescent, so the next update()
+    // still pushes these zeroed buffers to the GPU once before going idle.
+    this.ledger.reset();
     const geo = this.points.geometry;
     (geo.attributes.aSize as THREE.BufferAttribute).needsUpdate = true;
     (geo.attributes.aAlpha as THREE.BufferAttribute).needsUpdate = true;
@@ -285,8 +368,12 @@ export class Vfx {
     color: THREE.Color | number, size: number, lifetime: number, gravity = 0,
     sprite: number = SPR.glowSoft, rot: number = Math.random() * Math.PI * 2,
   ): void {
-    const i = this.head;
-    this.head = (this.head + 1) % CAPACITY;
+    // A non-positive lifetime would register as live but never cross the
+    // alive-to-dead edge the ledger counts on, wedging the pool out of its
+    // quiescent state; no caller does this today, but keep the invariant safe.
+    if (lifetime <= 0) return;
+    const wasLive = this.life[this.ledger.nextSlot] > 0;
+    const i = this.ledger.acquire(wasLive);
     this.pos[i * 3] = x; this.pos[i * 3 + 1] = y; this.pos[i * 3 + 2] = z;
     this.vel[i * 3] = vx; this.vel[i * 3 + 1] = vy; this.vel[i * 3 + 2] = vz;
     this.tmpColor.set(color as THREE.ColorRepresentation);
@@ -558,8 +645,10 @@ export class Vfx {
       }
     }
 
-    // advance the pool
-    for (let i = 0; i < CAPACITY; i++) {
+    // advance the pool, but only up to the ledger's high-water mark: an idle
+    // pool scans zero slots instead of the full capacity
+    const bound = this.ledger.scanBound();
+    for (let i = 0; i < bound; i++) {
       if (this.life[i] <= 0) {
         if (this.size[i] !== 0) this.size[i] = 0;
         continue;
@@ -571,8 +660,16 @@ export class Vfx {
       this.pos[i * 3 + 1] += this.vel[i * 3 + 1] * dt;
       this.pos[i * 3 + 2] += this.vel[i * 3 + 2] * dt;
       this.alphaAttr[i] = f < 0.25 ? f * 4 : 1;
-      if (this.life[i] <= 0) this.size[i] = 0;
+      if (this.life[i] <= 0) {
+        this.size[i] = 0;
+        this.ledger.onDeath();
+      }
     }
+    // Quiescence rule: the frame on which the last particle dies still uploads
+    // (its size was just zeroed above and must reach the GPU or the sprite
+    // would linger on screen); only after that one flush does the pool skip
+    // all six attribute uploads until the next spawn.
+    if (this.ledger.endFrame() === 'skip') return;
     const geo = this.points.geometry;
     (geo.attributes.position as THREE.BufferAttribute).needsUpdate = true;
     (geo.attributes.aSize as THREE.BufferAttribute).needsUpdate = true;
