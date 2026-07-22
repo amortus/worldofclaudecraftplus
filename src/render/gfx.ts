@@ -13,7 +13,7 @@ import * as THREE from 'three';
 //      anything unrecognized -> medium), so the 3D tier matches the medium data-fx-level fallback
 
 export type GfxTier = 'low' | 'medium' | 'high' | 'ultra';
-export const GFX_CONFIG_VERSION = 14;
+export const GFX_CONFIG_VERSION = 15;
 
 export const GFX_BUCKET_IDS = [
   'resolution',
@@ -317,11 +317,25 @@ function settingsFor(
     // N8AO runs on both composer tiers: half-res + Low quality on high keeps
     // it ~1ms-class on real GPUs; ultra gets full-res Medium
     ao: tier === 'high' || tier === 'ultra',
-    msaaSamples: tier === 'high' || tier === 'ultra' ? 4 : 0,
+    // Phone-class memory ceiling: a manual Options pick of High/Ultra on a phone must
+    // not allocate the desktop 4x MSAA composer target + 4096 shadow map (the one-shot
+    // GPU spike that gets a phone WebView's process killed at world entry). MSAA texels,
+    // like shadow-map texels, are cosmetic sharpness only, so this never changes what
+    // the player can see or react to.
+    msaaSamples: (tier === 'high' || tier === 'ultra') && !mobileHints ? 4 : 0,
     pixelRatioCap: mobileHints
       ? tier === 'low' ? 1.2 : tier === 'medium' ? 1.4 : tier === 'high' ? 1.6 : 2.0
       : tier === 'low' ? 1.48 : tier === 'medium' ? 1.48 : tier === 'high' ? 1.75 : 2.5,
-    shadowMap: tier === 'low' ? 2048 : tier === 'medium' ? 2560 : 4096,
+    shadowMap:
+      tier === 'low'
+        ? 2048
+        : tier === 'medium'
+          ? mobileHints
+            ? 1536
+            : 2560
+          : mobileHints
+            ? 2048
+            : 4096,
     standardMaterials: tier === 'medium' || tier === 'high' || tier === 'ultra',
     lowPlus: tier === 'low',
     leanFoliage: tier === 'low' || (tier === 'medium' && weakIntegratedGpu),

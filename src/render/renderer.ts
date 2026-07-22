@@ -55,6 +55,7 @@ import { type CameraOcclusionState, stepCameraOcclusion } from './camera_collisi
 import { castBarState } from './cast_bar';
 import { characterSoulRendActive } from './character_effects';
 import { type AnimState, type CharacterVisual, createCharacterVisual } from './characters';
+import { logAssetMissOnce } from './characters/asset_miss_log';
 import { mechAssetsReady, preloadMechAssets } from './characters/assets';
 import { skinCount, visualKeyFor } from './characters/manifest';
 import { CLICK_MARKER_LIFETIME, clickMarkerAnim, clickMarkerColor } from './click_marker';
@@ -87,6 +88,12 @@ import {
 } from './nameplate_projection';
 import { isMobThreateningViewer } from './nameplate_threat';
 import { buildComposer, type PostPipeline } from './post';
+import {
+  orderedPrewarmIds,
+  type PrewarmPolicy,
+  prewarmEntryRuns,
+  resolvePrewarmPolicy,
+} from './prewarm_policy';
 import { buildPropMaterialPrewarmGroup, buildProps } from './props';
 import { buildGroundQuestObject } from './quest_objects';
 import { FRIENDLY, isFriendlyPet, isOwnedPetHostile, mobNameColor } from './reaction';
@@ -104,6 +111,7 @@ import { sparkleTexture } from './textures';
 import { targetIntensity } from './travel_speed_fx';
 import { TravelSpeedFxPainter } from './travel_speed_fx_painter';
 import { Vfx } from './vfx';
+import { ViewCreateRetryGate } from './view_create_retry';
 import { buildWater, type WaterView } from './water';
 import { Weather } from './weather';
 
@@ -125,8 +133,22 @@ const VIEW_CREATE_HITCH_FRAME_MS = 50;
 // until the driver pages textures every frame (a sustained multi-hundred-ms render stall).
 const VIEW_POOL_CAP = 6;
 const VIEW_CREATE_BACKOFF_SECONDS = 0.75;
+// Cooldown before re-attempting a view whose assets failed to build (the
+// fail-soft path). Without it a permanently failing entity consumes a
+// view-creation budget slot every frame; under the hitch backoff the budget
+// is 1, so a first-sorted failing entity would starve every other pending view.
+const VIEW_CREATE_FAIL_RETRY_MS = 2000;
 const VIEW_PREWARM_RANGE_SQ = ENTITY_VIEW_CREATE_RANGE_SQ;
 const VIEW_PREWARM_MAX_MS = 12000;
+// Phone render profile (GFX.mobileProfile): the desktop budgets here allow the
+// prewarm to occupy the main thread for 12s of view builds plus up to 10s of
+// shader linking, with only microtask yields in between. A mobile OS kills a
+// WebView that stays unresponsive on that order (ANR territory, and RAM size is
+// irrelevant to it), so phones get a much smaller budget, an event-loop yield
+// between manifest entries, and a link pass after each entry so no later single
+// pass links every program at once. Full policy: prewarm_policy.ts.
+const VIEW_PREWARM_MAX_MS_MOBILE = 5000;
+const PREWARM_COMPILE_MAX_MS_MOBILE = 2500;
 // Re-render the sun shadow map (a full second scene draw from the light, the dominant
 // per-frame GPU submit on shadowed tiers - worst on `medium`, which runs shadows with no
 // post chain to hide behind) only every Nth frame instead of every frame. The shadow
@@ -148,6 +170,12 @@ const PREWARM_COMPILE_MAX_MS = 10000;
 const PREWARM_BUILD_RESERVE_MS = 3000;
 const VIEW_PREWARM_MAX_VIEWS_LOW = 48;
 const VIEW_PREWARM_MAX_VIEWS_HIGH = 72;
+// Phone render profile: a hard cap on nearby character views built SYNCHRONOUSLY
+// at entry. A populated production hub has dozens of nearby players and NPCs;
+// building them all up front is a large skinned-mesh + bone-texture + skin-upload
+// spike that survives an empty local world but kills a phone in production. The
+// rest stream in lazily via the per-frame view-create budget.
+const VIEW_PREWARM_MAX_VIEWS_MOBILE = 12;
 const VIEW_CREATED_TYPE_SAMPLE_LIMIT = 24;
 const PERSISTENT_PORTAL_VIEW_PREWARM_LIMIT = 16;
 // rigs further than this stop casting articulated shadows (~7 draws each) and
@@ -714,6 +742,10 @@ export class Renderer {
   camera: THREE.PerspectiveCamera;
   webgl: THREE.WebGLRenderer;
   views = new Map<number, EntityView>();
+  // Bounded cooldown for entity ids whose visual build failed (assets
+  // unavailable, the fail-soft path): a failing entity sits out the cooldown
+  // instead of burning a view-creation budget slot every frame.
+  private viewCreateRetry = new ViewCreateRetryGate(VIEW_CREATE_FAIL_RETRY_MS);
   nameplateLayer: HTMLDivElement;
   // Travel-form speed-illusion overlay (presentation only; see travel_speed_fx*).
   private travelSpeedFx: TravelSpeedFxPainter;
@@ -1932,6 +1964,7 @@ export class Renderer {
     for (const id of requiredIds) {
       const e = this.sim.entities.get(id);
       if (!e || this.views.has(e.id)) continue;
+      if (!this.viewCreateRetry.canAttempt(e.id, 'view', performance.now())) continue;
       this.createView(e);
       this.sampleCreatedViewType(createdViewTypes, e);
       created++;
@@ -1961,11 +1994,27 @@ export class Renderer {
     for (const candidate of this.viewCandidates) {
       if (created >= max || performance.now() >= deadlineMs) break;
       if (this.views.has(candidate.e.id)) continue;
+      // a recent failed build (assets unavailable) sits out its cooldown so it
+      // cannot burn a budget slot every frame
+      if (!this.viewCreateRetry.canAttempt(candidate.e.id, 'view', performance.now())) continue;
       this.createView(candidate.e);
       this.sampleCreatedViewType(createdViewTypes, candidate.e);
       created++;
     }
     return created;
+  }
+
+  private createCharacterVisualWithRetry(
+    e: Entity,
+    slot: string,
+    formKey?: 'form_sheep' | 'form_bear' | 'form_cat' | 'form_travel',
+  ): CharacterVisual | null {
+    const now = performance.now();
+    if (!this.viewCreateRetry.canAttempt(e.id, slot, now)) return null;
+    const visual = createCharacterVisual(e, formKey);
+    if (visual) this.viewCreateRetry.markSucceeded(e.id, slot);
+    else this.viewCreateRetry.markFailed(e.id, slot, now);
+    return visual;
   }
 
   private prewarmWorldFrame(dt: number): void {
@@ -2161,8 +2210,11 @@ export class Renderer {
       if (!template) return;
       for (let i = 0; i < copies; i++) {
         const entity = this.prewarmEntity('mob', template.id, template.color, template.scale);
-        builtModels.add(visualKeyFor(entity));
         const visual = createCharacterVisual(entity);
+        // assets unavailable: skip the seed, leave the model unmarked so the
+        // dedup pass below can retry it
+        if (!visual) continue;
+        builtModels.add(visualKeyFor(entity));
         const poolKey = this.visualPoolKeyFor(entity);
         if (poolKey) this.storePooledVisual(poolKey, visual);
         visual.root.visible = true;
@@ -2204,8 +2256,10 @@ export class Renderer {
       const entity = this.prewarmEntity('npc', npc.id, npc.color, 1);
       const modelKey = visualKeyFor(entity);
       if (builtModels.has(modelKey)) continue;
-      builtModels.add(modelKey);
       const visual = createCharacterVisual(entity);
+      // assets unavailable: skip the seed, leave the model unmarked
+      if (!visual) continue;
+      builtModels.add(modelKey);
       const poolKey = this.visualPoolKeyFor(entity);
       if (poolKey) this.storePooledVisual(poolKey, visual);
       visual.root.visible = true;
@@ -2234,6 +2288,8 @@ export class Renderer {
         const color = CLASSES[cls]?.color ?? 0xffffff;
         const entity = this.prewarmEntity('player', cls, color, 1, skin, -11_000 - idx);
         const visual = createCharacterVisual(entity);
+        // assets unavailable: skip the seed
+        if (!visual) continue;
         visual.root.visible = true;
         place(visual.root);
       }
@@ -2339,7 +2395,19 @@ export class Renderer {
   }
 
   async prewarmInitialScene(options: { maxMs?: number } = {}): Promise<RendererPrewarmStats> {
-    const maxMs = Math.max(0, options.maxMs ?? VIEW_PREWARM_MAX_MS);
+    const policy: PrewarmPolicy = resolvePrewarmPolicy({
+      mobileProfile: GFX.mobileProfile,
+      asyncCompileSupported: typeof this.webgl.compileAsync === 'function',
+      lowGfx: this.lowGfx,
+      defaultMaxMs: VIEW_PREWARM_MAX_MS,
+      mobileMaxMs: VIEW_PREWARM_MAX_MS_MOBILE,
+      defaultCompileMaxMs: PREWARM_COMPILE_MAX_MS,
+      mobileCompileMaxMs: PREWARM_COMPILE_MAX_MS_MOBILE,
+      maxViewsLow: VIEW_PREWARM_MAX_VIEWS_LOW,
+      maxViewsHigh: VIEW_PREWARM_MAX_VIEWS_HIGH,
+      maxViewsMobile: VIEW_PREWARM_MAX_VIEWS_MOBILE,
+    });
+    const maxMs = Math.max(0, options.maxMs ?? policy.maxMs);
     const started = performance.now();
     const deadline = started + maxMs;
     // Stop the archetype-build steps early so the later entries — crucially
@@ -2448,9 +2516,8 @@ export class Renderer {
         run: () => {
           this.collectMissingViewCandidates(p, VIEW_PREWARM_RANGE_SQ, false);
           candidateViews = this.viewCandidates.length;
-          const maxViews = this.lowGfx ? VIEW_PREWARM_MAX_VIEWS_LOW : VIEW_PREWARM_MAX_VIEWS_HIGH;
           createdViews += this.createCandidateViews(
-            Math.max(0, maxViews - createdViews),
+            Math.max(0, policy.maxViews - createdViews),
             createdViewTypes,
             deadline,
           );
@@ -2609,6 +2676,16 @@ export class Renderer {
           // exactly what prevents the in-world freeze, so a near-empty leftover budget
           // must not cut it short (the old bug — the async compile timed out and the
           // programs linked synchronously on first sight instead).
+          // Phone WITHOUT KHR_parallel_shader_compile: BOTH arms below are one
+          // multi-second synchronous main-thread block (compileAsync without the
+          // extension takes the same up-front compile), which is exactly the
+          // unresponsiveness that gets a WebView killed. The per-entry link passes
+          // already linked every visible program, so leave the remainder to the
+          // bounded first-sight view gates and skip the monolith.
+          if (policy.skipMonolithCompile) {
+            compileMs = 0;
+            return;
+          }
           if (this.webgl.compileAsync) {
             compileMode = 'async';
             let settled = false;
@@ -2621,7 +2698,7 @@ export class Renderer {
                 settled = true;
                 console.warn('Renderer async prewarm compile failed', err);
               });
-            await Promise.race([compilePromise, sleep(PREWARM_COMPILE_MAX_MS)]);
+            await Promise.race([compilePromise, sleep(policy.compileMaxMs)]);
             compileTimedOut = !settled;
             compileMs = roundMs(performance.now() - compileStart);
           } else {
@@ -2674,9 +2751,55 @@ export class Renderer {
       },
     ];
 
+    // Order per policy: with parallel compile on a phone, programs.compile moves
+    // ahead of world.initial-frame so that pass draws already-linked programs
+    // off-thread instead of force-linking them in one synchronous block
+    // (prewarm_policy.ts). Desktop keeps the manifest order untouched.
+    const byId = new Map(manifest.map((entry) => [entry.id, entry]));
+    const orderedManifest = orderedPrewarmIds(
+      manifest.map((entry) => entry.id),
+      policy,
+    ).map((id) => byId.get(id) as PrewarmManifestEntry);
     try {
-      for (const entry of manifest) {
+      for (const entry of orderedManifest) {
+        // Skip everything outside the minimal keep-list (prewarm_policy.ts),
+        // recording the skip so the prewarm summary stays honest about what was
+        // deliberately not warmed. The skipped warms happen lazily in-world.
+        if (!prewarmEntryRuns(entry.id, policy)) {
+          const counts = this.prewarmCounts();
+          manifestEntries.push({
+            id: entry.id,
+            category: entry.category,
+            priority: entry.priority,
+            required: entry.required,
+            status: 'skipped',
+            elapsedMs: 0,
+            remainingMsAfter: roundMs(Math.max(0, deadline - performance.now())),
+            passes: renderPasses,
+            programsBefore: counts.programs,
+            programsAfter: counts.programs,
+            programDelta: 0,
+            texturesBefore: counts.textures,
+            texturesAfter: counts.textures,
+            textureDelta: 0,
+            detail: 'mobile-minimal',
+          });
+          continue;
+        }
+        // Yield the EVENT LOOP between entries (the awaits inside runEntry are
+        // microtask-only, which never lets the process service events) so the
+        // responsiveness watchdog sees a live process.
+        if (policy.yieldBetweenEntries) {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
         await runEntry(entry);
+        // Without parallel compile, link group-by-group per entry (the monolith is
+        // skipped). With it, these passes are counterproductive and the async
+        // compile entry links off-thread instead (prewarm_policy.ts).
+        if (policy.linkPassPerEntry && performance.now() < buildDeadline) {
+          this.renderPrewarmPass(1 / 60);
+          renderPasses++;
+        }
       }
     } finally {
       this.vfx.clear();
@@ -3111,17 +3234,29 @@ export class Renderer {
       group.add(sparkle);
     } else {
       const visualKey = visualKeyFor(e);
+      // The in-flight cooldown stops the deferring entity from burning a
+      // budget slot every frame, and clearing it when the fetch RESOLVES
+      // keeps pop-in at the next frame after readiness (only a rejected
+      // fetch waits out the full cooldown).
       if (visualKey === 'player_mech' && !mechAssetsReady()) {
-        void preloadMechAssets().catch((err) =>
-          console.error('Failed to preload live mech cosmetic:', err),
-        );
+        void preloadMechAssets()
+          .then(() => this.viewCreateRetry.markSucceeded(e.id, 'view'))
+          .catch((err) =>
+            logAssetMissOnce('preload:player_mech', 'Failed to preload live mech cosmetic:', err),
+          );
+        this.viewCreateRetry.markFailed(e.id, 'view', performance.now());
         return;
       }
       visualPoolKey = this.visualPoolKeyFor(e);
       visual = visualPoolKey ? this.takePooledVisual(visualPoolKey) : null;
       if (!visual) {
-        visual = createCharacterVisual(e);
+        visual = this.createCharacterVisualWithRetry(e, 'view');
         visualPoolKey = null;
+        // assets unavailable: skip, the entity stays a view candidate but sits
+        // out the retry cooldown so it cannot starve the per-frame budget
+        if (!visual) return;
+      } else {
+        this.viewCreateRetry.markSucceeded(e.id, 'view');
       }
       // entity scale is applied to the whole group below, so it can update live
       // (Fiesta size buffs) and also scale lazily-built form visuals for free.
@@ -3281,13 +3416,22 @@ export class Renderer {
     if (!v.visual) return;
     const nextKey = visualKeyFor(e);
     if (nextKey === v.visualKey) return;
+    const retrySlot = `base:${nextKey}`;
+    if (!this.viewCreateRetry.canAttempt(e.id, retrySlot, performance.now())) return;
     if (nextKey === 'player_mech' && !mechAssetsReady()) {
-      void preloadMechAssets().catch((err) =>
-        console.error('Failed to preload live mech cosmetic:', err),
-      );
+      // in-flight cooldown; cleared on fetch resolution so the swap lands the
+      // next frame after readiness (see the createView gate)
+      void preloadMechAssets()
+        .then(() => this.viewCreateRetry.markSucceeded(e.id, retrySlot))
+        .catch((err) =>
+          logAssetMissOnce('preload:player_mech', 'Failed to preload live mech cosmetic:', err),
+        );
+      this.viewCreateRetry.markFailed(e.id, retrySlot, performance.now());
       return;
     }
-    const next = createCharacterVisual(e);
+    // Assets unavailable: keep the old visual and retry after the shared cooldown.
+    const next = this.createCharacterVisualWithRetry(e, retrySlot);
+    if (!next) return;
     next.setShadow(v.shadowOn);
     next.setFar(v.isFar);
     next.root.visible = v.visual.root.visible;
@@ -3719,6 +3863,7 @@ export class Renderer {
       this.selfFacingOverride = null;
     }
     const now = performance.now();
+    this.viewCreateRetry.prune(now, sim.entities);
     const selfPos = this.updateSelfRenderPosition(alpha, dt, selfAlphaLead);
     markPhase('setup');
 
@@ -3957,21 +4102,35 @@ export class Renderer {
         groundHeight(e.pos.x, e.pos.z, this.sim.cfg.seed) < WATER_LEVEL - 0.8;
 
       // lazy form visuals, swapped by visibility like the old sheep/bear rigs
+      // A null build (assets unavailable) leaves the field unset; the shared
+      // gate retries after its cooldown.
       if (polyed && !v.sheepVisual) {
-        v.sheepVisual = createCharacterVisual(e, 'form_sheep');
-        v.group.add(v.sheepVisual.root); // group.scale already carries e.scale
+        const built = this.createCharacterVisualWithRetry(e, 'form_sheep', 'form_sheep');
+        if (built) {
+          v.sheepVisual = built;
+          v.group.add(built.root); // group.scale already carries e.scale
+        }
       }
       if (bear && !v.bearVisual) {
-        v.bearVisual = createCharacterVisual(e, 'form_bear');
-        v.group.add(v.bearVisual.root);
+        const built = this.createCharacterVisualWithRetry(e, 'form_bear', 'form_bear');
+        if (built) {
+          v.bearVisual = built;
+          v.group.add(built.root);
+        }
       }
       if (cat && !v.catVisual) {
-        v.catVisual = createCharacterVisual(e, 'form_cat');
-        v.group.add(v.catVisual.root);
+        const built = this.createCharacterVisualWithRetry(e, 'form_cat', 'form_cat');
+        if (built) {
+          v.catVisual = built;
+          v.group.add(built.root);
+        }
       }
       if (travel && !v.travelVisual) {
-        v.travelVisual = createCharacterVisual(e, 'form_travel');
-        v.group.add(v.travelVisual.root);
+        const built = this.createCharacterVisualWithRetry(e, 'form_travel', 'form_travel');
+        if (built) {
+          v.travelVisual = built;
+          v.group.add(built.root);
+        }
       }
       if (v.sheepVisual) v.sheepVisual.root.visible = polyed;
       if (v.bearVisual) v.bearVisual.root.visible = bear;

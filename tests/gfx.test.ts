@@ -215,6 +215,43 @@ describe('graphics tier resolution', () => {
     expect(GFX_BUCKET_BANDS.ultra.foliage.baseline).toBeGreaterThan(GFX_BUCKET_BANDS.high.foliage.baseline);
   });
 
+  it('phone profile sheds the one-shot GPU spikes: no MSAA, smaller shadow maps on manual high/ultra', () => {
+    const mobileHints = { maxTouchPoints: 5, coarsePointer: true, narrowViewport: true };
+    for (const tier of ['low', 'medium', 'high', 'ultra'] as const) {
+      const s = gfxInternalsForTest.settingsFor(tier, mobileHints);
+      expect(s.mobileProfile).toBe(true);
+      // A manual Options pick of High/Ultra on a phone must not allocate the
+      // desktop 4x MSAA composer target.
+      expect(s.msaaSamples).toBe(0);
+    }
+    expect(gfxInternalsForTest.settingsFor('low', mobileHints).shadowMap).toBe(2048);
+    expect(gfxInternalsForTest.settingsFor('medium', mobileHints).shadowMap).toBe(1536);
+    expect(gfxInternalsForTest.settingsFor('high', mobileHints).shadowMap).toBe(2048);
+    expect(gfxInternalsForTest.settingsFor('ultra', mobileHints).shadowMap).toBe(2048);
+  });
+
+  it('desktop ladder is untouched by the phone memory profile', () => {
+    // Byte-identical desktop pins: these are the values shipped before the phone
+    // profile landed; any drift here is a desktop regression, not a mobile tune.
+    const low = gfxInternalsForTest.settingsFor('low');
+    const medium = gfxInternalsForTest.settingsFor('medium');
+    const high = gfxInternalsForTest.settingsFor('high');
+    const ultra = gfxInternalsForTest.settingsFor('ultra');
+    expect(low.msaaSamples).toBe(0);
+    expect(medium.msaaSamples).toBe(0);
+    expect(high.msaaSamples).toBe(4);
+    expect(ultra.msaaSamples).toBe(4);
+    expect(low.shadowMap).toBe(2048);
+    expect(medium.shadowMap).toBe(2560);
+    expect(high.shadowMap).toBe(4096);
+    expect(ultra.shadowMap).toBe(4096);
+    expect(low.pixelRatioCap).toBe(1.48);
+    expect(medium.pixelRatioCap).toBe(1.48);
+    expect(high.pixelRatioCap).toBe(1.75);
+    expect(ultra.pixelRatioCap).toBe(2.5);
+    for (const s of [low, medium, high, ultra]) expect(s.mobileProfile).toBe(false);
+  });
+
   it('detects older Intel integrated GPUs and drops them to low tier', () => {
     expect(isWeakIntegratedGpu('ANGLE (Intel, ANGLE Metal Renderer: Intel(R) Iris(TM) Plus Graphics 655)')).toBe(true);
     expect(isWeakIntegratedGpu('ANGLE (Apple, ANGLE Metal Renderer: Apple M2)')).toBe(false);

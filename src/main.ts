@@ -16,6 +16,13 @@ import {
   stepAngleToward,
 } from './game/click_move';
 import { getClientSeed } from './game/client_seed';
+import {
+  clearEntryProbe,
+  ENTRY_PROBE_STABLE_MS,
+  planEntryCrashRecovery,
+  readEntryProbeRaw,
+  stampEntryProbe,
+} from './game/entry_crash_guard';
 import { GamepadManager } from './game/gamepad';
 import { GamepadBindings } from './game/gamepad_bindings';
 import { Input } from './game/input';
@@ -846,6 +853,32 @@ async function startGame(
     settings.set('graphicsPreset', autoPreset);
     settings.set('graphicsDefaultApplied', true);
   }
+  // World-entry crash recovery (phones only, GFX.mobileProfile): a probe still armed
+  // from the previous boot means the last entry attempt died mid scene-build (a phone
+  // WebView/WebKit process kill fires no event; the shell just reloads). Step the
+  // persisted preset down ONE tier and pin it (graphicsDefaultApplied) so the auto
+  // default can never re-select a tier this device has proven it cannot enter the
+  // world at. A crash trumps even a deliberate Options pick: entering the world at
+  // all beats honoring a preset that can never finish an entry. We still do NOT set
+  // graphicsPresetChosen, because the demotion is ours, not the player's, and the
+  // flag must keep meaning "the player picked this in Options".
+  const entryRecovery = planEntryCrashRecovery(readEntryProbeRaw(), Date.now());
+  clearEntryProbe(); // one-shot signal: consumed (or stale) either way
+  if (entryRecovery && GFX.mobileProfile) {
+    if (entryRecovery.to < entryRecovery.from) {
+      settings.set('graphicsPreset', entryRecovery.to);
+    }
+    settings.set('graphicsDefaultApplied', true);
+    console.warn(
+      `[entry-guard] previous world entry crashed ${Math.round(entryRecovery.ageMs / 1000)}s ` +
+        `ago at preset=${entryRecovery.from}; graphics now preset=${entryRecovery.to}`,
+    );
+  } else if (entryRecovery) {
+    console.warn(
+      '[entry-guard] previous world entry did not complete (probe was still armed); ' +
+        'automatic downgrade is scoped to the phone render profile',
+    );
+  }
   // UI theming: apply the persisted theme's CSS variables to :root, then keep a
   // hook so the Options panel can switch preset / override colours live.
   const themeStore = new ThemeStore();
@@ -858,6 +891,26 @@ async function startGame(
   let renderer!: Renderer;
   let hud!: Hud;
   const perf = createPerfMonitor(null);
+  // World-entry crash guard (phones only, GFX.mobileProfile): persist a probe RIGHT
+  // BEFORE the synchronous scene build. If the OS kills the WebView process during
+  // the build (no event, no error, just a reload), the next boot finds the probe
+  // still armed and steps the graphics preset down one tier (see the recovery block
+  // above). Cleared once the entry demonstrably survives, on the handled failure
+  // path below, and whenever the page leaves the foreground: a page that was
+  // backgrounded mid-entry was not killed by a foreground memory spike, so a later
+  // background eviction (or a deliberate reload, which also fires pagehide) must
+  // not read as an entry crash and cost a tier.
+  if (GFX.mobileProfile) {
+    const disarmOnBackground = (): void => {
+      if (document.visibilityState === 'hidden') clearEntryProbe();
+    };
+    document.addEventListener('visibilitychange', disarmOnBackground);
+    window.addEventListener('pagehide', () => clearEntryProbe());
+    stampEntryProbe(settings.get('graphicsPreset'), Date.now());
+    // Dev-channel diagnostic (English on purpose): grep "[entry-guard]" in the
+    // WebView inspector / device console to isolate crash-at-entry causes.
+    console.info(`[entry-guard] world entry: preset=${settings.get('graphicsPreset')}`);
+  }
   try {
     renderer = new Renderer(world, canvas, nameplates);
     renderer.setAudioSink(sfx);
@@ -888,9 +941,19 @@ async function startGame(
     warmPlayerIcons(world);
   } catch (err) {
     // e.g. WebGL context creation failure: surface it instead of leaving the
-    // loading screen up forever
+    // loading screen up forever. A HANDLED failure is not a process kill, so the
+    // crash probe must not survive to cost the player a graphics tier next boot.
+    clearEntryProbe();
     fatalOverlay(t('loading.rendererFailed', { error: technicalErrorMessage(err) }));
     return;
+  }
+  // The build survived; give the post-build tail (first-frame texture uploads and
+  // shader compiles) time to settle before declaring the entry stable.
+  if (GFX.mobileProfile) {
+    window.setTimeout(() => {
+      clearEntryProbe();
+      console.info('[entry-guard] world entry stable; probe cleared');
+    }, ENTRY_PROBE_STABLE_MS);
   }
 
   // Offline only: expose the dev "2v2 Fiesta vs Bots" practice toggle to the HUD.
@@ -1552,15 +1615,22 @@ async function startGame(
         bestNpcD2 = d2;
       }
     });
+    // A successful interaction ends autorun: without this, pressing Interact at an
+    // NPC/corpse while autorunning opens the dialog and then carries the character
+    // away from the thing they just engaged (worst on mobile, where autorun is a
+    // toggle and the interact button is the primary verb).
     if (bestCorpse !== null) {
+      input.autorun = false;
       world.lootCorpse(bestCorpse);
       return;
     }
     if (bestDelve !== null) {
+      input.autorun = false;
       world.delveInteract(bestDelve);
       return;
     }
     if (bestObj !== null) {
+      input.autorun = false;
       const obj = world.entities.get(bestObj)!;
       if (obj.templateId === 'dungeon_door' && obj.dungeonId) {
         world.enterDungeon(obj.dungeonId);
@@ -1574,6 +1644,7 @@ async function startGame(
       return;
     }
     if (bestNpc !== null) {
+      input.autorun = false;
       const npc = world.entities.get(bestNpc);
       if (npc?.kind === 'npc' && npc.templateId === 'brother_halven') hud.openDelveBoard(bestNpc);
       else hud.openQuestDialog(bestNpc);

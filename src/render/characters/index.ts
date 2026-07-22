@@ -3,6 +3,7 @@
 // with the preload gate, so createCharacterVisual is synchronous by the time
 // the Renderer constructs views.
 import type { Entity } from '../../sim/types';
+import { logAssetMissOnce } from './asset_miss_log';
 import { visualKeyFor } from './manifest';
 import { CharacterVisual } from './visual';
 
@@ -10,17 +11,34 @@ export { CharacterPreview } from './preview';
 export type { AnimState } from './visual';
 export { CharacterVisual } from './visual';
 
-/** Build the visual for an entity (or an explicit shapeshift/polymorph form key). */
+/** Build the visual for an entity (or an explicit shapeshift/polymorph form key).
+ *  Returns null when the visual's assets are unavailable (a missed preload, a
+ *  lazy fetch that has not landed): callers skip that entity's view for the
+ *  frame and the entity stays a future candidate. A synchronous throw here
+ *  would stall the per-frame render path forever. */
 export function createCharacterVisual(
   e: Entity,
   formKey?: 'form_sheep' | 'form_bear' | 'form_cat' | 'form_travel',
-): CharacterVisual {
+): CharacterVisual | null {
   // forms (sheep/bear/cat/travel) are their own models — skins and held weapons
   // only apply to the base body
-  return new CharacterVisual(
-    formKey ?? visualKeyFor(e),
-    e.color,
-    formKey ? 0 : (e.skin ?? 0),
-    formKey ? null : e.mainhandItemId,
-  );
+  const key = formKey ?? visualKeyFor(e);
+  try {
+    return new CharacterVisual(
+      key,
+      e.color,
+      formKey ? 0 : (e.skin ?? 0),
+      formKey ? null : e.mainhandItemId,
+    );
+  } catch (err) {
+    // key the dedupe on visual key PLUS message: two models failing with an
+    // identical generic error must both get their first log line
+    const detail = err instanceof Error ? err.message : String(err);
+    logAssetMissOnce(
+      `${key}:${detail}`,
+      `character visual unavailable, skipping view (${key}):`,
+      err,
+    );
+    return null;
+  }
 }
