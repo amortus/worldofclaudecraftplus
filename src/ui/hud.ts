@@ -7325,6 +7325,17 @@ export class Hud {
     const sender = document.createElement('span');
     sender.className = 'chat-player-name';
     sender.textContent = name;
+    // Class-colored sender names, resolved from the live entity rather than carried on
+    // the wire: fromPid IS the sender's entity id, and player entities already sync
+    // their class color. Range-limited channels (say/party/roll) always resolve, since
+    // you only hear them from senders inside your interest radius; a cross-zone guild
+    // or whisper sender may not resolve and keeps the channel color, which is honest.
+    if (fromPid !== undefined) {
+      const senderEntity = this.sim.entities.get(fromPid);
+      if (senderEntity?.kind === 'player' && senderEntity.color) {
+        sender.style.color = `#${(senderEntity.color & 0xffffff).toString(16).padStart(6, '0')}`;
+      }
+    }
     sender.title = t('hud.chat.rightClickName', { name });
     sender.setAttribute('role', 'button');
     sender.setAttribute('aria-label', t('hud.chat.rightClickName', { name }));
