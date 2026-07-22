@@ -154,6 +154,12 @@ export const ja_JP: EnTranslations = {
     "spectate": {
       "banner": "{name}を観戦中"
     },
+    "reconnect": {
+      "attempt": "Connection lost. Reconnecting... attempt {attempt}/{max}",
+      "retryIn": "Retrying in {seconds}s",
+      "now": "Reconnecting...",
+      "restored": "Connection restored."
+    },
     "emotes": {
       "wave": "手を振る",
       "laugh": "大笑い",

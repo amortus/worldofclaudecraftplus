@@ -142,6 +142,7 @@ import {
   setStandingProvider,
 } from './ui/player_card_share';
 import { hydratePortraits, portraitChipHtml } from './ui/portrait_chip';
+import { ReconnectOverlay } from './ui/reconnect_overlay';
 import { tServer } from './ui/server_i18n';
 import { wireSkinPicker } from './ui/skin_picker';
 import { createSpectateBadge } from './ui/spectate_badge';
@@ -3751,6 +3752,13 @@ async function enterWorld(c: CharacterSummary, button?: HTMLButtonElement): Prom
     setReferralProvider(null);
     setStandingProvider(null);
   };
+  // Transient-drop UI: ClientWorld retries internally (backoff + rejoin) and
+  // reports progress through these two callbacks; the banner overlay is pure
+  // presentation. The FATAL path stays on onDisconnect below.
+  const reconnectOverlay = new ReconnectOverlay();
+  world.onConnectionLost = (attempt, maxAttempts, nextRetryAtMs) =>
+    reconnectOverlay.show(attempt, maxAttempts, nextRetryAtMs);
+  world.onReconnected = () => reconnectOverlay.showRestored();
   // wait for hello + first snapshot so the world starts populated
   const waitStart = Date.now();
   const poll = setInterval(() => {
@@ -3760,6 +3768,7 @@ async function enterWorld(c: CharacterSummary, button?: HTMLButtonElement): Prom
     } else if (Date.now() - waitStart > 10000) {
       clearInterval(poll);
       world.close();
+      reconnectOverlay.dismiss(); // close() ends the retry loop; drop its banner too
       clearCardProviders();
       fatalOverlay(t('loading.enterTimeout'));
     }
@@ -3768,6 +3777,7 @@ async function enterWorld(c: CharacterSummary, button?: HTMLButtonElement): Prom
   // mask the real reason (e.g. "character already in world")
   world.onDisconnect = (reason) => {
     clearInterval(poll);
+    reconnectOverlay.dismiss(); // the fatal overlay replaces the retry banner
     clearCardProviders();
     fatalOverlay(userFacingApiError(reason));
   };

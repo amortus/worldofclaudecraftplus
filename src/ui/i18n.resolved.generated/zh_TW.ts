@@ -154,6 +154,12 @@ export const zh_TW: EnTranslations = {
     "spectate": {
       "banner": "正在觀察 {name}"
     },
+    "reconnect": {
+      "attempt": "Connection lost. Reconnecting... attempt {attempt}/{max}",
+      "retryIn": "Retrying in {seconds}s",
+      "now": "Reconnecting...",
+      "restored": "Connection restored."
+    },
     "emotes": {
       "wave": "揮手",
       "laugh": "大笑",

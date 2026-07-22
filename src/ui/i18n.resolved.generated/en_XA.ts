@@ -154,6 +154,12 @@ export const en_XA: EnTranslations = {
     "spectate": {
       "banner": "[Šþéçţáţíñĝ {name}]"
     },
+    "reconnect": {
+      "attempt": "[Çóññéçţíóñ ļóšţ. Ŕéçóññéçţíñĝ... áţţéɱþţ {attempt}/{max}]",
+      "retryIn": "[Ŕéţŕýíñĝ íñ {seconds}š]",
+      "now": "[Ŕéçóññéçţíñĝ...]",
+      "restored": "[Çóññéçţíóñ ŕéšţóŕéð.]"
+    },
     "emotes": {
       "wave": "[Ŵáʋé]",
       "laugh": "[ĻÓĻ]",

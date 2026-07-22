@@ -154,6 +154,12 @@ export const pt_BR: EnTranslations = {
     "spectate": {
       "banner": "Spectating {name}"
     },
+    "reconnect": {
+      "attempt": "Connection lost. Reconnecting... attempt {attempt}/{max}",
+      "retryIn": "Retrying in {seconds}s",
+      "now": "Reconnecting...",
+      "restored": "Connection restored."
+    },
     "emotes": {
       "wave": "Acenar",
       "laugh": "Rir",

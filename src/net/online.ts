@@ -602,6 +602,42 @@ const DESPAWN_GRACE_MS = 600;
 // stealthed unit at that range when far out-leveling it.
 const DESPAWN_GRACE_MIN_DIST_SQ = 70 * 70;
 
+// ---------------------------------------------------------------------------
+// Auto-reconnect tuning
+// ---------------------------------------------------------------------------
+// A transient WS drop (network blip, phone backgrounded) is retried inside
+// ClientWorld so the renderer/HUD never notice: the rejoin re-runs the normal
+// auth handshake with the same bearer token + characterId, the post-auth
+// `hello` swaps playerId, and applySnapshot's prune repopulates the entity
+// map organically. A server-initiated `error` frame on a live session (kick,
+// moderation, takeover by another device) is FATAL and never retried.
+export const RECONNECT_MAX_ATTEMPTS = 10;
+const RECONNECT_BASE_DELAY_MS = 1000;
+const RECONNECT_MAX_DELAY_MS = 30_000;
+// When the tab/app becomes visible mid-backoff, retry this soon instead of
+// waiting out a long timer armed while backgrounded (the highest-value move
+// for phones returning from the lock screen).
+const RECONNECT_VISIBLE_RETRY_MS = 1000;
+// After this many consecutive 'character already in world' auth rejections
+// the old session is presumed stuck (the server's save-on-leave window, or a
+// socket that died without a clean close), so the next attempt forces a
+// takeover first. Two in a row rules out a one-off race.
+const TAKEOVER_AFTER_REJECTIONS = 2;
+
+// Exponential backoff with jitter: ~1s base doubling to a 30s cap. `random`
+// is injected (a [0,1) roll) so tests can pin the math; the caller passes
+// Math.random - backoff jitter is transport behavior, not gameplay, so the
+// sim's Rng rule does not apply here.
+export function reconnectDelayMs(attempt: number, random: number): number {
+  const exp = Math.min(
+    RECONNECT_MAX_DELAY_MS,
+    RECONNECT_BASE_DELAY_MS * 2 ** Math.max(0, attempt - 1),
+  );
+  // jitter to 75%..125% of the rung, still capped, so a mass disconnect does
+  // not stampede the server with synchronized retries
+  return Math.min(RECONNECT_MAX_DELAY_MS, Math.round(exp * (0.75 + 0.5 * random)));
+}
+
 function blankEntity(id: number): Entity {
   return {
     id,
@@ -800,7 +836,16 @@ export class ClientWorld implements IWorld {
   // camera follow for keyboard turns applied by the main loop
   pendingFacingDelta = 0;
   connected = false;
+  // FATAL path only: retries exhausted, or a server `error` frame ended the
+  // session for good. Transient drops go through onConnectionLost instead.
   onDisconnect: ((reason: string) => void) | null = null;
+  // Fired after each retry timer is armed (so a throwing UI callback cannot
+  // kill the retry loop): attempt about to run, the ladder size, and the epoch
+  // ms the attempt fires at (for a countdown display).
+  onConnectionLost: ((attempt: number, maxAttempts: number, nextRetryAtMs: number) => void) | null =
+    null;
+  // Fired once a rejoin completed (hello received, input stream re-armed).
+  onReconnected: (() => void) | null = null;
   readonly characterId: number;
 
   private ws: WebSocket;
@@ -830,6 +875,26 @@ export class ClientWorld implements IWorld {
   // facing once so the moderator does not snap to a stale heading.
   private spectateFacingPending = false;
   private pendingSpectateFacing: number | null = null;
+  // ── Reconnect state ──────────────────────────────────────────────────────
+  // True once this session is over for good: a fatal `error` frame arrived on
+  // the live session, retries were exhausted, or the app called close(). No
+  // retry may ever be scheduled after this flips - that is what prevents two
+  // devices from fighting a takeover war (each kick would otherwise trigger
+  // the other side's auto-reconnect).
+  private sessionEnded = false;
+  // True from the first transient close until a rejoin's `hello` lands.
+  private reconnecting = false;
+  private reconnectAttempt = 0;
+  // Consecutive 'character already in world' rejections during rejoin attempts.
+  private alreadyInWorldRejections = 0;
+  // Last auth-rejection text seen while retrying, surfaced via onDisconnect if
+  // the ladder runs out (so "already in world" is not masked by a generic
+  // "connection lost").
+  private lastRejectReason: string | null = null;
+  private retryTimer: number | undefined;
+  private nextRetryAtMs = 0;
+  private readonly wsUrl: string;
+  private readonly visibilityHandler: (() => void) | null = null;
 
   constructor(token: string, characterId: number, cls: PlayerClass, base = '', clientSeed = '') {
     this.characterId = characterId;
@@ -839,25 +904,27 @@ export class ClientWorld implements IWorld {
     this.ownPlayerClass = cls;
     this.cfg = { seed: 20061, playerClass: cls };
     // when a realm was picked, connect to that realm's origin; otherwise the
-    // page's own host
-    const wsUrl = this.base
+    // page's own host. Kept on the instance so a reconnect dials the same realm.
+    this.wsUrl = this.base
       ? `${this.base.replace(/^http/, 'ws')}/ws`
       : buildWebSocketUrl(location.protocol, location.host);
-    this.ws = new WebSocket(wsUrl);
-    this.ws.onopen = () => {
-      this.ws.send(JSON.stringify(buildWebSocketAuthMessage(token, characterId, this.clientSeed)));
-    };
-    this.ws.onmessage = (ev) => this.onMessage(String(ev.data));
-    this.ws.onclose = () => {
-      this.connected = false;
-      clearInterval(this.sendTimer);
-      this.onDisconnect?.('Connection to the server was lost.');
-    };
-    // input stream at sim rate
-    this.sendTimer = window.setInterval(() => this.sendInput(), 50);
+    this.ws = this.createSocket();
+    this.attachSocket(this.ws);
+    this.armInputTimer();
+    // Fast retry when the tab/app returns to the foreground mid-backoff.
+    if (typeof document !== 'undefined') {
+      this.visibilityHandler = () => this.onVisibilityChange();
+      document.addEventListener('visibilitychange', this.visibilityHandler);
+    }
   }
 
   close(): void {
+    // App-initiated teardown is final: no retry loop may outlive it.
+    this.sessionEnded = true;
+    this.clearRetryTimer();
+    if (this.visibilityHandler && typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', this.visibilityHandler);
+    }
     clearInterval(this.sendTimer);
     this.ws.onclose = null;
     this.ws.close();
@@ -903,6 +970,154 @@ export class ClientWorld implements IWorld {
   // -----------------------------------------------------------------------
   // Socket
   // -----------------------------------------------------------------------
+
+  // Separated from attachSocket so tests can stub socket creation with a fake.
+  private createSocket(): WebSocket {
+    return new WebSocket(this.wsUrl);
+  }
+
+  private attachSocket(ws: WebSocket): void {
+    ws.onopen = () => {
+      ws.send(
+        JSON.stringify(buildWebSocketAuthMessage(this.token, this.characterId, this.clientSeed)),
+      );
+    };
+    ws.onmessage = (ev) => this.onMessage(String(ev.data));
+    ws.onclose = () => this.handleSocketClose();
+  }
+
+  private armInputTimer(): void {
+    clearInterval(this.sendTimer);
+    // input stream at sim rate (bare setInterval, not window.*, so the same
+    // code path runs under Node-based tests)
+    this.sendTimer = setInterval(() => this.sendInput(), 50) as unknown as number;
+  }
+
+  private handleSocketClose(): void {
+    this.connected = false;
+    clearInterval(this.sendTimer);
+    this.sendTimer = undefined;
+    // A fatal `error` frame (kick, moderation, takeover, retries exhausted)
+    // already surfaced via onDisconnect; its trailing socket close must never
+    // start a retry loop. Only a bare close (network blip) reconnects.
+    if (this.sessionEnded) return;
+    this.reconnecting = true;
+    this.scheduleReconnect();
+  }
+
+  private scheduleReconnect(): void {
+    this.clearRetryTimer();
+    this.reconnectAttempt += 1;
+    if (this.reconnectAttempt > RECONNECT_MAX_ATTEMPTS) {
+      // Ladder exhausted: this becomes the FATAL path. Prefer the last auth
+      // rejection text (e.g. 'character already in world') over the generic
+      // reason so main.ts can localize the real cause.
+      this.failSession(this.lastRejectReason ?? 'Connection to the server was lost.');
+      return;
+    }
+    const delay = reconnectDelayMs(this.reconnectAttempt, Math.random());
+    this.nextRetryAtMs = Date.now() + delay;
+    this.retryTimer = setTimeout(() => this.attemptReconnect(), delay) as unknown as number;
+    // Fired only AFTER the timer is armed, so a throwing UI callback cannot
+    // kill the retry loop.
+    this.onConnectionLost?.(this.reconnectAttempt, RECONNECT_MAX_ATTEMPTS, this.nextRetryAtMs);
+  }
+
+  private attemptReconnect(): void {
+    this.retryTimer = undefined;
+    if (this.sessionEnded || !this.reconnecting) return;
+    if (this.alreadyInWorldRejections >= TAKEOVER_AFTER_REJECTIONS) {
+      // The server still holds our old session (save-on-leave in flight, or a
+      // socket that died without a clean close on the server side). Force it
+      // out, then rejoin. Best effort: if the takeover call fails, the next
+      // auth attempt reports the truth and the counter re-arms.
+      this.alreadyInWorldRejections = 0;
+      void this.requestTakeover().finally(() => this.openSocket());
+      return;
+    }
+    this.openSocket();
+  }
+
+  private openSocket(): void {
+    if (this.sessionEnded) return;
+    this.ws = this.createSocket();
+    this.attachSocket(this.ws);
+  }
+
+  // Same REST endpoint the character-select "Take Over" button uses
+  // (Api.takeoverCharacter); inlined here so reconnect stays fully inside
+  // ClientWorld and needs no Api handle.
+  private async requestTakeover(): Promise<void> {
+    try {
+      await fetch(apiUrl(`/api/characters/${this.characterId}/takeover`, this.base), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.token}`,
+        },
+        body: '{}',
+      });
+    } catch {
+      /* best effort - the next auth attempt surfaces the real state */
+    }
+  }
+
+  private onVisibilityChange(): void {
+    if (document.visibilityState !== 'visible') return;
+    if (this.sessionEnded || !this.reconnecting || this.retryTimer === undefined) return;
+    if (this.nextRetryAtMs - Date.now() <= RECONNECT_VISIBLE_RETRY_MS) return;
+    // The player just brought the app back to the foreground and is looking at
+    // the countdown: retry now-ish instead of waiting out a long backoff that
+    // was armed while backgrounded. Attempt number is NOT consumed by this.
+    this.clearRetryTimer();
+    this.nextRetryAtMs = Date.now() + RECONNECT_VISIBLE_RETRY_MS;
+    this.retryTimer = setTimeout(
+      () => this.attemptReconnect(),
+      RECONNECT_VISIBLE_RETRY_MS,
+    ) as unknown as number;
+    this.onConnectionLost?.(this.reconnectAttempt, RECONNECT_MAX_ATTEMPTS, this.nextRetryAtMs);
+  }
+
+  // A rejoin succeeded (`hello` landed while reconnecting): reset the per-
+  // session transient state. The new server session starts lastInputSeq at 0,
+  // so stale local counters would make every ack look ancient and poison the
+  // latency samples; optimistic quest intents and despawn-grace timers belong
+  // to the old session and must not leak into this one.
+  private finishRejoin(): void {
+    this.reconnecting = false;
+    this.reconnectAttempt = 0;
+    this.alreadyInWorldRejections = 0;
+    this.lastRejectReason = null;
+    this.clearRetryTimer();
+    this.inputSeq = 0;
+    this.ackedInputSeq = 0;
+    this.pendingInputSeqSentAt.clear();
+    this.inputEchoSamples = [];
+    this.lastInputSig = '';
+    this.lastInputSentAt = 0;
+    this.pendingQuestCommands.clear();
+    this.missingSince.clear();
+    this.lastSnapAt = 0;
+    // Spectate never survives a rejoin (it is server-side session state).
+    this.spectating = null;
+    this.cfg.playerClass = this.ownPlayerClass;
+    this.armInputTimer();
+    this.onReconnected?.();
+  }
+
+  private failSession(reason: string): void {
+    this.sessionEnded = true;
+    this.reconnecting = false;
+    this.clearRetryTimer();
+    this.onDisconnect?.(reason);
+  }
+
+  private clearRetryTimer(): void {
+    if (this.retryTimer !== undefined) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = undefined;
+    }
+  }
 
   private inputSignature(): string {
     const mi = this.moveInput;
@@ -998,6 +1213,10 @@ export class ClientWorld implements IWorld {
         this.profanityDirty = true;
       }
       this.connected = true;
+      // A hello while reconnecting is a successful rejoin: the pid swap above
+      // plus applySnapshot's prune repopulate the world; the rest of the
+      // per-session state resets here.
+      if (this.reconnecting) this.finishRejoin();
       return;
     }
     if (msg.t === 'spectate') {
@@ -1026,6 +1245,23 @@ export class ClientWorld implements IWorld {
     }
     if (msg.t === 'error') {
       this.connected = false;
+      if (this.reconnecting) {
+        // An auth rejection on a rejoin attempt, not a kick of a live session.
+        // The server closes the socket right after this frame; that close
+        // schedules the next retry. 'character already in world' means our old
+        // session still occupies the slot (the server's save-on-leave window):
+        // consecutive hits arm a forced takeover in attemptReconnect.
+        const text = typeof msg.error === 'string' ? msg.error : '';
+        this.alreadyInWorldRejections =
+          text === 'character already in world' ? this.alreadyInWorldRejections + 1 : 0;
+        this.lastRejectReason = text || null;
+        return;
+      }
+      // FATAL: a server-initiated rejection of a live session (kick,
+      // moderation, takeover by another device). Auto-reconnecting here would
+      // let two devices kick each other forever, so the session ends for good
+      // and the trailing socket close is inert (see handleSocketClose).
+      this.sessionEnded = true;
       this.onDisconnect?.(msg.error ?? 'rejected by server');
       return;
     }

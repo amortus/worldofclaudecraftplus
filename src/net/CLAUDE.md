@@ -19,7 +19,8 @@ See `server/CLAUDE.md` for server conventions; read `server/game.ts` directly fo
   `softWords`) · `snap` · `events` (pushed to `eventQueue`, drained by
   `drainEvents`) · `social` (sets `socialInfo`, flips `socialDirty`) · `socialpos`
   (in-place friend/guildmate position refresh) · `censor` (live soft-profanity
-  word-list update) · `error` (disconnect).
+  word-list update) · `error` (fatal on a live session; an auth rejection during
+  a rejoin attempt rides the retry loop — see Auto-reconnect below).
 - **Client → server**: `auth` (`buildWebSocketAuthMessage`) · `input` (20 Hz move
   intent via `sendInput`, `setInterval` 50 ms) · `cmd` (every IWorld action via the
   private `cmd()` helper).
@@ -44,8 +45,30 @@ See `server/CLAUDE.md` for server conventions; read `server/game.ts` directly fo
 REST first: `Api.login`/`register` → bearer `token`; `Api.characters()` lists the
 realm's chars; `Api.realms()`/`setRealm(url)` pick a realm origin (`base`). Then
 `new ClientWorld(token, characterId, cls, base)` opens the WS (realm origin, else
-page host), sends `auth` on open, waits for `hello`. No auto-reconnect — `onclose`
-clears the send timer and fires `onDisconnect`; the app re-creates the world.
+page host), sends `auth` on open, waits for `hello`.
+
+### Auto-reconnect (lives entirely inside `ClientWorld`)
+A **bare socket close** (network blip) is transient: `ClientWorld` retries the
+normal auth handshake itself (same token + characterId) with exponential backoff
+(~1s base, 30s cap, jitter, 10 attempts — see `reconnectDelayMs`), plus a ~1s
+fast retry when `visibilitychange` flips to visible mid-backoff (phones returning
+from background). On rejoin, the post-auth `hello` swaps `playerId` and
+`applySnapshot`'s prune repopulates entities, so render/HUD never notice; the
+rejoin also resets input seq/ack state (fresh server session starts at 0),
+re-arms the input timer, and clears `pendingQuestCommands`/`missingSince`.
+- **FATALITY RULE:** an `error` FRAME on a live session (kick, moderation,
+  takeover, 'rejected by server') sets `sessionEnded` and is NEVER auto-retried —
+  otherwise two devices would kick each other in a takeover war. `onclose` only
+  schedules a retry when `!sessionEnded`.
+- An `error` frame during a rejoin ATTEMPT is an auth rejection, not a kick:
+  it rides the retry loop. Two consecutive `'character already in world'`
+  rejections (the server's save-on-leave window) trigger a forced takeover
+  (`POST /api/characters/:id/takeover`) before the next attempt.
+- Callbacks: `onConnectionLost(attempt, max, nextRetryAtMs)` fires after each
+  retry timer is armed and `onReconnected()` after a successful rejoin (both feed
+  `ui/reconnect_overlay.ts`); `onDisconnect(reason)` remains the FATAL path only
+  (error frame or retries exhausted) — `main.ts` keeps its fatalOverlay there.
+  Guarded by `tests/reconnect.test.ts`.
 
 ## Adding a networked action
 1. Add the method to `IWorld` (`world_api.ts`). 2. Implement here as a one-line

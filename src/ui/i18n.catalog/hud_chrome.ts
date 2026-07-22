@@ -12,6 +12,14 @@ export const hudChromeStrings = {
   spectate: {
     banner: 'Spectating {name}',
   },
+  // Auto-reconnect banner (ui/reconnect_overlay.ts): shown while ClientWorld
+  // retries a dropped connection; hidden again once the rejoin lands.
+  reconnect: {
+    attempt: 'Connection lost. Reconnecting... attempt {attempt}/{max}',
+    retryIn: 'Retrying in {seconds}s',
+    now: 'Reconnecting...',
+    restored: 'Connection restored.',
+  },
   // Overhead emote display names (wheel tooltips/labels, editor items, overhead
   // bubble text). Source ids/order mirror OVERHEAD_EMOTES in world_api.ts.
   emotes: {
