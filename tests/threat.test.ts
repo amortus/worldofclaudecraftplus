@@ -6,6 +6,7 @@ import { Sim } from '../src/sim/sim';
 import {
   BEAR_FORM_THREAT_MULT,
   DEFENSIVE_STANCE_THREAT_MULT,
+  dropThreat,
   RIGHTEOUS_FURY_THREAT_MULT,
 } from '../src/sim/threat';
 import type { Entity } from '../src/sim/types';
@@ -72,6 +73,121 @@ function beefUp(mob: Entity) {
   mob.maxHp = 5000;
   mob.hp = 5000;
 }
+
+describe('dropThreat (single-attacker removal)', () => {
+  it('removes only that attacker and releases a taunt lock pointing at them', () => {
+    const mob = {
+      threat: new Map([
+        [1, 50],
+        [2, 80],
+      ]),
+      forcedTargetId: 1,
+      forcedTargetTimer: 2,
+    } as unknown as Entity;
+    dropThreat(mob, 1);
+    expect(mob.threat.has(1)).toBe(false);
+    expect(mob.threat.get(2)).toBe(80);
+    expect(mob.forcedTargetId).toBeNull();
+    expect(mob.forcedTargetTimer).toBe(0);
+  });
+
+  it('leaves a taunt lock held by a DIFFERENT attacker in place', () => {
+    const mob = {
+      threat: new Map([
+        [1, 50],
+        [2, 80],
+      ]),
+      forcedTargetId: 2,
+      forcedTargetTimer: 2,
+    } as unknown as Entity;
+    dropThreat(mob, 1);
+    expect(mob.forcedTargetId).toBe(2);
+    expect(mob.forcedTargetTimer).toBe(2);
+  });
+});
+
+// Exit-portal threat wipe: stepping out of an instance scrubs the leaver from
+// every inside mob's hate table, so door-dancing cannot reset or cheese pulls.
+describe('leaveDungeon scrubs the leaver from instance hate tables', () => {
+  function mobInInstance(sim: Sim, inst: any, templateId: string): Entity {
+    const mob = inst.mobIds
+      .map((id: number) => sim.entities.get(id))
+      .find((e: Entity | undefined) => e?.templateId === templateId);
+    if (!mob) throw new Error(`missing ${templateId} in the instance`);
+    return mob;
+  }
+
+  function claimedHollow(sim: Sim): any {
+    const inst = (sim as any).instances.find(
+      (i: any) => i.dungeonId === 'hollow_crypt' && i.partyKey !== null,
+    );
+    if (!inst) throw new Error('missing claimed hollow_crypt instance');
+    return inst;
+  }
+
+  function teleportRaw(sim: Sim, e: Entity, x: number, z: number) {
+    e.pos = { x, y: e.pos.y, z };
+    e.prevPos = { ...e.pos };
+    sim.rebucket(e);
+  }
+
+  it('leaving the dungeon scrubs the leaver from every inside hate table (no exit dancing)', () => {
+    const sim = makeSim('warrior');
+    const p = sim.player;
+    sim.enterDungeon('hollow_crypt');
+    const inst = claimedHollow(sim);
+
+    // Pull the first pack mob: real threat + aggro + a taunt-style forced lock.
+    const mob = mobInInstance(sim, inst, 'crypt_shambler');
+    teleportRaw(sim, p, mob.pos.x + 3, mob.pos.z);
+    p.maxHp = 1000000;
+    p.hp = 1000000;
+    hit(sim, p, mob, 25);
+    mob.forcedTargetId = p.id;
+    mob.forcedTargetTimer = 3;
+    expect(mob.threat.get(p.id)).toBeGreaterThan(0);
+    expect(mob.aggroTargetId).toBe(p.id);
+
+    sim.leaveDungeon();
+
+    expect(mob.threat.has(p.id)).toBe(false);
+    expect(mob.aggroTargetId).toBeNull();
+    expect(mob.forcedTargetId).toBeNull();
+  });
+
+  it('the mob re-targets a remaining party member instead of chasing the leaver', () => {
+    const sim = new Sim({ seed: 42, playerClass: 'warrior', noPlayer: true });
+    const a = sim.addPlayer('warrior', 'Leaver');
+    const b = sim.addPlayer('mage', 'Stayer');
+    sim.partyInvite(b, a);
+    sim.partyAccept(b);
+    const ea = sim.entities.get(a)!;
+    const eb = sim.entities.get(b)!;
+    sim.enterDungeon('hollow_crypt', a);
+    sim.enterDungeon('hollow_crypt', b);
+    const inst = claimedHollow(sim);
+
+    const mob = mobInInstance(sim, inst, 'crypt_shambler');
+    teleportRaw(sim, ea, mob.pos.x + 3, mob.pos.z);
+    teleportRaw(sim, eb, mob.pos.x - 3, mob.pos.z);
+    ea.maxHp = 1000000;
+    ea.hp = 1000000;
+    eb.maxHp = 1000000;
+    eb.hp = 1000000;
+    // The leaver pulls first and out-threats the stayer, so the mob locks on
+    // the leaver; the stayer is on the table with a sliver of threat.
+    hit(sim, ea, mob, 100);
+    hit(sim, eb, mob, 10, 'fire');
+    expect(mob.aggroTargetId).toBe(a);
+
+    sim.leaveDungeon(a);
+    sim.tick();
+
+    expect(mob.threat.has(a)).toBe(false);
+    expect(mob.threat.get(b)).toBeGreaterThan(0);
+    expect(mob.aggroTargetId).toBe(b);
+  });
+});
 
 describe('threat from damage', () => {
   it('damage lands on the hate table 1:1 without modifiers (plus the aggro seed)', () => {

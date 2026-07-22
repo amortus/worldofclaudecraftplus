@@ -55,6 +55,36 @@ describe('spatial grid', () => {
     expect(gridInRadius(grid, 0, 0, 2).has(1)).toBe(false);
   });
 
+  it('reclaims an emptied cell instead of leaking it forever', () => {
+    // remove() used to leave a stale empty array behind in `cells` whenever
+    // the last occupant of a cell moved out, so a long-lived process
+    // accumulated one dead Map entry per distinct cell any entity ever
+    // vacated. Simulate an entity wandering through many distinct cells (as
+    // happens over hours of real movement) and assert the tracked cell count
+    // stays at the true occupied count (1) instead of growing with the
+    // number of moves.
+    const grid = new SpatialGrid();
+    const e = { id: 1, pos: { x: 0, y: 0, z: 0 } } as Entity;
+    grid.insert(e);
+    for (let i = 1; i <= 500; i++) {
+      e.pos.x = i * 40; // 40 > cellSize (32), so every step crosses a cell boundary
+      grid.update(e);
+    }
+    expect(grid.cellCount()).toBe(1);
+  });
+
+  it('removing the last entity reclaims its cell entirely', () => {
+    const grid = new SpatialGrid();
+    const e = { id: 1, pos: { x: 10, y: 0, z: 10 } } as Entity;
+    grid.insert(e);
+    expect(grid.cellCount()).toBe(1);
+    grid.remove(e);
+    expect(grid.cellCount()).toBe(0);
+    // A re-insert recreates the cell on demand.
+    grid.insert(e);
+    expect(grid.cellCount()).toBe(1);
+  });
+
   it('player combat flag matches per-player scan semantics', () => {
     const sim = new Sim({ seed: 20061, playerClass: 'warrior' });
     const p = sim.entities.get(sim.primaryId)!;

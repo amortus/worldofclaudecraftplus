@@ -168,6 +168,7 @@ import { orderTabTargets, TAB_QUERY_RADIUS } from './tab_target';
 import {
   addThreat,
   clearThreat,
+  dropThreat,
   HEAL_THREAT_FACTOR,
   MELEE_SWITCH_MULT,
   RANGED_SWITCH_MULT,
@@ -1140,6 +1141,39 @@ function ignoresDamagePushback(abilityId: string): boolean {
 
 function isPetClass(cls: PlayerClass): boolean {
   return cls === 'hunter' || cls === 'warlock';
+}
+
+// Resolves a single exclusive rollGroup draw to its winning entry. Pure partition
+// math; the caller supplies the one rng draw so the draw-order/parity contract
+// (exactly one rng.next() per group) is unaffected by the dedup below.
+//
+// When the partition lands on an item id already awarded by an earlier group in
+// this same loot event, this falls forward deterministically to the next entry in
+// the SAME group (wrapping), rather than dropping the slot entirely: that is what
+// actually raises drop variety per kill (a plain skip just deletes the duplicate,
+// leaving the surviving item set unchanged and costing the raid a guaranteed
+// drop). Only when every entry in the group is already awarded does the slot
+// legitimately produce nothing.
+export function pickRollGroupWinner(
+  roll: number,
+  group: LootEntry[],
+  awardedItemIds: Set<string>,
+): LootEntry | null {
+  let cumulative = 0;
+  let winnerIndex = -1;
+  for (let i = 0; i < group.length; i++) {
+    cumulative += group[i].chance;
+    if (roll < cumulative) {
+      winnerIndex = i;
+      break;
+    }
+  }
+  if (winnerIndex === -1) return null;
+  for (let offset = 0; offset < group.length; offset++) {
+    const candidate = group[(winnerIndex + offset) % group.length];
+    if (!candidate.itemId || !awardedItemIds.has(candidate.itemId)) return candidate;
+  }
+  return null;
 }
 
 export class Sim {
@@ -6402,6 +6436,14 @@ export class Sim {
     let copper = 0;
     const items: LootSlot[] = [];
     const rolledGroups = new Set<string>();
+    // Cross-group duplicate guard: several exclusive rollGroups on the same mob (e.g.
+    // Nythraxis's 4 helm/shoulder slots) can share item ids, and each group draws its
+    // own independent rng.next(). Without this, one kill could hand out the same piece
+    // twice (or more) instead of a spread across the raid; a repeated winner falls
+    // forward to the next non-awarded entry in its own group instead (see
+    // pickRollGroupWinner), preserving both the guaranteed per-group drop and the
+    // single rng draw.
+    const awardedItemIds = new Set<string>();
     for (const entry of template.loot) {
       // Exclusive groups: a single rng draw is partitioned by the group
       // entries' chances, so at most one matching entry drops.
@@ -6411,13 +6453,10 @@ export class Sim {
         rolledGroups.add(entry.rollGroup);
         const group = template.loot.filter((l) => l.rollGroup === entry.rollGroup);
         const roll = this.rng.next();
-        let cumulative = 0;
-        for (const g of group) {
-          cumulative += g.chance;
-          if (roll < cumulative) {
-            if (g.itemId) items.push({ itemId: g.itemId, count: 1 });
-            break;
-          }
+        const winner = pickRollGroupWinner(roll, group, awardedItemIds);
+        if (winner?.itemId) {
+          items.push({ itemId: winner.itemId, count: 1 });
+          awardedItemIds.add(winner.itemId);
         }
         continue;
       }
@@ -8041,13 +8080,17 @@ export class Sim {
     // disarm: a brutal swing can knock the weapon from a player's grip, suppressing
     // their auto-attack for a duration. Players only (only they run the primary-target
     // auto-attack path) and hostile only, so a friendly pet (mobSwing's other caller)
-    // never disarms the party. Refreshes by id; never stacks.
+    // never disarms the party. Never stacks, and never refreshes while already active:
+    // a landed hit is only able to seed a FRESH disarm window, so a run of procs (one
+    // crusher swinging faster than its own duration, or several in the same pack each
+    // rolling their own chance) cannot chain-extend the lockout past its stated duration.
     const disarm = MOBS[mob.templateId]?.disarm;
     if (
       disarm &&
       mob.hostile &&
       target.kind === 'player' &&
       !target.dead &&
+      !target.auras.some((a) => a.kind === 'disarm') &&
       this.rng.chance(disarm.chance)
     ) {
       this.applyAura(target, {
@@ -9218,6 +9261,32 @@ export class Sim {
   // Boss threshold mechanics: add waves (summonAdds) and enrage. Checked
   // every tick while the boss is in combat; thresholds fire once per pull
   // and reset on evade/respawn.
+  // Shared same-faction ally scan for the mob support mechanics below (Mend,
+  // Ward, Rally, War Cadence). Each of those periodically walks every living
+  // friendly mob within a radius of the caster; this queries the SpatialGrid
+  // instead of the full entity map so the cost tracks nearby entities, not
+  // total world population. `predicate` layers on any mechanic-specific
+  // filter (wounded-only, ...).
+  private findNearbyAllies(
+    mob: Entity,
+    radius: number,
+    predicate: (ally: Entity) => boolean = () => true,
+  ): Entity[] {
+    const found: Entity[] = [];
+    this.grid.forEachInRadius(mob.pos.x, mob.pos.z, radius, (e) => {
+      if (e.kind !== 'mob' || e.dead || e.ownerId !== null) return; // skip players, pets, corpses
+      if (e.hostile !== mob.hostile) return; // same-faction mobs only
+      if (!predicate(e)) return;
+      found.push(e);
+    });
+    // The grid yields entities in cell-bucket order, not the entity-creation
+    // order the old `entities.values()` scan relied on for per-ally rng draw
+    // mapping (mendAlly). Entity ids are assigned monotonically, so sorting
+    // by id restores that same creation order deterministically.
+    found.sort((a, b) => a.id - b.id);
+    return found;
+  }
+
   private updateBossMechanics(mob: Entity): void {
     const tmpl = MOBS[mob.templateId];
     if (
@@ -9298,13 +9367,11 @@ export class Sim {
       mob.mendTimer -= DT;
       if (mob.mendTimer <= 0) {
         mob.mendTimer = tmpl.mendAlly.every;
-        const wounded: Entity[] = [];
-        for (const ally of this.entities.values()) {
-          if (ally.kind !== 'mob' || ally.dead || ally.ownerId !== null) continue; // skip players, pets, corpses
-          if (ally.hostile !== mob.hostile || ally.hp >= ally.maxHp) continue; // only wounded same-faction mobs
-          if (dist2d(ally.pos, mob.pos) > tmpl.mendAlly.radius) continue;
-          wounded.push(ally);
-        }
+        const wounded = this.findNearbyAllies(
+          mob,
+          tmpl.mendAlly.radius,
+          (ally) => ally.hp < ally.maxHp, // only wounded same-faction mobs
+        );
         if (wounded.length > 0) {
           const school = tmpl.mendAlly.school ?? 'nature';
           this.emit({ type: 'spellfx', sourceId: mob.id, targetId: mob.id, school, fx: 'nova' });
@@ -9329,13 +9396,7 @@ export class Sim {
       mob.wardTimer -= DT;
       if (mob.wardTimer <= 0) {
         mob.wardTimer = tmpl.wardAllies.every;
-        const allies: Entity[] = [];
-        for (const ally of this.entities.values()) {
-          if (ally.kind !== 'mob' || ally.dead || ally.ownerId !== null) continue; // skip players, pets, corpses
-          if (ally.hostile !== mob.hostile) continue; // same-faction mobs only
-          if (dist2d(ally.pos, mob.pos) > tmpl.wardAllies.radius) continue;
-          allies.push(ally);
-        }
+        const allies = this.findNearbyAllies(mob, tmpl.wardAllies.radius);
         if (allies.length > 0) {
           const school = tmpl.wardAllies.school ?? 'holy';
           this.emit({ type: 'spellfx', sourceId: mob.id, targetId: mob.id, school, fx: 'nova' });
@@ -9369,13 +9430,7 @@ export class Sim {
       mob.rallyTimer -= DT;
       if (mob.rallyTimer <= 0) {
         mob.rallyTimer = tmpl.rally.every;
-        const allies: Entity[] = [];
-        for (const ally of this.entities.values()) {
-          if (ally.kind !== 'mob' || ally.dead || ally.ownerId !== null) continue; // skip players, pets, corpses
-          if (ally.hostile !== mob.hostile) continue; // only same-faction mobs
-          if (dist2d(ally.pos, mob.pos) > tmpl.rally.radius) continue;
-          allies.push(ally);
-        }
+        const allies = this.findNearbyAllies(mob, tmpl.rally.radius);
         if (allies.length > 0) {
           const school = tmpl.rally.school ?? 'physical';
           this.emit({ type: 'spellfx', sourceId: mob.id, targetId: mob.id, school, fx: 'nova' });
@@ -9407,13 +9462,7 @@ export class Sim {
       mob.warcryTimer -= DT;
       if (mob.warcryTimer <= 0) {
         mob.warcryTimer = tmpl.warcry.every;
-        const allies: Entity[] = [];
-        for (const ally of this.entities.values()) {
-          if (ally.kind !== 'mob' || ally.dead || ally.ownerId !== null) continue; // skip players, pets, corpses
-          if (ally.hostile !== mob.hostile) continue; // same-faction only
-          if (dist2d(ally.pos, mob.pos) > tmpl.warcry.radius) continue;
-          allies.push(ally);
-        }
+        const allies = this.findNearbyAllies(mob, tmpl.warcry.radius);
         if (allies.length > 0) {
           const school = tmpl.warcry.school ?? 'physical';
           const auraId = `warcry_${mob.templateId}`;
@@ -10254,7 +10303,11 @@ export class Sim {
       );
       const level = this.rng.int(template.minLevel, template.maxLevel);
       const add = createMob(this.nextId++, template, level, pos);
-      add.spawnPos = { ...boss.spawnPos }; // leashes with the boss; stays dead in instances
+      // The add is anchored where it ERUPTED (createMob already set spawnPos to the
+      // spawn point beside the boss): a boss kited far from HIS original spawn must
+      // not hatch adds that are instantly past their own leash and evade home without
+      // ever swinging. Kited from here, the chase-case leash check walks it back to
+      // this eruption point, not the boss's distant home.
       add.tappedById = boss.tappedById;
       this.addEntity(add);
       boss.summonedIds.push(add.id);
@@ -10264,6 +10317,9 @@ export class Sim {
         add.aggroTargetId = victim.id;
         add.inCombat = true;
         add.aiState = dist2d(add.pos, victim.pos) > this.mobMeleeRange(add) ? 'chase' : 'attack';
+        // Same seeding aggroMob does on a normal pull: the leash measures from the
+        // eruption point until a hostile player action refreshes it.
+        add.leashAnchor = { ...add.pos };
         addThreat(add, victim.id, 1);
       }
     }
@@ -15734,12 +15790,41 @@ export class Sim {
         return;
       }
     }
+    // Stepping out of the instance removes the leaver (and anything they own,
+    // e.g. their pet) from every inside mob's hate table: dancing in and out of
+    // the exit portal cannot be used to kite a pull to the door and back.
+    // Re-entering means earning aggro from scratch.
+    const inst = this.instances.find((i) => {
+      if (i.partyKey === null) return false;
+      const o = this.instanceOriginOf(i);
+      return Math.abs(p.pos.x - o.x) < 120 && Math.abs(p.pos.z - o.z) < 250;
+    });
+    if (inst) this.scrubInstanceThreat(inst, p.id);
     p.pos = this.groundPos(dungeon.doorPos.x, dungeon.doorPos.z - 4);
     p.prevPos = { ...p.pos };
     this.rebucket(p);
     p.targetId = null;
     p.autoAttack = false;
     this.emit({ type: 'log', text: dungeon.leaveText, color: '#b9f', pid: r.meta.entityId });
+  }
+
+  // Drop one departing player (and every entity they own) from the hate tables of
+  // all mobs in the instance, releasing any aggro locked onto them. With the table
+  // entry gone, updateMobTarget re-targets the remaining party next tick, or the
+  // mob evades home when nobody is left on the table.
+  private scrubInstanceThreat(inst: InstanceSlot, pid: number): void {
+    for (const id of inst.mobIds) {
+      const mob = this.entities.get(id);
+      if (!mob || mob.dead) continue;
+      dropThreat(mob, pid);
+      for (const srcId of [...mob.threat.keys()]) {
+        if (this.entities.get(srcId)?.ownerId === pid) dropThreat(mob, srcId);
+      }
+      if (mob.aggroTargetId !== null) {
+        const tgt = this.entities.get(mob.aggroTargetId);
+        if (mob.aggroTargetId === pid || tgt?.ownerId === pid) mob.aggroTargetId = null;
+      }
+    }
   }
 
   // Legacy single-dungeon entry points (tests + scripts use these).

@@ -58,7 +58,15 @@ describe('World Market filters', () => {
       'axe',
       'other',
     ]);
-    expect(MARKET_RARITY_FILTERS).toEqual(['all', 'poor', 'common', 'uncommon', 'rare', 'epic']);
+    expect(MARKET_RARITY_FILTERS).toEqual([
+      'all',
+      'poor',
+      'common',
+      'uncommon',
+      'rare',
+      'epic',
+      'legendary',
+    ]);
   });
 
   it('groups wearable armor separately from weapons and consumables', () => {
@@ -99,6 +107,17 @@ describe('World Market filters', () => {
       'greyjaw_pelt_cloak',
       'elixir_of_the_bear',
     ]);
+  });
+
+  it('surfaces legendary items under the legendary rarity filter (not hidden by an epic cap)', () => {
+    // The Nythraxis legendaries ship as quality 'legendary'; before the filter
+    // list learned that rarity, a listed legendary could never be narrowed to.
+    const raidLoot = ['deathless_heartwood', 'kingsbane_last_oath', 'wyrmshadow_talongrips'];
+    expect(filterIds(raidLoot, { rarity: 'legendary' })).toEqual([
+      'deathless_heartwood',
+      'kingsbane_last_oath',
+    ]);
+    expect(filterIds(raidLoot, { rarity: 'epic' })).toEqual(['wyrmshadow_talongrips']);
   });
 
   it('combines item type and rarity filters', () => {
