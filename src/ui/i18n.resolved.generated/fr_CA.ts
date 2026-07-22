@@ -3391,6 +3391,7 @@ export const fr_CA: EnTranslations = {
       "rarityUncommon": "Peu commun",
       "rarityRare": "Rare",
       "rarityEpic": "Épique",
+      "rarityLegendary": "Legendary",
       "merchantStock": "Stock du Marchand",
       "stackCount": "x{count}",
       "each": "{money} l'unité",

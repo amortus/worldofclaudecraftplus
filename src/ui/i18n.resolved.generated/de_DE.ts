@@ -3391,6 +3391,7 @@ export const de_DE: EnTranslations = {
       "rarityUncommon": "Ungewöhnlich",
       "rarityRare": "Selten",
       "rarityEpic": "Episch",
+      "rarityLegendary": "Legendary",
       "merchantStock": "Händlerbestand",
       "stackCount": "x{count}",
       "each": "{money} pro Stück",

@@ -8925,6 +8925,7 @@ export class Hud {
     if (filter === 'uncommon') return 'itemUi.market.rarityUncommon';
     if (filter === 'rare') return 'itemUi.market.rarityRare';
     if (filter === 'epic') return 'itemUi.market.rarityEpic';
+    if (filter === 'legendary') return 'itemUi.market.rarityLegendary';
     return 'itemUi.market.filterRarityAll';
   }
 

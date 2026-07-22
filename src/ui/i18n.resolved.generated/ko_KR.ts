@@ -3391,6 +3391,7 @@ export const ko_KR: EnTranslations = {
       "rarityUncommon": "고급",
       "rarityRare": "희귀",
       "rarityEpic": "영웅",
+      "rarityLegendary": "Legendary",
       "merchantStock": "상인 재고",
       "stackCount": "x{count}",
       "each": "개당 {money}",

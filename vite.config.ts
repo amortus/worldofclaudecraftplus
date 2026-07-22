@@ -189,5 +189,9 @@ export default defineConfig({
   },
   test: {
     exclude: ['**/node_modules/**', '**/dist/**', '**/.claude/**'],
+    // Runs per test file. Node 22+ exposes a broken localStorage global that beats
+    // jsdom's implementation, which is one root of our historically flaky
+    // jsdom-environment tests; see the setup file for the full story.
+    setupFiles: ['./tests/jsdom_local_storage_setup.ts'],
   },
 });

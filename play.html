@@ -1176,9 +1176,15 @@
   .char-stats b { color: #fff; font-weight: normal; }
 
   /* spellbook */
-  #spellbook { width: 430px; }
+  #spellbook { width: 760px; }
   .spellbook-class, .spell-rank { color: var(--color-text-muted); font-size: 11px; }
-  .spell-list { display: flex; flex-direction: column; gap: 2px; }
+  .spell-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; }
+  @media (min-width: 900px) {
+    body:not(.mobile-touch) .spell-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  .spell-list > .spell-sub { grid-column: 1 / -1; }
+  body.mobile-touch #spellbook { width: 430px; }
+  body.mobile-touch #spellbook .spell-list { display: flex; flex-direction: column; gap: 2px; }
   .spell-row { display: flex; gap: 10px; min-height: 46px; padding: 6px; border-radius: 4px; align-items: center; }
   .spell-row:hover { background: #ffffff0e; }
   .spell-row:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; background: var(--color-primary-glow); }

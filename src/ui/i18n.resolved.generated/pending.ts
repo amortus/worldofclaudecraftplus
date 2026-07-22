@@ -173,7 +173,8 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.statInfo.sources.fromAttribute",
     "hudChrome.statInfo.sources.gear",
     "hudChrome.statInfo.sources.header",
-    "hudChrome.statInfo.sources.talents"
+    "hudChrome.statInfo.sources.talents",
+    "itemUi.market.rarityLegendary"
   ],
   "es_ES": [
     "entities.abilities.ironhold.description",
@@ -339,7 +340,8 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.statInfo.sources.fromAttribute",
     "hudChrome.statInfo.sources.gear",
     "hudChrome.statInfo.sources.header",
-    "hudChrome.statInfo.sources.talents"
+    "hudChrome.statInfo.sources.talents",
+    "itemUi.market.rarityLegendary"
   ],
   "fr_FR": [
     "entities.abilities.ironhold.description",
@@ -505,7 +507,8 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.statInfo.sources.fromAttribute",
     "hudChrome.statInfo.sources.gear",
     "hudChrome.statInfo.sources.header",
-    "hudChrome.statInfo.sources.talents"
+    "hudChrome.statInfo.sources.talents",
+    "itemUi.market.rarityLegendary"
   ],
   "fr_CA": [
     "entities.abilities.ironhold.description",
@@ -671,7 +674,8 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.statInfo.sources.fromAttribute",
     "hudChrome.statInfo.sources.gear",
     "hudChrome.statInfo.sources.header",
-    "hudChrome.statInfo.sources.talents"
+    "hudChrome.statInfo.sources.talents",
+    "itemUi.market.rarityLegendary"
   ],
   "en_CA": [],
   "it_IT": [
@@ -838,7 +842,8 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.statInfo.sources.fromAttribute",
     "hudChrome.statInfo.sources.gear",
     "hudChrome.statInfo.sources.header",
-    "hudChrome.statInfo.sources.talents"
+    "hudChrome.statInfo.sources.talents",
+    "itemUi.market.rarityLegendary"
   ],
   "de_DE": [
     "entities.abilities.ironhold.description",
@@ -1004,7 +1009,8 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.statInfo.sources.fromAttribute",
     "hudChrome.statInfo.sources.gear",
     "hudChrome.statInfo.sources.header",
-    "hudChrome.statInfo.sources.talents"
+    "hudChrome.statInfo.sources.talents",
+    "itemUi.market.rarityLegendary"
   ],
   "zh_CN": [
     "entities.abilities.ironhold.description",
@@ -1037,7 +1043,8 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.options.fpsLimit30",
     "hudChrome.options.fpsLimit60",
     "hudChrome.options.fpsLimitAuto",
-    "hudChrome.options.fpsLimitOff"
+    "hudChrome.options.fpsLimitOff",
+    "itemUi.market.rarityLegendary"
   ],
   "zh_TW": [
     "entities.abilities.ironhold.description",
@@ -1070,7 +1077,8 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.options.fpsLimit30",
     "hudChrome.options.fpsLimit60",
     "hudChrome.options.fpsLimitAuto",
-    "hudChrome.options.fpsLimitOff"
+    "hudChrome.options.fpsLimitOff",
+    "itemUi.market.rarityLegendary"
   ],
   "ko_KR": [
     "entities.abilities.ironhold.description",
@@ -1103,7 +1111,8 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.options.fpsLimit30",
     "hudChrome.options.fpsLimit60",
     "hudChrome.options.fpsLimitAuto",
-    "hudChrome.options.fpsLimitOff"
+    "hudChrome.options.fpsLimitOff",
+    "itemUi.market.rarityLegendary"
   ],
   "ja_JP": [
     "entities.abilities.ironhold.description",
@@ -1136,7 +1145,8 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.options.fpsLimit30",
     "hudChrome.options.fpsLimit60",
     "hudChrome.options.fpsLimitAuto",
-    "hudChrome.options.fpsLimitOff"
+    "hudChrome.options.fpsLimitOff",
+    "itemUi.market.rarityLegendary"
   ],
   "pt_BR": [
     "entities.abilities.ironhold.description",
@@ -1267,7 +1277,8 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.statInfo.sources.fromAttribute",
     "hudChrome.statInfo.sources.gear",
     "hudChrome.statInfo.sources.header",
-    "hudChrome.statInfo.sources.talents"
+    "hudChrome.statInfo.sources.talents",
+    "itemUi.market.rarityLegendary"
   ],
   "ru_RU": [
     "entities.abilities.ironhold.description",
@@ -1300,6 +1311,7 @@ export const pending: Record<string, readonly string[]> = {
     "hudChrome.options.fpsLimit30",
     "hudChrome.options.fpsLimit60",
     "hudChrome.options.fpsLimitAuto",
-    "hudChrome.options.fpsLimitOff"
+    "hudChrome.options.fpsLimitOff",
+    "itemUi.market.rarityLegendary"
   ]
 };

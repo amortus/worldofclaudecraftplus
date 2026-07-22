@@ -3391,6 +3391,7 @@ export const zh_CN: EnTranslations = {
       "rarityUncommon": "优秀",
       "rarityRare": "稀有",
       "rarityEpic": "史诗",
+      "rarityLegendary": "Legendary",
       "merchantStock": "商人库存",
       "stackCount": "x{count}",
       "each": "每个 {money}",
