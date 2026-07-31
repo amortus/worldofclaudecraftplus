@@ -881,6 +881,39 @@ export const en = {
       imperial_gold_armor_plate: { name: 'Imperial Gold' },
       vanguard_azure_armor_plate: { name: 'Vanguard Azure' },
       vanguard_chrome_armor_plate: { name: 'Vanguard Chrome' },
+      // Gathering professions: the twelve trade materials, the fifteen tools
+      // this wave adds, and the two Ashen Wastes fish. Mirrors the English
+      // source in src/sim/content/professions/. `simple_fishing_pole` is absent
+      // on purpose: it already ships in content/items.ts and only gains a tier.
+      copper_ore: { name: 'Copper Ore' },
+      iron_ore: { name: 'Iron Ore' },
+      thorium_ore: { name: 'Thorium Ore' },
+      cinderite_ore: { name: 'Cinderite Ore' },
+      ironbark_log: { name: 'Ironbark Log' },
+      ashwood_log: { name: 'Ashwood Log' },
+      elderwood_log: { name: 'Elderwood Log' },
+      boneash_log: { name: 'Boneash Log' },
+      silverleaf_herb: { name: 'Silverleaf' },
+      goldleaf_herb: { name: 'Goldleaf' },
+      sunpetal_herb: { name: 'Sunpetal' },
+      gravebloom_herb: { name: 'Gravebloom' },
+      worn_miners_pick: { name: "Worn Miner's Pick" },
+      sturdy_miners_pick: { name: "Sturdy Miner's Pick" },
+      reinforced_miners_pick: { name: "Reinforced Miner's Pick" },
+      gravewatch_pick: { name: 'Gravewatch Pick' },
+      worn_logging_axe: { name: 'Worn Logging Axe' },
+      sturdy_logging_axe: { name: 'Sturdy Logging Axe' },
+      reinforced_logging_axe: { name: 'Reinforced Logging Axe' },
+      gravewatch_felling_axe: { name: 'Gravewatch Felling Axe' },
+      worn_herbalists_sickle: { name: "Worn Herbalist's Sickle" },
+      sturdy_herbalists_sickle: { name: "Sturdy Herbalist's Sickle" },
+      reinforced_herbalists_sickle: { name: "Reinforced Herbalist's Sickle" },
+      gravewatch_sickle: { name: 'Gravewatch Sickle' },
+      braided_fishing_rod: { name: 'Braided Fishing Rod' },
+      wyrmgut_fishing_rod: { name: 'Wyrmgut Fishing Rod' },
+      stillmere_fishing_rod: { name: 'Stillmere Fishing Rod' },
+      raw_pallid_ashfish: { name: 'Raw Pallid Ashfish' },
+      raw_cinderscale_eel: { name: 'Raw Cinderscale Eel' },
     },
     mobs: { ...worldNames.en.entities.mobs, ...mergeEntities.en.mobs, ...mergeExtra.en.mobs },
     npcs: { ...worldNames.en.entities.npcs, ...mergeExtra.en.npcs },
@@ -891,6 +924,9 @@ export const en = {
     },
     dungeons: { ...worldNames.en.entities.dungeons, ...mergeExtra.en.dungeons },
     delves: { ...worldNames.en.entities.delves },
+    // Gatherable world-node names, keyed by (node type, zone) since every node
+    // of a pair shares one name. See world_entity_i18n.ts gatherNodeNameKey.
+    gatherNodes: { ...worldNames.en.entities.gatherNodes },
   },
 };
 

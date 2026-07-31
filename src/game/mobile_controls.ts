@@ -111,6 +111,15 @@ export interface MobileControlCallbacks {
 }
 
 /**
+ * Press handlers for the two More-menu buttons whose windows the HUD composes
+ * end to end (Skills, the Book of Deeds). Every other button routes through
+ * MobileControlCallbacks; these two need no world glue at all, so the HUD
+ * installs them directly. They are read at PRESS time rather than captured at
+ * bind time, so neither module has to be constructed before the other.
+ */
+export const hudPanelButtons: { skills?: () => void; deeds?: () => void } = {};
+
+/**
  * True when a camera-joystick tap should count as the second half of a
  * recenter double-tap: the press was a quick, near-stationary tap (not a
  * look-drag) and it landed within the double-tap window of the previous tap.
@@ -383,6 +392,8 @@ export class MobileControls {
     this.bindButton('mobile-talents', () => this.callbacks.onTalents());
     this.bindButton('mobile-map', () => this.callbacks.onMap());
     this.bindButton('mobile-leaderboard', () => this.callbacks.onLeaderboard());
+    this.bindButton('mobile-skills', () => hudPanelButtons.skills?.());
+    this.bindButton('mobile-deeds', () => hudPanelButtons.deeds?.());
     const nameplatesBtn = document.getElementById('mobile-nameplates');
     this.bindButton('mobile-nameplates', () => {
       const on = this.callbacks.onNameplates();

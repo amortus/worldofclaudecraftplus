@@ -171,6 +171,13 @@ export const BIND_ACTIONS: BindAction[] = [
     kind: 'edge',
     defaults: ['KeyK'],
   },
+  // The two windows the HUD composes and dispatches itself (see Hud.bindPanelKeys).
+  // The classic layout above already claims A/B/C/D/E/F/G/H/J/K/L/M/N/O/P/Q/R/S/V/W/X,
+  // so I and U are free; they also sit side by side, which reads as a pair.
+  // (KeyY is deliberately left unbound: tests/keybinds.test.ts uses it as the
+  // "no action owns this code" probe.)
+  { id: 'skills', label: 'Skills', category: 'Interface', kind: 'edge', defaults: ['KeyI'] },
+  { id: 'deeds', label: 'Book of Deeds', category: 'Interface', kind: 'edge', defaults: ['KeyU'] },
   {
     id: 'chat',
     label: 'Open Chat',

@@ -270,6 +270,8 @@ export const en: EnTranslations = {
       "autorun": "Autorun",
       "jump": "Jump",
       "leaderboard": "Ranks",
+      "skills": "Skills",
+      "deeds": "Deeds",
       "nameplates": "Names",
       "haptics": "Haptics",
       "hapticsOff": "Haptics Off",
@@ -729,6 +731,361 @@ export const en: EnTranslations = {
       "copied": "Copiado!",
       "thanks": "Pague pelo QR Code ou copie o codigo acima no app do seu banco.",
       "close": "Fechar"
+    },
+    "professions": {
+      "panelTitle": "Skills",
+      "close": "Close skills",
+      "subheading": "What the land will still teach you.",
+      "empty": "You have taken up no trade yet. Buy a tool and put it to work.",
+      "names": {
+        "mining": "Mining",
+        "logging": "Logging",
+        "herbalism": "Herbalism",
+        "fishing": "Fishing"
+      },
+      "descriptions": {
+        "mining": "Breaking ore and stone from the veins that seam the wild.",
+        "logging": "Felling timber from the stands that still grow between the zones.",
+        "herbalism": "Cutting herbs and roots from whatever the ground consents to give.",
+        "fishing": "Drawing a catch out of the rivers, lakes and dead meres of the world."
+      },
+      "skillValue": "{skill} / {max}",
+      "skillAria": "{profession} proficiency, {skill} of {max}",
+      "capped": "Mastered",
+      "cappedAria": "{profession} mastered at {max}",
+      "toNextTier": "{points} to the next tier",
+      "totals": "{skill} of {max} total proficiency",
+      "bandLabel": "Standing",
+      "bands": {
+        "apprentice": "Apprentice",
+        "journeyman": "Journeyman",
+        "master": "Master"
+      },
+      "bandToolCapped": "Your tackle holds you at {band}. A better rod lifts it.",
+      "toolLabel": "Tool",
+      "toolNone": "None carried",
+      "toolTier": "Tier {tier}",
+      "toolWorksTo": "Works anything up to tier {tier}",
+      "toolNoneHint": "Bare hands work nothing. Buy a tool first.",
+      "tierHeading": "By tier",
+      "tierLabel": "Tier {tier}",
+      "tierAria": "Tier {tier}, {state}",
+      "mastery": {
+        "full": "Full progress",
+        "reduced": "Half progress",
+        "minimal": "Slight progress",
+        "none": "No progress"
+      },
+      "masteryNoneHint": "This no longer improves your skill.",
+      "requirement": "Requires {profession} tool tier {tier}",
+      "requirementMet": "Your tool will serve.",
+      "requirementUnmet": "Your tool is too crude for this.",
+      "harvest": {
+        "result": "You gather {item} x{count}.",
+        "resultRich": "A rich seam. You gather {item} x{count}."
+      },
+      "skillUp": "{profession} rises to {skill}.",
+      "skillMastered": "You have mastered {profession}.",
+      "deny": {
+        "noTool": "You carry no {profession} tool.",
+        "toolTier": "This needs a {profession} tool of tier {tier} or better.",
+        "notReady": "You have already worked this one. Try again in {seconds}s."
+      },
+      "fishing": {
+        "bite": "Something takes the line. Reel it in!",
+        "biteAria": "A fish is biting. Press to reel in.",
+        "biteWindow": "{seconds}s to reel",
+        "noTackle": "You need a rod in your bags before you can cast.",
+        "reel": {
+          "tooEarly": "You pull too soon and the line comes up empty.",
+          "landed": "You land the catch.",
+          "tooLate": "You pull too late. Whatever it was is gone.",
+          "timeout": "The line goes slack. Whatever it was is gone."
+        }
+      }
+    },
+    "deeds": {
+      "panelTitle": "Book of Deeds",
+      "close": "Close the Book of Deeds",
+      "tablistLabel": "Deed categories",
+      "categories": {
+        "progression": "Progression",
+        "combat": "Combat",
+        "exploration": "Exploration",
+        "dungeon": "Dungeons",
+        "raid": "Raids"
+      },
+      "categoryAria": "{category}, {earned} of {total} earned",
+      "completionLabel": "Deeds earned",
+      "completionValue": "{earned} of {total}",
+      "renownLabel": "Renown",
+      "renownValue": "{renown}",
+      "renownWorth": "{renown} renown",
+      "earnedBadge": "Earned",
+      "progressValue": "{current} / {required}",
+      "progressAria": "{deed}, {current} of {required}",
+      "completeAria": "{deed}, earned",
+      "rewardTitle": "Title: {title}",
+      "titlesLabel": "Titles",
+      "empty": "Nothing recorded here yet.",
+      "unlockToast": "Deed earned: {name}",
+      "unlockToastRenown": "Deed earned: {name} ({renown} renown)",
+      "titleToast": "Title unlocked: {title}",
+      "titles": {
+        "elder": "the Elder",
+        "of_the_dawn": "of the Dawn",
+        "slayer": "the Slayer",
+        "corruptors_bane": "the Corruptor's Bane"
+      },
+      "list": {
+        "prog_first_steps": {
+          "name": "First Steps",
+          "desc": "Reach level 2 and take your first step on a long road."
+        },
+        "prog_finding_your_feet": {
+          "name": "Finding Your Feet",
+          "desc": "Reach level 5. The Vale already looks a little smaller."
+        },
+        "prog_double_digits": {
+          "name": "Double Digits",
+          "desc": "Reach level 10 and unlock your talents."
+        },
+        "prog_the_long_climb": {
+          "name": "The Long Climb",
+          "desc": "Reach level 15, high enough that Thornpeak will have you."
+        },
+        "prog_level_cap": {
+          "name": "The View From Twenty",
+          "desc": "Reach level 20, the level cap."
+        },
+        "prog_talented": {
+          "name": "A Point Well Spent",
+          "desc": "Spend your first talent point."
+        },
+        "prog_committed": {
+          "name": "Committed",
+          "desc": "Spend five talent points on a single build."
+        },
+        "prog_veteran": {
+          "name": "Veteran",
+          "desc": "Earn 250,000 lifetime experience."
+        },
+        "prog_champion": {
+          "name": "Champion",
+          "desc": "Earn 500,000 lifetime experience."
+        },
+        "prog_begin_again": {
+          "name": "Begin Again",
+          "desc": "Fill the bar once more past the cap and claim prestige rank 1."
+        },
+        "prog_old_habits": {
+          "name": "Old Habits",
+          "desc": "Reach prestige rank 5."
+        },
+        "prog_dawn_friendly": {
+          "name": "A Friend at Gravewatch",
+          "desc": "Reach Friendly with the Dawn of Claude."
+        },
+        "prog_dawn_honored": {
+          "name": "Honored by the Dawn",
+          "desc": "Reach Honored with the Dawn of Claude."
+        },
+        "prog_dawn_exalted": {
+          "name": "Light Against the Ash",
+          "desc": "Reach Exalted with the Dawn of Claude."
+        },
+        "cmb_first_blood": {
+          "name": "First Blood",
+          "desc": "Defeat your first enemy."
+        },
+        "cmb_hundred": {
+          "name": "A Hundred Down",
+          "desc": "Defeat 100 enemies."
+        },
+        "cmb_slayer": {
+          "name": "Slayer",
+          "desc": "Defeat 1,000 enemies."
+        },
+        "cmb_first_boss": {
+          "name": "Something Bigger",
+          "desc": "Land the killing blow on your first boss."
+        },
+        "cmb_boss_fifty": {
+          "name": "Practiced Hand",
+          "desc": "Defeat 50 bosses."
+        },
+        "cmb_duel_ten": {
+          "name": "Best of Ten",
+          "desc": "Win 10 duels."
+        },
+        "cmb_arena_first_win": {
+          "name": "Blooded in the Coliseum",
+          "desc": "Win your first ranked arena match."
+        },
+        "cmb_arena_fifty": {
+          "name": "Coliseum Regular",
+          "desc": "Win 50 ranked arena matches."
+        },
+        "cmb_first_fall": {
+          "name": "It Happens",
+          "desc": "Fall in battle for the first time. Everyone does."
+        },
+        "exp_vale_wayfarer": {
+          "name": "Wayfarer of the Vale",
+          "desc": "Set foot in Eastbrook Vale."
+        },
+        "exp_marsh_wayfarer": {
+          "name": "Wayfarer of the Marsh",
+          "desc": "Set foot in Mirefen Marsh."
+        },
+        "exp_peaks_wayfarer": {
+          "name": "Wayfarer of the Heights",
+          "desc": "Set foot in Thornpeak Heights."
+        },
+        "exp_ashen_wayfarer": {
+          "name": "Into the Ash",
+          "desc": "Set foot in the Ashen Wastes."
+        },
+        "exp_world_traveler": {
+          "name": "The Long Road North",
+          "desc": "Walk every zone from Eastbrook Vale to the Ashen Wastes."
+        },
+        "exp_errand_runner": {
+          "name": "Errand Runner",
+          "desc": "Complete 10 quests."
+        },
+        "exp_dependable": {
+          "name": "Dependable",
+          "desc": "Complete 50 quests."
+        },
+        "exp_chronicler": {
+          "name": "Chronicler",
+          "desc": "Complete 100 quests."
+        },
+        "exp_ashen_arrival": {
+          "name": "Reporting to Gravewatch",
+          "desc": "Answer the muster and complete \"Arrival\" in the Ashen Wastes."
+        },
+        "exp_ashen_attuned": {
+          "name": "Attuned",
+          "desc": "Complete the Ashen Wastes attunement."
+        },
+        "exp_first_rare": {
+          "name": "Something Blue",
+          "desc": "Loot your first rare item."
+        },
+        "exp_first_epic": {
+          "name": "Something Purple",
+          "desc": "Loot your first epic item."
+        },
+        "exp_first_legendary": {
+          "name": "Once in a Lifetime",
+          "desc": "Loot a legendary item."
+        },
+        "exp_heavy_purse": {
+          "name": "Heavy Purse",
+          "desc": "Loot 100 gold over a lifetime."
+        },
+        "dgn_hollow_crypt": {
+          "name": "The Hollow Crypt",
+          "desc": "Defeat Morthen the Gravecaller in the Hollow Crypt."
+        },
+        "dgn_sunken_bastion": {
+          "name": "The Sunken Bastion",
+          "desc": "Defeat Vael the Mistcaller in the Sunken Bastion."
+        },
+        "dgn_gravewyrm_sanctum": {
+          "name": "Gravewyrm Sanctum",
+          "desc": "Defeat Korzul the Gravewyrm in the Gravewyrm Sanctum."
+        },
+        "dgn_drowned_temple": {
+          "name": "The Drowned Temple",
+          "desc": "Defeat Ysolei, Avatar of the Drowned Moon, in the Drowned Temple."
+        },
+        "dgn_four_doors": {
+          "name": "Four Doors Opened",
+          "desc": "Clear all four of the great dungeons."
+        },
+        "dgn_nythraxis": {
+          "name": "Thornpeak's Scourge",
+          "desc": "Defeat Nythraxis, Scourge of Thornpeak."
+        },
+        "dgn_regular": {
+          "name": "Knows the Way",
+          "desc": "Clear 25 dungeons."
+        },
+        "dlv_reliquary": {
+          "name": "The Collapsed Reliquary",
+          "desc": "Complete the Collapsed Reliquary on Normal."
+        },
+        "dlv_reliquary_heroic": {
+          "name": "Deeper Still",
+          "desc": "Complete the Collapsed Reliquary on Heroic."
+        },
+        "dlv_delver": {
+          "name": "Delver",
+          "desc": "Complete 25 delve runs."
+        },
+        "raid_claudeholme_breach": {
+          "name": "Through the Gate",
+          "desc": "Defeat the Gatewarden and breach Claudeholme."
+        },
+        "raid_claudeholme_fall": {
+          "name": "The Hollow Lord",
+          "desc": "Defeat Lord Veholt the Hollow at the heart of Claudeholme."
+        },
+        "raid_claudeholme_complete": {
+          "name": "Claudeholme Unmade",
+          "desc": "Defeat every boss in Claudeholme."
+        },
+        "raid_claudexxaramas_entry": {
+          "name": "Past the Gutpile",
+          "desc": "Defeat Gutpile and open Claudexxaramas."
+        },
+        "raid_claudexxaramas_plaguelord": {
+          "name": "The Plaguelord",
+          "desc": "Defeat Maggath the Plaguelord."
+        },
+        "raid_claudexxaramas_fall": {
+          "name": "The Corruptor's Bane",
+          "desc": "Defeat Archlich Vorothne and end the corruption of Claudexxaramas."
+        },
+        "raid_thunzharr": {
+          "name": "The Waking Peak",
+          "desc": "Help bring down Thunzharr on Stormcrag."
+        }
+      }
+    },
+    "unstuck": {
+      "started": "Hold still. You will be moved to the nearest graveyard in {seconds} seconds.",
+      "countdown": "Moving in {seconds}...",
+      "cancelledLine": "Unstuck cancelled. {reason}",
+      "completed": {
+        "moved_to_graveyard": "You come to your senses at the nearest graveyard.",
+        "revived_at_graveyard": "Your spirit is drawn back into your body at the nearest graveyard."
+      },
+      "sickness": "Unstuck Sickness clings to you for {duration}.",
+      "sicknessAura": "Unstuck Sickness",
+      "sicknessTooltip": "All attributes reduced while the world settles around you again.",
+      "blocked": {
+        "already_active": "You are already working your way free.",
+        "cooldown": "You cannot do that again yet. Try in {seconds} seconds.",
+        "combat": "Not while you are in combat.",
+        "controlled": "You cannot move under your own power right now.",
+        "falling": "Not while you are off the ground.",
+        "moving": "Stand perfectly still first.",
+        "busy": "Finish what you are doing first.",
+        "competitive": "Not during a duel or an arena match.",
+        "trading": "Close the trade window first."
+      },
+      "cancelled": {
+        "moved": "You moved.",
+        "damaged": "Something struck you.",
+        "combat": "You were pulled into combat.",
+        "busy": "You started doing something else.",
+        "state_changed": "Your situation changed.",
+        "disconnected": "Your connection dropped."
+      }
     }
   },
   "guide": {
@@ -5436,6 +5793,93 @@ export const en: EnTranslations = {
       },
       "vanguard_chrome_armor_plate": {
         "name": "Vanguard Chrome"
+      },
+      "copper_ore": {
+        "name": "Copper Ore"
+      },
+      "iron_ore": {
+        "name": "Iron Ore"
+      },
+      "thorium_ore": {
+        "name": "Thorium Ore"
+      },
+      "cinderite_ore": {
+        "name": "Cinderite Ore"
+      },
+      "ironbark_log": {
+        "name": "Ironbark Log"
+      },
+      "ashwood_log": {
+        "name": "Ashwood Log"
+      },
+      "elderwood_log": {
+        "name": "Elderwood Log"
+      },
+      "boneash_log": {
+        "name": "Boneash Log"
+      },
+      "silverleaf_herb": {
+        "name": "Silverleaf"
+      },
+      "goldleaf_herb": {
+        "name": "Goldleaf"
+      },
+      "sunpetal_herb": {
+        "name": "Sunpetal"
+      },
+      "gravebloom_herb": {
+        "name": "Gravebloom"
+      },
+      "worn_miners_pick": {
+        "name": "Worn Miner's Pick"
+      },
+      "sturdy_miners_pick": {
+        "name": "Sturdy Miner's Pick"
+      },
+      "reinforced_miners_pick": {
+        "name": "Reinforced Miner's Pick"
+      },
+      "gravewatch_pick": {
+        "name": "Gravewatch Pick"
+      },
+      "worn_logging_axe": {
+        "name": "Worn Logging Axe"
+      },
+      "sturdy_logging_axe": {
+        "name": "Sturdy Logging Axe"
+      },
+      "reinforced_logging_axe": {
+        "name": "Reinforced Logging Axe"
+      },
+      "gravewatch_felling_axe": {
+        "name": "Gravewatch Felling Axe"
+      },
+      "worn_herbalists_sickle": {
+        "name": "Worn Herbalist's Sickle"
+      },
+      "sturdy_herbalists_sickle": {
+        "name": "Sturdy Herbalist's Sickle"
+      },
+      "reinforced_herbalists_sickle": {
+        "name": "Reinforced Herbalist's Sickle"
+      },
+      "gravewatch_sickle": {
+        "name": "Gravewatch Sickle"
+      },
+      "braided_fishing_rod": {
+        "name": "Braided Fishing Rod"
+      },
+      "wyrmgut_fishing_rod": {
+        "name": "Wyrmgut Fishing Rod"
+      },
+      "stillmere_fishing_rod": {
+        "name": "Stillmere Fishing Rod"
+      },
+      "raw_pallid_ashfish": {
+        "name": "Raw Pallid Ashfish"
+      },
+      "raw_cinderscale_eel": {
+        "name": "Raw Cinderscale Eel"
       }
     },
     "mobs": {
@@ -7506,6 +7950,44 @@ export const en: EnTranslations = {
         "name": "The Collapsed Reliquary",
         "enterText": "You descend into the collapsed reliquary.",
         "leaveText": "You climb back to Brother Halven at the reliquary ruin."
+      }
+    },
+    "gatherNodes": {
+      "ore_eastbrook_vale": {
+        "name": "Copper Vein"
+      },
+      "wood_eastbrook_vale": {
+        "name": "Ironbark Stand"
+      },
+      "herb_eastbrook_vale": {
+        "name": "Silverleaf Patch"
+      },
+      "ore_mirefen_marsh": {
+        "name": "Iron Deposit"
+      },
+      "wood_mirefen_marsh": {
+        "name": "Ashwood Stand"
+      },
+      "herb_mirefen_marsh": {
+        "name": "Goldleaf Patch"
+      },
+      "ore_thornpeak_heights": {
+        "name": "Thorium Vein"
+      },
+      "wood_thornpeak_heights": {
+        "name": "Elderwood Stand"
+      },
+      "herb_thornpeak_heights": {
+        "name": "Sunpetal Patch"
+      },
+      "ore_ashen_wastes": {
+        "name": "Cinderite Seam"
+      },
+      "wood_ashen_wastes": {
+        "name": "Boneash Snag"
+      },
+      "herb_ashen_wastes": {
+        "name": "Gravebloom Patch"
       }
     }
   },

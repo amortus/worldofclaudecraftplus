@@ -2287,6 +2287,9 @@
   #tooltip { position: absolute; display: none; z-index: 100; pointer-events: none; max-width: 280px;
     padding: 8px 10px; font-size: 12px; line-height: 1.5; }
   #tooltip .tt-title { font-family: var(--title-font); font-size: 13.5px; color: #fff; }
+  /* gather-node hover tooltip head (gathering_feedback.ts): same weight as .tt-title,
+     in the gold the panel headers use, since a node name is world content. */
+  #tooltip .tt-name { font-family: var(--title-font); font-size: 13.5px; color: var(--gold); }
   #tooltip .tt-sub { color: var(--color-text-muted); font-size: 11px; }
   .tt-opt-icon { width: 16px; height: 16px; display: inline-block; vertical-align: -3px; border-radius: 3px; margin-right: 2px; background-size: cover; background-position: center; background-repeat: no-repeat; }
   #tooltip .tt-desc { color: var(--color-accent); margin-top: 4px; font-size: 11.5px; }
@@ -9187,6 +9190,8 @@
       <button type="button" class="micro-btn" id="mm-emote" data-i18n-aria="hudChrome.emoteWheel.label" aria-label="Emotes" data-icon="emote"><span class="keybind">x</span></button>
       <button type="button" class="micro-btn" id="mm-music" data-i18n-title="hud.options.music" data-i18n-aria="hud.options.music" title="Music" aria-label="Music" data-icon="music"></button>
       <button type="button" class="micro-btn" id="mm-social" data-i18n-title="hud.keybinds.actions.social" data-i18n-aria="hud.keybinds.actions.social" title="Friends &amp; Guild" aria-label="Friends &amp; Guild" data-icon="social"><span class="keybind">o</span></button>
+      <button type="button" class="micro-btn" id="mm-skills" data-i18n-title="hudChrome.professions.panelTitle" data-i18n-aria="hudChrome.professions.panelTitle" title="Skills" aria-label="Skills" data-icon="market"><span class="keybind">i</span></button>
+      <button type="button" class="micro-btn" id="mm-deeds" data-i18n-title="hudChrome.deeds.panelTitle" data-i18n-aria="hudChrome.deeds.panelTitle" title="Book of Deeds" aria-label="Book of Deeds" data-icon="crown"><span class="keybind">u</span></button>
       <button type="button" class="micro-btn" id="mm-options" data-i18n-title="hud.options.gameMenu" data-i18n-aria="hud.options.gameMenu" title="Game Menu" aria-label="Game Menu" data-icon="menu"><span class="keybind">esc</span></button>
     </div>
     <div id="tooltip" class="panel"></div>
@@ -9913,6 +9918,8 @@
           <button type="button" class="mobile-btn" id="mobile-talents" data-i18n-title="game.talents.title" data-i18n-aria="game.talents.title" title="Talents" aria-label="Talents" data-icon="talents"><span class="mobile-label" data-i18n="game.talents.title">Talents</span></button>
           <button type="button" class="mobile-btn" id="mobile-map" data-i18n-title="hud.keybinds.actions.map" data-i18n-aria="hud.keybinds.actions.map" title="World Map" aria-label="World Map" data-icon="map"><span class="mobile-label" data-i18n="hud.core.mobileMap">Map</span></button>
           <button type="button" class="mobile-btn" id="mobile-leaderboard" data-i18n-title="game.leaderboard.title" data-i18n-aria="game.leaderboard.title" title="Leaderboard" aria-label="Leaderboard" data-icon="leaderboard"><span class="mobile-label" data-i18n="hudChrome.mobile.leaderboard">Ranks</span></button>
+          <button type="button" class="mobile-btn" id="mobile-skills" data-i18n-title="hudChrome.professions.panelTitle" data-i18n-aria="hudChrome.professions.panelTitle" title="Skills" aria-label="Skills" data-icon="market"><span class="mobile-label" data-i18n="hudChrome.mobile.skills">Skills</span></button>
+          <button type="button" class="mobile-btn" id="mobile-deeds" data-i18n-title="hudChrome.deeds.panelTitle" data-i18n-aria="hudChrome.deeds.panelTitle" title="Book of Deeds" aria-label="Book of Deeds" data-icon="crown"><span class="mobile-label" data-i18n="hudChrome.mobile.deeds">Deeds</span></button>
           <button type="button" class="mobile-btn active" id="mobile-nameplates" data-i18n-title="hud.keybinds.actions.nameplates" data-i18n-aria="hud.keybinds.actions.nameplates" title="Toggle nameplates" aria-label="Toggle nameplates" data-icon="nameplates"><span class="mobile-label" data-i18n="hudChrome.mobile.nameplates">Names</span></button>
           <button type="button" class="mobile-btn" id="mobile-music" data-i18n-title="hud.options.music" data-i18n-aria="hud.options.music" title="Music" aria-label="Toggle music" data-icon="music"><span class="mobile-label" data-i18n="hud.options.music">Music</span></button>
           <button type="button" class="mobile-btn" id="mobile-haptics" data-i18n-title="hudChrome.mobile.toggleHaptics" data-i18n-aria="hudChrome.mobile.toggleHaptics" title="Toggle haptic feedback" aria-label="Toggle haptic feedback" aria-pressed="true" data-icon="vibrate"><span class="mobile-label" data-i18n="hudChrome.mobile.haptics">Haptics</span></button>

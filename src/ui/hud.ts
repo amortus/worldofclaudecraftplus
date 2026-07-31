@@ -4,11 +4,13 @@ import { GAMEPAD_BUTTON_LABELS, GAMEPAD_NONE } from '../game/gamepad_map';
 import {
   BIND_ACTIONS,
   BIND_CATEGORIES,
+  isModifierCode,
   isReservedCode,
   type Keybinds,
   keyLabel,
+  makeCombo,
 } from '../game/keybinds';
-import { isNativeAppShell, useTouchInterface } from '../game/mobile_controls';
+import { hudPanelButtons, isNativeAppShell, useTouchInterface } from '../game/mobile_controls';
 import { music, musicZoneForLocation, shouldResetMusicForDungeonEntry } from '../game/music';
 import {
   type BoolSettingKey,
@@ -79,6 +81,15 @@ import {
   zoneAt,
 } from '../sim/data';
 import { DELVE_MODULE_LAYOUTS, type DelveModuleId } from '../sim/delve_layout';
+import { GATHER_TOOLS, gatherNodeById } from '../sim/content/professions';
+import {
+  bestOwnedGatherToolTier,
+  bestOwnedGatherToolTierOrNone,
+  GATHERING_PROFESSION_IDS,
+  type GatheringProfessionId,
+  professionForNodeType,
+  reelWindowSec,
+} from '../sim/professions';
 import { requiredLevelFor } from '../sim/item_level_req';
 import { LEADERBOARD_PAGE_SIZE } from '../sim/leaderboard_page';
 import type { Ante, PickAction } from '../sim/lockpick';
@@ -178,11 +189,14 @@ import {
   playerDelveLocal,
   type SchematicPrimitive,
 } from './delve_map';
+import { deedEventLines, toggleDeedsPanel } from './deeds_panel';
 import { dropdownKeyNav } from './dropdown_nav';
 import { computeDropdownPlacement } from './dropdown_position';
 import { emoteIconUrl } from './emote_icons';
 import { itemDisplayName, tEntity } from './entity_i18n';
 import { esc } from './esc';
+import { hideFishingBiteCue, showFishingBiteCue } from './fishing_bite_cue';
+import { gatheringEventLines, gatherNodeTooltipHtml } from './gathering_feedback';
 import {
   buildGuildLeaderboardView,
   type GuildLeaderboardRow,
@@ -300,6 +314,7 @@ import { restView } from './rest_indicator';
 import { rovingTarget } from './roving_index';
 import { localizeServerText, localizeZone } from './server_i18n';
 import { localizeSimAuraName, localizeSimText } from './sim_i18n';
+import { toggleSkillsPanel } from './skills_panel';
 import { SpellbookBarGate } from './spellbook_bar_gate';
 import {
   type BuffStatSource,
@@ -328,6 +343,7 @@ import { TutorialOverlay } from './tutorial';
 import { svgIcon } from './ui_icons';
 import { getUiScale } from './ui_scale';
 import { crestIdForEntity } from './unit_portrait';
+import { localizeUnstuckAuraName, unstuckEventLines } from './unstuck_feedback';
 import { UnitPortraitPainter } from './unit_portrait_painter';
 import { buildVendorView } from './vendor_view';
 import { renderVendorWindow } from './vendor_window';
@@ -613,7 +629,15 @@ const BIND_ACTION_LABEL_KEYS: Partial<Record<string, TranslationKey>> = {
   // map and fell back to the raw English BIND_ACTIONS labels).
   talents: 'game.talents.title',
   leaderboard: 'game.leaderboard.title',
+  // The two windows the HUD dispatches itself; reuse each panel's own title so
+  // the Key Bindings row and the panel header always read the same words.
+  skills: 'hudChrome.professions.panelTitle',
+  deeds: 'hudChrome.deeds.panelTitle',
 };
+// Minimum gap between two gather-node hover picks. A pick is a raycast, and
+// main.ts already issues one per frame for the hover cursor, so the tooltip
+// samples at roughly 15 Hz instead of once per mouse report.
+const GATHER_TOOLTIP_PICK_MS = 66;
 const CHAT_TEMPLATE_KEYS = {
   party: 'hud.chat.templates.party',
   yell: 'hud.chat.templates.yell',
@@ -1007,6 +1031,14 @@ export class Hud {
   private lockpickCoffer = false;
   private lockpickReturnFocus: HTMLElement | null = null;
   private lockpickKeyHandler: ((e: KeyboardEvent) => void) | null = null;
+  // Gather node currently under the cursor, so the hover tooltip only rebuilds
+  // its markup when the hovered node actually changes rather than on every mouse
+  // move. `PickedAt` throttles the raycast behind it; `Bound` keeps a second Hud
+  // from stacking a second listener on the shared canvas.
+  private gatherTooltipNodeId: string | null = null;
+  private gatherTooltipPickedAt = 0;
+  private gatherTooltipBound = false;
+  private panelKeyHandler: ((e: KeyboardEvent) => void) | null = null;
   // The board paints from the authoritative world.lockpickState (never a cached
   // copy), and owns the per-page countdown with a generation guard. hud.ts keeps
   // only offer routing, focus restore, and keybinds.
@@ -1483,6 +1515,15 @@ export class Hud {
       this.renderCharIfOpen();
     });
     $('#mm-social').addEventListener('click', () => this.toggleSocial());
+    document.getElementById('mm-skills')?.addEventListener('click', () => this.toggleSkills());
+    document.getElementById('mm-deeds')?.addEventListener('click', () => this.toggleDeeds());
+    // The phone half of the same two controls. They live in the More menu and are
+    // pressed through MobileControls' own binder (haptics, touch-tap, modal
+    // teardown), which reads these handlers at press time.
+    hudPanelButtons.skills = () => this.toggleSkills();
+    hudPanelButtons.deeds = () => this.toggleDeeds();
+    this.bindPanelKeys();
+    this.initGatherNodeTooltip();
     $('#mm-options')?.addEventListener('click', () => this.toggleOptionsMenu());
     $('#mm-arena').addEventListener('click', () => this.toggleArena());
     $('#mm-leaderboard').addEventListener('click', () => this.toggleLeaderboard());
@@ -3660,6 +3701,8 @@ export class Hud {
       ['#mm-leaderboard', 'leaderboard', 'game.leaderboard.title'],
       ['#mm-emote', 'emoteWheel', 'hudChrome.emoteWheel.label'],
       ['#mm-social', 'social', 'hud.social.friendsTab'],
+      ['#mm-skills', 'skills', 'hudChrome.professions.panelTitle'],
+      ['#mm-deeds', 'deeds', 'hudChrome.deeds.panelTitle'],
     ];
     for (const [selector, action, labelKey] of sideButtons) {
       const btn = document.querySelector<HTMLElement>(selector);
@@ -5037,6 +5080,119 @@ export class Hud {
     el.style.top = `${Math.max(10, (window.innerHeight - 220) / 2)}px`;
     el.style.transform = 'none';
     el.style.display = 'block';
+  }
+
+  /**
+   * Desktop keybind dispatch for the two windows the HUD composes end to end.
+   *
+   * Every other window is routed by main.ts, which relays Input's `onUiKey` into
+   * a `hud.toggleX()`. Skills and the Book of Deeds need no world glue at all, so
+   * the HUD resolves their bindings itself against the SAME Keybinds profile the
+   * options menu rebinds and `keybinds.ts` reserves keys in: rebinding either
+   * action in the Key Bindings panel moves this dispatch with it. Capture phase,
+   * matching bindLockpickKeys. The gating mirrors Input.onKeyDown so a panel key
+   * can never fire while the player is typing or a modal owns the screen.
+   */
+  private bindPanelKeys(): void {
+    // Same guard bindLockpickKeys uses: a second Hud (tests, any re-init path)
+    // stacking a second window listener would toggle each panel twice per press,
+    // which reads to a player as the panel refusing to open at all.
+    if (this.panelKeyHandler) return;
+    this.panelKeyHandler = (e: KeyboardEvent): void => {
+      if (e.repeat || isModifierCode(e.code)) return;
+      const tag = (document.activeElement?.tagName ?? '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea') return;
+      if (this.isModalOpen()) return;
+      if (document.getElementById('chat-input')?.style.display === 'block') return;
+      const action = this.keybinds.edgeActionForCombo(
+        makeCombo(e.code, { ctrl: e.ctrlKey, alt: e.altKey, shift: e.shiftKey, meta: e.metaKey }),
+      );
+      if (action !== 'skills' && action !== 'deeds') return;
+      e.preventDefault();
+      if (action === 'skills') this.toggleSkills();
+      else this.toggleDeeds();
+    };
+    window.addEventListener('keydown', this.panelKeyHandler, true);
+  }
+
+  /**
+   * Hover tooltip for a gatherable world node (ore vein / timber stand / herb
+   * patch). The node's backing ground object carries the NODE id as its
+   * `objectItemId`, which is the same field `Sim.tryStartHarvest` resolves the
+   * harvest through, so the tooltip and the interaction can never disagree.
+   *
+   * Bound on the render canvas, so it never fires while the pointer is over a
+   * HUD element (those own `#tooltip` through `attachTooltip`). Desktop only: a
+   * phone has no hover, and the pick is a raycast worth skipping there.
+   */
+  private initGatherNodeTooltip(): void {
+    const canvas = document.getElementById('game-canvas');
+    if (!canvas || this.gatherTooltipBound) return;
+    this.gatherTooltipBound = true;
+    canvas.addEventListener('mousemove', (ev) => {
+      if (document.body.classList.contains('mobile-touch')) return;
+      if (this.isModalOpen()) {
+        this.hideGatherNodeTooltip();
+        return;
+      }
+      const mouse = ev as MouseEvent;
+      // A gaming mouse reports far faster than the world can change under it,
+      // and each sample costs a raycast, so the pick is capped at ~15 Hz. Wall
+      // clock is fine here; the determinism ban is sim-only.
+      const now = performance.now();
+      if (now - this.gatherTooltipPickedAt < GATHER_TOOLTIP_PICK_MS) {
+        if (this.gatherTooltipNodeId !== null) this.placeGatherNodeTooltip(mouse.clientX, mouse.clientY);
+        return;
+      }
+      this.gatherTooltipPickedAt = now;
+      this.updateGatherNodeTooltip(mouse.clientX, mouse.clientY);
+    });
+    canvas.addEventListener('mouseleave', () => this.hideGatherNodeTooltip());
+  }
+
+  private updateGatherNodeTooltip(x: number, y: number): void {
+    const id = this.renderer.pick(x, y);
+    const entity = id !== null ? this.sim.entities.get(id) : undefined;
+    const node =
+      entity?.kind === 'object' && entity.objectItemId
+        ? gatherNodeById(entity.objectItemId)
+        : undefined;
+    if (!node) {
+      this.hideGatherNodeTooltip();
+      return;
+    }
+    // Only the MARKUP is cached on the hovered node; the display flag is written
+    // every pass. Anything else in the HUD (hideTooltip, closeOtherWindows) can
+    // hide #tooltip behind our back, and a cached "already shown" would then
+    // leave the player hovering a node with nothing on screen.
+    if (this.gatherTooltipNodeId !== node.id) {
+      const profession = professionForNodeType(node.type);
+      this.gatherTooltipNodeId = node.id;
+      this.tooltipEl.innerHTML = gatherNodeTooltipHtml(
+        node,
+        profession,
+        bestOwnedGatherToolTierOrNone(this.sim.inventory, profession, GATHER_TOOLS),
+        this.sim.gatheringSkills().find((s) => s.professionId === profession)?.skill ?? 0,
+      );
+    }
+    this.tooltipEl.style.display = 'block';
+    this.placeGatherNodeTooltip(x, y);
+  }
+
+  /** Author-space placement, matching attachTooltip: x/y arrive in visual
+   *  (zoomed) space while offsetWidth/Height are zoom-immune. */
+  private placeGatherNodeTooltip(x: number, y: number): void {
+    const z = getUiScale();
+    const tw = this.tooltipEl.offsetWidth;
+    const th = this.tooltipEl.offsetHeight;
+    this.tooltipEl.style.left = `${Math.max(8, Math.min(window.innerWidth / z - tw - 8, x / z + 14))}px`;
+    this.tooltipEl.style.top = `${Math.max(8, y / z - th - 10)}px`;
+  }
+
+  private hideGatherNodeTooltip(): void {
+    if (this.gatherTooltipNodeId === null) return;
+    this.gatherTooltipNodeId = null;
+    this.tooltipEl.style.display = 'none';
   }
 
   private bindLockpickKeys(): void {
@@ -7354,6 +7510,48 @@ export class Hud {
           }
           break;
         }
+        // Gathering professions: every deny, harvest, skill-up and fishing phase
+        // renders through the one gathering_feedback adapter, so the log lines
+        // and the bite cue can never disagree about the reel window.
+        case 'gatherDeny':
+        case 'gatherHarvest':
+        case 'professionSkill':
+        case 'fishing': {
+          // Only the bite cue needs the reel window, and deriving it costs an
+          // inventory scan, so it is resolved inside that arm rather than for
+          // every deny and skill tick.
+          const reelWindow =
+            ev.type === 'fishing'
+              ? reelWindowSec(bestOwnedGatherToolTier(sim.inventory, 'fishing', GATHER_TOOLS))
+              : 0;
+          for (const l of gatheringEventLines(ev, { reelWindowSeconds: reelWindow })) {
+            this.combatLog(l.text, l.color);
+          }
+          if (ev.type === 'fishing') {
+            if (ev.phase === 'bite') {
+              showFishingBiteCue(reelWindow, { onReel: () => this.reelFishing() });
+            } else {
+              hideFishingBiteCue();
+            }
+          }
+          // A harvest grants through the sim's SILENT path (the gatherHarvest
+          // line above replaces addItem's loot line), so the two side effects
+          // the `loot` arm would have provided are re-issued here: an open bag
+          // window repaints, and the grant is audible.
+          if (ev.type === 'gatherHarvest') {
+            audio.lootItem();
+            this.onInventoryChanged();
+          }
+          break;
+        }
+        case 'unstuck': {
+          for (const l of unstuckEventLines(ev, sim.player.level)) this.combatLog(l.text, l.color);
+          break;
+        }
+        case 'deedComplete': {
+          for (const text of deedEventLines(ev)) this.combatLog(text, '#ffd100');
+          break;
+        }
       }
     }
   }
@@ -9578,6 +9776,44 @@ export class Hud {
     // Pull a fresh on-chain $WOC balance for the footer; the async result
     // re-renders the bag via the onWalletUiChange listener wired in the ctor.
     this.optionsHooks?.refreshWocBalance();
+  }
+
+  // The Skills panel (the four gathering professions) and the Book of Deeds.
+  // Both are self-contained modules that mint their own element on first open,
+  // so Hud only orchestrates: clear transient overlays, then hand the module the
+  // live IWorld readers it needs.
+  toggleSkills(): void {
+    this.closeOtherWindows('#skills-panel');
+    toggleSkillsPanel({
+      skills: () => this.sim.gatheringSkills(),
+      toolTiers: () => this.gatherToolTiers(),
+    });
+  }
+
+  toggleDeeds(): void {
+    this.closeOtherWindows('#deeds-panel');
+    toggleDeedsPanel({ deeds: () => this.sim.deeds() });
+  }
+
+  /** Best owned tool tier per gathering profession; 0 where nothing is carried. */
+  private gatherToolTiers(): Partial<Record<GatheringProfessionId, number>> {
+    const out: Partial<Record<GatheringProfessionId, number>> = {};
+    for (const id of GATHERING_PROFESSION_IDS) {
+      out[id] = bestOwnedGatherToolTierOrNone(this.sim.inventory, id, GATHER_TOOLS);
+    }
+    return out;
+  }
+
+  /**
+   * Reel: pressing the bite cue re-uses the best rod in the bags, which is the
+   * same command a cast issues. The sim decides whether that lands the fish or
+   * pulls too early, exactly as it would for a hotbar press.
+   */
+  private reelFishing(): void {
+    const rod = this.sim.inventory
+      .filter((s) => GATHER_TOOLS[s.itemId]?.professionId === 'fishing')
+      .sort((a, b) => GATHER_TOOLS[b.itemId].tier - GATHER_TOOLS[a.itemId].tier)[0];
+    if (rod) this.sim.useItem(rod.itemId);
   }
 
   // Called when an authoritative inventory delta lands (online snapshots
@@ -15399,7 +15635,10 @@ function abilityDisplayNameFromSource(name: string): string {
 function auraDisplayNameFromSource(name: string): string {
   const viaTitle = localizeTalentTitle(name);
   if (viaTitle !== name) return viaTitle;
-  return localizeSimAuraName(name) ?? name;
+  // Unstuck Sickness is stamped by src/sim/unstuck.ts, which is language-agnostic
+  // like the rest of the sim, so its own resolver runs before the shared sim
+  // matcher; without it the debuff renders as raw English in every locale.
+  return localizeUnstuckAuraName(name) ?? localizeSimAuraName(name) ?? name;
 }
 
 function combatAbilityName(name: string | null): string {

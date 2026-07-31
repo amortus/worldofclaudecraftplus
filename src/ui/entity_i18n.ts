@@ -1,3 +1,4 @@
+import { gatherNodeById } from '../sim/content/professions';
 import {
   ABILITIES,
   CLASSES,
@@ -9,6 +10,7 @@ import {
   QUESTS,
   ZONES,
 } from '../sim/data';
+import { gatherNodeNameKey } from './world_entity_i18n';
 import type { ItemDef, PlayerClass } from '../sim/types';
 import {
   en,
@@ -32,7 +34,8 @@ export type EntityTranslationKind =
   | 'zone'
   | 'zonePoi'
   | 'dungeon'
-  | 'delve';
+  | 'delve'
+  | 'gatherNode';
 export type EntityTranslationField =
   | 'name'
   | 'description'
@@ -83,7 +86,11 @@ export type EntityTranslationRequest =
       id: string;
       field: 'name' | 'enterText' | 'leaveText';
       values?: InterpolationValues;
-    };
+    }
+  // A gatherable world node (ore vein, timber stand, herb patch). `id` is the
+  // NODE id, e.g. 'ore_eastbrook_1'; the key it resolves to is shared by every
+  // node of the same type in the same zone, since they all carry one name.
+  | { kind: 'gatherNode'; id: string; field: 'name'; values?: InterpolationValues };
 
 export interface EntityTranslationManifestEntry {
   kind: EntityTranslationKind;
@@ -222,6 +229,8 @@ function canonicalEntityText(request: EntityTranslationRequest): string {
       if (request.field === 'leaveText') return delve.leaveText;
       return delve.name;
     }
+    case 'gatherNode':
+      return gatherNodeById(request.id)?.objectName ?? request.id;
   }
 }
 
@@ -251,6 +260,11 @@ export function entityTranslationKey(request: EntityTranslationRequest): string 
       return `entities.dungeons.${entityPathSegment(request.id)}.${request.field}`;
     case 'delve':
       return `entities.delves.${entityPathSegment(request.id)}.${request.field}`;
+    case 'gatherNode': {
+      const node = gatherNodeById(request.id);
+      const slug = node ? gatherNodeNameKey(node.type, node.zoneId) : request.id;
+      return `entities.gatherNodes.${entityPathSegment(slug)}.name`;
+    }
   }
 }
 
@@ -294,6 +308,12 @@ export function tEntity(request: EntityTranslationRequest): string {
 
 export function itemDisplayName(item: ItemDef): string {
   return tEntity({ kind: 'item', id: item.id, field: 'name' });
+}
+
+/** The localized world name of a gatherable node ("Copper Vein"), from the node
+ *  id the ground object carries as its templateId. */
+export function gatherNodeDisplayName(nodeId: string): string {
+  return tEntity({ kind: 'gatherNode', id: nodeId, field: 'name' });
 }
 
 export function resetEntityTranslationFallbackLog(): void {

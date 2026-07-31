@@ -1,3 +1,4 @@
+import { GATHER_NODES } from '../sim/content/professions';
 import { DELVES, DUNGEONS, MOBS, NPCS, QUESTS, ZONES } from '../sim/data';
 
 // English world-entity names + narratives (mobs, NPCs, quests, zones, dungeons).
@@ -273,6 +274,18 @@ const QUEST_IDS = [
 ] as const;
 
 const ZONE_IDS = ['eastbrook_vale', 'mirefen_marsh', 'thornpeak_heights', 'ashen_wastes'] as const;
+
+/**
+ * Gatherable world nodes are named per (node type, zone), not per node: all
+ * three Copper Veins in the Vale carry one name, so there are twelve names for
+ * the thirty-nine placements. `gatherNodeNameKey` is the ONE place that
+ * encoding lives, shared with entity_i18n.ts's `gatherNode` resolver.
+ */
+export function gatherNodeNameKey(type: string, zoneId: string): string {
+  return `${type}_${zoneId}`;
+}
+
+type GatherNodeTranslations = Record<string, { name: string }>;
 const DUNGEON_IDS = [
   'hollow_crypt',
   'sunken_bastion',
@@ -327,6 +340,7 @@ type WorldEntityTranslations = {
     zones: ZoneTranslations;
     dungeons: DungeonTranslations;
     delves: DelveTranslations;
+    gatherNodes: GatherNodeTranslations;
   };
 };
 
@@ -405,6 +419,16 @@ function makeEnglishWorldEntities(): WorldEntityTranslations {
     };
   });
 
+  // Twelve names, one per (node type, zone). Derived from GATHER_NODES rather
+  // than restated, so a re-named vein can never drift from the world object the
+  // player actually clicks. First writer wins: every node of a pair carries the
+  // same objectName by construction.
+  const gatherNodes = {} as GatherNodeTranslations;
+  for (const node of GATHER_NODES) {
+    const key = gatherNodeNameKey(node.type, node.zoneId);
+    if (!gatherNodes[key]) gatherNodes[key] = { name: node.objectName };
+  }
+
   return {
     worldContent: {
       corpseName: '{name} (corpse)',
@@ -415,7 +439,7 @@ function makeEnglishWorldEntities(): WorldEntityTranslations {
       delveRewardChestInteract: 'Press F to claim spoils',
       delveSurfaceExitInteract: 'Press F to climb',
     },
-    entities: { mobs, npcs, quests, zones, dungeons, delves },
+    entities: { mobs, npcs, quests, zones, dungeons, delves, gatherNodes },
   };
 }
 
