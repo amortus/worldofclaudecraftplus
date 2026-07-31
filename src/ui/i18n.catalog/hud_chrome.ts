@@ -125,6 +125,12 @@ export const hudChromeStrings = {
     ready: 'Swing',
     seconds: '{seconds}s',
   },
+  // Combat-log lines that live here rather than in the tsc-enforced `hud` domain.
+  // auraGainOther is the beneficial counterpart of hud.combat.auraAfflicted: a
+  // non-player unit gaining a BUFF is not afflicted by anything.
+  combat: {
+    auraGainOther: '{target} gains {name}.',
+  },
   rest: {
     resting: 'Resting',
   },
@@ -695,6 +701,9 @@ export const hudChromeStrings = {
     methodGroup: 'Loot method set to group loot.',
     assigned: '{looter} assigned {item} to {target}.',
     leaderOnly: 'Only the party leader can change the loot method.',
+    // Shown when every player the master looter picked has stopped being eligible
+    // (left the group, logged out, left the instance). The prompt is re-offered.
+    targetIneligible: 'That player can no longer receive this item.',
   },
   // Loot Settings window (party/raid): the leader edits the loot method + roll
   // threshold, members get a read-only view. Opened from the self/group context menu

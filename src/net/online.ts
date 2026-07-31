@@ -1,7 +1,6 @@
 // Online play: REST auth client + WebSocket world mirror.
 
 import { signChallenge } from '../sim/client_challenge';
-import { SpatialGrid } from '../sim/spatial';
 import { mechChromaItemId, mechChromaSkinIndex } from '../sim/content/skins';
 import {
   cloneAllocation,
@@ -19,6 +18,7 @@ import type { Ante, PickAction } from '../sim/lockpick';
 import type { MarketQuery } from '../sim/market_query';
 import { normalizeMoveFacing, sanitizeMoveInput } from '../sim/move_input';
 import type { ResolvedAbility } from '../sim/sim';
+import { SpatialGrid } from '../sim/spatial';
 import {
   type Entity,
   type EquipSlot,
@@ -1593,7 +1593,16 @@ export class ClientWorld implements IWorld {
       this.restedXp = s.rxp ?? 0;
       this.prestigeRank = s.prk ?? 0;
       if (s.milestones !== undefined) this.unlockedMilestones = s.milestones;
-      this.copper = s.copper ?? 0;
+      // A money-only delta carries no inventory echo at all (a proceeds-only market
+      // collect, a quest gold reward, a coin-only loot all move copper and nothing
+      // else), so without this the bag money row and vendor affordability sat stale
+      // until the window was reopened. DIFF against the prior mirror, never a
+      // presence test: copper rides EVERY self-frame, so `s.copper !== undefined`
+      // would raise the flag at 20 Hz and rebuild the bags under the player's cursor
+      // continuously.
+      const copper = s.copper ?? 0;
+      if (copper !== this.copper) this.invChanged = true;
+      this.copper = copper;
       if (s.inv !== undefined) {
         this.inventory = s.inv;
         this.invChanged = true;

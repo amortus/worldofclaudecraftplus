@@ -53,7 +53,6 @@ import {
   validateAllocation,
 } from '../sim/content/talents';
 import type { ZoneDef } from '../sim/data';
-import { FACTION_IDS, FACTIONS, reputationFor, type ReputationStanding } from '../sim/reputation';
 import {
   ABILITIES,
   CLASSES,
@@ -84,6 +83,7 @@ import { requiredLevelFor } from '../sim/item_level_req';
 import { LEADERBOARD_PAGE_SIZE } from '../sim/leaderboard_page';
 import type { Ante, PickAction } from '../sim/lockpick';
 import { PICK_ACTIONS } from '../sim/lockpick';
+import { FACTION_IDS, FACTIONS, type ReputationStanding, reputationFor } from '../sim/reputation';
 import type { ResolvedAbility } from '../sim/sim';
 import type {
   AbilityDef,
@@ -134,6 +134,7 @@ import { type AbilityScaling, abilityDamageBonus } from './ability_damage';
 import { absorbBarView } from './absorb_bar';
 import { claimAdReward, showRewardedAd } from './ads';
 import { abilityStartsAutoAttack, hasAutoAttackTarget } from './attack_on_ability';
+import { auraGainLogKeyFor, findAuraForGainEvent, isDebuffAura } from './aura_gain_log';
 import {
   applyBagFilter,
   BAG_CATEGORIES,
@@ -182,7 +183,6 @@ import { computeDropdownPlacement } from './dropdown_position';
 import { emoteIconUrl } from './emote_icons';
 import { itemDisplayName, tEntity } from './entity_i18n';
 import { esc } from './esc';
-import { milestoneName } from './milestone_i18n';
 import {
   buildGuildLeaderboardView,
   type GuildLeaderboardRow,
@@ -223,13 +223,15 @@ import {
   tOptional,
   tPlural,
 } from './i18n';
-import { iconDataUrl, iconDataUrlIfReady, QUALITY_COLOR, raidMarkerDataUrl } from './icons';
 import { warmIcons } from './icon_warm';
+import { iconDataUrl, iconDataUrlIfReady, QUALITY_COLOR, raidMarkerDataUrl } from './icons';
 import { requiredClassesForTooltip } from './item_class_restriction';
 import { itemStatDeltas } from './item_compare';
 import { PICK_ACTION_HOTKEYS } from './lockpick_panel';
 import { LockpickWindow } from './lockpick_window';
 import { reconcileLootRolls as computeLootRollReconcile } from './loot_roll_reconcile';
+import { lootSettingsView } from './loot_settings_view';
+import { renderLootSettingsWindow } from './loot_settings_window';
 import { lowHealthVignette } from './low_health';
 import { lowResourceView } from './low_resource';
 import { overworldDungeonPortals } from './map_dungeon_portals';
@@ -246,6 +248,7 @@ import {
   type MarketSubtypeFilter,
 } from './market_filters';
 import { Meters } from './meters';
+import { milestoneName } from './milestone_i18n';
 import {
   clampMinimapZoom,
   isMaxMinimapZoom,
@@ -254,6 +257,14 @@ import {
   minimapZoomValue,
   nextMinimapZoom,
 } from './minimap_zoom';
+import {
+  GlyphSpriteCache,
+  type GlyphSpriteGeometry,
+  glyphBlitX,
+  glyphBlitY,
+} from './glyph_sprite_cache';
+import { buildMapAllyMarkers } from './map_ally_markers';
+import { scopedSettingDefaults } from './options_reset';
 import { selectPartyFrameMembers } from './party_frames';
 import {
   type PerfOverlayHooks,
@@ -279,9 +290,9 @@ import {
 import { chatPlayerContextActions } from './player_context_menu';
 import { hydratePortraits, portraitChipHtml } from './portrait_chip';
 import { maskProfanity } from './profanity';
-import { encodeItemLink, encodeQuestLink, parseChatSegments } from './quest_link';
-import { type QuestTrackerView, questTrackerView, type TrackedQuest } from './quest_tracker';
+import { parseChatSegments, tryEncodeItemLink, tryEncodeQuestLink } from './quest_link';
 import { pickNearest, type QuestMarker, questMarkers } from './quest_targets';
+import { type QuestTrackerView, questTrackerView, type TrackedQuest } from './quest_tracker';
 import { QuestTracking } from './quest_tracking';
 import { lockoutParts, lockoutShape } from './raid_lockout';
 import { type RaidLockoutI18n, raidLockoutPanelHtml } from './raid_lockout_view';
@@ -289,6 +300,7 @@ import { restView } from './rest_indicator';
 import { rovingTarget } from './roving_index';
 import { localizeServerText, localizeZone } from './server_i18n';
 import { localizeSimAuraName, localizeSimText } from './sim_i18n';
+import { SpellbookBarGate } from './spellbook_bar_gate';
 import {
   type BuffStatSource,
   buildStatTooltip,
@@ -317,8 +329,6 @@ import { svgIcon } from './ui_icons';
 import { getUiScale } from './ui_scale';
 import { crestIdForEntity } from './unit_portrait';
 import { UnitPortraitPainter } from './unit_portrait_painter';
-import { lootSettingsView } from './loot_settings_view';
-import { renderLootSettingsWindow } from './loot_settings_window';
 import { buildVendorView } from './vendor_view';
 import { renderVendorWindow } from './vendor_window';
 import { nextVoicedYell, type VoicedYellState, voicedYellGain } from './voice_events';
@@ -652,6 +662,16 @@ const MAP_PLACEHOLDER_RES = 64;
 // cheap res first so HUD construction never does the full ~78k-pixel paint synchronously
 // (a login-time main-thread freeze); the full 140px paint is idle-sliced in afterwards.
 const MINIMAP_PLACEHOLDER_RES = 24;
+// Minimap quest-giver glyph typography, drawn from a sprite cache rather than a
+// per-marker fillText (glyph_sprite_cache.ts has the measurements and the why).
+// The sprite box is COUPLED TO the font: 11px Georgia bold ascends at most ~11px
+// above the alphabetic baseline and the glyph set ('?', '!', '•') has no descenders,
+// so 16x16 with the baseline at y=12 and the left edge at x=2 contains every glyph
+// with margin (also under the serif fallbacks Android resolves instead). A sprite too
+// small CLIPS rather than fails: re-measure these if the font size changes.
+const NPC_GLYPH_FONT = 'bold 11px Georgia';
+const NPC_GLYPH_SPRITE_GEOM: GlyphSpriteGeometry = { size: 16, originX: 2, baselineY: 12 };
+const MINIMAP_NPC_GLYPH_COLOR = '#ffd100';
 const MAP_MAX_ZOOM = 6;
 // 1x1 transparent placeholder for itemIconAsync: shown (framed by the .item-icon CSS)
 // until the real procedural icon is encoded during idle and swapped in.
@@ -784,6 +804,22 @@ export class Hud {
     | 'performance'
     | 'controller'
     | 'bugreport' = 'main';
+  // The GameSettings keys the OPEN options sub-view rendered, in paint order. Reset
+  // by settingsViewShell and appended by every setting* control helper, so
+  // settingsViewFooter's Reset to Defaults restores only what this view shows.
+  private settingsViewKeys: string[] = [];
+  // The spellbook's +/- action-bar toggles, collected as renderSpellbook mints each
+  // row (never re-queried), plus the per-frame gate that decides whether they need
+  // repainting at all. See refreshSpellbookHotbarControls.
+  private spellbookToggles: { abilityId: string; btn: HTMLButtonElement }[] = [];
+  private readonly spellbookBarGate = new SpellbookBarGate();
+  // Minimap quest-giver glyphs ('?' ready, '!' available, '•' plain), rasterized once
+  // each instead of a per-marker fillText on every minimap redraw.
+  private readonly npcGlyphSprites = new GlyphSpriteCache(
+    NPC_GLYPH_FONT,
+    NPC_GLYPH_SPRITE_GEOM,
+    () => document.createElement('canvas'),
+  );
   // The Options > Performance panel, lazily built and reused (it caches the live
   // position-slider handles so a drag-to-move can update them in place).
   private perfSettings: PerfOverlaySettingsPanel | null = null;
@@ -2222,16 +2258,24 @@ export class Hud {
 
   // Shift-click a quest-log entry: open the chat input and insert a readable
   // [Name] link. composeChatSend swaps it for the canonical [[q:id]] token on send.
+  // Both draft inserts drop the link rather than draft a token the chat parser will
+  // not match, which would reach every recipient as literal "[[q:...]]" source text.
+  // An unlinkable id is the same class of failure as an item the client cannot name,
+  // so it takes the same silent early return: no draft text, no new copy, and the
+  // player's typed line is left alone.
   insertQuestChatLink(questId: string): void {
-    this.insertChatLink(`[${questTitle(questId)}]`, encodeQuestLink(questId));
+    const token = tryEncodeQuestLink(questId);
+    if (token === null) return;
+    this.insertChatLink(`[${questTitle(questId)}]`, token);
   }
 
   // Shift-click a bag item: insert a readable [Item Name] link into chat. On send,
   // composeChatSend swaps it for the canonical [[i:id]] token (name resolved at render).
   insertItemChatLink(itemId: string): void {
     const item = ITEMS[itemId];
-    if (!item) return;
-    this.insertChatLink(`[${itemDisplayName(item)}]`, encodeItemLink(itemId));
+    const token = tryEncodeItemLink(itemId);
+    if (!item || token === null) return;
+    this.insertChatLink(`[${itemDisplayName(item)}]`, token);
   }
 
   // Shared affordance: append a readable [Name] to the chat input and remember the
@@ -2273,7 +2317,16 @@ export class Hud {
       this.showError(t('hudChrome.questShare.noQuestSelected'));
       return true;
     }
-    this.sim.chat(`/p ${encodeQuestLink(id)}`);
+    const token = tryEncodeQuestLink(id);
+    if (token === null) {
+      // `/share` consumes the keystroke, so unlike the draft inserts it cannot just
+      // fall silent. To the player a quest the link parser cannot encode is simply a
+      // quest that can't be shared, which is the sentence the sim already sends for
+      // its own unshareable cases, so one outcome keeps one string (no new key).
+      this.showError(t('hudChrome.questShare.notShareable'));
+      return true;
+    }
+    this.sim.chat(`/p ${token}`);
     return true;
   }
 
@@ -2871,6 +2924,21 @@ export class Hud {
       this.renderMarket();
     }
     if ($('#char-window').style.display === 'block') this.renderChar();
+    // Windows whose repaint is gated on a TEXT-INDEPENDENT signature (or that only
+    // repaint on open) keep the previous locale until the player happens to change
+    // something, so each open one is rebuilt here explicitly.
+    if (this.spellbookEl.style.display === 'block') this.renderSpellbook();
+    if ($('#talents-window').style.display === 'block') this.renderTalents();
+    // The Interface view is skipped: it owns the language picker, and that picker's
+    // own success handler already rebuilds it AND restores keyboard focus to the
+    // fresh trigger, which a blind rebuild here would race.
+    if (this.optionsOpen && this.optionsView !== 'interface') this.renderOptions();
+    if ($('#social-window').classList.contains('open')) {
+      // The social panel's slow-band gate is a JSON signature of names/levels/ids,
+      // none of which move on a language switch; clear it so the next pass rebuilds.
+      this.lastSocialContent = '';
+      this.renderSocial();
+    }
     const dialog = $('#quest-dialog');
     if (dialog.style.display !== 'block' || this.openGossipNpcId === null) return;
     const npc = this.sim.entities.get(this.openGossipNpcId);
@@ -3133,18 +3201,27 @@ export class Hud {
     return true;
   }
 
+  // Per-frame while the spellbook is open (see update()), so it must cost nothing on
+  // an unchanged frame: the gate compares the bar's slot layout in place and this
+  // returns without touching the DOM unless the bar actually moved. The toggle
+  // buttons are collected as renderSpellbook mints them, so even a repaint frame
+  // makes no element query and no per-row dataset read.
   private refreshSpellbookHotbarControls(): void {
-    document
-      .querySelectorAll<HTMLButtonElement>('#spellbook .spell-hotbar-toggle')
-      .forEach((btn) => {
-        const id = btn.dataset.abilityId;
-        if (!id) return;
-        const onBar = this.hotbarIndexForAbility(id) !== -1;
-        btn.textContent = onBar ? '-' : '+';
-        btn.classList.toggle('remove', onBar);
-        btn.setAttribute('aria-pressed', onBar ? 'true' : 'false');
-        btn.disabled = !onBar && this.firstEmptyHotbarIndex() === -1;
-      });
+    if (!this.spellbookBarGate.takeChange(this.hotbarActions)) return;
+    this.paintSpellbookHotbarControls();
+  }
+
+  // Unconditional repaint of the +/- toggles (the gate's accept path, plus the
+  // click/reset handlers that already know the bar moved).
+  private paintSpellbookHotbarControls(): void {
+    const noFreeSlot = this.firstEmptyHotbarIndex() === -1;
+    for (const { abilityId, btn } of this.spellbookToggles) {
+      const onBar = this.hotbarIndexForAbility(abilityId) !== -1;
+      btn.textContent = onBar ? '-' : '+';
+      btn.classList.toggle('remove', onBar);
+      btn.setAttribute('aria-pressed', onBar ? 'true' : 'false');
+      btn.disabled = !onBar && noFreeSlot;
+    }
   }
 
   // Rebuild the active bar from its default kit (form bars get their form kit;
@@ -4253,15 +4330,21 @@ export class Hud {
     this.setDisplay(this.releaseSpiritBtnEl, deadInArena ? 'none' : '');
     // If the player is alive again (released spirit or revived externally), clear the earned-ad state.
     if (!p.dead && this.adReviveReady) this.adReviveReady = false;
-    const isNativeAndDead = document.body.classList.contains('native-app') && p.dead && !deadInArena;
+    const isNativeAndDead =
+      document.body.classList.contains('native-app') && p.dead && !deadInArena;
     // "Watch ad" button: shown while no ad has been earned yet.
-    this.setDisplay(this.adReviveBtnEl, (isNativeAndDead && !this.adReviveReady) ? '' : 'none');
+    this.setDisplay(this.adReviveBtnEl, isNativeAndDead && !this.adReviveReady ? '' : 'none');
     // "Revive Here!" button: shown after the ad is earned, waiting for the player to confirm.
-    this.setDisplay(this.adReviveReadyEl, (isNativeAndDead && this.adReviveReady) ? '' : 'none');
+    this.setDisplay(this.adReviveReadyEl, isNativeAndDead && this.adReviveReady ? '' : 'none');
 
     const inDungeon = p.pos.x > DUNGEON_X_THRESHOLD;
     // Dungeon exit: offer the XP boost ad in native builds.
-    if (this.lastInDungeon && !inDungeon && document.body.classList.contains('native-app') && !p.dead) {
+    if (
+      this.lastInDungeon &&
+      !inDungeon &&
+      document.body.classList.contains('native-app') &&
+      !p.dead
+    ) {
       this.showAdBoostOffer();
     }
     this.lastInDungeon = inDungeon;
@@ -4528,33 +4611,10 @@ export class Hud {
     el.innerHTML = '';
     for (const a of e.auras) {
       // A negative-value stat aura (e.g. a mob's Withering Wail sapping attack
-      // power, or an Intellect-draining curse) is a debuff even though it reuses a buff_* kind.
-      const isDebuff =
-        [
-          'dot',
-          'slow',
-          'root',
-          'stun',
-          'incapacitate',
-          'polymorph',
-          'attackspeed',
-          'debuff_ap',
-          'sunder',
-          'mortal_wound',
-          'silence',
-          'disarm',
-          'blind',
-          'expose',
-          'spellvuln',
-          'lockout',
-          'vulnerability',
-          'hex',
-          'tongues',
-          'cost_tax',
-          'heal_absorb',
-          'critvuln',
-        ].includes(a.kind) ||
-        (a.kind.startsWith('buff_') && a.value < 0);
+      // power, or an Intellect-draining curse) is a debuff even though it reuses a
+      // buff_* kind; isDebuffAura (aura_gain_log.ts) owns that rule for both this
+      // bar and the "gains vs is afflicted by" combat-log line.
+      const isDebuff = isDebuffAura(a.kind, a.value);
       if (mode === 'debuffs' && !isDebuff) continue;
       const d = document.createElement('div');
       d.className = `buff${isDebuff ? ' debuff' : ''}`;
@@ -4668,7 +4728,9 @@ export class Hud {
     let rows = '';
     for (const q of view.quests) {
       const tracked = this.questTracking.isTracked(q.id);
-      const trackHint = esc(t(tracked ? 'hudChrome.questTracker.untrackHint' : 'hudChrome.questTracker.trackHint'));
+      const trackHint = esc(
+        t(tracked ? 'hudChrome.questTracker.untrackHint' : 'hudChrome.questTracker.trackHint'),
+      );
       rows += `<button type="button" class="qt-title${tracked ? ' tracked' : ''}" data-quest-id="${esc(q.id)}" aria-pressed="${tracked}" title="${trackHint}">${esc(q.title)}${q.complete ? ` <span class="quest-complete">(${esc(t('questUi.tracker.complete'))})</span>` : ''}</button>`;
       for (const o of q.objectives) {
         rows += `<div class="qt-obj${o.done ? ' done' : ''}">- ${esc(this.questProgressText(o.label, o.current, o.total))}</div>`;
@@ -5651,9 +5713,18 @@ export class Hud {
         const hasReady = e.questIds.some(
           (q) => isQuestTurnInNpc(QUESTS[q], e.templateId) && this.sim.questState(q) === 'ready',
         );
-        ctx.fillStyle = '#ffd100';
-        ctx.font = 'bold 11px Georgia';
-        ctx.fillText(hasReady ? '?' : hasAvail ? '!' : '•', mx - 2, my + 3);
+        // Blit the cached glyph sprite so its internal fillText origin lands on the
+        // same (mx - 2, my + 3) anchor the inline fillText used. Every canvas text
+        // entry point re-resolves font state against the document, so a per-marker
+        // fillText got expensive exactly when the frame was already busy (a crowded
+        // town, where the nameplate transform writes dirty the style tree). The blit
+        // is flat. See glyph_sprite_cache.ts for the rounding, which is load-bearing.
+        const glyph = hasReady ? '?' : hasAvail ? '!' : '•';
+        ctx.drawImage(
+          this.npcGlyphSprites.sprite(glyph, MINIMAP_NPC_GLYPH_COLOR),
+          glyphBlitX(mx - 2, NPC_GLYPH_SPRITE_GEOM),
+          glyphBlitY(my + 3, NPC_GLYPH_SPRITE_GEOM),
+        );
       } else if (
         e.kind === 'object' &&
         (e.templateId === 'dungeon_door' || e.templateId === 'dungeon_exit')
@@ -6285,40 +6356,39 @@ export class Hud {
       ctx.stroke();
       ctx.restore();
     }
-    // friends (green) and guild members (blue), plotted anywhere in this zone
-    // from the live positions the server streams for online allies. socialInfo
-    // is null offline, so this is online-only.
+    // Allies, all drawn in this LIVE overlay pass (never baked into the idle-painted
+    // terrain layer, which would leave them lagging a slice behind or missing):
+    // party members in their class color first, then friends (green) and guild
+    // members (blue). Party members are excluded from the friend/guild pass so a
+    // guildmate you are grouped with is one dot, not two, matching the minimap.
+    // socialInfo is null offline, so friends/guild are online-only; partyInfo is
+    // live in both worlds. buildMapAllyMarkers owns the ordering and the dedupe.
     const social = this.sim.socialInfo;
-    if (social) {
+    const allyMarkers = buildMapAllyMarkers({
+      selfPid: p.id,
+      selfName: p.name,
+      party: this.sim.partyInfo?.members ?? [],
+      friends: social?.friends ?? [],
+      guild: social?.guild?.members ?? [],
+      inView: (x, z) => z >= zone.zMin && z < zone.zMax && x <= WORLD_MAX_X,
+      classColor: classCss,
+    });
+    if (allyMarkers.length > 0) {
       ctx.lineWidth = 3;
       ctx.font = 'bold 11px Georgia';
       ctx.textAlign = 'center';
-      const selfName = p.name;
-      const drawn = new Set<number>();
-      const plotAlly = (m: FriendInfo, color: string) => {
-        if (
-          !m.online ||
-          m.x === undefined ||
-          m.z === undefined ||
-          m.name === selfName ||
-          drawn.has(m.id)
-        )
-          return;
-        if (m.z < zone.zMin || m.z >= zone.zMax || m.x > WORLD_MAX_X) return;
-        drawn.add(m.id);
-        const { mx, my } = toMap(m.x, m.z);
-        ctx.fillStyle = color;
+      for (const marker of allyMarkers) {
+        const { mx, my } = toMap(marker.x, marker.z);
+        ctx.fillStyle = marker.color;
         ctx.strokeStyle = '#000';
         ctx.beginPath();
         ctx.arc(mx, my, 4, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
-        ctx.fillStyle = color;
-        ctx.strokeText(m.name, mx, my - 8);
-        ctx.fillText(m.name, mx, my - 8);
-      };
-      for (const f of social.friends) plotAlly(f, '#4ade80'); // friends green (win ties)
-      if (social.guild) for (const m of social.guild.members) plotAlly(m, '#60a5fa');
+        ctx.fillStyle = marker.color;
+        ctx.strokeText(marker.name, mx, my - 8);
+        ctx.fillText(marker.name, mx, my - 8);
+      }
     }
   }
 
@@ -6684,6 +6754,11 @@ export class Hud {
           }
           break;
         }
+        case 'prestige':
+          // The rank sits on the character sheet, which otherwise only repaints on an
+          // inventory or cosmetics delta. The chat line already announces the rank.
+          this.renderCharIfOpen();
+          break;
         case 'levelup': {
           this.showBanner(t('hud.core.levelBanner', { level: ev.level }));
           this.log(t('hud.core.levelLog', { level: ev.level }), '#ffd100');
@@ -7264,8 +7339,16 @@ export class Hud {
               '#d8a0d8',
             );
           } else if (tgt && ev.gained) {
+            // Not every aura another unit gains is an affliction: a mob or ally
+            // picking up a buff/HoT/shield reads as a gain, not a debuff. Classify
+            // off the live aura the event just applied (same classifier the aura
+            // bar's buff/debuff split uses).
+            const matched = findAuraForGainEvent(tgt.auras, ev.name);
             this.combatLog(
-              t('hud.combat.auraAfflicted', { target: entityDisplayName(tgt), name: auraName }),
+              t(auraGainLogKeyFor(matched), {
+                target: entityDisplayName(tgt),
+                name: auraName,
+              }),
               '#d8a0d8',
             );
           }
@@ -7472,6 +7555,7 @@ export class Hud {
       }
     }
     const exact: Record<string, TranslationKey> = {
+      'That player can no longer receive this item.': 'hudChrome.masterLoot.targetIneligible',
       'You are stunned!': 'hud.errors.stunned',
       'You are silenced!': 'hud.errors.silenced',
       'You are busy.': 'hud.errors.busy',
@@ -7735,11 +7819,15 @@ export class Hud {
         money: this.localizeSimMoney(match[2]),
       });
     }
-    match = /^Sold (.+) for (.+)\.$/.exec(text);
+    // The optional xN suffix (vendor-selling a stack) routes through
+    // itemStackDisplayName so the item NAME still localizes, the same treatment as
+    // the listed/bought/reclaimed arms below: a greedy single capture would feed
+    // "Copper Ore x2" to the exact-name lookup and silently degrade to raw English.
+    match = /^Sold (.+?)( x\d+)? for (.+)\.$/.exec(text);
     if (match)
       return t('hud.logs.soldItem', {
-        item: itemDisplayNameFromSource(match[1]),
-        money: this.localizeSimMoney(match[2]),
+        item: itemStackDisplayName(match[1], match[2]),
+        money: this.localizeSimMoney(match[3]),
       });
     match = /^Listed (.+?)( x\d+)? on the World Market for (.+)\.$/.exec(text);
     if (match)
@@ -9894,9 +9982,10 @@ export class Hud {
       const name = esc(fk ? t(fk) : FACTIONS[id].name);
       const standing = esc(t(STANDING_KEY[r.standing]));
       const pct = r.max > 0 ? Math.round((r.current / r.max) * 100) : 100;
-      const detail = r.max > 0
-        ? esc(`${formatNumber(r.current)} / ${formatNumber(r.max)}`)
-        : esc(t('hudChrome.reputation.maxed'));
+      const detail =
+        r.max > 0
+          ? esc(`${formatNumber(r.current)} / ${formatNumber(r.max)}`)
+          : esc(t('hudChrome.reputation.maxed'));
       rows +=
         `<div class="rep-row"><div class="rep-head"><span class="rep-name">${name}</span>` +
         `<span class="rep-standing rep-${r.standing}">${standing}</span></div>` +
@@ -9914,14 +10003,15 @@ export class Hud {
     const cls = CLASSES[sim.cfg.playerClass];
     const className = classDisplayName(cls.id);
     let html = `<div class="panel-title char-title-portrait">${portraitChipHtml({ cls: sim.cfg.playerClass, skin: p.skin ?? 0, name: p.name, variant: 'md' })}<span class="char-title-text">${esc(p.name)} <span class="panel-subtitle">${esc(t('itemUi.equipment.levelClass', { level: formatNumber(p.level, { maximumFractionDigits: 0 }), className }))}</span></span><button type="button" class="x-btn" data-close aria-label="${esc(t('hud.options.returnToGame'))}">${svgIcon('close')}</button></div>`;
-    html += `<div class="char-tabs" role="tablist" aria-label="${esc(t('hudChrome.character.tabsAria'))}">` +
+    html +=
+      `<div class="char-tabs" role="tablist" aria-label="${esc(t('hudChrome.character.tabsAria'))}">` +
       `<button type="button" class="char-tab${this.charTab === 'overview' ? ' active' : ''}" role="tab" aria-selected="${this.charTab === 'overview'}" data-ctab="overview">${esc(t('hudChrome.character.tabOverview'))}</button>` +
       `<button type="button" class="char-tab${this.charTab === 'reputation' ? ' active' : ''}" role="tab" aria-selected="${this.charTab === 'reputation'}" data-ctab="reputation">${esc(t('hudChrome.character.tabReputation'))}</button>` +
       `</div>`;
     if (this.charTab === 'reputation') {
       html += this.reputationPanelHtml();
     } else {
-    html += `<div class="paperdoll">
+      html += `<div class="paperdoll">
       <div class="equip-col" id="equip-col-left"></div>
       <div class="char-model-panel">
         <div id="char-model-preview" class="char-model-preview"></div>
@@ -9929,15 +10019,15 @@ export class Hud {
       </div>
       <div class="equip-col equip-col-right" id="equip-col-right"></div>
     </div>`;
-    // Eleven focusable stat cells: the five primaries down the left column and the
-    // derived stats (armor, attack power, Spell Power, dps, crit, dodge) down the
-    // right, dodge wrapping to the final row. The cell markup, value formatting, and
-    // the visually-hidden aria breakdown all come from the pure, unit-tested
-    // stat_tooltip_view module; each cell's value is read from the model so it cannot
-    // drift from the tooltip it opens, and the post-render pass below attaches the
-    // floating breakdown.
-    const statCell = (stat: StatId) => statCellHtml(this.statModel(stat), STAT_VIEW_DEPS);
-    html += `<div class="char-stats">
+      // Eleven focusable stat cells: the five primaries down the left column and the
+      // derived stats (armor, attack power, Spell Power, dps, crit, dodge) down the
+      // right, dodge wrapping to the final row. The cell markup, value formatting, and
+      // the visually-hidden aria breakdown all come from the pure, unit-tested
+      // stat_tooltip_view module; each cell's value is read from the model so it cannot
+      // drift from the tooltip it opens, and the post-render pass below attaches the
+      // floating breakdown.
+      const statCell = (stat: StatId) => statCellHtml(this.statModel(stat), STAT_VIEW_DEPS);
+      html += `<div class="char-stats">
       ${statCell('str')}${statCell('armor')}
       ${statCell('agi')}${statCell('attackPower')}
       ${statCell('sta')}${statCell('spellPower')}
@@ -9945,10 +10035,10 @@ export class Hud {
       ${statCell('spi')}${statCell('critChance')}
       ${statCell('dodge')}
     </div>`;
-    html += this.talentSummaryHtml();
-    html += this.progressionHtml(p.level);
-    const shareGlyph = `<svg class="pc-share-ico" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M18 16.1a3 3 0 0 0-2.3 1.1l-6.7-3.9a3 3 0 0 0 0-2.6l6.7-3.9A3 3 0 1 0 15 4l-6.7 3.9a3 3 0 1 0 0 8.2L15 20a3 3 0 1 0 3-3.9z"/></svg>`;
-    html += `<div class="pc-share-row"><button type="button" class="btn pc-share-btn" data-act="share-card">${shareGlyph}<span>${esc(t('playerCard.shareButton'))}</span></button></div>`;
+      html += this.talentSummaryHtml();
+      html += this.progressionHtml(p.level);
+      const shareGlyph = `<svg class="pc-share-ico" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M18 16.1a3 3 0 0 0-2.3 1.1l-6.7-3.9a3 3 0 0 0 0-2.6l6.7-3.9A3 3 0 1 0 15 4l-6.7 3.9a3 3 0 1 0 0 8.2L15 20a3 3 0 1 0 3-3.9z"/></svg>`;
+      html += `<div class="pc-share-row"><button type="button" class="btn pc-share-btn" data-act="share-card">${shareGlyph}<span>${esc(t('playerCard.shareButton'))}</span></button></div>`;
     }
     el.innerHTML = html;
     el.querySelectorAll<HTMLElement>('.char-tab').forEach((tab) => {
@@ -11693,6 +11783,11 @@ export class Hud {
 
   renderSpellbook(): void {
     const el = $('#spellbook');
+    // The rebuild below replaces every row, so drop the collected toggle refs first
+    // (they point at nodes this innerHTML write is about to destroy) and re-arm the
+    // per-frame gate: the fresh toggles are painted from live state right here.
+    this.spellbookToggles = [];
+    this.spellbookBarGate.takeChange(this.hotbarActions);
     const sim = this.sim;
     const cls = CLASSES[sim.cfg.playerClass];
     const className = classDisplayName(cls.id);
@@ -11754,6 +11849,7 @@ export class Hud {
           audio.click();
           this.refreshSpellbookHotbarControls();
         });
+        this.spellbookToggles.push({ abilityId: known.def.id, btn: toggle });
         row.appendChild(toggle);
         row.draggable = true;
         row.addEventListener('dragstart', (e) => {
@@ -12420,7 +12516,9 @@ export class Hud {
       const isTracked = this.questTracking.isTracked(this.selectedQuestLogId);
       track.textContent = isTracked ? '★' : '☆';
       track.classList.toggle('tracked', isTracked);
-      const trackHint = t(isTracked ? 'hudChrome.questTracker.untrackHint' : 'hudChrome.questTracker.trackHint');
+      const trackHint = t(
+        isTracked ? 'hudChrome.questTracker.untrackHint' : 'hudChrome.questTracker.trackHint',
+      );
       track.title = trackHint;
       track.setAttribute('aria-label', trackHint);
       track.setAttribute('aria-pressed', isTracked ? 'true' : 'false');
@@ -13958,6 +14056,7 @@ export class Hud {
   ): void {
     const hooks = this.optionsHooks;
     if (!hooks) return;
+    this.settingsViewKeys.push(key);
     const r = SETTING_RANGES[key];
     const row = document.createElement('div');
     row.className = 'set-row';
@@ -14005,6 +14104,7 @@ export class Hud {
   ): void {
     const hooks = this.optionsHooks;
     if (!hooks) return;
+    this.settingsViewKeys.push(key);
     const row = document.createElement('div');
     row.className = 'set-row';
     const name = document.createElement('span');
@@ -14034,6 +14134,7 @@ export class Hud {
   private settingBoolToggle(parent: HTMLElement, label: string, key: BoolSettingKey): void {
     const hooks = this.optionsHooks;
     if (!hooks) return;
+    this.settingsViewKeys.push(key);
     const row = document.createElement('div');
     row.className = 'set-row';
     const name = document.createElement('span');
@@ -14067,6 +14168,7 @@ export class Hud {
   ): void {
     const hooks = this.optionsHooks;
     if (!hooks) return;
+    this.settingsViewKeys.push(key);
     const row = document.createElement('div');
     row.className = 'set-row';
     const name = document.createElement('span');
@@ -14103,6 +14205,10 @@ export class Hud {
   }
 
   private settingsViewShell(title: string): HTMLElement {
+    // Each sub-view records the setting keys it paints (settingSlider / settingToggle
+    // / settingBoolToggle / settingChoice push here), so settingsViewFooter's Reset to
+    // Defaults can scope itself to exactly this view.
+    this.settingsViewKeys = [];
     const el = $('#options-menu');
     el.innerHTML = `<div class="panel-title"><span>${esc(title)}</span><button type="button" class="x-btn" data-close aria-label="${esc(t('hud.options.returnToGame'))}">${svgIcon('close')}</button></div>`;
     const body = document.createElement('div');
@@ -14111,19 +14217,26 @@ export class Hud {
     return body;
   }
 
+  // Reset to Defaults is scoped to the OPEN sub-view: it restores only the settings
+  // this view rendered (collected into settingsViewKeys by settingsViewShell +
+  // the setting* control helpers), rather than wiping every GameSettings value and
+  // silently taking the player's Graphics/Interface/Controller choices with it.
   private settingsViewFooter(): void {
     const el = $('#options-menu');
+    const scoped = scopedSettingDefaults(this.settingsViewKeys);
     const reset = document.createElement('button');
     reset.className = 'btn';
     reset.textContent = t('hud.options.resetToDefaults');
     reset.addEventListener('click', () => {
       audio.click();
-      this.optionsHooks?.settings.reset();
-      // re-apply every setting to its subsystem, then redraw the view
-      const all = this.optionsHooks?.settings.all();
-      if (all)
-        for (const k of Object.keys(all) as (keyof GameSettings)[])
-          this.optionsHooks?.onSettingChange(k, all[k]);
+      const hooks = this.optionsHooks;
+      // re-apply only this view's settings to their subsystem, then redraw the view
+      for (const { key, value } of scoped) {
+        if (!hooks) break;
+        if (typeof value === 'boolean') hooks.settings.set(key as BoolSettingKey, value);
+        else hooks.settings.set(key as NumericSettingKey, value);
+        hooks.onSettingChange(key, hooks.settings.get(key));
+      }
       this.renderOptions();
     });
     const back = document.createElement('button');

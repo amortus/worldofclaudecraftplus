@@ -274,6 +274,36 @@ unit-testing.
   focusable `statCellHtml` markup, taking i18n + `formatNumber` as an injected
   `StatTooltipI18n` so it never imports the runtime. `hud.ts` is the thin consumer:
   `statModel()` bridges the live sim to the core, then it hands the model to the view.
+- **aura_gain_log.ts** — `isDebuffAura(kind, value)`, the ONE client rule for
+  harmful-vs-beneficial (a negative-value `buff_*` drain is a debuff), plus
+  `auraGainLogKeyFor` / `findAuraForGainEvent`, which pick between "X is afflicted by
+  Y" and "X gains Y" for a non-player aura gain. Both the target aura BAR's
+  buff/debuff split and the combat-log line read it, so they can never disagree.
+  Deliberately wider than the sim's own `HARMFUL_AURA_KINDS` (which only tags
+  `/targetbuffs`); `tests/aura_gain_log.test.ts` pins the superset relation.
+- **options_reset.ts** — `scopedSettingDefaults(keys)`, the `{key, default}` pairs for
+  the settings ONE options sub-view rendered. `hud.ts` collects those keys as its
+  `setting*` control helpers paint (reset per `settingsViewShell`), so a sub-view's
+  "Reset to Defaults" restores only what the player is looking at instead of wiping
+  every `GameSettings` value.
+- **spellbook_bar_gate.ts** — `SpellbookBarGate`, the per-frame change gate for the
+  spellbook's +/- action-bar toggles. The spellbook is the one window `update()`
+  drives per frame; the gate compares the bar's slot layout IN PLACE (no allocation)
+  so an unchanged frame does no element lookup and no DOM write at all. `hud.ts` also
+  collects the toggle refs as it mints each row, so even a repaint frame makes zero
+  queries and no per-row `dataset` read.
+- **glyph_sprite_cache.ts** — `GlyphSpriteCache` + `glyphBlitX`/`glyphBlitY`, for
+  canvas text drawn in a hot loop (the minimap's NPC quest glyphs at 10 Hz). Every
+  canvas text entry point (`font` setter, `fillText`, `measureText`) re-resolves font
+  state against the document, so hoisting `ctx.font` is hygiene, not a fix; leaving
+  the text API is. Rasterize each (glyph, color) once, then blit. **The blit
+  destination must be ROUNDED** (a fractional `drawImage` destination is resampled).
+  The canvas factory is injected so the cache is unit-testable without a 2D context.
+- **map_ally_markers.ts** — `buildMapAllyMarkers`, which allies the zone map plots and
+  in what color: party members in their class color (grey when dead), then friends
+  (green), then guild (blue), deduped with party winning so a grouped guildmate is one
+  dot, not two (the rule the minimap already follows). Markers are drawn in the LIVE
+  overlay pass, never baked into the idle-painted terrain layer.
 - **esc.ts**: the one canonical HTML escaper (`esc`) for innerHTML / attribute
   interpolation, shared by `hud.ts`, `portrait_chip.ts`, and the small view modules
   (the src/ui rule "all HTML interpolation goes through `esc()`"); escapes `& < > " '`.
