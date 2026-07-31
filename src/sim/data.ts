@@ -44,6 +44,7 @@ import {
   TEMPLE_QUEST_ORDER,
   TEMPLE_QUESTS,
 } from './content/temple';
+import { PROFESSION_ITEMS } from './content/professions';
 import { WARLOCK_PET_MOBS } from './content/warlock_pets';
 import {
   GRAVEYARD_POS,
@@ -152,6 +153,10 @@ export const ITEMS: Record<string, ItemDef> = mergeItems(
   ZONE4_ITEMS,
   CLAUDEHOLME_ITEMS,
   CLAUDEXX_ITEMS,
+  // Gathering professions: materials, tools and zone-4 fish. `simple_fishing_pole`
+  // is deliberately NOT in this set — it already ships in BASE_ITEMS and is only
+  // assigned a tier by GATHER_TOOLS, so it is never redefined here.
+  PROFESSION_ITEMS,
 );
 
 export const MOBS: Record<string, MobTemplate> = {
