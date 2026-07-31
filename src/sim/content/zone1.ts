@@ -537,6 +537,12 @@ export const ZONE1_NPCS: Record<string, NpcDef> = {
       'tough_jerky',
       'minor_healing_potion',
       'minor_mana_potion',
+      // Tier-1 gathering tools. Every gathering profession hard-requires a tool, so
+      // the starter zone is where all three trades have to be buyable or the nodes
+      // scattered across the Vale are unusable scenery.
+      'worn_miners_pick',
+      'worn_logging_axe',
+      'worn_herbalists_sickle',
     ],
     greeting: 'Fresh bread, clean water, fair prices. What can I get you?',
   },

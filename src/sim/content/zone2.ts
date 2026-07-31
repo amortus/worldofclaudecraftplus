@@ -340,6 +340,9 @@ export const ZONE2_NPCS: Record<string, NpcDef> = {
       'bogiron_mace', 'fenreed_staff', 'mirefen_skinner', 'bogiron_hauberk',
       'marshcloth_robe', 'reedwoven_jerkin', 'fenwalker_boots', 'reedwoven_trousers',
       'simple_fishing_pole',
+      // Tier-2 gathering tools: the rung that opens Mirefen's own nodes.
+      'sturdy_miners_pick', 'sturdy_logging_axe', 'sturdy_herbalists_sickle',
+      'braided_fishing_rod',
     ],
     greeting: 'Dry boots, dry bread, dry powder — at Fenbridge you get two of the three on a good day.',
   },

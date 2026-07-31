@@ -1043,6 +1043,11 @@ export const ZONE3_NPCS: Record<string, NpcDef> = {
       'cragwalker_boots',
       'windguard_leggings',
       'simple_fishing_pole',
+      // Tier-3 gathering tools, for Thornpeak's own veins, timber and herbs.
+      'reinforced_miners_pick',
+      'reinforced_logging_axe',
+      'reinforced_herbalists_sickle',
+      'wyrmgut_fishing_rod',
     ],
     greeting:
       'Wool, hardtack, and steel-shod boots — Highwatch runs on all three, and I am short of everything.',

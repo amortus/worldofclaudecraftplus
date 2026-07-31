@@ -424,6 +424,13 @@ export const ZONE4_NPCS: Record<string, NpcDef> = {
     vendorItems: [
       'healing_potion',
       'mana_potion',
+      // Tier-4 gathering tools. Deliberately NOT reputation-gated (no vendorReqs
+      // entry): the tier-0.5 armour is the standing reward, while a working tool is
+      // what lets a gatherer earn standing here in the first place.
+      'gravewatch_pick',
+      'gravewatch_felling_axe',
+      'gravewatch_sickle',
+      'stillmere_fishing_rod',
       // Dawnguard Battlegear (plate - warrior/paladin/shaman)
       'dawnguard_sabatons',
       'dawnguard_gauntlets',
