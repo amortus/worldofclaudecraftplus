@@ -1748,8 +1748,101 @@ export type SimEvent = { pid?: number } & (
       rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
       qty: number;
     }
-  // A gathering profession's proficiency went up. `skill` is the new value.
+  // A gathering profession's proficiency went up. `skill` is the new value. The
+  // crafts have their own `craftSkill` twin below.
   | { type: 'professionSkill'; professionId: string; skill: number; maxSkill: number }
+  // ---------------------------------------------------------------------
+  // Crafting and enchanting (wave 2). Same text-free contract as the gather
+  // events above: stable ids plus numbers, the client composes every line, so
+  // none of them needs a `sim_i18n.ts` matcher rule.
+  // ---------------------------------------------------------------------
+  // Every deny reason below is exactly the pure module's own union
+  // (`CraftDenyReason` / `EnchantDenyReason` / `DisenchantDenyReason`), never a
+  // wider host-level one. The two host-level refusals crafting shares with every
+  // other player action, being dead and being busy, ride the SAME already
+  // matched English `error` literals the gather path uses ("You can't do that
+  // while dead." / "You are busy."), so this union stays a 1:1 mirror of the
+  // mechanics and the client needs no extra deny copy.
+  //
+  // A craft attempt the gates refused. `reagents` carries every reagent line
+  // resolved against the bag, so the client can point at the short one. Each row
+  // is structurally the professions module's `ReagentStatus`, restated inline so
+  // this union stays free of a subsystem import.
+  | {
+      type: 'craftDeny';
+      recipeId: string;
+      professionId?: string;
+      reason: 'insufficient_materials';
+      reagents?: { itemId: string; required: number; held: number; met: boolean }[];
+    }
+  // A completed craft. The output is granted by the professions module straight
+  // into the bag, so this is the ONLY line the player sees for it (granting
+  // through `addItem` would print a second "You receive" for the same item).
+  // `masterwork` and its baked bonus ride only when the single proc draw landed;
+  // `signer` rides only when the output actually carries a maker's bond.
+  | {
+      type: 'craftResult';
+      recipeId: string;
+      professionId: string;
+      itemId: string;
+      count: number;
+      consumed: { itemId: string; count: number }[];
+      skillGain: number;
+      nextSkill: number;
+      signer?: string;
+      signedReagentUsed?: boolean;
+      masterwork?: boolean;
+      masterworkStats?: Record<string, number>;
+    }
+  // A CRAFT's skill went up. Deliberately its own event rather than a reuse of
+  // `professionSkill`: the two id spaces are disjoint and the client renders a
+  // different label set for each, so keying on the event keeps the client from
+  // having to re-narrow a string.
+  | { type: 'craftSkill'; professionId: string; skill: number; maxSkill: number }
+  // An enchant apply (or destructive replace) the gates refused.
+  // `replacedEnchantId` rides the `already_enchanted` arm, which is what the
+  // confirmation dialog names; `reagents` rides every arm that resolved a cost.
+  | {
+      type: 'enchantDeny';
+      enchantId: string;
+      reason:
+        | 'not_held'
+        | 'wrong_slot'
+        | 'insufficient_materials'
+        | 'already_enchanted'
+        | 'same_enchant';
+      itemId?: string;
+      replacedEnchantId?: string;
+      reagents?: { itemId: string; required: number; held: number; met: boolean }[];
+    }
+  // An enchant landed on one specific copy. `where` says which arm ran, and
+  // `slot` rides the worn arm only. `replaced` marks the destructive path.
+  | {
+      type: 'enchantResult';
+      enchantId: string;
+      itemId: string;
+      where: 'worn' | 'bag';
+      slot?: EquipSlot;
+      replaced?: boolean;
+      replacedEnchantId?: string;
+      consumed: { itemId: string; count: number }[];
+    }
+  // A disenchant the gates refused.
+  | {
+      type: 'disenchantDeny';
+      itemId: string;
+      reason: 'not_held' | 'not_disenchantable';
+    }
+  // A completed disenchant: the piece destroyed and the materials it gave up.
+  // Same silent-grant contract as `craftResult`.
+  | {
+      type: 'disenchantResult';
+      itemId: string;
+      materialItemId: string;
+      count: number;
+      secondaryItemId?: string;
+      secondaryCount?: number;
+    }
   // Fishing minigame beats. `bite` arms the reel window, `landed` is a
   // successful reel, `escaped` carries why the fish got away, `no_tackle` is
   // the text-free deny for casting without a rod in the bags.

@@ -1,8 +1,10 @@
 import type {
   AccountCosmetics,
+  CraftRecipeView,
   DeedsView,
   DelveCompanionInfo,
   DelveRunInfo,
+  EnchantOptionView,
   LockpickView,
 } from '../world_api';
 import { type AssistCandidate, resolveAssist } from './assist';
@@ -68,6 +70,10 @@ import {
   serializeDeedProgress,
 } from './deeds';
 import {
+  CRAFT_RECIPES,
+  CRAFTING_MAX_SKILL,
+  ENCHANTS,
+  enchantById,
   fishingTablesFor,
   GATHER_NODES,
   GATHER_TOOLS,
@@ -76,8 +82,37 @@ import {
   groundObjectSpecForNode,
   isFishingJunk,
   nodeMaterialFor,
+  recipeById,
   zoneGatherTier,
 } from './content/professions';
+import {
+  beginCraft,
+  beginEnchant,
+  countItemInSlots,
+  type CraftAttempt,
+  type CraftOutputInfo,
+  type CraftRecipeDef,
+  type CraftingProficiency,
+  type CraftingProfessionId,
+  CRAFTING_PROFESSION_IDS,
+  craftingSkillsView,
+  type DisenchantInput,
+  type DisenchantPlan,
+  emptyCraftingProficiency,
+  type EnchantAttempt,
+  type EnchantTarget,
+  enchantSkillGain,
+  enchantsForSlot,
+  isSignableCraftOutput,
+  masteryStateFor,
+  normalizeCraftingProficiency,
+  type PlayerCraftSkill,
+  previewDisenchant,
+  reagentStatusOf,
+  resolveCraft,
+  resolveDisenchant,
+  resolveEnchant,
+} from './professions';
 import {
   beginHarvest,
   bestOwnedGatherToolTier,
@@ -267,6 +302,7 @@ import {
   dist2d,
   type Entity,
   type EquipSlot,
+  EQUIP_SLOTS,
   type ErrorReason,
   emptyMoveInput,
   FISHING_CAST_ID,
@@ -1017,6 +1053,12 @@ export interface PlayerMeta {
   // interrupted harvest just drops it, which is exactly why an interruption
   // costs nothing (no draw, no respawn stamp).
   gatherNodeId: string | null;
+  // Crafting skill per craft (smithing/woodcraft/alchemy/enchanting). Persisted
+  // on exactly the same terms as `gathering`: omitted from CharacterState
+  // entirely while every counter is still zero. There is no known-recipe set:
+  // every recipe is known from the start (content/professions/types.ts), so
+  // `skillReq` shapes gain and the masterwork proc and never admission.
+  crafting: CraftingProficiency;
   // The Book of Deeds chronicle. Immutable: every evaluator call either returns
   // a new object or the same reference, so `next !== meta.deeds` is the cheap
   // did-anything-change test. Persisted (sparse + sorted).
@@ -1147,6 +1189,11 @@ export interface CharacterState {
   // `equipmentInstances`). Loaded through `normalizeGatheringProficiency`, which
   // drops unknown keys and clamps to each profession's ceiling.
   gatheringProficiency?: Record<string, number>;
+  // Crafting skill (professionId -> points). Optional and OMITTED under exactly
+  // the same rule as `gatheringProficiency` above, so a pre-crafting save loads
+  // AND re-saves byte-for-byte. Loaded through `normalizeCraftingProficiency`,
+  // which drops unknown keys and clamps to each craft's 125 ceiling.
+  craftingProficiency?: Record<string, number>;
   // The Book of Deeds chronicle, in its sparse + sorted persisted form. Optional
   // and OMITTED while the chronicle is empty. Loaded through
   // `restoreDeedProgress`, which bounds counters, marks and earned ids.
@@ -1192,6 +1239,158 @@ export function serializeGatheringProficiency(
     }
   }
   return any ? out : undefined;
+}
+
+// The crafting-side twin of `serializeGatheringProficiency`, with the identical
+// contract: zero counters are dropped and an all-zero record returns
+// `undefined`, so the key is absent from CharacterState (and from the JSONB)
+// until the character has actually crafted. Read side is
+// `normalizeCraftingProficiency`, which is symmetric (missing -> 0).
+export function serializeCraftingProficiency(
+  proficiency: CraftingProficiency,
+): Record<string, number> | undefined {
+  const out: Record<string, number> = {};
+  let any = false;
+  for (const id of CRAFTING_PROFESSION_IDS) {
+    const v = proficiency[id] ?? 0;
+    if (v > 0) {
+      out[id] = v;
+      any = true;
+    }
+  }
+  return any ? out : undefined;
+}
+
+/**
+ * The read-only recipe rows the crafting window paints, built from ids and
+ * numbers only. Pure and host-agnostic so the offline `Sim` and the online
+ * `ClientWorld` derive them from the SAME code (the `buildDeedsView` pattern):
+ * one takes `PlayerMeta`'s bag and skills, the other the mirrored self-wire.
+ */
+export function buildCraftRecipeViews(
+  inventory: readonly InvSlot[],
+  crafting: CraftingProficiency,
+  professionId?: CraftingProfessionId,
+): CraftRecipeView[] {
+  const out: CraftRecipeView[] = [];
+  for (const recipe of CRAFT_RECIPES) {
+    if (professionId !== undefined && recipe.professionId !== professionId) continue;
+    out.push(craftRecipeView(recipe, inventory, crafting[recipe.professionId] ?? 0));
+  }
+  return out;
+}
+
+function craftRecipeView(
+  recipe: CraftRecipeDef,
+  inventory: readonly InvSlot[],
+  skill: number,
+): CraftRecipeView {
+  // `beginCraft` is the rng-FREE half, so building the whole window costs no
+  // draws and the displayed cost is computed by the SAME code the consumption
+  // charges by.
+  const start = beginCraft({
+    recipe,
+    skill,
+    maxSkill: CRAFTING_MAX_SKILL[recipe.professionId],
+    inventory: inventory as InvSlot[],
+    crafterName: '',
+    crafterId: 0,
+    output: outputInfoFor(recipe.resultItemId),
+  });
+  return {
+    recipeId: recipe.id,
+    professionId: recipe.professionId,
+    resultItemId: recipe.resultItemId,
+    resultCount: recipe.resultCount,
+    skillReq: recipe.skillReq,
+    level: recipe.level,
+    recipeTier: start.recipeTier,
+    capabilityTier: start.capabilityTier,
+    masteryState: masteryStateFor(start.capabilityTier, start.recipeTier),
+    skillGain: start.skillGain,
+    masterworkChance: start.masterworkChance,
+    reagents: start.reagents,
+    canCraft: start.ok,
+  };
+}
+
+/** The recipe output's def facts the crafting module takes explicitly (it never
+ *  imports `ITEMS`). An unknown result id degrades to a stats-free consumable,
+ *  which simply cannot masterwork. */
+function outputInfoFor(itemId: string): CraftOutputInfo {
+  const def = ITEMS[itemId];
+  if (!def) return { kind: 'junk' };
+  return {
+    kind: def.kind,
+    ...(def.quality !== undefined && { quality: def.quality }),
+    ...(def.stats !== undefined && { stats: def.stats }),
+  };
+}
+
+/**
+ * The read-only enchant rows the picker paints for one equipment slot. Pure and
+ * shared by both worlds, exactly like `buildCraftRecipeViews`. Draw-free.
+ */
+export function buildEnchantOptionViews(
+  slot: EquipSlot,
+  inventory: readonly InvSlot[],
+  skill: number,
+): EnchantOptionView[] {
+  return enchantsForSlot(slot, ENCHANTS).map((enchant) => ({
+    enchantId: enchant.id,
+    group: enchant.group,
+    itemSlot: enchant.itemSlot,
+    statBonus: { ...enchant.statBonus },
+    reagents: reagentStatusOf(inventory, enchant.reagents),
+    reagentsMet: enchant.reagents.every(
+      (r) => countItemInSlots(inventory, r.itemId) >= r.count,
+    ),
+    skillGain: enchantSkillGain(skill, enchant),
+  }));
+}
+
+/**
+ * The exact, draw-free disenchant preview for one bag slot, shared by both
+ * worlds so the confirmation dialog the player agrees to is built by the same
+ * code the resolve charges by. Null whenever the slot cannot be broken down.
+ */
+export function buildDisenchantPreview(
+  inventory: readonly InvSlot[],
+  index: number,
+): DisenchantPlan | null {
+  if (!Number.isInteger(index) || index < 0 || index >= inventory.length) return null;
+  const slot = inventory[index];
+  // `noDiscard` is the same undestroyable marker the discard path honours: a
+  // quest or account-bound piece is never reachable through a second,
+  // materials-flavoured destroy button.
+  if (!slot || slot.count < 1 || ITEMS[slot.itemId]?.noDiscard) return null;
+  const item = disenchantInputFor(slot.itemId);
+  return item ? previewDisenchant(item) : null;
+}
+
+/** Re-check an `EnchantTarget` that arrived over the wire. A malformed target
+ *  (an unknown slot name, a fractional or negative bag index) names no copy at
+ *  all and is refused as `not_held` rather than trusted. */
+export function isValidEnchantTarget(target: EnchantTarget | undefined): target is EnchantTarget {
+  if (!target || typeof target !== 'object') return false;
+  if (target.where === 'worn') return (EQUIP_SLOTS as readonly string[]).includes(target.slot);
+  if (target.where === 'bag') return Number.isInteger(target.index) && target.index >= 0;
+  return false;
+}
+
+/** The def facts one disenchant needs, resolved off `ITEMS`. Returns null when
+ *  the id names nothing, so the caller refuses rather than inventing a piece. */
+export function disenchantInputFor(itemId: string): DisenchantInput | null {
+  const def = ITEMS[itemId];
+  if (!def) return null;
+  return {
+    itemId,
+    kind: def.kind,
+    ...(def.quality !== undefined && { quality: def.quality }),
+    ...(def.armorType !== undefined && { armorType: def.armorType }),
+    ...(def.stats !== undefined && { stats: def.stats }),
+    itemLevel: requiredLevelFor(def),
+  };
 }
 
 /**
@@ -1853,6 +2052,7 @@ export class Sim {
       gathering: emptyGatheringProficiency(),
       gatherReadyAt: {},
       gatherNodeId: null,
+      crafting: emptyCraftingProficiency(),
       deeds: freshDeedProgress(),
       deedQueue: [],
       pendingUnstuck: null,
@@ -1933,6 +2133,7 @@ export class Sim {
       // Both tolerate `undefined` and garbage: a pre-feature save loads as an
       // all-zero record / an empty chronicle rather than throwing.
       meta.gathering = normalizeGatheringProficiency(s.gatheringProficiency, GATHERING_MAX_SKILL);
+      meta.crafting = normalizeCraftingProficiency(s.craftingProficiency, CRAFTING_MAX_SKILL);
       meta.deeds = restoreDeedProgress(s.deeds);
       meta.delveMarks = s.delveMarks ?? 0;
       meta.delveClears = { ...(s.delveClears ?? {}) };
@@ -1952,7 +2153,7 @@ export class Sim {
     // resolver below consume it (they only ever read these flat numbers).
     meta.talentMods = computeTalentModifiers(cls, meta.talents);
     this.refreshKnownAbilities(meta, false);
-    recalcPlayerStats(player, cls, meta.equipment, meta.talentMods);
+    recalcPlayerStats(player, cls, meta.equipment, meta.talentMods, meta.equipmentInstances);
     if (savedState) {
       player.hp = Math.max(1, Math.min(player.maxHp, savedState.hp));
       player.resource =
@@ -2059,6 +2260,7 @@ export class Sim {
     // character's level, and stays sparse (zero counters and empty sets are
     // dropped, members sorted), so an untouched chronicle never churns a save.
     const gatheringProficiency = serializeGatheringProficiency(meta.gathering);
+    const craftingProficiency = serializeCraftingProficiency(meta.crafting);
     const savedDeeds = serializeDeedProgress(meta.deeds);
     const deeds = Object.keys(savedDeeds).length > 0 ? savedDeeds : undefined;
     const state: CharacterState = {
@@ -2119,6 +2321,7 @@ export class Sim {
         markClears: meta.delveDaily.markClears,
       },
       ...(gatheringProficiency && { gatheringProficiency }),
+      ...(craftingProficiency && { craftingProficiency }),
       ...(deeds && { deeds }),
     };
     return sanitizeRemovedZone1Content(state).state;
@@ -2359,6 +2562,27 @@ export class Sim {
   gatheringSkills(): PlayerProfessionSkill[] {
     return this.gatheringSkillsFor(this.primaryId);
   }
+  craftingSkills(): PlayerCraftSkill[] {
+    return this.craftingSkillsFor(this.primaryId);
+  }
+  craftRecipes(professionId?: CraftingProfessionId): CraftRecipeView[] {
+    return this.craftRecipesFor(this.primaryId, professionId);
+  }
+  craft(recipeId: string): void {
+    this.craftItem(recipeId, this.primaryId);
+  }
+  slotEnchants(slot: EquipSlot): EnchantOptionView[] {
+    return this.slotEnchantsFor(this.primaryId, slot);
+  }
+  applyEnchant(enchantId: string, target: EnchantTarget, confirmReplace?: boolean): void {
+    this.applyEnchantFor(enchantId, target, confirmReplace, this.primaryId);
+  }
+  disenchantPreview(index: number): DisenchantPlan | null {
+    return this.disenchantPreviewFor(this.primaryId, index);
+  }
+  disenchant(index: number): void {
+    this.disenchantItem(index, this.primaryId);
+  }
   deeds(): DeedsView {
     return this.deedsViewFor(this.primaryId);
   }
@@ -2484,7 +2708,13 @@ export class Sim {
     // from a sane baseline (virtualLevel never falls below the real level). Only
     // ever raises it — lifetimeXp is monotonic.
     r.meta.lifetimeXp = Math.max(r.meta.lifetimeXp, xpToReachLevel(r.e.level));
-    recalcPlayerStats(r.e, r.meta.cls, r.meta.equipment, this.playerMods(r.meta));
+    recalcPlayerStats(
+      r.e,
+      r.meta.cls,
+      r.meta.equipment,
+      this.playerMods(r.meta),
+      r.meta.equipmentInstances,
+    );
     r.e.hp = r.e.maxHp;
     if (r.e.resourceType === 'mana') r.e.resource = r.e.maxResource;
     this.refreshKnownAbilities(r.meta, false);
@@ -2503,7 +2733,7 @@ export class Sim {
   private recomputeTalents(meta: PlayerMeta): void {
     meta.talentMods = computeTalentModifiers(meta.cls, meta.talents);
     const e = this.entities.get(meta.entityId);
-    if (e) recalcPlayerStats(e, meta.cls, meta.equipment, this.playerMods(meta));
+    if (e) recalcPlayerStats(e, meta.cls, meta.equipment, this.playerMods(meta), meta.equipmentInstances);
     this.refreshKnownAbilities(meta, false);
     // The one funnel every allocation change passes through (spend, spec pick,
     // respec, loadout swap), so the chronicle needs no per-command hook.
@@ -3582,7 +3812,7 @@ export class Sim {
     }
     if (statsDirty && e.kind === 'player') {
       const meta = this.players.get(e.id);
-      if (meta) recalcPlayerStats(e, meta.cls, meta.equipment, this.playerMods(meta));
+      if (meta) recalcPlayerStats(e, meta.cls, meta.equipment, this.playerMods(meta), meta.equipmentInstances);
     }
   }
 
@@ -4828,7 +5058,7 @@ export class Sim {
             if (existing >= 0) {
               p.auras.splice(existing, 1);
               this.emit({ type: 'aura', targetId: p.id, name: ability.name, gained: false });
-              recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta));
+              recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta), meta.equipmentInstances);
               break;
             }
           }
@@ -4855,7 +5085,7 @@ export class Sim {
             sourceId: p.id,
             school: ability.school,
           });
-          recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta));
+          recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta), meta.equipmentInstances);
           break;
         }
         case 'gainResource': {
@@ -5015,7 +5245,13 @@ export class Sim {
     this.refreshMobLeashFromAction(source ?? null, target);
     if (target.kind === 'player') {
       const meta = this.players.get(target.id);
-      if (meta) recalcPlayerStats(target, meta.cls, meta.equipment, this.playerMods(meta));
+      if (meta) recalcPlayerStats(
+        target,
+        meta.cls,
+        meta.equipment,
+        this.playerMods(meta),
+        meta.equipmentInstances,
+      );
     }
   }
 
@@ -6683,7 +6919,7 @@ export class Sim {
       meta.xp -= xpForLevel(p.level);
       p.level++;
       meta.counters.levelUps++;
-      recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta));
+      recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta), meta.equipmentInstances);
       p.hp = p.maxHp;
       if (p.resourceType === 'mana') p.resource = p.maxResource;
       this.emit({ type: 'levelup', level: p.level, pid: p.id });
@@ -9126,7 +9362,7 @@ export class Sim {
     if (idx < 0) return false;
     target.auras.splice(idx, 1);
     const meta = this.players.get(target.id);
-    if (meta) recalcPlayerStats(target, meta.cls, meta.equipment, meta.talentMods);
+    if (meta) recalcPlayerStats(target, meta.cls, meta.equipment, meta.talentMods, meta.equipmentInstances);
     this.emit({ type: 'aura', targetId: target.id, name, gained: true });
     return true;
   }
@@ -10973,7 +11209,7 @@ export class Sim {
     if (taken.instances[0]) meta.equipmentInstances[slot] = taken.instances[0];
     else delete meta.equipmentInstances[slot];
     meta.equipment[slot] = itemId;
-    recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta));
+    recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta), meta.equipmentInstances);
     this.emit({ type: 'log', text: `Equipped ${def.name}.`, color: '#8f8', pid: meta.entityId });
   }
 
@@ -10993,7 +11229,7 @@ export class Sim {
     // not a fresh acquisition, so it must not fire collect-quest credit. No quest
     // today keys on an unequip, so there is nothing to award here regardless.
     this.addItemSilent(itemId, 1, meta, instance);
-    recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta));
+    recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta), meta.equipmentInstances);
     const def = ITEMS[itemId];
     this.emit({
       type: 'log',
@@ -11299,6 +11535,336 @@ export class Sim {
     const meta = this.players.get(pid);
     if (!meta) return [];
     return gatheringSkillsView(meta.gathering, GATHERING_MAX_SKILL);
+  }
+
+  // -------------------------------------------------------------------------
+  // Crafting and enchanting (wave 2)
+  //
+  // The whole subsystem resolves server-side and INSTANTLY: there is no cast,
+  // no station and no learn step (see content/professions), so a command either
+  // completes or is denied in the same call. Every mechanic lives in the pure
+  // `professions/` modules; everything below is wiring.
+  //
+  // The draw contract these methods must preserve, because a change to it
+  // reorders the world's rng and desyncs every player:
+  //   craft       exactly 1 draw per success, 0 on every denial
+  //   disenchant  exactly 1 draw per success, 0 on every denial
+  //   enchant     0 draws, always, on apply AND on the destructive replace
+  // That is why each deny arm returns from the rng-FREE half (`beginCraft` /
+  // `beginEnchant` / `previewDisenchant`) before the resolve is ever reached.
+  // -------------------------------------------------------------------------
+
+  // Bank a craft-skill delta and announce it. The clamp already happened inside
+  // the professions module, so a zero delta is the normal grayed-out/capped
+  // case and stays silent, exactly like `applyProficiencyGain`.
+  private applyCraftSkillGain(
+    meta: PlayerMeta,
+    professionId: CraftingProfessionId,
+    gain: number,
+  ): void {
+    if (gain <= 0) return;
+    meta.crafting[professionId] += gain;
+    this.emit({
+      type: 'craftSkill',
+      professionId,
+      skill: meta.crafting[professionId],
+      maxSkill: CRAFTING_MAX_SKILL[professionId],
+      pid: meta.entityId,
+    });
+  }
+
+  // The one shared "can this player act at all" gate for the three commands.
+  // Returns true (and tells the player why) when the action cannot start.
+  //
+  // These two refusals are NOT crafting's own: they are the same being-dead and
+  // being-busy gates every player action has, so they reuse the exact English
+  // literals the gather and interaction paths already emit and the client
+  // matcher (src/ui/sim_i18n.ts) already recognizes. Keeping them off the deny
+  // events is what lets each deny union stay a 1:1 mirror of the pure module's.
+  private craftBlocked(p: Entity, pid: number): boolean {
+    if (p.dead) {
+      this.error(pid, "You can't do that while dead.");
+      return true;
+    }
+    if (p.castingAbility || isConsuming(p)) {
+      this.error(pid, 'You are busy.');
+      return true;
+    }
+    return false;
+  }
+
+  /** The flat attempt literal both halves of a craft take. */
+  private craftAttemptFor(recipe: CraftRecipeDef, meta: PlayerMeta, p: Entity): CraftAttempt {
+    return {
+      recipe,
+      skill: meta.crafting[recipe.professionId],
+      maxSkill: CRAFTING_MAX_SKILL[recipe.professionId],
+      inventory: meta.inventory,
+      crafterName: p.name,
+      crafterId: meta.entityId,
+      output: outputInfoFor(recipe.resultItemId),
+    };
+  }
+
+  /**
+   * Craft one recipe. EXACTLY ONE rng draw (the masterwork proc) on success and
+   * ZERO on every denial: each deny arm below returns from `beginCraft`, which
+   * is the rng-free half.
+   */
+  craftItem(recipeId: string, pid?: number): void {
+    const r = this.resolve(pid);
+    if (!r) return;
+    const { meta, e: p } = r;
+    if (this.craftBlocked(p, meta.entityId)) return;
+    // An id no recipe knows is unreachable from the shipped window (it only
+    // ever sends ids craftRecipes() handed it), so it is a tampered command:
+    // refused silently, exactly like equipItem on an unknown item id.
+    const recipe = recipeById(recipeId);
+    if (!recipe) return;
+    const attempt = this.craftAttemptFor(recipe, meta, p);
+    const start = beginCraft(attempt);
+    if (!start.ok) {
+      this.emit({
+        type: 'craftDeny',
+        recipeId,
+        professionId: recipe.professionId,
+        reason: 'insufficient_materials',
+        reagents: start.reagents,
+        pid: meta.entityId,
+      });
+      return;
+    }
+    // The single draw. `resolveCraft` consumes through `removeFromSlots` (plain
+    // stacks before instanced ones, so a reagent cost can never eat a signed or
+    // enchanted copy) and grants through `addToSlots`.
+    const res = resolveCraft(attempt, this.rng);
+    if (!res.ok) {
+      // Unreachable: `beginCraft` already passed and nothing between the two can
+      // change the bag. Kept as the honest deny for a torn state.
+      this.emit({
+        type: 'craftDeny',
+        recipeId,
+        professionId: recipe.professionId,
+        reason: 'insufficient_materials',
+        reagents: start.reagents,
+        pid: meta.entityId,
+      });
+      return;
+    }
+    this.emit({
+      type: 'craftResult',
+      recipeId: res.recipeId,
+      professionId: res.professionId,
+      itemId: res.itemId ?? recipe.resultItemId,
+      count: res.count ?? recipe.resultCount,
+      consumed: res.consumed.map((c) => ({ itemId: c.itemId, count: c.count })),
+      skillGain: res.skillGain,
+      nextSkill: res.nextSkill,
+      // The maker's bond is stamped on crafted GEAR only, so the line that
+      // names it rides only when a signature was actually minted.
+      ...(isSignableCraftOutput(attempt.output.kind) && { signer: attempt.crafterName }),
+      ...(res.signedReagentUsed && { signedReagentUsed: true }),
+      ...(res.masterwork && { masterwork: true }),
+      ...(res.masterworkStats && { masterworkStats: { ...res.masterworkStats } }),
+      pid: meta.entityId,
+    });
+    // The grant went straight into the bag, so quest credit is the one side
+    // effect `addItem` would have contributed and it is called explicitly (same
+    // shape as `completeHarvest`).
+    this.onInventoryChangedForQuests(meta);
+    this.applyCraftSkillGain(meta, res.professionId, res.skillGain);
+  }
+
+  /**
+   * Apply (or, with explicit consent, destructively replace) one enchant on one
+   * named copy. DRAWS NOTHING on any path: enchanting has no randomness at all,
+   * which is why `resolveEnchant` does not even take an `Rng`.
+   */
+  applyEnchantFor(
+    enchantId: string,
+    target: EnchantTarget,
+    confirmReplace: boolean | undefined,
+    pid?: number,
+  ): void {
+    const r = this.resolve(pid);
+    if (!r) return;
+    const { meta, e: p } = r;
+    if (this.craftBlocked(p, meta.entityId)) return;
+    // Tamper-only, like an unknown recipe id above: refused silently.
+    const enchant = enchantById(enchantId);
+    if (!enchant) return;
+    // The target arrives from a wire command, so its shape is re-checked here
+    // rather than trusted. A malformed target names no copy at all, which IS
+    // the module's own not_held.
+    if (!isValidEnchantTarget(target)) {
+      this.emit({ type: 'enchantDeny', enchantId, reason: 'not_held', pid: meta.entityId });
+      return;
+    }
+    const worn =
+      target.where === 'worn'
+        ? {
+            ...(meta.equipment[target.slot] !== undefined && {
+              itemId: meta.equipment[target.slot],
+            }),
+            ...(meta.equipmentInstances[target.slot] !== undefined && {
+              instance: meta.equipmentInstances[target.slot],
+            }),
+          }
+        : undefined;
+    const targetItemId =
+      target.where === 'worn' ? meta.equipment[target.slot] : meta.inventory[target.index]?.itemId;
+    const attempt: EnchantAttempt = {
+      enchant,
+      target,
+      inventory: meta.inventory,
+      ...(worn && { worn }),
+      targetItemSlot: targetItemId !== undefined ? ITEMS[targetItemId]?.slot : undefined,
+      skill: meta.crafting.enchanting,
+      // Strict boolean: a truthy non-boolean from an untrusted caller must never
+      // read as consent to destroy an existing enchant.
+      ...(confirmReplace === true && { confirmReplace: true }),
+    };
+    const start = beginEnchant(attempt);
+    if (!start.ok) {
+      this.emit({
+        type: 'enchantDeny',
+        enchantId,
+        reason: start.reason ?? 'not_held',
+        ...(start.itemId !== undefined && { itemId: start.itemId }),
+        ...(start.replacedEnchantId !== undefined && {
+          replacedEnchantId: start.replacedEnchantId,
+        }),
+        reagents: start.reagents,
+        pid: meta.entityId,
+      });
+      return;
+    }
+    const res = resolveEnchant(attempt, enchantById);
+    if (!res.ok || !res.instance) {
+      // Reachable only when the victim's marker id no longer names an enchant
+      // (a hand-edited save): refusing beats stacking an unsubtractable bonus.
+      this.emit({
+        type: 'enchantDeny',
+        enchantId,
+        reason: res.reason ?? 'already_enchanted',
+        ...(res.itemId !== undefined && { itemId: res.itemId }),
+        reagents: start.reagents,
+        pid: meta.entityId,
+      });
+      return;
+    }
+    if (res.applied === 'worn' && target.where === 'worn') {
+      // The module never touches equipment (it is not its to hold), so the worn
+      // arm is written here and the derived stats are re-baked, exactly the way
+      // the equip path does it.
+      meta.equipmentInstances[target.slot] = res.instance;
+      recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta), meta.equipmentInstances);
+    }
+    this.emit({
+      type: 'enchantResult',
+      enchantId: res.enchantId,
+      itemId: res.itemId ?? '',
+      where: res.applied ?? target.where,
+      ...(target.where === 'worn' && { slot: target.slot }),
+      ...(res.replaced && { replaced: true }),
+      ...(res.replacedEnchantId !== undefined && { replacedEnchantId: res.replacedEnchantId }),
+      consumed: res.consumed.map((c) => ({ itemId: c.itemId, count: c.count })),
+      pid: meta.entityId,
+    });
+    this.onInventoryChangedForQuests(meta);
+    this.applyCraftSkillGain(meta, 'enchanting', res.skillGain);
+  }
+
+  /**
+   * Destroy one BAGGED piece for its arcane materials. EXACTLY ONE rng draw (the
+   * ladder material's bonus unit) on success and ZERO on every denial.
+   */
+  disenchantItem(index: number, pid?: number): void {
+    const r = this.resolve(pid);
+    if (!r) return;
+    const { meta, e: p } = r;
+    if (this.craftBlocked(p, meta.entityId)) return;
+    const slot =
+      Number.isInteger(index) && index >= 0 && index < meta.inventory.length
+        ? meta.inventory[index]
+        : undefined;
+    if (!slot || slot.count < 1) {
+      this.emit({ type: 'disenchantDeny', itemId: '', reason: 'not_held', pid: meta.entityId });
+      return;
+    }
+    // The SAME draw-free gate the confirmation preview is built from, so a
+    // refusal never reaches the resolve's draw and the dialog can never offer a
+    // yield the command would then refuse.
+    const item = disenchantInputFor(slot.itemId);
+    if (!item || !buildDisenchantPreview(meta.inventory, index)) {
+      this.emit({
+        type: 'disenchantDeny',
+        itemId: slot.itemId,
+        reason: 'not_disenchantable',
+        pid: meta.entityId,
+      });
+      return;
+    }
+    const res = resolveDisenchant(
+      { item, index, inventory: meta.inventory, skill: meta.crafting.enchanting },
+      this.rng,
+    );
+    if (!res.ok) {
+      this.emit({
+        type: 'disenchantDeny',
+        itemId: res.itemId,
+        reason: res.reason ?? 'not_held',
+        pid: meta.entityId,
+      });
+      return;
+    }
+    this.emit({
+      type: 'disenchantResult',
+      itemId: res.itemId,
+      materialItemId: res.materialItemId ?? '',
+      count: res.count ?? 0,
+      ...(res.secondaryItemId !== undefined && { secondaryItemId: res.secondaryItemId }),
+      ...(res.secondaryCount !== undefined && { secondaryCount: res.secondaryCount }),
+      pid: meta.entityId,
+    });
+    this.onInventoryChangedForQuests(meta);
+    this.applyCraftSkillGain(meta, 'enchanting', res.skillGain);
+  }
+
+  /** The read-only "your crafts" rows the HUD paints (ids + numbers). */
+  craftingSkillsFor(pid: number): PlayerCraftSkill[] {
+    const meta = this.players.get(pid);
+    if (!meta) return [];
+    return craftingSkillsView(meta.crafting, CRAFTING_MAX_SKILL);
+  }
+
+  /** The raw per-craft counters, for the server's self-wire (the client derives
+   *  its own rows from them through the same `craftingSkillsView`). */
+  craftingProficiencyFor(pid: number): CraftingProficiency {
+    return this.players.get(pid)?.crafting ?? emptyCraftingProficiency();
+  }
+
+  /** Every recipe (optionally one craft's) with its reagent status resolved
+   *  against this player's bag. Draw-free. */
+  craftRecipesFor(pid: number, professionId?: CraftingProfessionId): CraftRecipeView[] {
+    const meta = this.players.get(pid);
+    if (!meta) return [];
+    return buildCraftRecipeViews(meta.inventory, meta.crafting, professionId);
+  }
+
+  /** The enchants valid for one equipment slot, with reagent status. Draw-free. */
+  slotEnchantsFor(pid: number, slot: EquipSlot): EnchantOptionView[] {
+    const meta = this.players.get(pid);
+    if (!meta) return [];
+    return buildEnchantOptionViews(slot, meta.inventory, meta.crafting.enchanting);
+  }
+
+  /** The exact, draw-free preview the destructive disenchant confirmation shows
+   *  before the player agrees to break the piece in bag slot `index`. */
+  disenchantPreviewFor(pid: number, index: number): DisenchantPlan | null {
+    const meta = this.players.get(pid);
+    if (!meta) return null;
+    return buildDisenchantPreview(meta.inventory, index);
   }
 
   useItem(itemId: string, pid?: number): ItemUseResult | undefined {
@@ -12462,7 +13028,7 @@ export class Sim {
     p.facing = 0;
     p.auras = [];
     p.ccDr.clear();
-    recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta));
+    recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta), meta.equipmentInstances);
     p.hp = p.maxHp;
     p.resource = p.resourceType === 'mana' ? p.maxResource : p.resourceType === 'energy' ? 100 : 0;
     p.targetId = null;
@@ -12484,7 +13050,7 @@ export class Sim {
     p.dead = false;
     p.auras = [];
     p.ccDr.clear();
-    recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta));
+    recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta), meta.equipmentInstances);
     p.hp = p.maxHp;
     p.resource = p.resourceType === 'mana' ? p.maxResource : p.resourceType === 'energy' ? 100 : 0;
     p.targetId = null;
@@ -12654,12 +13220,12 @@ export class Sim {
     // Recalc with a clean aura list first, so `p.stats` is the BASE the sickness
     // percentage is taken from; then push the debuff and recalc again, keeping
     // every derived stat inside the one place stats are ever derived.
-    recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta));
+    recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta), meta.equipmentInstances);
     const sickness = unstuckSicknessAura(p.level, p.stats, p.id);
     if (sickness) {
       p.auras.push(sickness);
       this.emit({ type: 'aura', targetId: p.id, name: sickness.name, gained: true });
-      recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta));
+      recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta), meta.equipmentInstances);
     }
     if (res.revive) {
       p.hp = p.maxHp;
@@ -14295,7 +14861,13 @@ export class Sim {
     }
     if (statsDirty && target.kind === 'player') {
       const meta = this.players.get(target.id);
-      if (meta) recalcPlayerStats(target, meta.cls, meta.equipment, this.playerMods(meta));
+      if (meta) recalcPlayerStats(
+        target,
+        meta.cls,
+        meta.equipment,
+        this.playerMods(meta),
+        meta.equipmentInstances,
+      );
     }
   }
 
@@ -15022,7 +15594,7 @@ export class Sim {
       e.ccDr.clear();
     }
     const meta = this.players.get(e.id);
-    if (meta) recalcPlayerStats(e, meta.cls, meta.equipment, this.playerMods(meta));
+    if (meta) recalcPlayerStats(e, meta.cls, meta.equipment, this.playerMods(meta), meta.equipmentInstances);
     e.hp = e.maxHp;
     e.resource = e.resourceType === 'mana' ? e.maxResource : e.resourceType === 'energy' ? 100 : 0;
     e.targetId = null;
@@ -15272,7 +15844,7 @@ export class Sim {
     meta.fiestaSpecial = sp;
     meta.known = abilitiesKnownAt(meta.cls, e.level, meta.fiestaMods);
     const frac = e.maxHp > 0 ? e.hp / e.maxHp : 1;
-    recalcPlayerStats(e, meta.cls, meta.equipment, meta.fiestaMods);
+    recalcPlayerStats(e, meta.cls, meta.equipment, meta.fiestaMods, meta.equipmentInstances);
     e.hp = e.dead ? 0 : Math.max(1, Math.round(e.maxHp * frac));
   }
 
@@ -15290,7 +15862,7 @@ export class Sim {
     meta.fiestaMods = null;
     meta.fiestaSpecial = {};
     meta.known = abilitiesKnownAt(meta.cls, e.level, meta.talentMods);
-    recalcPlayerStats(e, meta.cls, meta.equipment, meta.talentMods);
+    recalcPlayerStats(e, meta.cls, meta.equipment, meta.talentMods, meta.equipmentInstances);
   }
 
   // Standardize a fighter to a balanced level-20 build for the bout. The
@@ -15303,7 +15875,7 @@ export class Sim {
     meta.talents = defaultBuild(meta.cls, talentPointsAtLevel(FIESTA_STANDARD_LEVEL));
     meta.talentMods = computeTalentModifiers(meta.cls, meta.talents);
     meta.known = abilitiesKnownAt(meta.cls, e.level, this.playerMods(meta));
-    recalcPlayerStats(e, meta.cls, meta.equipment, this.playerMods(meta));
+    recalcPlayerStats(e, meta.cls, meta.equipment, this.playerMods(meta), meta.equipmentInstances);
   }
 
   // Undo fiestaStandardize: restore the player's real level/xp/talents.
@@ -15316,7 +15888,7 @@ export class Sim {
     meta.talentMods = computeTalentModifiers(meta.cls, meta.talents);
     meta.fiestaRestore = null;
     meta.known = abilitiesKnownAt(meta.cls, e.level, meta.talentMods);
-    recalcPlayerStats(e, meta.cls, meta.equipment, meta.talentMods);
+    recalcPlayerStats(e, meta.cls, meta.equipment, meta.talentMods, meta.equipmentInstances);
   }
 
   // Player command: lock in one of the augments currently on offer.
@@ -18172,7 +18744,13 @@ export class Sim {
     p.facing = 0;
     p.auras = [];
     p.ccDr.clear();
-    recalcPlayerStats(p, r.meta.cls, r.meta.equipment, r.meta.talentMods);
+    recalcPlayerStats(
+      p,
+      r.meta.cls,
+      r.meta.equipment,
+      r.meta.talentMods,
+      r.meta.equipmentInstances,
+    );
     p.hp = p.maxHp;
     p.resource = p.resourceType === 'mana' ? p.maxResource : p.resourceType === 'energy' ? 100 : 0;
     p.targetId = null;
@@ -18342,7 +18920,13 @@ export class Sim {
     p.facing = 0;
     p.auras = [];
     p.ccDr.clear();
-    recalcPlayerStats(p, r.meta.cls, r.meta.equipment, r.meta.talentMods);
+    recalcPlayerStats(
+      p,
+      r.meta.cls,
+      r.meta.equipment,
+      r.meta.talentMods,
+      r.meta.equipmentInstances,
+    );
     p.hp = Math.max(1, Math.round(p.maxHp * 0.5));
     p.resource =
       p.resourceType === 'mana'

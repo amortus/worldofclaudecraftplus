@@ -1,6 +1,16 @@
 import type { Role, SavedLoadout, TalentAllocation } from './sim/content/talents';
 import type { DeedCategory } from './sim/deeds';
-import type { PlayerProfessionSkill } from './sim/professions';
+import type {
+  CraftingProfessionId,
+  DisenchantPlan,
+  EnchantGroup,
+  EnchantStatBonus,
+  EnchantTarget,
+  MasteryState,
+  PlayerCraftSkill,
+  PlayerProfessionSkill,
+  ReagentStatus,
+} from './sim/professions';
 import type { GuildLeaderboardPage, LeaderboardPage } from './sim/leaderboard_page';
 import type { Ante, LootTier, PickAction, VisibleCell } from './sim/lockpick';
 import type { MarketQuery } from './sim/market_query';
@@ -123,6 +133,46 @@ export interface DelveDailyInfo {
   date: string;
   firstClearXp: string[];
   markClears: number;
+}
+
+// One recipe row of the crafting window, already resolved against the viewer's
+// bag. Ids and numbers only (this seam is string-free): the client supplies
+// every label, colour and localized line.
+export interface CraftRecipeView {
+  recipeId: string;
+  professionId: CraftingProfessionId;
+  resultItemId: string;
+  resultCount: number;
+  /** Where the recipe sits on the shared 25-point mastery ladder, in points. */
+  skillReq: number;
+  /** The output's content level (also its equip requirement). */
+  level: number;
+  recipeTier: number;
+  capabilityTier: number;
+  /** The four-state colour the row is painted in (full / reduced / minimal / none). */
+  masteryState: MasteryState;
+  /** Skill this craft would teach, already clamped. 0 means grey or capped. */
+  skillGain: number;
+  /** Masterwork proc odds in [0, 1]. Draw-free: reading this rolls nothing. */
+  masterworkChance: number;
+  /** Every reagent line: required, held, met. In the recipe's declared order. */
+  reagents: ReagentStatus[];
+  /** True when every reagent line is met. */
+  canCraft: boolean;
+}
+
+// One enchant row of the per-slot picker, resolved against the viewer's bag.
+export interface EnchantOptionView {
+  enchantId: string;
+  group: EnchantGroup;
+  itemSlot: EquipSlot;
+  /** The flat bonus this enchant bakes in. Frozen once applied. */
+  statBonus: EnchantStatBonus;
+  reagents: ReagentStatus[];
+  /** True when the bag holds every reagent. Says nothing about the target: the
+   *  already-enchanted and wrong-slot gates resolve server-side on apply. */
+  reagentsMet: boolean;
+  skillGain: number;
 }
 
 // A Marks-vendor (Brother Halven) shop entry resolved against the player's clears:
@@ -553,6 +603,29 @@ export interface IWorld {
   // proficiency, that profession's ceiling) for the professions panel. Always
   // one row per profession, in a stable order.
   gatheringSkills(): PlayerProfessionSkill[];
+  // Crafting professions: the local player's rows (craft id, current skill, the
+  // 125 ceiling) for the crafting panel. One row per craft, stable order.
+  craftingSkills(): PlayerCraftSkill[];
+  // Every recipe (optionally one craft's), each already resolved against the
+  // viewer's bag: reagent rows, mastery state, skill gain and the masterwork
+  // odds. Every recipe is known from the start, so there is no separate
+  // "known" list; `canCraft` is the availability the window greys rows on.
+  craftRecipes(professionId?: CraftingProfessionId): CraftRecipeView[];
+  // Craft one recipe. Server-authoritative: the client renders the outcome from
+  // the craftComplete / craftDeny events, it never predicts one.
+  craft(recipeId: string): void;
+  // The enchants that target one equipment slot, grouped base / runed / greater,
+  // each with its reagent status against the viewer's bag.
+  slotEnchants(slot: EquipSlot): EnchantOptionView[];
+  // Apply one enchant to one named copy (a worn slot or a bag index).
+  // `confirmReplace` is the explicit consent to DESTROY an existing enchant;
+  // without it an already-enchanted target is denied rather than overwritten.
+  applyEnchant(enchantId: string, target: EnchantTarget, confirmReplace?: boolean): void;
+  // The exact, draw-free yield preview the destructive disenchant confirmation
+  // shows for the piece in bag slot `index`. Null when it cannot be broken down.
+  disenchantPreview(index: number): DisenchantPlan | null;
+  // Destroy the bagged piece at `index` for its arcane materials.
+  disenchant(index: number): void;
   // The Book of Deeds readout. Derived, so a method rather than a property:
   // both worlds build it from the same pure helper over the raw progress.
   deeds(): DeedsView;

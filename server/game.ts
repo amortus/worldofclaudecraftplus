@@ -13,6 +13,7 @@ import {
   zoneAt,
 } from '../src/sim/data';
 import { sanitizeMarketQuery } from '../src/sim/market_query';
+import type { EnchantTarget } from '../src/sim/professions';
 import { parseMoveInputFrame } from '../src/sim/move_input';
 import type { PetState, PlayerMeta } from '../src/sim/sim';
 import { MAX_CHAT_MESSAGE_LEN, RAID_MAX, Sim } from '../src/sim/sim';
@@ -2235,6 +2236,38 @@ export class GameServer {
       case 'market_collect':
         sim.marketCollect(pid);
         break;
+      // Crafting and enchanting. Every outcome (reagent consumption, the
+      // masterwork proc, the enchant bake, the disenchant yield) resolves inside
+      // the Sim; the client only renders the resulting events.
+      case 'craft':
+        if (typeof msg.recipeId === 'string') sim.craftItem(msg.recipeId, pid);
+        break;
+      case 'enchant': {
+        if (typeof msg.enchantId !== 'string') break;
+        // The target is rebuilt field by field from primitives rather than
+        // passed through: one socket must never hand the Sim a shape it did not
+        // validate.
+        const raw = msg.target;
+        if (!raw || typeof raw !== 'object') break;
+        let target: EnchantTarget | null = null;
+        if (
+          raw.where === 'worn' &&
+          typeof raw.slot === 'string' &&
+          (EQUIP_SLOTS as readonly string[]).includes(raw.slot)
+        ) {
+          target = { where: 'worn', slot: raw.slot as EquipSlot };
+        } else if (raw.where === 'bag' && Number.isInteger(raw.index) && raw.index >= 0) {
+          target = { where: 'bag', index: raw.index };
+        }
+        if (!target) break;
+        // Strict boolean: only an explicit `true` is consent to destroy an
+        // existing enchant.
+        sim.applyEnchantFor(msg.enchantId, target, msg.confirmReplace === true, pid);
+        break;
+      }
+      case 'disenchant':
+        if (Number.isInteger(msg.index) && msg.index >= 0) sim.disenchantItem(msg.index, pid);
+        break;
       // dev/ops commands, only when ALLOW_DEV_COMMANDS=1 (never in production)
       case 'dev_level': {
         if (process.env.ALLOW_DEV_COMMANDS === '1' && typeof msg.level === 'number') {
@@ -2657,6 +2690,14 @@ export class GameServer {
     // derives its own rows from them via the same `gatheringSkillsView` helper
     // the sim uses, so the derivation is never duplicated.
     maybe('gather', meta.gathering);
+    // Crafting skill, the same raw per-craft counters shape (the client derives
+    // its rows through the sim's own `craftingSkillsView`).
+    maybe('craft', meta.crafting);
+    // Per-copy identity of the WORN pieces. The bag's instances already ride
+    // `inv`; without this the enchant picker could not tell an already-enchanted
+    // worn piece from a plain one, and would have to guess at the destructive
+    // replace confirmation.
+    maybe('equipinst', meta.equipmentInstances);
     // The chronicle in its SPARSE persisted form, not the built view: the view
     // is 53 rows and would resend on every kill, while this is counters + marks
     // + earned ids and both sides rebuild the view from the same pure helper.

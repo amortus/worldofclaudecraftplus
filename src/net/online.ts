@@ -12,28 +12,43 @@ import {
   type TalentAllocation,
   talentPointsAtLevel,
 } from '../sim/content/talents';
-import { GATHERING_MAX_SKILL } from '../sim/content/professions';
+import { CRAFTING_MAX_SKILL, GATHERING_MAX_SKILL } from '../sim/content/professions';
 import { abilitiesKnownAt, CLASSES, NPCS, resolveDelveShopOffers } from '../sim/data';
 import { type DeedProgress, freshDeedProgress, restoreDeedProgress } from '../sim/deeds';
-import { parseInvSlots } from '../sim/item_instance';
+import { parseInstanceMap, parseInvSlots } from '../sim/item_instance';
 import {
+  type CraftingProficiency,
+  type CraftingProfessionId,
+  craftingSkillsView,
+  type DisenchantPlan,
+  emptyCraftingProficiency,
   emptyGatheringProficiency,
+  type EnchantTarget,
   type GatheringProficiency,
   gatheringSkillsView,
+  normalizeCraftingProficiency,
   normalizeGatheringProficiency,
+  type PlayerCraftSkill,
   type PlayerProfessionSkill,
 } from '../sim/professions';
 import { LEADERBOARD_PAGE_SIZE } from '../sim/leaderboard_page';
 import type { Ante, PickAction } from '../sim/lockpick';
 import type { MarketQuery } from '../sim/market_query';
 import { normalizeMoveFacing, sanitizeMoveInput } from '../sim/move_input';
-import { buildDeedsView, type ResolvedAbility } from '../sim/sim';
+import {
+  buildCraftRecipeViews,
+  buildDeedsView,
+  buildDisenchantPreview,
+  buildEnchantOptionViews,
+  type ResolvedAbility,
+} from '../sim/sim';
 import { SpatialGrid } from '../sim/spatial';
 import {
   type Entity,
   type EquipSlot,
   emptyMoveInput,
   type InvSlot,
+  type ItemInstance,
   type LootRollChoice,
   type LootRollPrompt,
   type MasterLootThreshold,
@@ -47,12 +62,14 @@ import {
   type AccountCosmetics,
   type ArenaInfo,
   type CharacterSearchResult,
+  type CraftRecipeView,
   type DelveCompanionInfo,
   type DelveDailyInfo,
   type DeedsView,
   type DelveRunInfo,
   type DelveShopOfferView,
   type DuelInfo,
+  type EnchantOptionView,
   type FriendInfo,
   type GuildLeaderboardPage,
   type IWorld,
@@ -836,6 +853,14 @@ export class ClientWorld implements IWorld {
   // Gathering proficiency, mirrored raw from the self-wire; the rows the panel
   // paints are derived locally through the sim's own `gatheringSkillsView`.
   private gatheringProficiency: GatheringProficiency = emptyGatheringProficiency();
+  // Crafting skill, mirrored raw from the self-wire exactly like the gathering
+  // counters; the rows the panel paints are derived locally through the sim's
+  // own `craftingSkillsView`, so the derivation is never duplicated.
+  private craftingProficiency: CraftingProficiency = emptyCraftingProficiency();
+  // Per-copy identity of the WORN pieces, mirrored from the self-wire. The bag's
+  // instances already ride `inv`; this is what lets the enchant picker tell an
+  // already-enchanted worn piece from a plain one before it sends the command.
+  equipmentInstances: Partial<Record<EquipSlot, ItemInstance>> = {};
   // The chronicle, mirrored in its sparse persisted form and restored through
   // the evaluator's own `restoreDeedProgress`, so the view is built by the same
   // pure helper the offline Sim uses.
@@ -1681,6 +1706,15 @@ export class ClientWorld implements IWorld {
       if (s.gather !== undefined) {
         this.gatheringProficiency = normalizeGatheringProficiency(s.gather, GATHERING_MAX_SKILL);
       }
+      if (s.craft !== undefined) {
+        this.craftingProficiency = normalizeCraftingProficiency(s.craft, CRAFTING_MAX_SKILL);
+      }
+      if (s.equipinst !== undefined) {
+        this.equipmentInstances = parseInstanceMap(s.equipinst) as Partial<
+          Record<EquipSlot, ItemInstance>
+        >;
+        this.invChanged = true;
+      }
       if (s.deeds !== undefined) this.deedProgress = restoreDeedProgress(s.deeds);
       if (s.unstuck !== undefined) this.unstuckSeconds = s.unstuck ?? null;
       // camera follows server-side facing changes when not mouselooking
@@ -2155,6 +2189,32 @@ export class ClientWorld implements IWorld {
   }
   gatheringSkills(): PlayerProfessionSkill[] {
     return gatheringSkillsView(this.gatheringProficiency, GATHERING_MAX_SKILL);
+  }
+  craftingSkills(): PlayerCraftSkill[] {
+    return craftingSkillsView(this.craftingProficiency, CRAFTING_MAX_SKILL);
+  }
+  craftRecipes(professionId?: CraftingProfessionId): CraftRecipeView[] {
+    return buildCraftRecipeViews(this.inventory, this.craftingProficiency, professionId);
+  }
+  craft(recipeId: string): void {
+    this.cmd({ cmd: 'craft', recipeId });
+  }
+  slotEnchants(slot: EquipSlot): EnchantOptionView[] {
+    return buildEnchantOptionViews(slot, this.inventory, this.craftingProficiency.enchanting);
+  }
+  applyEnchant(enchantId: string, target: EnchantTarget, confirmReplace?: boolean): void {
+    this.cmd({
+      cmd: 'enchant',
+      enchantId,
+      target,
+      ...(confirmReplace === true && { confirmReplace: true }),
+    });
+  }
+  disenchantPreview(index: number): DisenchantPlan | null {
+    return buildDisenchantPreview(this.inventory, index);
+  }
+  disenchant(index: number): void {
+    this.cmd({ cmd: 'disenchant', index });
   }
   deeds(): DeedsView {
     return buildDeedsView(this.deedProgress);

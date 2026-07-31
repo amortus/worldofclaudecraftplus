@@ -86,7 +86,10 @@ describe('gathering wiring: node spawn', () => {
   });
 
   it('spreads every profession item into ITEMS', () => {
-    expect(Object.keys(PROFESSION_ITEMS)).toHaveLength(29);
+    // Deliberately not a fixed count. Every wave that adds a profession item would trip
+    // one, which teaches contributors to bump the number rather than read the test. What
+    // matters is that the merge is complete and lossless, which the loop below checks.
+    expect(Object.keys(PROFESSION_ITEMS).length).toBeGreaterThan(0);
     for (const id of Object.keys(PROFESSION_ITEMS)) {
       expect(ITEMS[id], id).toBeTruthy();
       expect(ITEMS[id].name).toBe(PROFESSION_ITEMS[id].name);

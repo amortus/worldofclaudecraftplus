@@ -1,7 +1,15 @@
 import type { TalentModifiers } from './content/talents';
 import { CLASSES, ITEMS, MOBS, type NpcDef } from './data';
 import { meetsLevelRequirement } from './item_level_req';
-import type { Entity, EquipSlot, MobTemplate, PlayerClass, Stats, Vec3 } from './types';
+import type {
+  Entity,
+  EquipSlot,
+  ItemInstance,
+  MobTemplate,
+  PlayerClass,
+  Stats,
+  Vec3,
+} from './types';
 import { EQUIP_SLOTS, SPELL_POWER_PER_INT } from './types';
 
 function baseEntity(id: number, pos: Vec3): Entity {
@@ -161,11 +169,18 @@ function manaFromIntellect(int: number): number {
 // Recompute all derived stats for the player from class, level, gear, buffs, and
 // precomputed talent modifiers. `mods` is the flat struct resolved at
 // allocation/respec time (computeTalentModifiers) — this never walks the tree.
+//
+// `instances` is the worn pieces' per-copy identity (`PlayerMeta.equipmentInstances`).
+// A copy carrying `rolled.stats` (an applied enchant, or a masterwork craft) sums
+// that bonus ON TOP of its def's own stats, which is what makes an enchant change
+// the character sheet at all. Optional so every caller that has no instance map
+// (the character-sheet preview, tests) behaves exactly as it did before.
 export function recalcPlayerStats(
   e: Entity,
   cls: PlayerClass,
   equipment: PlayerEquipment,
   mods?: TalentModifiers,
+  instances?: Partial<Record<EquipSlot, ItemInstance>>,
 ): void {
   const def = CLASSES[cls];
   const lvl = e.level;
@@ -192,6 +207,17 @@ export function recalcPlayerStats(
     // Spell Power affix respects the same level gate: an over-level (inert) item
     // contributes no Spell Power, matching how its stats/armor are withheld above.
     bonusSp += item.spellPower ?? 0;
+    // Per-copy bonuses (enchant / masterwork) ride the same level gate as the
+    // def's own stats: an inert over-level piece grants nothing at all.
+    const rolled = instances?.[slot]?.rolled?.stats;
+    if (rolled) {
+      s.str += rolled.str ?? 0;
+      s.agi += rolled.agi ?? 0;
+      s.sta += rolled.sta ?? 0;
+      s.int += rolled.int ?? 0;
+      s.spi += rolled.spi ?? 0;
+      s.armor += rolled.armor ?? 0;
+    }
     if (!item.stats) continue;
     s.str += item.stats.str ?? 0;
     s.agi += item.stats.agi ?? 0;
