@@ -257,6 +257,9 @@ export const zh_CN: EnTranslations = {
       "ready": "挥击",
       "seconds": "{seconds}秒"
     },
+    "combat": {
+      "auraGainOther": "{target} gains {name}."
+    },
     "rest": {
       "resting": "休息中"
     },
@@ -685,7 +688,8 @@ export const zh_CN: EnTranslations = {
       "methodMaster": "拾取方式已设为队长分配。分配者：{name}。",
       "methodGroup": "拾取方式已设为小队拾取。",
       "assigned": "{looter}将{item}分配给了{target}。",
-      "leaderOnly": "只有队长才能更改拾取方式。"
+      "leaderOnly": "只有队长才能更改拾取方式。",
+      "targetIneligible": "That player can no longer receive this item."
     },
     "lootSettings": {
       "title": "拾取设置",

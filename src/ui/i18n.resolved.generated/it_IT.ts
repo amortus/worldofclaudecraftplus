@@ -257,6 +257,9 @@ export const it_IT: EnTranslations = {
       "ready": "Attacco",
       "seconds": "{seconds}s"
     },
+    "combat": {
+      "auraGainOther": "{target} gains {name}."
+    },
     "rest": {
       "resting": "A riposo"
     },
@@ -685,7 +688,8 @@ export const it_IT: EnTranslations = {
       "methodMaster": "Loot method set to master loot. Master looter: {name}.",
       "methodGroup": "Loot method set to group loot.",
       "assigned": "{looter} assigned {item} to {target}.",
-      "leaderOnly": "Only the party leader can change the loot method."
+      "leaderOnly": "Only the party leader can change the loot method.",
+      "targetIneligible": "That player can no longer receive this item."
     },
     "lootSettings": {
       "title": "Loot Settings",

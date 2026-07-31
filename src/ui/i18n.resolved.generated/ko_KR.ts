@@ -257,6 +257,9 @@ export const ko_KR: EnTranslations = {
       "ready": "공격",
       "seconds": "{seconds}초"
     },
+    "combat": {
+      "auraGainOther": "{target} gains {name}."
+    },
     "rest": {
       "resting": "휴식 중"
     },
@@ -685,7 +688,8 @@ export const ko_KR: EnTranslations = {
       "methodMaster": "전리품 방식이 분배 담당으로 설정되었습니다. 분배 담당자: {name}.",
       "methodGroup": "전리품 방식이 파티 분배로 설정되었습니다.",
       "assigned": "{looter}님이 {item}을(를) {target}에게 분배했습니다.",
-      "leaderOnly": "파티장만 전리품 방식을 변경할 수 있습니다."
+      "leaderOnly": "파티장만 전리품 방식을 변경할 수 있습니다.",
+      "targetIneligible": "That player can no longer receive this item."
     },
     "lootSettings": {
       "title": "전리품 설정",

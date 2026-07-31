@@ -257,6 +257,9 @@ export const en_XA: EnTranslations = {
       "ready": "[Šŵíñĝ]",
       "seconds": "[{seconds}š]"
     },
+    "combat": {
+      "auraGainOther": "[{target} ĝáíñš {name}.]"
+    },
     "rest": {
       "resting": "[Ŕéšţíñĝ]"
     },
@@ -685,7 +688,8 @@ export const en_XA: EnTranslations = {
       "methodMaster": "[Ļóóţ ɱéţĥóð šéţ ţó ɱášţéŕ ļóóţ. Ɱášţéŕ ļóóţéŕ: {name}.]",
       "methodGroup": "[Ļóóţ ɱéţĥóð šéţ ţó ĝŕóúþ ļóóţ.]",
       "assigned": "[{looter} áššíĝñéð {item} ţó {target}.]",
-      "leaderOnly": "[Óñļý ţĥé þáŕţý ļéáðéŕ çáñ çĥáñĝé ţĥé ļóóţ ɱéţĥóð.]"
+      "leaderOnly": "[Óñļý ţĥé þáŕţý ļéáðéŕ çáñ çĥáñĝé ţĥé ļóóţ ɱéţĥóð.]",
+      "targetIneligible": "[Ţĥáţ þļáýéŕ çáñ ñó ļóñĝéŕ ŕéçéíʋé ţĥíš íţéɱ.]"
     },
     "lootSettings": {
       "title": "[Ļóóţ Šéţţíñĝš]",

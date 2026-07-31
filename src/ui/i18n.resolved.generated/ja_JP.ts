@@ -257,6 +257,9 @@ export const ja_JP: EnTranslations = {
       "ready": "攻撃",
       "seconds": "{seconds}秒"
     },
+    "combat": {
+      "auraGainOther": "{target} gains {name}."
+    },
     "rest": {
       "resting": "休息中"
     },
@@ -685,7 +688,8 @@ export const ja_JP: EnTranslations = {
       "methodMaster": "分配方式をマスタールートに設定しました。分配担当：{name}。",
       "methodGroup": "分配方式をグループルートに設定しました。",
       "assigned": "{looter}が{item}を{target}に分配しました。",
-      "leaderOnly": "分配方式を変更できるのはパーティリーダーだけです。"
+      "leaderOnly": "分配方式を変更できるのはパーティリーダーだけです。",
+      "targetIneligible": "That player can no longer receive this item."
     },
     "lootSettings": {
       "title": "分配設定",

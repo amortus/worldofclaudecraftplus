@@ -257,6 +257,9 @@ export const ru_RU: EnTranslations = {
       "ready": "Замах",
       "seconds": "{seconds} сек."
     },
+    "combat": {
+      "auraGainOther": "{target} gains {name}."
+    },
     "rest": {
       "resting": "Отдых"
     },
@@ -685,7 +688,8 @@ export const ru_RU: EnTranslations = {
       "methodMaster": "Способ добычи изменён на мастера добычи. Мастер добычи: {name}.",
       "methodGroup": "Способ добычи изменён на групповой.",
       "assigned": "{looter} передал предмет {item} игроку {target}.",
-      "leaderOnly": "Только лидер группы может менять способ добычи."
+      "leaderOnly": "Только лидер группы может менять способ добычи.",
+      "targetIneligible": "That player can no longer receive this item."
     },
     "lootSettings": {
       "title": "Настройки добычи",
