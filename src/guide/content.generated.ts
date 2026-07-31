@@ -83,7 +83,7 @@ export interface GuideDelve {
 export const GUIDE_CLASSES: GuideClassInfo[] = [
   {
     "id": "warrior",
-    "color": "#c79c6e",
+    "color": "#d67a54",
     "resource": "rage",
     "roles": [
       "tank",
@@ -210,7 +210,7 @@ export const GUIDE_CLASSES: GuideClassInfo[] = [
   },
   {
     "id": "paladin",
-    "color": "#f58cba",
+    "color": "#f58ca0",
     "resource": "mana",
     "roles": [
       "tank",
@@ -322,7 +322,7 @@ export const GUIDE_CLASSES: GuideClassInfo[] = [
   },
   {
     "id": "hunter",
-    "color": "#abd473",
+    "color": "#a6d84f",
     "resource": "mana",
     "roles": [
       "dps"
@@ -436,7 +436,7 @@ export const GUIDE_CLASSES: GuideClassInfo[] = [
   },
   {
     "id": "rogue",
-    "color": "#fff569",
+    "color": "#fcee58",
     "resource": "energy",
     "roles": [
       "dps"
@@ -578,7 +578,7 @@ export const GUIDE_CLASSES: GuideClassInfo[] = [
   },
   {
     "id": "priest",
-    "color": "#fffff0",
+    "color": "#c6d4f0",
     "resource": "mana",
     "roles": [
       "healer",
@@ -678,7 +678,7 @@ export const GUIDE_CLASSES: GuideClassInfo[] = [
   },
   {
     "id": "shaman",
-    "color": "#0070de",
+    "color": "#4e8aea",
     "resource": "mana",
     "roles": [
       "healer",
@@ -782,7 +782,7 @@ export const GUIDE_CLASSES: GuideClassInfo[] = [
   },
   {
     "id": "mage",
-    "color": "#69ccf0",
+    "color": "#33c1f1",
     "resource": "mana",
     "roles": [
       "dps"
@@ -896,7 +896,7 @@ export const GUIDE_CLASSES: GuideClassInfo[] = [
   },
   {
     "id": "warlock",
-    "color": "#9482c9",
+    "color": "#a785e6",
     "resource": "mana",
     "roles": [
       "dps"
@@ -1023,7 +1023,7 @@ export const GUIDE_CLASSES: GuideClassInfo[] = [
   },
   {
     "id": "druid",
-    "color": "#ff7d0a",
+    "color": "#ff8c1a",
     "resource": "mana",
     "roles": [
       "tank",
