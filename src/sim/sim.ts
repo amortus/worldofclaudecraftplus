@@ -1,5 +1,6 @@
 import type {
   AccountCosmetics,
+  DeedsView,
   DelveCompanionInfo,
   DelveRunInfo,
   LockpickView,
@@ -51,7 +52,62 @@ import {
   validateAllocation,
 } from './content/talents';
 import type { DelveShopGate, DelveShopOffer } from './data';
+import { DEED_CATALOG } from './content/deeds';
+import {
+  applyDeedEvents,
+  deedCompletion,
+  deedProgressView,
+  deedRenown,
+  deedTitles,
+  type DeedEvent,
+  type DeedProgress,
+  evaluateDeeds,
+  freshDeedProgress,
+  restoreDeedProgress,
+  type SavedDeedProgress,
+  serializeDeedProgress,
+} from './deeds';
+import {
+  fishingTablesFor,
+  GATHER_NODES,
+  GATHER_TOOLS,
+  GATHERING_MAX_SKILL,
+  gatherNodeById,
+  groundObjectSpecForNode,
+  isFishingJunk,
+  nodeMaterialFor,
+  zoneGatherTier,
+} from './content/professions';
+import {
+  beginHarvest,
+  bestOwnedGatherToolTier,
+  bestOwnedGatherToolTierOrNone,
+  biteScheduleTicks,
+  emptyGatheringProficiency,
+  type GatherNodeDef,
+  GATHERING_PROFESSION_IDS,
+  type GatheringProficiency,
+  type GatheringProfessionId,
+  gatheringSkillsView,
+  hasFishingImplement,
+  normalizeGatheringProficiency,
+  type PlayerProfessionSkill,
+  professionForNodeType,
+  resolveFishingCatch,
+  resolveHarvest,
+  resolveReelTick,
+  rollBiteSchedule,
+} from './professions';
 import { atLeastStanding, FACTIONS, REP_MAX, REP_MIN } from './reputation';
+import {
+  type PendingUnstuck,
+  requestUnstuck,
+  tickUnstuck,
+  UNSTUCK_COOLDOWN_ID,
+  UNSTUCK_RETRY_COOLDOWN_SECONDS,
+  type UnstuckSnapshot,
+  unstuckSicknessAura,
+} from './unstuck';
 import {
   ABILITIES,
   ARENA_SLOT_COUNT,
@@ -77,7 +133,6 @@ import {
   delveShopGateUnlocked,
   dungeonAt,
   FISHING_RARE_ID,
-  FISHING_TABLES,
   GROUND_OBJECTS,
   GROUP_XP_BONUS,
   INSTANCE_SLOT_COUNT,
@@ -117,6 +172,14 @@ import {
   recalcPlayerStats,
 } from './entity';
 import { canEquipItem } from './equipment_rules';
+import {
+  addToSlots,
+  cloneInstanceMap,
+  cloneInvSlots,
+  parseInstanceMap,
+  parseInvSlots,
+  removeFromSlots,
+} from './item_instance';
 import { meetsLevelRequirement, requiredLevelFor } from './item_level_req';
 import {
   type GuildLeaderboardPage,
@@ -207,12 +270,14 @@ import {
   type ErrorReason,
   emptyMoveInput,
   FISHING_CAST_ID,
-  FISHING_CAST_TIME,
+  FISHING_SESSION_CAP,
   CAST_QUEUE_WINDOW_SEC,
+  GATHER_CAST_ID,
   GCD,
   INTERACT_RANGE,
   type InvSlot,
   type ItemDef,
+  type ItemInstance,
   type ItemLootStrategy,
   isConsuming,
   isQuestTurnInNpc,
@@ -862,6 +927,11 @@ export interface PlayerMeta {
   vendorBuyback: InvSlot[];
   copper: number;
   equipment: PlayerEquipment;
+  // Per-copy identity of the WORN pieces, keyed by equip slot. `equipment` stores
+  // only item ids, so this is where a worn item's signature/enchant/bonus roll
+  // lives while it is out of the bags. Empty for every character with no instanced
+  // gear, and omitted from CharacterState entirely when empty.
+  equipmentInstances: Partial<Record<EquipSlot, ItemInstance>>;
   xp: number;
   // Post-cap progression (Max-Level XP Overflow). `lifetimeXp` is the monotonic
   // 64-bit-safe total of all XP ever earned — it keeps growing at the cap and is
@@ -933,6 +1003,34 @@ export interface PlayerMeta {
   companionUpgrades: Record<string, number>;
   delveLoreUnlocked: Set<string>;
   delveDaily: { date: string; firstClearXp: Set<string>; markClears: number };
+  // Gathering proficiency per profession (mining/logging/herbalism/fishing).
+  // Persisted, and omitted from CharacterState entirely while every counter is
+  // still zero.
+  gathering: GatheringProficiency;
+  // THIS player's node respawn stamps: node id -> the sim.time at which they may
+  // work that node again. Session-only and deliberately NOT persisted: respawn
+  // is per viewer (one player working a node never touches another's timer),
+  // which is what stops node camping, and a fresh session starting ready costs
+  // nothing.
+  gatherReadyAt: Record<string, number>;
+  // The node the in-progress gather cast is working, or null. Session-only: an
+  // interrupted harvest just drops it, which is exactly why an interruption
+  // costs nothing (no draw, no respawn stamp).
+  gatherNodeId: string | null;
+  // The Book of Deeds chronicle. Immutable: every evaluator call either returns
+  // a new object or the same reference, so `next !== meta.deeds` is the cheap
+  // did-anything-change test. Persisted (sparse + sorted).
+  deeds: DeedProgress;
+  // DeedEvents produced anywhere in this tick, drained ONCE at the tick tail.
+  // Session-only scratch; never persisted.
+  deedQueue: DeedEvent[];
+  // Live `/unstuck` attempt, or null. Session-only: an attempt never survives a
+  // disconnect (the countdown's whole point is that the player stood still).
+  pendingUnstuck: PendingUnstuck | null;
+  // Overworld zone the player was last seen in, for the zoneEnter deed fact.
+  // Session-only; the deed mark it feeds is a Set, so re-firing on a relog is a
+  // no-op rather than a double count.
+  lastZoneId: string;
 }
 
 // Away-from-keyboard / do-not-disturb presence. `afk` still delivers whispers
@@ -1004,6 +1102,10 @@ export interface CharacterState {
   pos: { x: number; z: number };
   facing: number;
   equipment: PlayerEquipment;
+  // Per-copy identity of the worn pieces (equipSlot -> ItemInstance). Optional and
+  // OMITTED when empty, so a character with no instanced gear serializes byte-for-byte
+  // the way it did before per-item identity existed.
+  equipmentInstances?: Record<string, ItemInstance>;
   inventory: InvSlot[];
   vendorBuyback?: InvSlot[];
   questLog: { questId: string; counts: number[]; state: 'active' | 'ready' | 'done' }[];
@@ -1039,6 +1141,16 @@ export interface CharacterState {
   companionUpgrades?: Record<string, number>;
   delveLoreUnlocked?: string[];
   delveDaily?: { date: string; firstClearXp: string[]; markClears: number };
+  // Gathering proficiency (professionId -> points). Optional and OMITTED while
+  // the character has never gathered, so a pre-professions save loads AND
+  // re-saves byte-for-byte the way it did before (same contract as
+  // `equipmentInstances`). Loaded through `normalizeGatheringProficiency`, which
+  // drops unknown keys and clamps to each profession's ceiling.
+  gatheringProficiency?: Record<string, number>;
+  // The Book of Deeds chronicle, in its sparse + sorted persisted form. Optional
+  // and OMITTED while the chronicle is empty. Loaded through
+  // `restoreDeedProgress`, which bounds counters, marks and earned ids.
+  deeds?: SavedDeedProgress;
 }
 
 export interface PetState {
@@ -1060,6 +1172,59 @@ interface PendingMobRespawn {
   facing: number;
   dungeonId: string | null;
   timer: number;
+}
+
+// Sparse persisted form of a gathering-proficiency record: zero counters are
+// dropped and an all-zero record returns `undefined`, so the key is absent from
+// CharacterState (and therefore from the JSONB) until the character has actually
+// gathered something. Mirrors `cloneInstanceMap`'s empty-map contract; the read
+// side is `normalizeGatheringProficiency`, which is symmetric (missing -> 0).
+export function serializeGatheringProficiency(
+  proficiency: GatheringProficiency,
+): Record<string, number> | undefined {
+  const out: Record<string, number> = {};
+  let any = false;
+  for (const id of GATHERING_PROFESSION_IDS) {
+    const v = proficiency[id] ?? 0;
+    if (v > 0) {
+      out[id] = v;
+      any = true;
+    }
+  }
+  return any ? out : undefined;
+}
+
+/**
+ * Pure chronicle readout, shared by the sim and the network client the same way
+ * `computeQuestState` below is: the offline `Sim` builds it from its own
+ * `PlayerMeta.deeds`, and `ClientWorld` builds it from the restored progress the
+ * self-snapshot mirrored, so the derivation exists exactly once.
+ */
+export function buildDeedsView(progress: DeedProgress): DeedsView {
+  const entries: DeedsView['entries'] = [];
+  for (const id of DEED_CATALOG.order) {
+    const def = DEED_CATALOG.deeds[id];
+    if (!def) continue;
+    const view = deedProgressView(progress, def);
+    entries.push({
+      id,
+      category: def.category,
+      renown: def.renown,
+      hidden: !!def.hidden,
+      earned: view.complete,
+      current: view.current,
+      required: view.required,
+      ...(def.reward?.kind === 'title' && { titleId: def.reward.titleId }),
+    });
+  }
+  const { earned, total } = deedCompletion(progress, DEED_CATALOG);
+  return {
+    entries,
+    renown: deedRenown(progress, DEED_CATALOG),
+    earned,
+    total,
+    titles: deedTitles(progress, DEED_CATALOG),
+  };
 }
 
 // Pure quest-state computation, shared by the sim and the network client.
@@ -1201,6 +1366,11 @@ export class Sim {
   // Flat [x, z, x, z, ...] of player positions, rebuilt once per tick for the
   // mob-AI activation distance check; reused so the hot path never allocates.
   private activationPlayerXZ: number[] = [];
+  // Serialized chronicle per progress OBJECT, so the 20 Hz self-snapshot does not
+  // re-sort and rebuild a save form that changes once a minute. `DeedProgress` is
+  // immutable and swapped by reference on every change, so this is exact and
+  // self-evicting. See `deedProgressWire`.
+  private readonly deedWireCache = new WeakMap<DeedProgress, SavedDeedProgress>();
   primaryId = -1; // the local/RL player in single-player contexts
   nextId = 1;
   events: SimEvent[] = [];
@@ -1341,6 +1511,23 @@ export class Sim {
         );
         this.addEntity(obj);
       }
+    }
+
+    // Gatherable nodes (ore veins / timber stands / herb patches). Spawned as
+    // ordinary ground objects so a node gets world presence, interaction range
+    // and rendering for free; the object's item id is the NODE id, which is how
+    // the interaction resolves back to a GatherNodeDef. Appended AFTER the
+    // GROUND_OBJECTS loop and drawing no rng, so every existing spawn keeps its
+    // exact world-gen draw order (determinism).
+    for (const node of GATHER_NODES) {
+      const spec = groundObjectSpecForNode(node);
+      const obj = createGroundObject(
+        this.nextId++,
+        spec.itemId,
+        spec.name,
+        this.groundPos(spec.pos.x, spec.pos.z),
+      );
+      this.addEntity(obj);
     }
 
     // Dungeon entrances + their private instance slots
@@ -1564,7 +1751,23 @@ export class Sim {
     name: string,
     opts?: { autoEquip?: boolean; state?: CharacterState; characterId?: number },
   ): number {
-    const savedState = opts?.state ? sanitizeRemovedZone1Content(opts.state).state : undefined;
+    // Parse the bags BEFORE anything else reads them: a persisted bag is JSONB
+    // that may be older than this build, newer than it, or corrupt, and every
+    // downstream consumer (sanitizeRemovedZone1Content included) assumes well
+    // formed `{ itemId, count }` slots. parseInvSlots makes that assumption true
+    // (and preserves any `instance` payload), so a bad row can never make a
+    // character fail to load.
+    const rawState = opts?.state;
+    const savedState = rawState
+      ? sanitizeRemovedZone1Content({
+          ...rawState,
+          inventory: parseInvSlots(rawState.inventory),
+          vendorBuyback:
+            rawState.vendorBuyback === undefined
+              ? undefined
+              : parseInvSlots(rawState.vendorBuyback),
+        }).state
+      : undefined;
     // Characters saved inside a dungeon instance rejoin at its entrance —
     // their old instance is gone (or belongs to someone else) by now.
     let savedPos = savedState?.pos ?? null;
@@ -1611,6 +1814,7 @@ export class Sim {
       vendorBuyback: [],
       copper: 0,
       equipment: { mainhand: classDef.startWeapon, chest: classDef.startChest },
+      equipmentInstances: {},
       xp: 0,
       lifetimeXp: 0,
       prestigeRank: 0,
@@ -1646,6 +1850,17 @@ export class Sim {
       companionUpgrades: {},
       delveLoreUnlocked: new Set(),
       delveDaily: { date: '', firstClearXp: new Set(), markClears: 0 },
+      gathering: emptyGatheringProficiency(),
+      gatherReadyAt: {},
+      gatherNodeId: null,
+      deeds: freshDeedProgress(),
+      deedQueue: [],
+      pendingUnstuck: null,
+      // Deliberately EMPTY rather than the login zone: the first tick then fires
+      // a zoneEnter for wherever the character actually stands, so a veteran who
+      // logs in in Thornpeak gets that mark without having to leave and come
+      // back. The mark is a Set add, so re-firing it on every relog is a no-op.
+      lastZoneId: '',
     };
     this.players.set(player.id, meta);
     player.skinCatalog = meta.skinCatalog;
@@ -1669,8 +1884,15 @@ export class Sim {
       this.syncWornTitle(meta, player); // wear it on load, not only on the next unlock
       meta.copper = s.copper;
       meta.equipment = { ...s.equipment };
-      meta.inventory = s.inventory.map((i) => ({ ...i }));
-      meta.vendorBuyback = (s.vendorBuyback ?? []).map((i) => ({ ...i }));
+      // Every bag/gear read from persisted state goes through item_instance.ts:
+      // an old save with no `instance` fields loads (and re-saves) unchanged, and
+      // an unknown or malformed payload degrades to a plain stack instead of
+      // throwing, a character that cannot load is a player who lost an account.
+      meta.inventory = parseInvSlots(s.inventory);
+      meta.vendorBuyback = parseInvSlots(s.vendorBuyback ?? []);
+      meta.equipmentInstances = parseInstanceMap(s.equipmentInstances) as Partial<
+        Record<EquipSlot, ItemInstance>
+      >;
       for (const q of s.questLog) {
         if (q.state !== 'done')
           meta.questLog.set(q.questId, {
@@ -1708,6 +1930,10 @@ export class Sim {
           if (Number.isFinite(until) && until > now) meta.raidLockouts.set(dungeonId, until);
         }
       }
+      // Both tolerate `undefined` and garbage: a pre-feature save loads as an
+      // all-zero record / an empty chronicle rather than throwing.
+      meta.gathering = normalizeGatheringProficiency(s.gatheringProficiency, GATHERING_MAX_SKILL);
+      meta.deeds = restoreDeedProgress(s.deeds);
       meta.delveMarks = s.delveMarks ?? 0;
       meta.delveClears = { ...(s.delveClears ?? {}) };
       meta.companionUpgrades = { ...(s.companionUpgrades ?? {}) };
@@ -1746,6 +1972,10 @@ export class Sim {
     }
     player.swingTimer = 0;
     if (savedState?.pet) this.restorePet(player, savedState.pet);
+    // Retro chronicle pass, once per join: an existing character gets credit for
+    // the state it verifiably holds, and a newly shipped deed is re-checked
+    // against an already-loaded chronicle.
+    this.seedDeedsOnJoin(meta, player);
     return player.id;
   }
 
@@ -1759,6 +1989,9 @@ export class Sim {
     const leavingRun = this.delveRunForPlayer(pid);
     if (leavingRun?.lockpick && leavingRun.lockpick.ownerId === pid)
       this.abandonLockpick(leavingRun);
+    // A live /unstuck attempt never survives the leave: the whole premise is
+    // that the player stood still for ten seconds, which a disconnect ends.
+    meta.pendingUnstuck = null;
     // leave social systems cleanly
     this.removeFromParty(pid, 'has left the party');
     const trade = this.trades.get(pid);
@@ -1817,6 +2050,17 @@ export class Sim {
     // throwaway build, persist the PRE-fiesta snapshot so an autosave or
     // mid-match disconnect never writes the temporary state to the database.
     const restore = meta.fiestaRestore;
+    // Undefined (and therefore absent from the object AND from the JSONB) unless
+    // this character actually wears an instanced piece.
+    const equipmentInstances = cloneInstanceMap(meta.equipmentInstances);
+    // Same omit-when-empty contract as equipmentInstances above. A character who
+    // has never swung a pick serializes exactly as it did before professions
+    // existed; the chronicle key appears as soon as the join pass banks the
+    // character's level, and stays sparse (zero counters and empty sets are
+    // dropped, members sorted), so an untouched chronicle never churns a save.
+    const gatheringProficiency = serializeGatheringProficiency(meta.gathering);
+    const savedDeeds = serializeDeedProgress(meta.deeds);
+    const deeds = Object.keys(savedDeeds).length > 0 ? savedDeeds : undefined;
     const state: CharacterState = {
       level: restore ? restore.level : e.level,
       xp: restore ? restore.xp : meta.xp,
@@ -1830,8 +2074,9 @@ export class Sim {
       pos: { x: e.pos.x, z: e.pos.z },
       facing: e.facing,
       equipment: { ...meta.equipment },
-      inventory: meta.inventory.map((i) => ({ ...i })),
-      vendorBuyback: meta.vendorBuyback.map((i) => ({ ...i })),
+      ...(equipmentInstances && { equipmentInstances }),
+      inventory: cloneInvSlots(meta.inventory),
+      vendorBuyback: cloneInvSlots(meta.vendorBuyback),
       questLog: [...meta.questLog.values()].map((q) => ({
         questId: q.questId,
         counts: [...q.counts],
@@ -1873,6 +2118,8 @@ export class Sim {
         firstClearXp: [...meta.delveDaily.firstClearXp],
         markClears: meta.delveDaily.markClears,
       },
+      ...(gatheringProficiency && { gatheringProficiency }),
+      ...(deeds && { deeds }),
     };
     return sanitizeRemovedZone1Content(state).state;
   }
@@ -2107,6 +2354,17 @@ export class Sim {
     }
     return out;
   }
+  // IWorld: gathering / chronicle / unstuck, all primary-bound aliases over the
+  // per-pid methods the server also calls.
+  gatheringSkills(): PlayerProfessionSkill[] {
+    return this.gatheringSkillsFor(this.primaryId);
+  }
+  deeds(): DeedsView {
+    return this.deedsViewFor(this.primaryId);
+  }
+  unstuckCountdown(): number | null {
+    return this.unstuckCountdownFor(this.primaryId);
+  }
   get counters(): RewardCounters {
     return this.primary.counters;
   }
@@ -2247,6 +2505,10 @@ export class Sim {
     const e = this.entities.get(meta.entityId);
     if (e) recalcPlayerStats(e, meta.cls, meta.equipment, this.playerMods(meta));
     this.refreshKnownAbilities(meta, false);
+    // The one funnel every allocation change passes through (spend, spec pick,
+    // respec, loadout swap), so the chronicle needs no per-command hook.
+    // `talentPointsSpent` is a high-water counter, so a respec never un-earns.
+    this.queueDeed(meta, { kind: 'talents', pointsSpent: pointsSpent(meta.talents) });
   }
 
   private talentLockReason(p: Entity): string | null {
@@ -2537,7 +2799,11 @@ export class Sim {
       if (!p.dead) {
         this.updatePlayerMovement(p, meta);
         this.updateDoorTriggers(p);
+        this.trackZoneEntry(p, meta);
         this.updateCasting(p, meta);
+        // After updateCasting, so the session cap has already had its tick: this
+        // only fires the bite cue and the got-away. Draw-free.
+        this.updateFishingSession(p, meta);
         this.updatePlayerAutoAttack(p, meta);
         this.updateRegen(p, meta);
         this.updateRested(p, meta);
@@ -2601,6 +2867,14 @@ export class Sim {
       if (p) p.inCombat = this.engagedPids.has(p.id) || p.combatTimer < 5;
     }
 
+    // /unstuck runs HERE, immediately after player movement and the combat
+    // resolve above and before the spatial re-bucket below. That position is
+    // load-bearing: the state machine reads the post-movement position (its
+    // "did you stand still?" test) and the post-combat `inCombat` flag (its
+    // "this is not a combat escape" test). It draws no rng, so it cannot fork
+    // the world's draw order.
+    this.updateUnstuck();
+
     this.updateDuels();
     this.updateArena();
     this.updateTradesAndInvites();
@@ -2614,6 +2888,11 @@ export class Sim {
     // snapshot broadcast right after this one see fresh cells
     this.grid.refresh(this.entities.values());
     this.playerGrid.refresh(this.playerEntities());
+
+    // The chronicle is drained ONCE, at the very end of the tick tail, so a deed
+    // can never complete halfway through a tick and every fact this tick
+    // produced is folded in one ordered batch. Draw-free.
+    this.drainDeedEvents();
 
     const out = this.events;
     this.events = [];
@@ -3398,11 +3677,20 @@ export class Sim {
 
     if (p.castRemaining <= CAST_COMPLETE_EPS) {
       const castId = p.castingAbility;
+      if (castId === FISHING_CAST_ID) {
+        // A fishing session is resolved by the reel arm or by the bite deadline
+        // in updateFishingSession, NEVER by the cast timer: `castTotal` is only
+        // the session cap. Reaching it means the line was never reeled, so the
+        // fish is gone and no catch draw happens.
+        this.endFishingSession(p, false);
+        this.emit({ type: 'fishing', phase: 'escaped', reason: 'timeout', pid: p.id });
+        return;
+      }
       p.castingAbility = null;
       p.castRemaining = 0;
       this.emit({ type: 'castStop', entityId: p.id, success: true });
-      if (castId === FISHING_CAST_ID) {
-        this.completeFishing(p, meta);
+      if (castId === GATHER_CAST_ID) {
+        this.completeHarvest(meta);
         return;
       }
       const res = this.resolvedAbility(castId, p.id);
@@ -3424,10 +3712,26 @@ export class Sim {
   }
 
   private cancelCast(p: Entity): void {
+    const wasFishing = p.castingAbility === FISHING_CAST_ID;
+    const wasGathering = p.castingAbility === GATHER_CAST_ID;
     p.castingAbility = null;
     p.castRemaining = 0;
     p.channeling = false;
     p.queuedCastAbility = null;
+    // The single cancel funnel is also where the two profession sessions are torn
+    // down, so movement, damage, a stun and a silence all clear them for free.
+    // Neither costs anything: `resolveHarvest` and the catch roll only ever run
+    // on a completed cast, so an interrupted session draws no rng and leaves the
+    // node's per-viewer respawn timer untouched.
+    if (wasFishing) {
+      p.fishBiteTick = undefined;
+      p.fishReelDeadlineTick = undefined;
+      p.fishBiteCued = undefined;
+    }
+    if (wasGathering) {
+      const meta = this.players.get(p.id);
+      if (meta) meta.gatherNodeId = null;
+    }
     this.emit({ type: 'castStop', entityId: p.id, success: false });
   }
 
@@ -3480,6 +3784,10 @@ export class Sim {
       this.error(p.id, 'You are silenced!');
       return;
     }
+    // A harvest is an interaction, not a spell: deliberately casting anything
+    // else abandons it rather than eating a "busy" error. It costs the player
+    // nothing (resolveHarvest never ran, so no draw and no respawn stamp).
+    if (p.castingAbility === GATHER_CAST_ID) this.cancelCast(p);
     if (p.castingAbility) {
       // Pressing your next spell in the tail of the current cast queues it rather than
       // eating a "busy" error, so a cast chain does not need frame-perfect timing. The
@@ -5994,8 +6302,14 @@ export class Sim {
         amount > 0 &&
         kind === 'hit'
       ) {
-        if (target.castingAbility === FISHING_CAST_ID) this.cancelCast(target);
-        else if (!ignoresDamagePushback(target.castingAbility)) this.pushbackCast(target);
+        // Neither profession session survives a hit: they are interactions, not
+        // spells, so there is nothing for the vanilla pushback rule to shorten.
+        if (
+          target.castingAbility === FISHING_CAST_ID ||
+          target.castingAbility === GATHER_CAST_ID
+        ) {
+          this.cancelCast(target);
+        } else if (!ignoresDamagePushback(target.castingAbility)) this.pushbackCast(target);
       }
     }
 
@@ -6132,6 +6446,14 @@ export class Sim {
     e.ccDr.clear();
     e.castingAbility = null;
     e.queuedCastAbility = null; // dying must not fire the spell you queued mid-cast
+    // Death clears the cast directly rather than through cancelCast, so tear the
+    // two profession sessions down here too: neither may survive as stale state
+    // a later cast could resolve against.
+    e.fishBiteTick = undefined;
+    e.fishReelDeadlineTick = undefined;
+    e.fishBiteCued = undefined;
+    const dyingMeta = e.kind === 'player' ? this.players.get(e.id) : undefined;
+    if (dyingMeta) dyingMeta.gatherNodeId = null;
     this.emit({ type: 'death', entityId: e.id, killerId: killer?.id ?? -1 });
 
     // a dead mob keeps no raid marker — respawnMob reuses the same entity id,
@@ -6161,6 +6483,7 @@ export class Sim {
       e.chargePath = [];
       e.followTargetId = null;
       this.emit({ type: 'playerDeath', pid: e.id });
+      if (meta) this.queueDeed(meta, { kind: 'death' });
       for (const m of this.entities.values()) {
         if (m.kind === 'mob' && !m.dead && m.aggroTargetId === e.id && m.aiState !== 'dead') {
           // turn on the next nearby attacker; go home only if nobody is left
@@ -6272,7 +6595,12 @@ export class Sim {
           );
           if (xpGain > 0) this.grantXp(xpGain, member, { fromKill: true });
           this.onMobKilledForQuests(e, member);
+          // Chronicle kill credit, shared with the whole eligible group exactly
+          // like xp and quest credit. `boss` rides along because SimEvent does
+          // not carry it and the evaluator must not re-derive world state.
+          this.queueDeed(member, { kind: 'kill', mobId: e.templateId, boss: !!template?.boss });
         }
+        this.creditDungeonClear(e, eligible);
         // World bosses use PERSONAL loot for every contributor (rolled below from the
         // damager-roster snapshot), not the tapper/party shared-corpse roll.
         if (!template?.worldBoss) this.rollLoot(e, meta, eligible);
@@ -6359,6 +6687,7 @@ export class Sim {
       p.hp = p.maxHp;
       if (p.resourceType === 'mana') p.resource = p.maxResource;
       this.emit({ type: 'levelup', level: p.level, pid: p.id });
+      this.queueDeed(meta, { kind: 'level', level: p.level });
       this.refreshKnownAbilities(meta, true);
       this.syncPetLevel(p);
     }
@@ -6386,6 +6715,7 @@ export class Sim {
         this.emit({ type: 'virtualLevelUp', level: v, pid: p.id });
       }
     }
+    this.queueDeed(meta, { kind: 'xp', lifetimeXp: meta.lifetimeXp });
     this.checkMilestones(meta, p);
   }
 
@@ -6429,6 +6759,7 @@ export class Sim {
       color: '#ffd100',
     });
     this.emit({ type: 'prestige', pid: r.e.id, rank: r.meta.prestigeRank });
+    this.queueDeed(r.meta, { kind: 'prestige', rank: r.meta.prestigeRank });
     return true;
   }
 
@@ -6501,9 +6832,23 @@ export class Sim {
     }
   }
 
+  // The chronicle's "looted an item" fact. Deliberately NOT wired into
+  // `addItem`: that is the GENERIC grant funnel (quest rewards, vendor buys,
+  // trades and mail all pass through it) while the loot deeds are worded as
+  // loot ("Loot your first rare item"), so only the corpse / need-greed /
+  // master-loot paths report here.
+  private queueLootDeed(meta: PlayerMeta, itemId: string): void {
+    const quality = ITEMS[itemId]?.quality;
+    if (!quality) return;
+    this.queueDeed(meta, { kind: 'loot', itemId, quality });
+  }
+
   private grantLootCopper(meta: PlayerMeta, amount: number): void {
     meta.copper += amount;
     meta.counters.lootCopper += amount;
+    // The single copper-from-loot funnel (solo award and party fair split both
+    // land here), so `copperLooted` never counts quest gold or a vendor sale.
+    this.queueDeed(meta, { kind: 'loot', itemId: '', quality: 'common', copper: amount });
     this.emit({ type: 'loot', text: `You loot ${formatMoney(amount)}.`, pid: meta.entityId });
   }
 
@@ -6628,7 +6973,9 @@ export class Sim {
 
   private awardSharedLootItem(itemId: string, mob: Entity, looter: PlayerMeta): void {
     if (this.startMasterLootRoll(itemId, mob)) return;
-    if (!this.startNeedGreedRoll(itemId, mob)) this.addItem(itemId, 1, looter.entityId);
+    if (this.startNeedGreedRoll(itemId, mob)) return;
+    this.addItem(itemId, 1, looter.entityId);
+    this.queueLootDeed(looter, itemId);
   }
 
   // Open need-greed rolls the given player may still answer. Mirrors the
@@ -6716,6 +7063,8 @@ export class Sim {
           pid: recipient,
         });
       this.addItem(roll.itemId, 1, targets[0]);
+      const assigned = this.players.get(targets[0]);
+      if (assigned) this.queueLootDeed(assigned, roll.itemId);
       return;
     }
     this.convertMasterRollToNeedGreed(roll, targets);
@@ -6816,6 +7165,7 @@ export class Sim {
       });
     }
     this.addItem(roll.itemId, 1, winner.pid);
+    if (winnerMeta) this.queueLootDeed(winnerMeta, roll.itemId);
   }
 
   private returnLootRollItemToCorpse(roll: PendingLootRoll): void {
@@ -10543,14 +10893,15 @@ export class Sim {
     return n;
   }
 
-  addItem(itemId: string, count: number, pid?: number): void {
+  // `instance` (optional) gives this copy per-item identity: a maker's signature,
+  // an applied enchant, a baked bonus roll (src/sim/item_instance.ts). Passing one
+  // always opens a fresh slot; omitting it is the ordinary fungible add.
+  addItem(itemId: string, count: number, pid?: number, instance?: ItemInstance): void {
     const r = this.resolve(pid);
     if (!r) return;
     const { meta } = r;
     const def = ITEMS[itemId];
-    const existing = meta.inventory.find((s) => s.itemId === itemId);
-    if (existing) existing.count += count;
-    else meta.inventory.push({ itemId, count });
+    addToSlots(meta.inventory, itemId, count, instance);
     this.emit({
       type: 'loot',
       // biome-ignore lint/style/useTemplate: keep this scanner-friendly shape for i18n extraction.
@@ -10567,14 +10918,7 @@ export class Sim {
     const r = this.resolve(pid);
     if (!r) return;
     const { meta } = r;
-    for (let i = meta.inventory.length - 1; i >= 0 && count > 0; i--) {
-      const s = meta.inventory[i];
-      if (s.itemId !== itemId) continue;
-      const take = Math.min(s.count, count);
-      s.count -= take;
-      count -= take;
-      if (s.count <= 0) meta.inventory.splice(i, 1);
-    }
+    removeFromSlots(meta.inventory, itemId, count);
     this.onInventoryChangedForQuests(meta);
   }
 
@@ -10618,8 +10962,16 @@ export class Sim {
     }
     const slot = def.slot;
     const old = meta.equipment[slot];
-    this.removeItem(itemId, 1, meta.entityId);
-    if (old) this.addItemSilent(old, 1, meta);
+    const oldInstance = meta.equipmentInstances[slot];
+    // Carry the consumed copy's identity onto the worn piece, and the identity of
+    // the piece coming off back into the bags, so wearing a signed/enchanted item
+    // never quietly turns it into a plain one. removeFromSlots takes plain copies
+    // first, so an instanced copy is only worn when it is the only one you own.
+    const taken = removeFromSlots(meta.inventory, itemId, 1);
+    this.onInventoryChangedForQuests(meta);
+    if (old) this.addItemSilent(old, 1, meta, oldInstance);
+    if (taken.instances[0]) meta.equipmentInstances[slot] = taken.instances[0];
+    else delete meta.equipmentInstances[slot];
     meta.equipment[slot] = itemId;
     recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta));
     this.emit({ type: 'log', text: `Equipped ${def.name}.`, color: '#8f8', pid: meta.entityId });
@@ -10635,10 +10987,12 @@ export class Sim {
     const itemId = meta.equipment[slot];
     if (!itemId) return false;
     delete meta.equipment[slot];
+    const instance = meta.equipmentInstances[slot];
+    delete meta.equipmentInstances[slot];
     // addItemSilent (not addItem): returning a piece you already owned to bags is
     // not a fresh acquisition, so it must not fire collect-quest credit. No quest
     // today keys on an unequip, so there is nothing to award here regardless.
-    this.addItemSilent(itemId, 1, meta);
+    this.addItemSilent(itemId, 1, meta, instance);
     recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta));
     const def = ITEMS[itemId];
     this.emit({
@@ -10679,6 +11033,16 @@ export class Sim {
       this.error(meta.entityId, "You can't do that while dead.");
       return;
     }
+    // The reel arm sits ahead of EVERY start gate on purpose: re-pressing the rod
+    // is how you reel, and the press routes back into here through useItem, so a
+    // busy check first would reject every reel as "you are busy", and a combat
+    // or swimming check first would strand a line already in the water the moment
+    // a groupmate's pull flags you. Only the dead-check above outranks it, and a
+    // death clears the cast anyway.
+    if (p.castingAbility === FISHING_CAST_ID) {
+      this.reelFishing(p, meta);
+      return;
+    }
     if (p.inCombat) {
       this.error(meta.entityId, "You can't do that while in combat.");
       return;
@@ -10695,17 +11059,79 @@ export class Sim {
       this.error(meta.entityId, 'You need to face fishable water.');
       return;
     }
+    // Gathering always requires a tool, and this is that rule's fishing arm:
+    // casting a line needs tackle in the bags. Text-free deny (the client renders
+    // the line), and rng-free, so a denial never shifts the world's rng stream.
+    if (!hasFishingImplement(meta.inventory, GATHER_TOOLS)) {
+      this.emit({ type: 'fishing', phase: 'no_tackle', pid: meta.entityId });
+      return;
+    }
     if (p.sitting) this.standUp(p);
+    // ONE draw per session: the hidden bite delay. Converted straight onto the
+    // tick clock and parked on SIM-LOCAL entity fields, never on castTotal /
+    // castRemaining, which are broadcast and would hand a cheating client the
+    // exact bite moment.
+    const rodTier = bestOwnedGatherToolTier(meta.inventory, 'fishing', GATHER_TOOLS);
+    const ticks = biteScheduleTicks(rollBiteSchedule(rodTier, this.rng), this.tickCount, DT);
+    p.fishBiteTick = ticks.biteAtTick;
+    p.fishReelDeadlineTick = ticks.reelDeadlineTick;
+    p.fishBiteCued = false;
     p.castingAbility = FISHING_CAST_ID;
-    p.castTotal = FISHING_CAST_TIME;
-    p.castRemaining = FISHING_CAST_TIME;
+    p.castTotal = FISHING_SESSION_CAP;
+    p.castRemaining = FISHING_SESSION_CAP;
     p.channeling = false;
     this.emit({
       type: 'castStart',
       entityId: p.id,
       ability: FISHING_CAST_ID,
-      time: FISHING_CAST_TIME,
+      time: FISHING_SESSION_CAP,
     });
+  }
+
+  // One reel press. Draw-free by itself: the catch draw happens in
+  // completeFishing, and only on a landed reel.
+  private reelFishing(p: Entity, meta: PlayerMeta): void {
+    const outcome = resolveReelTick(
+      p.fishBiteTick ?? Infinity,
+      p.fishReelDeadlineTick ?? -Infinity,
+      this.tickCount,
+    );
+    if (outcome !== 'landed') {
+      this.endFishingSession(p, false);
+      this.emit({ type: 'fishing', phase: 'escaped', reason: outcome, pid: meta.entityId });
+      return;
+    }
+    this.endFishingSession(p, true);
+    this.emit({ type: 'fishing', phase: 'landed', pid: meta.entityId });
+    this.completeFishing(p, meta);
+  }
+
+  // Clear the cast + the hidden schedule and close the cast bar. `landed` is the
+  // `castStop` success flag; the caller emits the player-facing beat.
+  private endFishingSession(p: Entity, landed: boolean): void {
+    p.castingAbility = null;
+    p.castRemaining = 0;
+    p.castTotal = 0;
+    p.channeling = false;
+    p.fishBiteTick = undefined;
+    p.fishReelDeadlineTick = undefined;
+    p.fishBiteCued = undefined;
+    this.emit({ type: 'castStop', entityId: p.id, success: landed });
+  }
+
+  // Tick phase of a live fishing session: fire the bite cue at `biteAtTick`, and
+  // let the fish go at `reelDeadlineTick + 1`. Draw-free.
+  private updateFishingSession(p: Entity, meta: PlayerMeta): void {
+    if (p.castingAbility !== FISHING_CAST_ID) return;
+    if (p.fishBiteTick === undefined || p.fishReelDeadlineTick === undefined) return;
+    if (!p.fishBiteCued && this.tickCount >= p.fishBiteTick) {
+      p.fishBiteCued = true;
+      this.emit({ type: 'fishing', phase: 'bite', pid: meta.entityId });
+    }
+    if (this.tickCount > p.fishReelDeadlineTick) {
+      this.endFishingSession(p, false);
+      this.emit({ type: 'fishing', phase: 'escaped', reason: 'too_late', pid: meta.entityId });
+    }
   }
 
   private completeFishing(p: Entity, meta: PlayerMeta): void {
@@ -10713,24 +11139,29 @@ export class Sim {
       this.addItem(THE_CODFATHER_ITEM_ID, 1, meta.entityId);
       return;
     }
-    // The catch depends on which zone's water you're fishing — each has its own
-    // weighted table (src/sim/content/items.ts). Fall back to the Vale table for
-    // any spot without its own (e.g. fishable water inside a dungeon zone).
-    const table = FISHING_TABLES[zoneAt(p.pos.z).id] ?? FISHING_TABLES.eastbrook_vale;
-    const total = table.reduce((sum, e) => sum + e.weight, 0);
-    let roll = this.rng.next() * total;
-    let caught: string | null = null;
-    for (const entry of table) {
-      roll -= entry.weight;
-      if (roll < 0) {
-        caught = entry.itemId;
-        break;
-      }
-    }
+    // The catch depends on which zone's water you're fishing, each zone has its
+    // own weighted table, now one per proficiency band. BAND 0 IS THE SHIPPED
+    // TABLE, row for row, so a brand-new angler catches exactly what they caught
+    // before the ladder existed. Falls back to the Vale tables for any spot
+    // without its own (e.g. fishable water inside a dungeon zone). ONE draw.
+    const zone = zoneAt(p.pos.z);
+    const catchResult = resolveFishingCatch(
+      {
+        tables: fishingTablesFor(zone.id),
+        waterTier: zoneGatherTier(zone.id),
+        proficiency: meta.gathering.fishing,
+        maxSkill: GATHERING_MAX_SKILL.fishing,
+        rodTier: bestOwnedGatherToolTier(meta.inventory, 'fishing', GATHER_TOOLS),
+        isJunk: isFishingJunk,
+      },
+      this.rng,
+    );
+    const caught = catchResult.itemId;
     if (caught === null) {
       this.emit({ type: 'log', text: 'No fish are biting.', color: '#999', pid: p.id });
       return;
     }
+    this.applyProficiencyGain(meta, 'fishing', catchResult.skillGain);
     if (caught === FISHING_RARE_ID) {
       this.emit({
         type: 'log',
@@ -10740,6 +11171,134 @@ export class Sim {
       });
     }
     this.addItem(caught, 1, meta.entityId);
+  }
+
+  // -------------------------------------------------------------------------
+  // Gathering professions (mining / logging / herbalism)
+  // -------------------------------------------------------------------------
+
+  // Bank a proficiency delta and announce it. The clamp already happened inside
+  // the professions module, so a zero delta is the normal grayed-out/capped case
+  // and stays silent.
+  private applyProficiencyGain(
+    meta: PlayerMeta,
+    professionId: GatheringProfessionId,
+    gain: number,
+  ): void {
+    if (gain <= 0) return;
+    meta.gathering[professionId] += gain;
+    this.emit({
+      type: 'professionSkill',
+      professionId,
+      skill: meta.gathering[professionId],
+      maxSkill: GATHERING_MAX_SKILL[professionId],
+      pid: meta.entityId,
+    });
+  }
+
+  // The flat attempt literal both halves of a harvest take. `readyAt` is read
+  // from THIS player's own map, which is what makes respawn per-viewer.
+  private gatherAttemptFor(node: GatherNodeDef, meta: PlayerMeta) {
+    const professionId = professionForNodeType(node.type);
+    return {
+      node,
+      proficiency: meta.gathering[professionId],
+      maxSkill: GATHERING_MAX_SKILL[professionId],
+      toolTier: bestOwnedGatherToolTierOrNone(meta.inventory, professionId, GATHER_TOOLS),
+      readyAt: meta.gatherReadyAt[node.id],
+      now: this.time,
+    };
+  }
+
+  /**
+   * A gather node's backing ground object carries the NODE id as its
+   * `objectItemId` (the yield is rolled at harvest time, so there is no fixed
+   * pickup), which is also what keeps a node out of the ordinary ground-pickup
+   * path. Returns true whenever the object WAS a node, whether or not the
+   * harvest was allowed to start, so the caller stops there.
+   *
+   * Everything here is rng-FREE: `beginHarvest` only gates and returns a cast
+   * duration, so a denial can never shift the world's rng stream.
+   */
+  private tryStartHarvest(obj: Entity, p: Entity, meta: PlayerMeta): boolean {
+    if (!obj.objectItemId) return false;
+    const node = gatherNodeById(obj.objectItemId);
+    if (!node) return false;
+    if (p.dead) {
+      this.error(meta.entityId, "You can't do that while dead.");
+      return true;
+    }
+    if (p.castingAbility || isConsuming(p)) {
+      this.error(meta.entityId, 'You are busy.');
+      return true;
+    }
+    const start = beginHarvest(this.gatherAttemptFor(node, meta));
+    if (!start.ok || start.castSeconds === undefined) {
+      this.emit({
+        type: 'gatherDeny',
+        nodeId: node.id,
+        professionId: start.professionId,
+        reason: start.reason ?? 'no_tool',
+        requiredTier: start.requiredTier,
+        ...(start.readyInSec !== undefined && { readyInSec: start.readyInSec }),
+        pid: meta.entityId,
+      });
+      return true;
+    }
+    if (p.sitting) this.standUp(p);
+    meta.gatherNodeId = node.id;
+    p.castingAbility = GATHER_CAST_ID;
+    p.castTotal = start.castSeconds;
+    p.castRemaining = start.castSeconds;
+    p.channeling = false;
+    this.emit({
+      type: 'castStart',
+      entityId: p.id,
+      ability: GATHER_CAST_ID,
+      time: start.castSeconds,
+    });
+    return true;
+  }
+
+  /**
+   * The gather cast landed. EXACTLY ONE rng draw (the material rarity), and the
+   * only place a respawn stamp is written, an interrupted harvest never reaches
+   * here, so it costs neither a draw nor the node's timer.
+   */
+  private completeHarvest(meta: PlayerMeta): void {
+    const nodeId = meta.gatherNodeId;
+    meta.gatherNodeId = null;
+    if (!nodeId) return;
+    const node = gatherNodeById(nodeId);
+    if (!node) return;
+    const attempt = this.gatherAttemptFor(node, meta);
+    const res = resolveHarvest(attempt, nodeMaterialFor(node.type, node.zoneId), this.rng);
+    meta.gatherReadyAt[node.id] = res.nextReadyAt;
+    this.emit({
+      type: 'gatherHarvest',
+      nodeId: node.id,
+      professionId: res.professionId,
+      itemId: res.itemId,
+      rarity: res.rarity,
+      qty: res.qty,
+      pid: meta.entityId,
+    });
+    // Silent grant, NOT addItem: the gatherHarvest event above already names the
+    // material and its count (coloured by the rolled rarity), so addItem's own
+    // "You receive: X" loot line would print the same harvest twice. The one
+    // side effect worth keeping is quest credit, so it is called explicitly;
+    // auto-equip cannot apply here because gather materials are never weapons
+    // or armour.
+    this.addItemSilent(res.itemId, res.qty, meta);
+    this.onInventoryChangedForQuests(meta);
+    this.applyProficiencyGain(meta, res.professionId, res.skillGain);
+  }
+
+  /** The read-only "your professions" rows the HUD paints (ids + numbers). */
+  gatheringSkillsFor(pid: number): PlayerProfessionSkill[] {
+    const meta = this.players.get(pid);
+    if (!meta) return [];
+    return gatheringSkillsView(meta.gathering, GATHERING_MAX_SKILL);
   }
 
   useItem(itemId: string, pid?: number): ItemUseResult | undefined {
@@ -11031,10 +11590,13 @@ export class Sim {
     });
   }
 
-  private addItemSilent(itemId: string, count: number, meta: PlayerMeta): void {
-    const existing = meta.inventory.find((s) => s.itemId === itemId);
-    if (existing) existing.count += count;
-    else meta.inventory.push({ itemId, count });
+  private addItemSilent(
+    itemId: string,
+    count: number,
+    meta: PlayerMeta,
+    instance?: ItemInstance,
+  ): void {
+    addToSlots(meta.inventory, itemId, count, instance);
   }
 
   private maybeAutoEquip(itemId: string, meta: PlayerMeta): void {
@@ -11088,12 +11650,14 @@ export class Sim {
       if (!this.lootSlotVisibleTo(s, meta.entityId)) continue;
       if (s.openToAll) {
         for (let i = 0; i < s.count; i++) this.addItem(s.itemId, 1, meta.entityId);
+        if (s.count > 0) this.queueLootDeed(meta, s.itemId);
         s.count = 0;
         continue;
       }
       if (s.personalFor) {
         const wasEligible = s.personalFor.includes(meta.entityId);
         this.addItem(s.itemId, 1, meta.entityId);
+        this.queueLootDeed(meta, s.itemId);
         s.personalFor = s.personalFor.filter((id) => id !== meta.entityId);
         // Consume the world-boss daily lockout the moment this player actually LOOTS a
         // personal slot (not at kill/roll time): a contributor who dies or never reaches
@@ -11124,6 +11688,11 @@ export class Sim {
       this.error(meta.entityId, 'Too far away.');
       return;
     }
+    // Gather nodes resolve here rather than in `interact()` because every object
+    // arm of `interact()` (targeted and nearest alike) funnels through this
+    // method, as does a direct pickUpObject command from the client, one arm
+    // covers all three and keeps a node out of the ordinary pickup path below.
+    if (this.tryStartHarvest(obj, p, meta)) return;
     if (this.tryStartNythraxisWardChannel(obj, p)) return;
     if (this.activateNythraxisRelic(obj, meta)) return;
     if (this.interactObjectForQuests(obj, meta)) return;
@@ -11688,6 +12257,7 @@ export class Sim {
     this.grantXp(quest.xpReward, meta);
     if (quest.repReward) this.grantReputation(meta, quest.repReward.faction, quest.repReward.amount);
     this.emit({ type: 'questDone', questId, pid: meta.entityId });
+    this.queueDeed(meta, { kind: 'questDone', questId });
     this.emit({
       type: 'log',
       text: `Quest completed: ${quest.name}`,
@@ -11797,6 +12367,9 @@ export class Sim {
     const before = meta.reputation[faction] ?? 0;
     const after = Math.max(REP_MIN, Math.min(REP_MAX, before + amount));
     if (after !== before) meta.reputation[faction] = after;
+    // ABSOLUTE standing, not the delta: the chronicle's reputation counter is a
+    // high-water mark, so losing standing can never un-earn a rep deed.
+    this.queueDeed(meta, { kind: 'reputation', factionId: faction, points: after });
   }
 
   private onMobKilledForQuests(mob: Entity, meta: PlayerMeta): void {
@@ -11920,6 +12493,318 @@ export class Sim {
     p.combatTimer = 99;
     p.inCombat = false;
     this.emit({ type: 'respawn', pid: meta.entityId });
+  }
+
+  // -------------------------------------------------------------------------
+  // Unstuck (`/unstuck`), the stationary-countdown recovery command
+  // -------------------------------------------------------------------------
+
+  /** Stable identity of the area a player stands in. Leaving it mid-countdown
+   *  cancels the attempt, so it must distinguish the overworld zones AND every
+   *  instanced band (a dungeon, the arena, a delve). */
+  private unstuckAreaKey(p: Entity): string {
+    if (isDelvePos(p.pos.x)) return `delve:${delveAt(p.pos.x)?.id ?? 'unknown'}`;
+    if (isArenaPos(p.pos.x)) return 'arena';
+    const dungeon = dungeonAt(p.pos.x);
+    if (dungeon) return `dungeon:${dungeon.id}`;
+    return zoneAt(p.pos.z).id;
+  }
+
+  /** Compose the flat snapshot the pure state machine takes, from the Entity +
+   *  PlayerMeta. `time` is the SIM clock, never a wall clock. */
+  private unstuckSnapshot(p: Entity, meta: PlayerMeta): UnstuckSnapshot {
+    // Distance actually covered this tick, not the air-velocity fields: prevPos
+    // was copied at the top of the tick and movement has already run by the time
+    // this is read, so it is the true "did you stand still?" measure and it also
+    // catches a slide or a knockback.
+    const speed =
+      Math.hypot(p.pos.x - p.prevPos.x, p.pos.y - p.prevPos.y, p.pos.z - p.prevPos.z) / DT;
+    const inp = meta.moveInput;
+    return {
+      time: this.time,
+      pos: p.pos,
+      level: p.level,
+      dead: p.dead,
+      inCombat: p.inCombat,
+      combatTimer: p.combatTimer,
+      onGround: p.onGround,
+      jumping: p.jumping,
+      speed,
+      stunned: this.isStunned(p),
+      rooted: this.isRooted(p),
+      busy: !!p.castingAbility || isConsuming(p),
+      sitting: p.sitting,
+      moveInput:
+        inp.forward ||
+        inp.back ||
+        inp.strafeLeft ||
+        inp.strafeRight ||
+        inp.turnLeft ||
+        inp.turnRight ||
+        inp.jump,
+      forcedMovement:
+        p.chargeTargetId !== null || p.followTargetId !== null || !!this.fearAura(p),
+      competitive:
+        this.duelFor(p.id) !== null || this.arenaMatches.has(p.id) || isArenaPos(p.pos.x),
+      trading: this.trades.has(p.id),
+      damageTaken: meta.counters.damageTaken,
+      cooldownRemaining: p.cooldowns.get(UNSTUCK_COOLDOWN_ID) ?? 0,
+      areaKey: this.unstuckAreaKey(p),
+    };
+  }
+
+  /** `/unstuck`: validate and arm the stationary countdown. */
+  startUnstuck(pid?: number): void {
+    const r = this.resolve(pid);
+    if (!r) return;
+    const { meta, e: p } = r;
+    const res = requestUnstuck(this.unstuckSnapshot(p, meta), meta.pendingUnstuck);
+    if (res.ok) {
+      meta.pendingUnstuck = res.state;
+      p.cooldowns.set(UNSTUCK_COOLDOWN_ID, UNSTUCK_RETRY_COOLDOWN_SECONDS);
+      this.emit({ type: 'unstuck', phase: 'started', seconds: res.seconds, pid: meta.entityId });
+      return;
+    }
+    // The retry cooldown is stamped on the refusal too, so /unstuck spam is cheap
+    // to ignore, EXCEPT when the refusal is itself the cooldown, where
+    // re-stamping would let a spammer extend their own lockout forever.
+    if (res.reason !== 'cooldown') {
+      p.cooldowns.set(UNSTUCK_COOLDOWN_ID, UNSTUCK_RETRY_COOLDOWN_SECONDS);
+    }
+    this.emit({
+      type: 'unstuck',
+      phase: 'blocked',
+      reason: res.reason,
+      ...(res.cooldownSeconds !== undefined && { seconds: res.cooldownSeconds }),
+      pid: meta.entityId,
+    });
+  }
+
+  /** Seconds left on this player's live countdown, or null when none is armed. */
+  unstuckCountdownFor(pid: number): number | null {
+    const state = this.players.get(pid)?.pendingUnstuck;
+    if (!state) return null;
+    return Math.max(0, Math.ceil(state.endsAt - this.time));
+  }
+
+  private updateUnstuck(): void {
+    for (const meta of this.players.values()) {
+      const state = meta.pendingUnstuck;
+      if (!state) continue;
+      const p = this.entities.get(meta.entityId);
+      if (!p) {
+        meta.pendingUnstuck = null;
+        continue;
+      }
+      const res = tickUnstuck(this.unstuckSnapshot(p, meta), state);
+      if (res.phase === 'pending') {
+        meta.pendingUnstuck = res.state;
+        if (res.countdown !== null) {
+          this.emit({
+            type: 'unstuck',
+            phase: 'countdown',
+            seconds: res.countdown,
+            pid: meta.entityId,
+          });
+        }
+        continue;
+      }
+      meta.pendingUnstuck = null;
+      if (res.phase === 'cancelled') {
+        this.emit({
+          type: 'unstuck',
+          phase: 'cancelled',
+          reason: res.reason,
+          pid: meta.entityId,
+        });
+        continue;
+      }
+      this.completeUnstuck(p, meta, res.resolution);
+    }
+  }
+
+  /**
+   * The countdown survived. The player is moved through the SAME respawn path
+   * `releaseSpirit` uses, the module already resolved the identical destination
+   *, which is the point: Unstuck must never be a shortcut the death loop does
+   * not already offer. Unstuck never kills: a living player keeps their pools, a
+   * dead one is raised on arrival. The price is Unstuck Sickness.
+   */
+  private completeUnstuck(
+    p: Entity,
+    meta: PlayerMeta,
+    res: { destination: { x: number; z: number }; revive: boolean; cooldownSeconds: number; outcome: 'moved_to_graveyard' | 'revived_at_graveyard' },
+  ): void {
+    p.dead = false;
+    // Inside a delve the module's graveyard rule does not apply: `dungeonAt`
+    // returns null for the delve x-band, so `unstuckGraveyardFor` would resolve
+    // an OVERWORLD graveyard and hand the player a free escape from a failing
+    // run with the run still registered. Mirror `releaseSpirit`, which routes
+    // delve positions to their own path: land them back at the module entrance,
+    // still inside their instance.
+    const delveRun = isDelvePos(p.pos.x) ? this.delveRunForPlayer(meta.entityId) : null;
+    p.pos = delveRun
+      ? { ...this.delveModuleEntry(delveRun) }
+      : this.groundPos(res.destination.x, res.destination.z);
+    p.prevPos = { ...p.pos };
+    this.rebucket(p);
+    p.facing = 0;
+    p.auras = [];
+    p.ccDr.clear();
+    // Recalc with a clean aura list first, so `p.stats` is the BASE the sickness
+    // percentage is taken from; then push the debuff and recalc again, keeping
+    // every derived stat inside the one place stats are ever derived.
+    recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta));
+    const sickness = unstuckSicknessAura(p.level, p.stats, p.id);
+    if (sickness) {
+      p.auras.push(sickness);
+      this.emit({ type: 'aura', targetId: p.id, name: sickness.name, gained: true });
+      recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta));
+    }
+    if (res.revive) {
+      p.hp = p.maxHp;
+      p.resource =
+        p.resourceType === 'mana' ? p.maxResource : p.resourceType === 'energy' ? 100 : 0;
+      this.emit({ type: 'respawn', pid: meta.entityId });
+    } else {
+      // Alive in, alive out: pools are kept, only re-clamped to the maxima the
+      // sickness just shrank.
+      p.hp = Math.max(1, Math.min(p.hp, p.maxHp));
+      p.resource = Math.min(p.resource, p.maxResource);
+    }
+    p.targetId = null;
+    p.autoAttack = false;
+    p.queuedOnSwing = null;
+    p.combatTimer = 99;
+    p.inCombat = false;
+    p.cooldowns.set(UNSTUCK_COOLDOWN_ID, res.cooldownSeconds);
+    this.emit({
+      type: 'unstuck',
+      phase: 'completed',
+      outcome: res.outcome,
+      pid: meta.entityId,
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // The Book of Deeds (chronicle)
+  // -------------------------------------------------------------------------
+
+  /** Queue one chronicle fact. Drained ONCE at the tick tail; queueing is free
+   *  and draws nothing, so a fact can be reported from any site. */
+  private queueDeed(meta: PlayerMeta, event: DeedEvent): void {
+    meta.deedQueue.push(event);
+  }
+
+  private drainDeedEvents(): void {
+    for (const meta of this.players.values()) {
+      if (meta.deedQueue.length === 0) continue;
+      const events = meta.deedQueue;
+      meta.deedQueue = [];
+      const res = applyDeedEvents(meta.deeds, events, DEED_CATALOG, this.tickCount);
+      // The evaluator returns the SAME reference when nothing changed, which is
+      // the whole did-anything-change test: no copy, no re-broadcast, no save.
+      if (res.progress === meta.deeds) continue;
+      meta.deeds = res.progress;
+      this.emitDeedCompletions(meta, res.completed);
+    }
+  }
+
+  private emitDeedCompletions(meta: PlayerMeta, completed: readonly string[]): void {
+    for (const deedId of completed) {
+      const def = DEED_CATALOG.deeds[deedId];
+      if (!def) continue;
+      this.emit({
+        type: 'deedComplete',
+        deedId,
+        renown: def.renown,
+        ...(def.reward?.kind === 'title' && { titleId: def.reward.titleId }),
+        pid: meta.entityId,
+      });
+    }
+  }
+
+  /**
+   * A dungeon is CLEARED when its LAST living boss falls. Deriving it that way
+   * rather than from a hand-maintained final-boss table keeps the one-boss
+   * five-mans and the eight-boss raids on the same rule, and it can never drift
+   * when a boss is added to a wing.
+   */
+  private creditDungeonClear(mob: Entity, eligible: readonly PlayerMeta[]): void {
+    if (!MOBS[mob.templateId]?.boss) return;
+    const inst = this.instances.find((i) => i.partyKey !== null && i.mobIds.includes(mob.id));
+    if (!inst) return;
+    for (const id of inst.mobIds) {
+      if (id === mob.id) continue;
+      const other = this.entities.get(id);
+      if (other && !other.dead && MOBS[other.templateId]?.boss) return;
+    }
+    for (const member of eligible) {
+      this.queueDeed(member, { kind: 'dungeonClear', dungeonId: inst.dungeonId });
+    }
+  }
+
+  /**
+   * Retro credit at world join. Only HIGH-WATER facts are folded (level,
+   * lifetime XP, prestige, talent points, reputation): every one of them is a
+   * `max` counter, so re-folding them at every login is a no-op, unlike a `sum`
+   * counter (kills, quests) which would inflate on each relog. The follow-up
+   * `evaluateDeeds` pass covers the other half of the retro case: a catalogue
+   * change whose new deed an already-held chronicle already satisfies.
+   */
+  private seedDeedsOnJoin(meta: PlayerMeta, p: Entity): void {
+    const events: DeedEvent[] = [
+      { kind: 'level', level: p.level },
+      { kind: 'xp', lifetimeXp: meta.lifetimeXp },
+      { kind: 'prestige', rank: meta.prestigeRank },
+      { kind: 'talents', pointsSpent: pointsSpent(meta.talents) },
+    ];
+    for (const factionId of Object.keys(meta.reputation).sort()) {
+      events.push({ kind: 'reputation', factionId, points: meta.reputation[factionId] });
+    }
+    const folded = applyDeedEvents(meta.deeds, events, DEED_CATALOG, this.tickCount);
+    const retro = evaluateDeeds(folded.progress, DEED_CATALOG, this.tickCount);
+    meta.deeds = retro.progress;
+    this.emitDeedCompletions(meta, [...folded.completed, ...retro.completed]);
+  }
+
+  /** The chronicle's read-only view for the HUD: one row per deed plus the
+   *  renown total, the earned/total pair and the unlocked title ids. */
+  deedsViewFor(pid: number): DeedsView {
+    const meta = this.players.get(pid);
+    if (!meta) return { entries: [], renown: 0, earned: 0, total: 0, titles: [] };
+    return buildDeedsView(meta.deeds);
+  }
+
+  /**
+   * Persisted chronicle form, for the server's self-snapshot wire.
+   *
+   * MEMOIZED on the progress object itself. The server calls this at 20 Hz per
+   * session while `serializeDeedProgress` sorts the mark list, sorts and rebuilds
+   * the earned map, and the caller then JSON-stringifies the result to diff it ,
+   * for data that changes once a minute at most. `DeedProgress` is immutable and
+   * replaced BY REFERENCE whenever it changes, so a WeakMap keyed on it is exact
+   * and evicts itself.
+   */
+  deedProgressWire(pid: number): SavedDeedProgress {
+    const meta = this.players.get(pid);
+    if (!meta) return {};
+    const cached = this.deedWireCache.get(meta.deeds);
+    if (cached) return cached;
+    const wire = serializeDeedProgress(meta.deeds);
+    this.deedWireCache.set(meta.deeds, wire);
+    return wire;
+  }
+
+  /** The overworld zone a player stands in, diffed against the last one seen, so
+   *  the chronicle gets a `zoneEnter` fact. Skipped inside every instanced band
+   *  (dungeon / arena / delve), where `zoneAt(z)` is meaningless. */
+  private trackZoneEntry(p: Entity, meta: PlayerMeta): void {
+    if (p.pos.x > DUNGEON_X_THRESHOLD) return;
+    const zoneId = zoneAt(p.pos.z).id;
+    if (zoneId === meta.lastZoneId) return;
+    meta.lastZoneId = zoneId;
+    this.queueDeed(meta, { kind: 'zoneEnter', zoneId });
   }
 
   // Add rested XP as an ad-reward bonus (5 bubbles = 25% of the current level's XP).
@@ -12447,6 +13332,12 @@ export class Sim {
     }
     if (/^\/(?:graveyard|gy|spirithealer)(?:\s|$)/i.test(raw)) {
       this.error(r.meta.entityId, this.graveyardReadout(r.e));
+      return null;
+    }
+    // Text-free: `startUnstuck` emits stable phase/reason ids and the client
+    // renders every line, so this readout has no English of its own.
+    if (/^\/(?:unstuck|stuck)(?:\s|$)/i.test(raw)) {
+      this.startUnstuck(r.meta.entityId);
       return null;
     }
     if (/^\/(?:dungeons|dungeon|instances)(?:\s|$)/i.test(raw)) {
@@ -13435,6 +14326,7 @@ export class Sim {
       const winner = winnerPid === duel.a ? aMeta : bMeta;
       const loser = winnerPid === duel.a ? bMeta : aMeta;
       this.emit({ type: 'duelEnd', winnerName: winner.name, loserName: loser.name });
+      this.queueDeed(winner, { kind: 'duelWin' });
     } else if (aMeta && bMeta) {
       for (const dPid of [duel.a, duel.b]) {
         this.emit({ type: 'log', text: 'The duel has ended.', color: '#fa6', pid: dPid });
@@ -14209,6 +15101,9 @@ export class Sim {
           allies: this.arenaCombatants(pids.filter((p) => p !== pid)),
           enemies: this.arenaCombatants(enemies),
         });
+        // RANKED wins only: the arena deeds are worded "win a ranked arena
+        // match", and unranked Fiesta bouts would otherwise farm the counter.
+        if (ranked && won === true) this.queueDeed(meta, { kind: 'arenaWin' });
       }
     };
 
@@ -17389,6 +18284,7 @@ export class Sim {
     this.maybeCompanionBark(run, pid, 'completion');
     this.restorePetFromDelveStash(pid);
     this.emit({ type: 'delveComplete', delveId: run.delveId, tierId: run.tierId, pid });
+    this.queueDeed(meta, { kind: 'delveClear', delveId: run.delveId, tierId: run.tierId });
   }
 
   private grantDelveRewards(run: DelveRun): void {

@@ -2653,6 +2653,17 @@ export class GameServer {
     maybe('dcomp', this.sim.companionUpgradesFor(anchorSession.pid));
     maybe('dclears', this.sim.delveClearsFor(anchorSession.pid));
     maybe('delveDaily', this.sim.delveDailyWire(anchorSession.pid));
+    // Gathering proficiency, as the raw per-profession counters. The client
+    // derives its own rows from them via the same `gatheringSkillsView` helper
+    // the sim uses, so the derivation is never duplicated.
+    maybe('gather', meta.gathering);
+    // The chronicle in its SPARSE persisted form, not the built view: the view
+    // is 53 rows and would resend on every kill, while this is counters + marks
+    // + earned ids and both sides rebuild the view from the same pure helper.
+    maybe('deeds', this.sim.deedProgressWire(anchorSession.pid));
+    // Whole seconds left on a live /unstuck countdown (null when none). Integer
+    // so the delta guard ships it once per second, not once per tick.
+    maybe('unstuck', this.sim.unstuckCountdownFor(anchorSession.pid));
     // talents/spec/loadouts ride the wire only when they change (PR-5: never
     // every snapshot). The client recomputes its known abilities from this.
     maybe('tal', {

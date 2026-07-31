@@ -13,7 +13,7 @@ import { Sim } from '../src/sim/sim';
 import {
   dist2d,
   FISHING_CAST_ID,
-  FISHING_CAST_TIME,
+  FISHING_SESSION_CAP,
   MAX_LEVEL,
   meleeMissChance,
   mobXpValue,
@@ -1091,7 +1091,7 @@ describe('food, drink, vendor', () => {
     );
   });
 
-  it('starts a five-second fishing cast near and facing Mirror Lake', () => {
+  it('opens a fishing session capped at FISHING_SESSION_CAP near and facing Mirror Lake', () => {
     const sim = makeSim('warrior');
     const spot = mirrorLakeFishingSpot(sim.cfg.seed);
     teleportTo(sim, spot.x, spot.z);
@@ -1100,19 +1100,21 @@ describe('food, drink, vendor', () => {
     sim.events = [];
     sim.useItem('simple_fishing_pole');
     expect(sim.player.castingAbility).toBe(FISHING_CAST_ID);
-    expect(sim.player.castTotal).toBe(FISHING_CAST_TIME);
-    expect(sim.player.castRemaining).toBe(FISHING_CAST_TIME);
+    // castTotal is now only the session cap; the bite moment lives on hidden
+    // fields so it can never leak to the client through the cast bar.
+    expect(sim.player.castTotal).toBe(FISHING_SESSION_CAP);
+    expect(sim.player.castRemaining).toBe(FISHING_SESSION_CAP);
     expect(sim.player.channeling).toBe(false);
     expect(sim.events).toContainEqual(
       expect.objectContaining({
         type: 'castStart',
         ability: FISHING_CAST_ID,
-        time: FISHING_CAST_TIME,
+        time: FISHING_SESSION_CAP,
       }),
     );
   });
 
-  it('rolls the fishing catch table only when the cast completes', () => {
+  it('rolls the fishing catch table only when a reel lands inside the bite window', () => {
     const sim = makeSim('warrior');
     const spot = mirrorLakeFishingSpot(sim.cfg.seed);
     teleportTo(sim, spot.x, spot.z);
@@ -1122,14 +1124,26 @@ describe('food, drink, vendor', () => {
     sim.useItem('simple_fishing_pole');
     expect(valeCatchCount(sim)).toBe(0);
 
+    // Tick until the bite cue, then reel. Nothing may be granted before it.
     const events: SimEvent[] = [];
-    for (let i = 0; i < 20 * 6 && sim.player.castingAbility; i++) events.push(...sim.tick());
+    let bit = false;
+    for (let i = 0; i < 20 * 15 && !bit; i++) {
+      const tickEvents = sim.tick();
+      events.push(...tickEvents);
+      bit = tickEvents.some((e) => e.type === 'fishing' && e.phase === 'bite');
+    }
+    expect(bit).toBe(true);
+    expect(valeCatchCount(sim)).toBe(0);
 
-    const catchCount = valeCatchCount(sim);
+    sim.events = [];
+    sim.useItem('simple_fishing_pole');
+    const reelEvents = sim.events;
     expect(sim.player.castingAbility).toBe(null);
+    expect(reelEvents).toContainEqual(expect.objectContaining({ type: 'castStop', success: true }));
+    const catchCount = valeCatchCount(sim);
     expect(catchCount === 1 || catchCount === 0).toBe(true);
     if (catchCount === 0) {
-      expect(events).toContainEqual(
+      expect(reelEvents).toContainEqual(
         expect.objectContaining({
           type: 'log',
           text: 'No fish are biting.',
@@ -1137,6 +1151,57 @@ describe('food, drink, vendor', () => {
       );
     }
     expect(sim.countItem('simple_fishing_pole')).toBe(1);
+  });
+
+  it('lets the fish get away when the reel comes too early', () => {
+    const sim = makeSim('warrior');
+    const spot = mirrorLakeFishingSpot(sim.cfg.seed);
+    teleportTo(sim, spot.x, spot.z);
+    sim.player.facing = spot.facing;
+    sim.addItem('simple_fishing_pole', 1);
+    sim.useItem('simple_fishing_pole');
+    // The minimum bite delay is 3s, so a reel on the very next tick is early.
+    sim.tick();
+    sim.events = [];
+    sim.useItem('simple_fishing_pole');
+    expect(sim.player.castingAbility).toBe(null);
+    expect(sim.events).toContainEqual(
+      expect.objectContaining({ type: 'fishing', phase: 'escaped', reason: 'too_early' }),
+    );
+    expect(valeCatchCount(sim)).toBe(0);
+  });
+
+  it('lets the fish get away when the reel never comes', () => {
+    const sim = makeSim('warrior');
+    const spot = mirrorLakeFishingSpot(sim.cfg.seed);
+    teleportTo(sim, spot.x, spot.z);
+    sim.player.facing = spot.facing;
+    sim.addItem('simple_fishing_pole', 1);
+    sim.useItem('simple_fishing_pole');
+    const events: SimEvent[] = [];
+    for (let i = 0; i < 20 * 15 && sim.player.castingAbility; i++) events.push(...sim.tick());
+    expect(sim.player.castingAbility).toBe(null);
+    expect(events).toContainEqual(
+      expect.objectContaining({ type: 'fishing', phase: 'escaped', reason: 'too_late' }),
+    );
+    expect(valeCatchCount(sim)).toBe(0);
+  });
+
+  it('refuses to cast a line with no tackle in the bags', () => {
+    const sim = makeSim('warrior');
+    const spot = mirrorLakeFishingSpot(sim.cfg.seed);
+    teleportTo(sim, spot.x, spot.z);
+    sim.player.facing = spot.facing;
+    sim.addItem('simple_fishing_pole', 1);
+    // Drop the rod out of the bags but still route the use through it: the
+    // tackle gate is a bag scan, not an item-use check.
+    const meta = sim.meta(sim.playerId)!;
+    sim.events = [];
+    (sim as any).startFishing(sim.player, { ...meta, inventory: [] });
+    expect(sim.player.castingAbility).toBe(null);
+    expect(sim.events).toContainEqual(
+      expect.objectContaining({ type: 'fishing', phase: 'no_tackle' }),
+    );
   });
 
   it('catches The Codfather in Deepfen Shallows while its quest is active', () => {
@@ -1156,10 +1221,18 @@ describe('food, drink, vendor', () => {
     expect(sim.player.castingAbility).toBe(FISHING_CAST_ID);
 
     const events: SimEvent[] = [];
-    for (let i = 0; i < 20 * 6 && sim.player.castingAbility; i++) events.push(...sim.tick());
+    let bit = false;
+    for (let i = 0; i < 20 * 15 && !bit; i++) {
+      const tickEvents = sim.tick();
+      events.push(...tickEvents);
+      bit = tickEvents.some((e) => e.type === 'fishing' && e.phase === 'bite');
+    }
+    expect(bit).toBe(true);
+    sim.events = [];
+    sim.useItem('simple_fishing_pole');
 
     expect(sim.player.castingAbility).toBe(null);
-    expect(events).toContainEqual(expect.objectContaining({ type: 'castStop', success: true }));
+    expect(sim.events).toContainEqual(expect.objectContaining({ type: 'castStop', success: true }));
     expect(sim.countItem('the_codfather')).toBe(1);
     expect(sim.questState('q_the_codfather')).toBe('ready');
     expect(sim.countItem('simple_fishing_pole')).toBe(1);

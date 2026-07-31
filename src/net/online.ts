@@ -12,12 +12,22 @@ import {
   type TalentAllocation,
   talentPointsAtLevel,
 } from '../sim/content/talents';
+import { GATHERING_MAX_SKILL } from '../sim/content/professions';
 import { abilitiesKnownAt, CLASSES, NPCS, resolveDelveShopOffers } from '../sim/data';
+import { type DeedProgress, freshDeedProgress, restoreDeedProgress } from '../sim/deeds';
+import { parseInvSlots } from '../sim/item_instance';
+import {
+  emptyGatheringProficiency,
+  type GatheringProficiency,
+  gatheringSkillsView,
+  normalizeGatheringProficiency,
+  type PlayerProfessionSkill,
+} from '../sim/professions';
 import { LEADERBOARD_PAGE_SIZE } from '../sim/leaderboard_page';
 import type { Ante, PickAction } from '../sim/lockpick';
 import type { MarketQuery } from '../sim/market_query';
 import { normalizeMoveFacing, sanitizeMoveInput } from '../sim/move_input';
-import type { ResolvedAbility } from '../sim/sim';
+import { buildDeedsView, type ResolvedAbility } from '../sim/sim';
 import { SpatialGrid } from '../sim/spatial';
 import {
   type Entity,
@@ -39,6 +49,7 @@ import {
   type CharacterSearchResult,
   type DelveCompanionInfo,
   type DelveDailyInfo,
+  type DeedsView,
   type DelveRunInfo,
   type DelveShopOfferView,
   type DuelInfo,
@@ -822,6 +833,15 @@ export class ClientWorld implements IWorld {
   // delveShopOffers can resolve the shop lock badge client-side.
   delveClears: Record<string, number> = {};
   delveDaily: DelveDailyInfo = { date: '', firstClearXp: [], markClears: 0 };
+  // Gathering proficiency, mirrored raw from the self-wire; the rows the panel
+  // paints are derived locally through the sim's own `gatheringSkillsView`.
+  private gatheringProficiency: GatheringProficiency = emptyGatheringProficiency();
+  // The chronicle, mirrored in its sparse persisted form and restored through
+  // the evaluator's own `restoreDeedProgress`, so the view is built by the same
+  // pure helper the offline Sim uses.
+  private deedProgress: DeedProgress = freshDeedProgress();
+  // Whole seconds left on a live /unstuck countdown, or null when none is armed.
+  private unstuckSeconds: number | null = null;
   markers: Record<number, number> = {}; // entityId -> markerId, mirrored from the self-wire
   private lootRollPrompts: LootRollPrompt[] = []; // open need-greed rolls, mirrored from the self-wire
   realm = '';
@@ -1603,12 +1623,17 @@ export class ClientWorld implements IWorld {
       const copper = s.copper ?? 0;
       if (copper !== this.copper) this.invChanged = true;
       this.copper = copper;
+      // Bags arrive as raw JSON. parseInvSlots keeps per-item identity
+      // (InvSlot.instance) intact across the wire while dropping anything
+      // malformed, so a payload written by a NEWER server (a field this build has
+      // never heard of) is mirrored rather than crashing the client, and a
+      // corrupt one degrades to a plain stack.
       if (s.inv !== undefined) {
-        this.inventory = s.inv;
+        this.inventory = parseInvSlots(s.inv);
         this.invChanged = true;
       }
       if (s.buyback !== undefined) {
-        this.vendorBuyback = s.buyback;
+        this.vendorBuyback = parseInvSlots(s.buyback);
         this.invChanged = true;
       }
       if (s.equip !== undefined) this.equipment = s.equip;
@@ -1651,6 +1676,13 @@ export class ClientWorld implements IWorld {
       if (s.dcomp !== undefined) this.companionUpgrades = s.dcomp ?? {};
       if (s.dclears !== undefined) this.delveClears = s.dclears ?? {};
       if (s.delveDaily !== undefined) this.delveDaily = s.delveDaily;
+      // Both go through the sim's own parsers, so an unexpected payload degrades
+      // to an empty record rather than reaching the view builders malformed.
+      if (s.gather !== undefined) {
+        this.gatheringProficiency = normalizeGatheringProficiency(s.gather, GATHERING_MAX_SKILL);
+      }
+      if (s.deeds !== undefined) this.deedProgress = restoreDeedProgress(s.deeds);
+      if (s.unstuck !== undefined) this.unstuckSeconds = s.unstuck ?? null;
       // camera follows server-side facing changes when not mouselooking
       if (prevSelfFacing !== undefined && this.mouselookFacing === null) {
         let d = e.facing - prevSelfFacing;
@@ -2120,6 +2152,15 @@ export class ClientWorld implements IWorld {
   }
   delveShopOffers(delveId: string): DelveShopOfferView[] {
     return resolveDelveShopOffers(delveId, this.delveClears);
+  }
+  gatheringSkills(): PlayerProfessionSkill[] {
+    return gatheringSkillsView(this.gatheringProficiency, GATHERING_MAX_SKILL);
+  }
+  deeds(): DeedsView {
+    return buildDeedsView(this.deedProgress);
+  }
+  unstuckCountdown(): number | null {
+    return this.unstuckSeconds;
   }
   lockpickEngage(objectId: number, ante: Ante): void {
     this.cmd({ cmd: 'lockpick_engage', objectId, ante });

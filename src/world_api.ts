@@ -1,4 +1,6 @@
 import type { Role, SavedLoadout, TalentAllocation } from './sim/content/talents';
+import type { DeedCategory } from './sim/deeds';
+import type { PlayerProfessionSkill } from './sim/professions';
 import type { GuildLeaderboardPage, LeaderboardPage } from './sim/leaderboard_page';
 import type { Ante, LootTier, PickAction, VisibleCell } from './sim/lockpick';
 import type { MarketQuery } from './sim/market_query';
@@ -358,6 +360,31 @@ export interface RaidLockout {
   msRemaining: number;
 }
 
+// One Book of Deeds row. Ids and numbers only: the client renders
+// `deed.<id>.name` / `deed.<id>.desc` and the title text itself.
+export interface DeedEntryView {
+  id: string;
+  category: DeedCategory;
+  renown: number;
+  /** Masked out of the completion pair until earned. */
+  hidden: boolean;
+  earned: boolean;
+  /** The bar: `current` out of `required`. Boolean triggers report 0/1. */
+  current: number;
+  required: number;
+  titleId?: string;
+}
+
+// The whole chronicle readout: one row per deed in catalogue order, the renown
+// total, the earned/total pair (hidden deeds masked), and unlocked title ids.
+export interface DeedsView {
+  entries: DeedEntryView[];
+  renown: number;
+  earned: number;
+  total: number;
+  titles: string[];
+}
+
 // The surface the renderer + HUD need from a game world. The offline `Sim`
 // satisfies this structurally; the online `ClientWorld` implements it by
 // mirroring server snapshots and sending commands over the socket.
@@ -522,6 +549,16 @@ export interface IWorld {
   // Still-locked raids for the local player (unlock countdown in ms), driving the
   // minimap raid-lockout badge + panel. Empty when nothing is locked.
   raidLockouts(): RaidLockout[];
+  // Gathering professions: the local player's rows (profession id, current
+  // proficiency, that profession's ceiling) for the professions panel. Always
+  // one row per profession, in a stable order.
+  gatheringSkills(): PlayerProfessionSkill[];
+  // The Book of Deeds readout. Derived, so a method rather than a property:
+  // both worlds build it from the same pure helper over the raw progress.
+  deeds(): DeedsView;
+  // Seconds left on a live `/unstuck` countdown, or null when none is armed.
+  // Drives the countdown overlay; the move itself is server-authoritative.
+  unstuckCountdown(): number | null;
   // Post-cap progression: the realm-scoped lifetime-XP leaderboard, and the
   // opt-in cosmetic prestige action. Paged server-side (a realm can hold far
   // more than one page of max-level players); page is 0-based.
