@@ -22,6 +22,15 @@ export const CHANNEL_PUSHBACK_FRACTION = 0.25; // vanilla: each hit shaves 25% o
 export const FISHING_CAST_ID = 'fishing';
 export const FISHING_CAST_NAME = 'Fishing';
 export const FISHING_CAST_TIME = 5;
+// Sentinel cast id for a node harvest, the same shape as FISHING_CAST_ID: not an
+// ability, so it never resolves through ABILITIES and never takes the GCD. The
+// client keys its cast-bar label off this id.
+export const GATHER_CAST_ID = 'gathering';
+// Upper bound on ONE fishing session. Replaces FISHING_CAST_TIME as the value on
+// `castTotal`: the catch is resolved by the reel, not by the cast timer, so this
+// is only the "you never reeled" cap. Comfortably above the worst-case schedule
+// (an 8s bite delay plus a 4.5s reel window on a tier-1 rod).
+export const FISHING_SESSION_CAP = 20;
 
 export type PlayerClass =
   | 'warrior'
@@ -258,9 +267,47 @@ export interface ItemDef {
   requiredLevel?: number;
 }
 
+/**
+ * Per-copy identity for a single inventory slot (the Professions 2.0 keystone).
+ * Two copies of an item are normally indistinguishable stack counters; a copy
+ * carrying an `ItemInstance` is a specific, non-fungible object: signed by its
+ * maker, enchanted, or carrying a baked bonus roll.
+ *
+ * Every field is optional and every rule about the shape lives in
+ * `src/sim/item_instance.ts` (stacking, cloning, back-compat parsing, minting) ,
+ * never inline. Payloads persist inside the character JSONB and ride the wire
+ * verbatim, so treat this as a stored format: only ADD optional fields, never
+ * repurpose or remove one, and expect to meet fields a newer build wrote
+ * (`parseItemInstance` preserves those it does not know).
+ */
+export interface ItemInstance {
+  /** The Maker's Bond: display name of the player who crafted/signed this copy. */
+  signer?: string;
+  /** The signer's entity id, so the bond survives a rename and stays resolvable. */
+  signerId?: number;
+  /** Values baked into this specific copy when it was made. `masterwork` marks a
+   *  masterwork proc whose `stats` are its bonus (an enchant uses `enchant` below). */
+  rolled?: { quality?: string; stats?: Record<string, number>; masterwork?: boolean };
+  /** Id of the enchant applied to this copy (the authoritative "already enchanted" marker). */
+  enchant?: string;
+  /** Recipe id that minted this copy. */
+  craftedRecipeId?: string;
+  /** Remaining charges for a per-effect-limited copy, keyed by effect id. */
+  charges?: Record<string, number>;
+  /** Player entity id this copy is soulbound to. */
+  boundTo?: number;
+}
+
 export interface InvSlot {
   itemId: string;
   count: number;
+  /**
+   * Additive, optional per-copy identity. ABSENT for an ordinary fungible stack,
+   * which behaves exactly as it did before this field existed. A slot that HAS
+   * one never stacks with anything (`item_instance.ts` `canStack`), because
+   * sharing a `count` is precisely what would destroy the identity.
+   */
+  instance?: ItemInstance;
 }
 
 export interface LootSlot extends InvSlot {
@@ -1292,6 +1339,15 @@ export interface Entity {
   castRemaining: number;
   castTotal: number;
   channeling: boolean;
+  // Fishing minigame, SIM-LOCAL and never on the wire (like `nythraxis` below,
+  // so the client mirror's blank entity does not have to carry them). The tick
+  // the fish bites and the last tick a reel still lands, plus whether the bite
+  // cue already fired. These MUST NOT live on castTotal/castRemaining, which
+  // ARE broadcast: a cheating client could otherwise read the hidden bite
+  // moment straight off the cast bar and reel perfectly every time.
+  fishBiteTick?: number;
+  fishReelDeadlineTick?: number;
+  fishBiteCued?: boolean;
   channelTickTimer: number;
   channelTickEvery: number;
   gcdRemaining: number;
@@ -1664,6 +1720,55 @@ export type SimEvent = { pid?: number } & (
   // the server-rolled rank. Text-free on purpose — the client renders its own
   // localized copy, so no sim/server i18n matcher rule is needed.
   | { type: 'skinEvent'; rank: SkinRank; catalog?: SkinCatalog }
+  // ---------------------------------------------------------------------
+  // Gathering professions, fishing minigame, unstuck and deeds. Every one of
+  // these is TEXT-FREE on purpose: the sim emits stable ids plus numbers and
+  // the client composes and localizes the line, so none of them needs a
+  // `sim_i18n.ts` matcher rule (same contract as `skinEvent`/`lockpick*`).
+  // ---------------------------------------------------------------------
+  // A harvest attempt the gates refused. `requiredTier` is the tool tier the
+  // node demands; `readyInSec` rides only on `not_ready`.
+  | {
+      type: 'gatherDeny';
+      nodeId: string;
+      professionId: string;
+      reason: 'no_tool' | 'tool_tier' | 'not_ready';
+      requiredTier: number;
+      readyInSec?: number;
+    }
+  // A completed harvest. The item is granted SILENTLY (addItemSilent), so this is
+  // the only line the player sees for it; granting through `addItem` would print a
+  // second `loot` line for the same ore. Carries the rolled rarity so the client can
+  // colour the harvest line.
+  | {
+      type: 'gatherHarvest';
+      nodeId: string;
+      professionId: string;
+      itemId: string;
+      rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+      qty: number;
+    }
+  // A gathering profession's proficiency went up. `skill` is the new value.
+  | { type: 'professionSkill'; professionId: string; skill: number; maxSkill: number }
+  // Fishing minigame beats. `bite` arms the reel window, `landed` is a
+  // successful reel, `escaped` carries why the fish got away, `no_tackle` is
+  // the text-free deny for casting without a rod in the bags.
+  | {
+      type: 'fishing';
+      phase: 'bite' | 'landed' | 'escaped' | 'no_tackle';
+      reason?: 'too_early' | 'too_late' | 'timeout';
+    }
+  // `/unstuck` lifecycle. `seconds` is the countdown on `started`/`countdown`
+  // and the remaining cooldown on a `blocked` with reason `cooldown`.
+  | {
+      type: 'unstuck';
+      phase: 'started' | 'countdown' | 'blocked' | 'cancelled' | 'completed';
+      seconds?: number;
+      reason?: string;
+      outcome?: 'moved_to_graveyard' | 'revived_at_graveyard';
+    }
+  // A Book of Deeds entry was earned. The client renders `deed.<id>.name`.
+  | { type: 'deedComplete'; deedId: string; renown: number; titleId?: string }
 );
 
 export interface MoveInput {
