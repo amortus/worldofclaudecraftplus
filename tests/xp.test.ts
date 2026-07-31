@@ -26,6 +26,7 @@ import {
   xpForLevel, xpToReachLevel, zeroDiff,
   PRESTIGE_XP_PER_RANK, maxPrestigeRank, canPrestige, xpUntilNextPrestige,
 } from '../src/sim/types';
+import type { SimEvent } from '../src/sim/types';
 import { xpBarView, formatXp } from '../src/ui/xp_bar';
 import { formatNumber, t } from '../src/ui/i18n';
 import { GameServer } from '../server/game';
@@ -270,6 +271,23 @@ describe('prestige', () => {
     expect(sim.prestigeRank).toBe(1); // rank incremented
     expect(sim.lifetimeXp).toBe(lifeBefore); // lifetime untouched
     expect(sim.player.level).toBe(MAX_LEVEL); // no de-level / power loss
+  });
+
+  it('announces the new rank on its own event', () => {
+    // The rank is painted on the character sheet, which otherwise repaints only on an
+    // inventory or cosmetics delta, so an open sheet kept showing the stale rank. The
+    // chat line is not enough: the HUD needs a signal it can key a repaint off.
+    const sim = makeSim('warrior');
+    sim.setPlayerLevel(MAX_LEVEL);
+    sim.grantXp(800_000);
+    expect(sim.prestige()).toBe(true);
+
+    const events = sim.tick();
+    const ev = events.find((e) => e.type === 'prestige') as
+      | Extract<SimEvent, { type: 'prestige' }>
+      | undefined;
+    expect(ev).toBeTruthy();
+    expect(ev!.rank).toBe(sim.prestigeRank);
   });
 
   it('is refused below the cap', () => {

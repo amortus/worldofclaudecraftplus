@@ -1346,6 +1346,11 @@ export interface Entity {
   warcryTimer: number; // warcry ally-haste pulse countdown
   firedSummons: number; // summonAdds thresholds already triggered
   summonedIds: number[]; // live adds this boss summoned; despawned on reset
+  // Sim-local (never on the wire, so it stays optional and the client mirror's
+  // blank entity does not have to carry it): true for a mob spawnBossAdds erupted
+  // beside its summoner. A slain add unravels with its corpse instead of
+  // respawning at its eruption point, which is wherever the fight was dragged.
+  summonedAdd?: boolean;
   enraged: boolean; // enrage mechanic active
   healedThisPull: boolean; // desperation self-heal already used this pull
   aoeSlowTimer: number; // anti-kite snare (Howling Gale) pulse countdown
@@ -1473,6 +1478,10 @@ export type SimEvent = { pid?: number } & (
   // level past the cap, and unlocking a cosmetic lifetime-XP milestone
   | { type: 'virtualLevelUp'; level: number }
   | { type: 'milestoneUnlocked'; milestoneId: string }
+  // Prestiging bumps a rank the character sheet paints. Without an event of its own
+  // the sheet only ever repainted on an inventory or cosmetics delta, so an open sheet
+  // kept showing the old rank until something unrelated happened to redraw it.
+  | { type: 'prestige'; rank: number }
   | { type: 'learnAbility'; abilityId: string; rank: number }
   | { type: 'loot'; text: string }
   | {

@@ -69,7 +69,10 @@ describe('duel: non-lethal cleanup', () => {
     (sim as any).applyAura(eb, opponentDot(ea.id));
     (sim as any).dealDamage(ea, eb, eb.hp + 1000, false, 'physical', 'Finisher', 'hit');
 
-    expect((sim as any).duels.has(b)).toBe(false); // duel is over
+    // duel is over. endDuel now defers the map delete to updateDuels()'s tick-tail
+    // purge (so a same-tick reciprocal lethal hit still finds it and gets clamped),
+    // so "ended" is read through duelFor, not raw map membership.
+    expect(sim.duelFor(b)).toBeNull();
     expect(eb.dead).toBe(false);
     expect(eb.hp).toBe(1);
 
@@ -131,7 +134,7 @@ describe('duel: PvP combat affordances', () => {
 
     (sim as any).dealDamage(pet, eb, eb.hp + 1000, false, 'physical', 'Pet Bite', 'hit');
 
-    expect((sim as any).duels.has(b)).toBe(false);
+    expect(sim.duelFor(b)).toBeNull();
     expect(eb.dead).toBe(false);
     expect(eb.hp).toBe(1);
   });

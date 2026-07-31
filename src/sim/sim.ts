@@ -359,7 +359,11 @@ const NYTHRAXIS_ALDRIC_SPAWN_DIST = 50;
 const NYTHRAXIS_ALDRIC_WALK_DIST = 30;
 const PARTY_MAX = 5;
 const RAID_MIN = 5;
-const RAID_MAX = 10;
+// The largest roster any group can hold. The one reader outside this file: it is
+// also the honest ceiling on how many players a client-supplied group-wide pid
+// list can name, so server/game.ts imports it to bound the masterAssign wire
+// case. Raising it widens that wire bound too, which is the intent.
+export const RAID_MAX = 10;
 const RAID_GROUP_MAX = 5;
 const DAMAGE_IDLE_DESPAWN_SECONDS = 60;
 const DAMAGE_IDLE_DESPAWN_MOB_IDS = new Set(['varkas_boneguard', 'bound_guardian']);
@@ -685,6 +689,12 @@ export interface DuelState {
   b: number;
   state: 'countdown' | 'active';
   timer: number; // countdown remaining / elapsed
+  // Tick number endDuel() marked this duel on, or undefined while it is live.
+  // The entry stays in `this.duels` (instead of being deleted synchronously)
+  // until updateDuels() purges it at tick-tail, so a reciprocal lethal hit
+  // resolving later in the SAME tick still finds it and gets clamped too:
+  // duels never produce a real death, even on a simultaneous double-kill.
+  endedTick?: number;
 }
 
 type GroundAoE = {
@@ -1753,7 +1763,7 @@ export class Sim {
     this.removeFromParty(pid, 'has left the party');
     const trade = this.trades.get(pid);
     if (trade) this.tradeCancel(pid);
-    const duel = this.duels.get(pid);
+    const duel = this.duelFor(pid);
     if (duel) this.endDuel(duel, duel.a === pid ? duel.b : duel.a);
     // arena: leaving the queue is free; disconnecting mid-bout forfeits it
     this.arenaDequeue(pid);
@@ -5766,11 +5776,19 @@ export class Sim {
 
     const sourcePlayer = this.pvpController(source);
 
-    // duels end at 1 hp — nobody dies
+    // duels end at 1 hp — nobody dies. A duel that already ended earlier THIS
+    // SAME tick (endDuel defers the this.duels delete to tick-tail) still matches
+    // here on purpose: a reciprocal lethal hit against the other duelist,
+    // resolving later in the same tick, must be clamped too instead of producing
+    // a real death on a simultaneous double-kill. `state` is never flipped when a
+    // duel ends, so the lifetime test is what stops an ended entry that outlives
+    // its own tick (removePlayer ends a duel outside a tick) from clamping for an
+    // extra tick.
     const duel = target.kind === 'player' ? this.duels.get(target.id) : undefined;
     if (
       duel &&
       duel.state === 'active' &&
+      (duel.endedTick === undefined || duel.endedTick === this.tickCount) &&
       sourcePlayer &&
       (sourcePlayer.id === duel.a || sourcePlayer.id === duel.b)
     ) {
@@ -6410,6 +6428,7 @@ export class Sim {
       text: `You have prestiged! Prestige Rank ${r.meta.prestigeRank}.`,
       color: '#ffd100',
     });
+    this.emit({ type: 'prestige', pid: r.e.id, rank: r.meta.prestigeRank });
     return true;
   }
 
@@ -6581,17 +6600,30 @@ export class Sim {
     this.pendingLootRolls.set(roll.id, roll);
     mob.corpseTimer = Math.max(mob.corpseTimer, MASTER_LOOT_TIMEOUT + 2);
     // Sent only to the master looter; the candidate list is who they can assign to.
+    this.emitMasterLootPrompt(roll, looterPid);
+    return true;
+  }
+
+  // The master looter's assign prompt. Emitted when the roll opens and again when an
+  // assignment is refused, so the second path can never drift from the first. Names are
+  // resolved live rather than captured, so a candidate who has since left the world drops
+  // out of the re-offered list instead of being offered again and refused again.
+  private emitMasterLootPrompt(roll: PendingLootRoll, looterPid: number): void {
+    const candidates: { pid: number; name: string }[] = [];
+    for (const pid of roll.candidates) {
+      const player = this.players.get(pid);
+      if (player) candidates.push({ pid, name: player.name });
+    }
     this.emit({
       type: 'masterLoot',
       rollId: roll.id,
-      itemId,
-      itemName,
+      itemId: roll.itemId,
+      itemName: roll.itemName,
       quality: roll.quality,
       expiresAt: roll.expiresAt,
-      candidates: candidates.map((candidate) => ({ pid: candidate.entityId, name: candidate.name })),
+      candidates,
       pid: looterPid,
     });
-    return true;
   }
 
   private awardSharedLootItem(itemId: string, mob: Entity, looter: PlayerMeta): void {
@@ -6653,9 +6685,26 @@ export class Sim {
     const roll = this.pendingLootRolls.get(rollId);
     if (!roll || roll.masterLooter === undefined) return;
     if (r.meta.entityId !== roll.masterLooter) return; // only the master looter decides
-    // Keep only still-eligible targets; ignore anyone no longer a candidate.
-    const targets = targetPids.filter((p) => roll.candidates.includes(p));
-    if (targets.length === 0) return; // nothing valid selected: leave the prompt open
+    // Keep only still-eligible targets, each counted once; ignore anyone no longer
+    // a candidate. The pid list is client-supplied (the masterAssign wire case only
+    // checks it is a non-empty numeric array no longer than a full raid roster,
+    // nothing about the values), and a pid named twice would send that player two
+    // lootRoll prompts and print their reveal line twice.
+    // What is load-bearing is deduping BEFORE the length tests below, so [X, X]
+    // takes the direct-grant arm exactly like [X] instead of converting to a
+    // one-player need/greed roll (the dedupe and the filter commute, so their
+    // relative order is not). Set iterates in first-seen order, which preserves the
+    // caller's prompt order.
+    const targets = [...new Set(targetPids)].filter((p) => roll.candidates.includes(p));
+    if (targets.length === 0) {
+      // Every pick has since stopped being a candidate (left the group, logged out,
+      // left the instance). The looter's client already tore its prompt down on click,
+      // so returning silently strands the item until the roll times out. Say why, and
+      // hand the prompt back with whoever is still eligible.
+      this.error(r.e.id, 'That player can no longer receive this item.');
+      this.emitMasterLootPrompt(roll, r.e.id);
+      return;
+    }
     if (targets.length === 1) {
       if (!this.pendingLootRolls.delete(roll.id)) return;
       const targetName = this.players.get(targets[0])?.name ?? 'Unknown';
@@ -7169,6 +7218,16 @@ export class Sim {
       }
       // dungeon mobs stay dead until the instance resets
       const isInstanceMob = mob.spawnPos.x > DUNGEON_X_THRESHOLD;
+      // A slain summoned add unravels once its corpse decays, like the summoned
+      // demon above, rather than respawning into the wild: its spawnPos is
+      // wherever its summoner stood when the wave erupted, so an in-place respawn
+      // would permanently seed a new open-world spawn point at the eruption spot
+      // and grow the world population without bound. The corpse keeps its full
+      // loot window (the drop waits on corpseTimer).
+      if (!isInstanceMob && mob.summonedAdd) {
+        if (mob.corpseTimer <= 0) this.dropEntity(mob.id);
+        return;
+      }
       if (!isInstanceMob && mob.respawnTimer <= 0 && (mob.corpseTimer <= 0 || !mob.lootable)) {
         this.respawnMob(mob);
       }
@@ -10309,6 +10368,12 @@ export class Sim {
       // ever swinging. Kited from here, the chase-case leash check walks it back to
       // this eruption point, not the boss's distant home.
       add.tappedById = boss.tappedById;
+      // ...which is exactly why a SLAIN add must not respawn there: the eruption
+      // point is wherever the fight was dragged (a kited rare hatches adds in the
+      // middle of a town or a road), and the only other cleanup is
+      // despawnSummonedAdds on the summoner's own respawn, hours away for a rare.
+      // updateMob unravels the corpse instead once its loot window lapses.
+      add.summonedAdd = true;
       this.addEntity(add);
       boss.summonedIds.push(add.id);
       inst?.mobIds.push(add.id);
@@ -12726,7 +12791,7 @@ export class Sim {
       if (!attackerPlayer) return false;
       if (attackerPlayer.dead) return false;
       if (attackerPlayer.id === target.id) return false;
-      const duel = this.duels.get(attackerPlayer.id);
+      const duel = this.duelFor(attackerPlayer.id);
       if (
         duel &&
         duel.state === 'active' &&
@@ -13172,7 +13237,7 @@ export class Sim {
       this.error(r.meta.entityId, 'You cannot duel in Nythraxis Raid Arena.');
       return;
     }
-    if (this.duels.has(r.meta.entityId) || this.duels.has(targetPid)) {
+    if (this.duelFor(r.meta.entityId) || this.duelFor(targetPid)) {
       this.error(r.meta.entityId, 'A duel is already in progress.');
       return;
     }
@@ -13219,7 +13284,7 @@ export class Sim {
       this.error(r.meta.entityId, 'You cannot duel in Nythraxis Raid Arena.');
       return;
     }
-    if (this.duels.has(invite.fromPid) || this.duels.has(r.meta.entityId)) {
+    if (this.duelFor(invite.fromPid) || this.duelFor(r.meta.entityId)) {
       this.error(r.meta.entityId, 'A duel is already in progress.');
       return;
     }
@@ -13284,6 +13349,9 @@ export class Sim {
     for (const duel of this.duels.values()) {
       if (seen.has(duel)) continue;
       seen.add(duel);
+      // Already ended (an earlier same-tick lethal hit, or a stale entry awaiting
+      // purge): nothing left to evaluate, fall through to the purge sweep below.
+      if (duel.endedTick !== undefined) continue;
       const ea = this.entities.get(duel.a);
       const eb = this.entities.get(duel.b);
       if (!ea || !eb) {
@@ -13316,6 +13384,13 @@ export class Sim {
         this.endDuel(duel, duel.a);
       }
     }
+    // Purge every duel endDuel() marked ended (this tick or, when it was ended
+    // outside a tick entirely, an earlier one) now that combat for this tick has
+    // fully resolved. Deferring the delete out of endDuel() is what lets a
+    // reciprocal lethal hit landing later in the SAME tick still find the duel.
+    for (const [pid, duel] of this.duels) {
+      if (duel.endedTick !== undefined) this.duels.delete(pid);
+    }
   }
 
   private clearAurasFromSource(target: Entity, sourceId: number): void {
@@ -13335,8 +13410,14 @@ export class Sim {
 
   // winnerPid null = draw/cancelled
   private endDuel(duel: DuelState, winnerPid: number | null): void {
-    this.duels.delete(duel.a);
-    this.duels.delete(duel.b);
+    // Idempotent: a same-tick reciprocal lethal hit re-enters here after the
+    // first hit already ended this same duel (the 1-HP clamp in dealDamage still
+    // matches it via endedTick). Only the first call does the teardown and emits.
+    if (duel.endedTick !== undefined) return;
+    // Deferred delete: the entry stays in `this.duels` until updateDuels() purges
+    // it at tick-tail, which is what lets the second lethal blow of a simultaneous
+    // exchange still find the duel and get clamped instead of killing for real.
+    duel.endedTick = this.tickCount;
     const aMeta = this.players.get(duel.a);
     const bMeta = this.players.get(duel.b);
     const ea = this.entities.get(duel.a);
@@ -13362,7 +13443,12 @@ export class Sim {
   }
 
   duelFor(pid: number): DuelState | null {
-    return this.duels.get(pid) ?? null;
+    const duel = this.duels.get(pid);
+    // An ended duel lingers in `this.duels` until updateDuels() purges it at
+    // tick-tail (see endDuel); every consumer except the 1-HP damage clamp must
+    // keep seeing it as gone the instant it ends, matching the old synchronous
+    // delete.
+    return duel && duel.endedTick === undefined ? duel : null;
   }
 
   // -------------------------------------------------------------------------
@@ -13402,7 +13488,7 @@ export class Sim {
       this.error(id, 'You cannot queue for the arena while dead.');
       return;
     }
-    if (this.duels.has(id)) {
+    if (this.duelFor(id) !== null) {
       this.error(id, 'You cannot queue while dueling.');
       return;
     }
@@ -13475,7 +13561,7 @@ export class Sim {
         this.error(id, `${mMeta.name} is already in the arena queue.`);
         return;
       }
-      if (this.duels.has(mPid)) {
+      if (this.duelFor(mPid) !== null) {
         this.error(id, `${mMeta.name} cannot queue while dueling.`);
         return;
       }

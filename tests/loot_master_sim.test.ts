@@ -131,6 +131,45 @@ describe('master loot: assignment', () => {
     expect(hasItem(sim, b)).toBe(false);
   });
 
+  // Regression (upstream 4378839a4): the pid list is client-supplied and the wire
+  // case checks only that it is a non-empty numeric array, so a repeated pid used
+  // to survive into `targets`. [X, X] then took the "two or more" arm and converted
+  // a straight assignment into a one-player need/greed roll, and sent X two prompts
+  // plus two reveal lines. Deduping BEFORE the length tests is the load-bearing part.
+  it('collapses a repeated pid so a doubled pick still grants directly', () => {
+    const { sim, a, b, c } = setup();
+    sim.setPartyLootMaster(true, 0, 'uncommon', a);
+    const ml = openMasterRoll(sim, a, [a, b, c]);
+
+    sim.assignMasterLoot(ml.rollId, [b, b], a);
+    const events = sim.tick();
+
+    expect(hasItem(sim, b)).toBe(true); // the direct-grant arm, exactly like [b]
+    expect(pendingRolls(sim).length).toBe(0); // not converted to a need/greed roll
+    expect(events.some((e) => e.type === 'lootRoll')).toBe(false);
+    // and b is told once, not twice
+    const toB = events.filter(
+      (e) => e.type === 'loot' && (e as any).pid === b && / assigned /.test((e as any).text),
+    );
+    expect(toB).toHaveLength(1);
+  });
+
+  it('collapses duplicates before the subset roll, prompting each player once', () => {
+    const { sim, a, b, c } = setup();
+    sim.setPartyLootMaster(true, 0, 'uncommon', a);
+    const ml = openMasterRoll(sim, a, [a, b, c]);
+
+    sim.assignMasterLoot(ml.rollId, [b, c, b, c], a);
+    const events = sim.tick();
+
+    const rolls = events.filter(
+      (e): e is Extract<SimEvent, { type: 'lootRoll' }> =>
+        e.type === 'lootRoll' && e.rollId === ml.rollId,
+    );
+    expect(rolls.map((e) => e.pid).sort()).toEqual([b, c].sort()); // one prompt each
+    expect(pendingRolls(sim)[0].candidates).toEqual([b, c]); // first-seen order kept
+  });
+
   it('is a no-op when no valid candidate is selected', () => {
     const { sim, a, b, c } = setup();
     const outsider = sim.addPlayer('priest', 'Delta');

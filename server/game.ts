@@ -15,7 +15,7 @@ import {
 import { sanitizeMarketQuery } from '../src/sim/market_query';
 import { parseMoveInputFrame } from '../src/sim/move_input';
 import type { PetState, PlayerMeta } from '../src/sim/sim';
-import { MAX_CHAT_MESSAGE_LEN, Sim } from '../src/sim/sim';
+import { MAX_CHAT_MESSAGE_LEN, RAID_MAX, Sim } from '../src/sim/sim';
 import { stealthDetectionRadius, threatEntries } from '../src/sim/threat';
 import {
   DT,
@@ -2000,6 +2000,13 @@ export class GameServer {
           typeof msg.rollId === 'number' &&
           Array.isArray(msg.pids) &&
           msg.pids.length > 0 &&
+          // A curate-phase roll's candidates are the tapping group's loot-eligible
+          // members, so a full raid roster is the most an honest client can check.
+          // Over cap the frame is rejected outright, the way the other capped cases
+          // here reject theirs, rather than truncated to a selection the master
+          // looter never made. Tested BEFORE the element scan so the per-element
+          // work is bounded too; the Sim re-validates every pid.
+          msg.pids.length <= RAID_MAX &&
           msg.pids.every((p: unknown) => typeof p === 'number')
         )
           sim.assignMasterLoot(msg.rollId, msg.pids, pid);
