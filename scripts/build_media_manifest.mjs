@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
@@ -69,9 +69,39 @@ function emit() {
   console.log(`emitted ${Object.keys(entries).length} hashed media assets to ${path.relative(root, mediaDir)}`);
 }
 
+// Vite copies public/ into dist/ verbatim, and emit() then writes a SECOND,
+// content-hashed copy of every media file under dist/media/. Both shipped, so the
+// bundle carried each model, texture, HDRI and vfx sheet twice (about 76 MiB of exact
+// duplication, proven by matching md5s). In a production build `assetUrl` resolves
+// every one of these through the manifest, so the unhashed originals are dead weight
+// there; they exist for `npm run dev`, which serves public/ directly and never reads
+// dist/. Pruning is safe precisely because manifestEntries() walks the SAME four roots
+// it emits: every file we delete provably has a hashed counterpart the runtime uses.
+function prune() {
+  const entries = manifestEntries();
+  let bytes = 0;
+  let removed = 0;
+  for (const logical of Object.keys(entries)) {
+    const original = path.join(distDir, logical);
+    if (!existsSync(original)) continue;
+    bytes += statSync(original).size;
+    rmSync(original);
+    removed++;
+  }
+  // Leave no empty directory skeletons behind.
+  for (const rootName of MEDIA_ROOTS) {
+    const dir = path.join(distDir, rootName);
+    if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });
+  }
+  console.log(
+    `pruned ${removed} unhashed media duplicates from dist (${(bytes / 1048576).toFixed(1)} MiB freed)`,
+  );
+}
+
 const cmd = process.argv[2] ?? 'generate';
 if (cmd === 'generate') generate();
 else if (cmd === 'emit') emit();
+else if (cmd === 'prune') prune();
 else {
   console.error(`unknown command: ${cmd}`);
   process.exit(1);
