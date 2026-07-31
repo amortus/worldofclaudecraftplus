@@ -858,6 +858,243 @@ export const hudChromeStrings = {
     },
   },
   // ---------------------------------------------------------------------------
+  // Crafting (wave 2): the four craft professions, their recipes, the masterwork
+  // proc and the maker's bond.
+  //
+  // src/sim/professions/ is text-free by contract: it returns ids and numbers
+  // (CraftDenyReason, MasteryState, a reagent's required/held counts, a proc
+  // chance), so every line below is authored here and rendered by
+  // src/ui/crafting_window.ts and src/ui/crafting_feedback.ts. The ITEM names a
+  // recipe row prints are entity names and live under entities.items.* instead
+  // (tEntity), not here. The four mastery-state words are wave 1's
+  // (professions.mastery.*), reused rather than restated.
+  // ---------------------------------------------------------------------------
+  crafting: {
+    panelTitle: 'Crafting',
+    close: 'Close crafting',
+    subheading: 'What your hands can still make from what the land gave up.',
+    empty: 'You have taken up no craft yet.',
+    tablistLabel: 'Crafts',
+    tabAria: '{profession}, skill {skill} of {max}',
+    // Craft names + blurbs. English source mirrors CRAFTING_PROFESSIONS in
+    // src/sim/content/professions/crafts.ts.
+    names: {
+      smithing: 'Smithing',
+      woodcraft: 'Woodcraft',
+      alchemy: 'Alchemy',
+      enchanting: 'Enchanting',
+    },
+    descriptions: {
+      smithing: 'Working ore and timber into mail armor and heavy weapons.',
+      woodcraft:
+        'Shaping timber into staves and hafts, and weaving treated bark into light armor.',
+      alchemy: 'Distilling herbs and river catches into draughts and elixirs.',
+      enchanting:
+        'Unmaking finished gear for its arcane residue, and binding that residue back into other gear.',
+    },
+    // Progress readouts. The digits are spliced in already formatted.
+    skillValue: '{skill} / {max}',
+    skillAria: '{profession} skill, {skill} of {max}',
+    capped: 'Mastered',
+    cappedAria: '{profession} mastered at {max}',
+    toNextTier: '{points} to the next tier',
+    totals: '{skill} of {max} craft skill, {craftable} ready to make',
+    craftableNow: '{count} ready to make',
+    noRecipes: 'This craft keeps no patterns. Its work is done at the bench.',
+    openEnchanting: 'Open the enchanting bench',
+    // Recipe rows.
+    recipeTitleBatch: '{item} x{count}',
+    itemLevel: 'Item level {level}',
+    masterworkChance: 'Masterwork chance {chance}',
+    teaches: 'Still teaches you',
+    teachesNothing: 'Teaches you nothing more',
+    reagentsHeading: 'Reagents',
+    reagentCount: '{held} / {required}',
+    reagentCost: '{count} {item}',
+    reagentAriaMet: '{item}, {held} of {required} held',
+    reagentAriaShort: '{item}, {held} of {required} held, {short} short',
+    craft: 'Craft',
+    craftAria: 'Craft {item}',
+    // Denials. The id comes from CraftDenyReason; the counts are the only
+    // numbers the sim hands over.
+    deny: {
+      insufficientMaterials: 'You lack the materials for that.',
+      insufficientNamed: 'You need {required} {item} and hold only {held}.',
+      needMore: 'You need more {item}.',
+      // Host-level refusals the server adds on top of the pure core's gates.
+      unknownRecipe: 'You know no such pattern.',
+      busy: 'Your hands are full with something else.',
+      dead: 'The dead craft nothing.',
+    },
+    skillUp: '{profession} rises to {skill}.',
+    skillMastered: 'You have mastered {profession}.',
+    // Craft results. `count` arrives pre-formatted; `stats` is a built clause.
+    result: {
+      single: 'You craft {item}.',
+      batch: 'You craft {item} x{count}.',
+      masterwork: 'A masterwork. {item} comes off the bench better than the pattern.',
+      masterworkStats: 'It carries {stats} beyond the pattern.',
+      makersBond: 'Crafted by {name}.',
+      signedReagent: 'Signed materials steadied the work.',
+    },
+    // Shared fragments. `statLine` is the one "+N Stat" form the whole feature
+    // prints, and `listJoin` the one separator it strings them with.
+    statLine: '+{value} {stat}',
+    listJoin: ', ',
+    tooltip: {
+      masterwork: 'Masterwork',
+      fromMasterwork: '+{value} {stat} (masterwork)',
+      makersBond: 'Crafted by {name}',
+    },
+    // The four crafted elixirs stamp an aura whose English name is authored in
+    // the sim; these are the localized forms the buff frame shows.
+    auras: {
+      silverVigor: 'Silver Vigor',
+      goldenFocus: 'Golden Focus',
+      sunpetalSwiftness: 'Sunpetal Swiftness',
+      ashenWard: 'Ashen Ward',
+    },
+  },
+  // ---------------------------------------------------------------------------
+  // Enchanting (wave 2): the Apply Enchant list, the destructive replace
+  // confirmation, and the disenchant confirmation.
+  //
+  // The 36 enchant names mirror the English source in
+  // src/sim/content/professions/enchants.ts. Every line the two confirmations
+  // print is authored here: the sim reports which enchant would be destroyed and
+  // what the cost is, and refuses to guess at the words for it.
+  // ---------------------------------------------------------------------------
+  enchanting: {
+    panelTitle: 'Enchanting',
+    close: 'Close the enchanting bench',
+    subheading: 'Bind arcane residue into a piece, or unmake a piece back into residue.',
+    tablistLabel: 'Enchanting bench',
+    tabEnchant: 'Apply Enchant',
+    tabDisenchant: 'Disenchant',
+    targetsLabel: 'Pieces you can enchant',
+    targetWorn: '{item} (worn)',
+    targetBagged: '{item} (in bags)',
+    targetAriaPlain: '{item}, not enchanted',
+    targetAriaEnchanted: '{item}, already carries {enchant}',
+    noTargets: 'You carry nothing an enchant will take.',
+    noOptions: 'No enchantment known to you will bind to this piece.',
+    currentOn: '{item} already carries {enchant}.',
+    currentNone: '{item} carries no enchantment.',
+    // The three tiers the picker groups by, and what each one costs to buy.
+    groups: {
+      base: 'Base',
+      runed: 'Runed',
+      greater: 'Greater',
+    },
+    groupBlurbs: {
+      base: 'The common bindings, bought with dust and essence.',
+      runed: 'Bound with a resonant weave, which only a rare piece gives up.',
+      greater: 'The deep bindings. Each one costs an arcane shard.',
+    },
+    costLabel: 'Cost: {cost}',
+    costRow: '{held}/{required} {item}',
+    optionAria: '{enchant}, grants {stats}',
+    replacesNote: 'Replaces {destroyed}, which is destroyed.',
+    currentNote: 'Already bound to this piece.',
+    unknownEnchant: 'an unknown enchantment',
+    result: {
+      applied: 'You bind {enchant} into {item}.',
+      replaced: 'You bind {enchant} into {item}, unmaking {destroyed}.',
+    },
+    deny: {
+      notHeld: 'You no longer hold that piece.',
+      wrongSlot: 'That enchantment will not take on this piece.',
+      wrongSlotNamed: 'That enchantment will not take on {item}.',
+      insufficientMaterials: 'You lack the reagents for that binding.',
+      alreadyEnchanted: 'That piece already carries an enchantment. Confirm to destroy it.',
+      sameEnchant: 'That binding is already on the piece. Nothing would change.',
+      // Host-level refusals the server adds on top of the pure core's gates.
+      unknownEnchantId: 'You know no such binding.',
+      busy: 'Your hands are full with something else.',
+      dead: 'The dead bind nothing.',
+    },
+    // The destructive replace. Every clause is separate so the dialog can state
+    // what dies, what arrives, what it costs, and the two things that cannot be
+    // walked back.
+    replace: {
+      title: 'Destroy {destroyed}?',
+      bodyDestroys: 'Binding this will destroy {destroyed} on {item}.',
+      bodyApplies: 'In its place you gain {enchant}, granting {stats}.',
+      bodyCost: 'It costs {cost}.',
+      warningNotRefunded: 'The materials in the old enchantment are not refunded.',
+      warningCannotUndo: 'This cannot be undone.',
+      confirm: 'Destroy and rebind',
+      cancel: 'Keep the old enchantment',
+    },
+    // The disenchant preview. The ladder material is a range (the sim spends its
+    // one draw on a bonus unit); the typed weave is exact.
+    disenchant: {
+      title: 'Unmake {item}?',
+      bodyYield: 'Breaking it down yields {material}.',
+      bodySecondary: 'It also gives up {secondary}.',
+      warningDestroyed: 'The piece itself is destroyed.',
+      warningCannotUndo: 'This cannot be undone.',
+      confirm: 'Unmake it',
+      cancel: 'Keep the piece',
+      button: 'Disenchant',
+      buttonAria: 'Disenchant {item}',
+      empty: 'You carry nothing worth breaking down.',
+      yieldExact: '{count} {item}',
+      yieldRange: '{min} to {max} {item}',
+      yieldsLabel: 'Yields {yield}',
+      unmade: 'You unmake {item}.',
+      recovered: 'You recover {item} x{count}.',
+      denyNotHeld: 'You no longer hold that piece.',
+      denyNotDisenchantable: 'That will not come apart into anything useful.',
+      denyBusy: 'Your hands are full with something else.',
+      denyDead: 'The dead unmake nothing.',
+    },
+    tooltip: {
+      enchanted: 'Enchanted: {enchant}',
+      fromEnchant: '+{value} {stat} (enchant)',
+    },
+    // The 36 enchant names, keyed by the enchant's own stable id. English source
+    // mirrors src/sim/content/professions/enchants.ts.
+    names: {
+      enchant_weapon_might: 'Enchant Weapon - Might',
+      enchant_weapon_agility: 'Enchant Weapon - Agility',
+      enchant_weapon_spellpower: 'Enchant Weapon - Spellpower',
+      enchant_helmet_fortitude: 'Enchant Helmet - Fortitude',
+      enchant_helmet_intellect: 'Enchant Helmet - Intellect',
+      enchant_helmet_reinforcement: 'Enchant Helmet - Reinforcement',
+      enchant_shoulder_strength: 'Enchant Shoulders - Strength',
+      enchant_shoulder_agility: 'Enchant Shoulders - Agility',
+      enchant_shoulder_intellect: 'Enchant Shoulders - Intellect',
+      enchant_chest_stamina: 'Enchant Chest - Stamina',
+      enchant_chest_spirit: 'Enchant Chest - Spirit',
+      enchant_chest_reinforcement: 'Enchant Chest - Reinforcement',
+      enchant_waist_stamina: 'Enchant Belt - Stamina',
+      enchant_waist_strength: 'Enchant Belt - Strength',
+      enchant_waist_agility: 'Enchant Belt - Agility',
+      enchant_legs_stamina: 'Enchant Legs - Stamina',
+      enchant_legs_intellect: 'Enchant Legs - Intellect',
+      enchant_legs_agility: 'Enchant Legs - Agility',
+      enchant_gloves_agility: 'Enchant Gloves - Agility',
+      enchant_gloves_intellect: 'Enchant Gloves - Spellpower',
+      enchant_gloves_strength: 'Enchant Gloves - Strength',
+      enchant_feet_agility: 'Enchant Boots - Agility',
+      enchant_feet_strength: 'Enchant Boots - Strength',
+      enchant_feet_stamina: 'Enchant Boots - Stamina',
+      enchant_feet_spirit: 'Enchant Boots - Spirit',
+      enchant_weapon_runed_edge: 'Enchant Weapon - Runed Edge',
+      enchant_weapon_runed_sigil: 'Enchant Weapon - Runed Sigil',
+      enchant_chest_runed_weave: 'Enchant Chest - Runed Weave',
+      enchant_legs_runed_hide: 'Enchant Legs - Runed Hide',
+      enchant_helmet_runed_links: 'Enchant Helmet - Runed Links',
+      enchant_weapon_greater_might: 'Enchant Weapon - Greater Might',
+      enchant_weapon_greater_spellpower: 'Enchant Weapon - Greater Spellpower',
+      enchant_helmet_greater_fortitude: 'Enchant Helmet - Greater Fortitude',
+      enchant_chest_greater_stamina: 'Enchant Chest - Greater Stamina',
+      enchant_legs_greater_stamina: 'Enchant Legs - Greater Stamina',
+      enchant_gloves_greater_agility: 'Enchant Gloves - Greater Agility',
+    },
+  },
+  // ---------------------------------------------------------------------------
   // The Book of Deeds (achievements). The sim stores deed IDS only; the English
   // name/desc pairs below mirror src/sim/content/deeds/ verbatim so the panel,
   // the toast and the wiki all quote the same words.

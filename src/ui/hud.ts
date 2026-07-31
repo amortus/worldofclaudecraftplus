@@ -81,12 +81,23 @@ import {
   zoneAt,
 } from '../sim/data';
 import { DELVE_MODULE_LAYOUTS, type DelveModuleId } from '../sim/delve_layout';
-import { GATHER_TOOLS, gatherNodeById } from '../sim/content/professions';
+import {
+  CRAFT_RECIPES,
+  ENCHANTS,
+  enchantById,
+  GATHER_TOOLS,
+  gatherNodeById,
+} from '../sim/content/professions';
 import {
   bestOwnedGatherToolTier,
   bestOwnedGatherToolTierOrNone,
+  type EnchantTarget,
+  enchantsForSlot,
   GATHERING_PROFESSION_IDS,
   type GatheringProfessionId,
+  isDisenchantable,
+  type PlayerCraftSkill,
+  previewDisenchant,
   professionForNodeType,
   reelWindowSec,
 } from '../sim/professions';
@@ -100,6 +111,7 @@ import type {
   AbilityDef,
   EquipSlot,
   InvSlot,
+  ItemInstance,
   LootRollChoice,
   PetMode,
   PlayerClass,
@@ -190,6 +202,21 @@ import {
   type SchematicPrimitive,
 } from './delve_map';
 import { deedEventLines, toggleDeedsPanel } from './deeds_panel';
+import {
+  type CraftingFeedbackEvent,
+  craftingEventLines,
+  instanceAttributionHtml,
+  isCraftingFeedbackEventType,
+} from './crafting_feedback';
+import { localizeCraftedElixirAuraName } from './crafting_labels';
+import { renderCraftingWindow, toggleCraftingWindow } from './crafting_window';
+import {
+  type DisenchantOption,
+  type EnchantTargetOption,
+  openEnchantingWindow,
+  renderEnchantingWindow,
+  toggleEnchantingWindow,
+} from './enchanting_window';
 import { dropdownKeyNav } from './dropdown_nav';
 import { computeDropdownPlacement } from './dropdown_position';
 import { emoteIconUrl } from './emote_icons';
@@ -421,6 +448,14 @@ export interface BugReportHooks {
 }
 
 const $ = <T extends HTMLElement = HTMLElement>(sel: string): T => document.querySelector(sel) as T;
+// The Crafting window's key. Wave 1's Skills (I) and Deeds (U) are rows in
+// src/game/keybinds.ts BIND_ACTIONS and are therefore rebindable; that file is
+// outside this change's file ownership, so crafting carries its default here
+// instead and YIELDS to the bindings profile (see Hud.bindPanelKeys). The
+// classic layout claims A through S plus V, W and X; KeyY is reserved by
+// tests/keybinds.test.ts as its unbound probe, which leaves T.
+const CRAFTING_KEY_CODE = 'KeyT';
+const CRAFTING_KEY_LABEL = 't';
 const trackMetaPixel = (eventName: string, data?: Record<string, unknown>): void => {
   const fbq = (window as Window & { fbq?: (...args: unknown[]) => void }).fbq;
   if (typeof fbq !== 'function') return;
@@ -1522,6 +1557,7 @@ export class Hud {
     // teardown), which reads these handlers at press time.
     hudPanelButtons.skills = () => this.toggleSkills();
     hudPanelButtons.deeds = () => this.toggleDeeds();
+    this.mountCraftingButtons();
     this.bindPanelKeys();
     this.initGatherNodeTooltip();
     $('#mm-options')?.addEventListener('click', () => this.toggleOptionsMenu());
@@ -2763,7 +2799,15 @@ export class Hud {
     this.tooltipEl.style.display = 'none';
   }
 
-  private itemTooltip(item: ItemDef, compare = true): string {
+  /**
+   * `instance` is the per-copy identity of the exact copy being hovered (bag
+   * slot payload). When present, the tooltip gains a per-line ATTRIBUTION block:
+   * which stats came from the enchant (named), which from the masterwork bake,
+   * and the maker's bond. That block is what replaces a vague "Enchanted" badge:
+   * `resolveEnchant` sums the enchant's bonus additively into `rolled.stats`, so
+   * the split is exact rather than a guess.
+   */
+  private itemTooltip(item: ItemDef, compare = true, instance?: ItemInstance): string {
     const qColor = QUALITY_COLOR[item.quality ?? 'common'] ?? '#fff';
     let html = `<div class="tt-title" style="color:${qColor}">${esc(itemDisplayName(item))}</div>`;
     html += `<div class="tt-sub">${esc(
@@ -2803,6 +2847,7 @@ export class Hud {
         }
       }
     }
+    html += instanceAttributionHtml(instance, this.enchantBonusFor(instance));
     if (item.foodHp)
       html += `<div class="tt-desc">${esc(t('itemUi.tooltip.useFood', { amount: itemNumber(item.foodHp), seconds: itemNumber(CONSUME_DURATION) }))}</div>`;
     if (item.drinkMana)
@@ -5083,6 +5128,63 @@ export class Hud {
   }
 
   /**
+   * Mount the Crafting entry points, on desktop AND on the phone.
+   *
+   * Wave 1's Skills and Deeds buttons are authored in index.html and bound by
+   * MobileControls. Wave 2's markup is minted HERE instead, for one concrete
+   * reason: index.html and src/game/ are outside this change's file ownership,
+   * so a static button would have had to be added to files this wave does not
+   * own. Minting it is the same thing the panel modules already do with their
+   * own element, and it keeps the whole feature inside src/ui/.
+   *
+   * Desktop: a `.micro-btn` appended to #side-buttons, beside Skills and Deeds.
+   * Phone: a `.mobile-btn` appended to #mobile-extra-grid (the More drawer),
+   * which closes the drawer on press exactly as MobileControls' own binder does,
+   * so the window is not left behind a full-screen modal.
+   */
+  private mountCraftingButtons(): void {
+    const label = t('hudChrome.crafting.panelTitle');
+    const side = document.getElementById('side-buttons');
+    if (side && !document.getElementById('mm-crafting')) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'micro-btn';
+      btn.id = 'mm-crafting';
+      btn.dataset.icon = 'bags';
+      btn.title = label;
+      btn.setAttribute('aria-label', label);
+      btn.innerHTML = `<span class="keybind">${esc(CRAFTING_KEY_LABEL)}</span>`;
+      // Before Options, which is always the last control in the rail.
+      const options = document.getElementById('mm-options');
+      if (options) side.insertBefore(btn, options);
+      else side.appendChild(btn);
+      btn.addEventListener('click', () => this.toggleCrafting());
+    }
+    const grid = document.getElementById('mobile-extra-grid');
+    if (grid && !document.getElementById('mobile-crafting')) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'mobile-btn';
+      btn.id = 'mobile-crafting';
+      btn.dataset.icon = 'bags';
+      btn.title = label;
+      btn.setAttribute('aria-label', label);
+      const text = document.createElement('span');
+      text.className = 'mobile-label';
+      text.textContent = label;
+      btn.appendChild(text);
+      grid.appendChild(btn);
+      btn.addEventListener('click', () => {
+        // Close the More drawer first: it is `aria-modal`, so leaving it open
+        // would bury the window under a full-screen dialog.
+        document.body.classList.remove('mobile-more-open');
+        document.getElementById('mobile-controls')?.classList.remove('expanded');
+        this.toggleCrafting();
+      });
+    }
+  }
+
+  /**
    * Desktop keybind dispatch for the two windows the HUD composes end to end.
    *
    * Every other window is routed by main.ts, which relays Input's `onUiKey` into
@@ -5104,9 +5206,29 @@ export class Hud {
       if (tag === 'input' || tag === 'textarea') return;
       if (this.isModalOpen()) return;
       if (document.getElementById('chat-input')?.style.display === 'block') return;
-      const action = this.keybinds.edgeActionForCombo(
-        makeCombo(e.code, { ctrl: e.ctrlKey, alt: e.altKey, shift: e.shiftKey, meta: e.metaKey }),
-      );
+      const combo = makeCombo(e.code, {
+        ctrl: e.ctrlKey,
+        alt: e.altKey,
+        shift: e.shiftKey,
+        meta: e.metaKey,
+      });
+      const action = this.keybinds.edgeActionForCombo(combo);
+      // Crafting's key is resolved here rather than through a BIND_ACTIONS row,
+      // because src/game/keybinds.ts is outside this change's file ownership. It
+      // YIELDS to the bindings profile: the lookup above runs first, so the
+      // moment a rebind (or a later BIND_ACTIONS row) claims this code, that
+      // owner wins and this arm never fires. KeyT is unclaimed by the classic
+      // layout (which takes A-S, V, W and X) and is not KeyY, which
+      // tests/keybinds.test.ts reserves as its "no action owns this" probe.
+      if (
+        action === null &&
+        combo === CRAFTING_KEY_CODE &&
+        this.keybinds.actionForCode(combo) === null
+      ) {
+        e.preventDefault();
+        this.toggleCrafting();
+        return;
+      }
       if (action !== 'skills' && action !== 'deeds') return;
       e.preventDefault();
       if (action === 'skills') this.toggleSkills();
@@ -6818,6 +6940,20 @@ export class Hud {
       this.playEventSfx(ev); // positional sound for nearby combat/creatures
       this.meters.onEvent(ev);
       if (this.isNythraxisEvent(ev)) this.lastNythraxisCombatEventAt = performance.now();
+      // Crafting / enchanting / disenchanting: every result and deny renders
+      // through the one crafting_feedback adapter, so the log line and the
+      // window's own deny reason can never disagree.
+      //
+      // Routed BEFORE the switch, by event NAME rather than as `case` labels on
+      // the SimEvent union: this arm and the sim-side variants land in separate
+      // changes, and a name check keeps the HUD compiling either way. It is the
+      // same reason the adapter declares its own structural event union.
+      if (isCraftingFeedbackEventType(ev.type)) {
+        this.handleCraftingEvent(ev as unknown as CraftingFeedbackEvent);
+        // `professionSkill` is shared with the gathering wave, so it must fall
+        // through to the switch as well; every other crafting event is ours.
+        if (ev.type !== 'professionSkill') continue;
+      }
       switch (ev.type) {
         case 'damage': {
           const src = sim.entities.get(ev.sourceId);
@@ -7544,6 +7680,11 @@ export class Hud {
           }
           break;
         }
+        // Crafting / enchanting / disenchanting: every result, skill-up and
+        // deny renders through the one crafting_feedback adapter, so the log
+        // line and the window's own deny reason can never disagree. The arm is
+        // keyed by NAME rather than by the SimEvent union so the HUD keeps
+        // composing even while the sim side is still landing its variants.
         case 'unstuck': {
           for (const l of unstuckEventLines(ev, sim.player.level)) this.combatLog(l.text, l.color);
           break;
@@ -9795,6 +9936,157 @@ export class Hud {
     toggleDeedsPanel({ deeds: () => this.sim.deeds() });
   }
 
+  // The Crafting window (the four craft professions) and the enchanting bench.
+  // Both follow the wave 1 shape: a self-contained module that mints its own
+  // element on first open, so Hud only orchestrates (clear transient overlays,
+  // then hand the module the live IWorld readers and the action callbacks).
+  //
+  // Recipes and the enchant table are read from the STATIC content tables the
+  // way GATHER_TOOLS already is; only mutable world state (skills, the bag) and
+  // the commands go through IWorld.
+  toggleCrafting(): void {
+    this.closeOtherWindows('#crafting-window');
+    toggleCraftingWindow(this.craftingWindowDeps());
+  }
+
+  private craftingWindowDeps() {
+    return {
+      skills: (): readonly PlayerCraftSkill[] => this.sim.craftingSkills(),
+      recipes: () => CRAFT_RECIPES,
+      inventory: () => this.sim.inventory,
+      onCraft: (recipeId: string) => {
+        this.sim.craft(recipeId);
+        audio.click();
+      },
+      onOpenEnchanting: () => this.openEnchanting(),
+      itemName: (itemId: string) => this.itemNameFor(itemId),
+      itemColor: (itemId: string) => QUALITY_COLOR[ITEMS[itemId]?.quality ?? 'common'] ?? '#fff',
+      attachTooltip: (el: HTMLElement, html: () => string) => this.attachTooltip(el, html),
+      itemTooltipHtml: (itemId: string) => {
+        const item = ITEMS[itemId];
+        return item ? this.itemTooltip(item) : '';
+      },
+    };
+  }
+
+  toggleEnchanting(): void {
+    this.closeOtherWindows('#enchanting-window');
+    toggleEnchantingWindow(this.enchantingWindowDeps());
+  }
+
+  /** Open the bench outright (the Crafting window's enchanting tab links here). */
+  private openEnchanting(): void {
+    this.closeOtherWindows('#enchanting-window');
+    openEnchantingWindow(this.enchantingWindowDeps());
+  }
+
+  private enchantingWindowDeps() {
+    return {
+      // BAG COPIES ONLY, deliberately. An enchant target has to be named by the
+      // exact copy, and the already-enchanted gate reads that copy's
+      // `ItemInstance`. `IWorld.inventory` carries the instance per slot; there
+      // is no equivalent accessor for the WORN copy, so offering a worn target
+      // would mean guessing it is bare and springing the destructive-replace
+      // deny on the player after the fact. Unequip, enchant, re-equip.
+      targets: (): readonly EnchantTargetOption[] => {
+        const out: EnchantTargetOption[] = [];
+        this.sim.inventory.forEach((slot, index) => {
+          const item = ITEMS[slot.itemId];
+          if (!item?.slot) return;
+          if (item.kind !== 'weapon' && item.kind !== 'armor') return;
+          if (enchantsForSlot(item.slot, ENCHANTS).length === 0) return;
+          const option: EnchantTargetOption = {
+            key: `bag-${index}`,
+            target: { where: 'bag', index },
+            itemId: slot.itemId,
+            itemSlot: item.slot,
+            worn: false,
+          };
+          if (slot.instance) option.instance = slot.instance;
+          out.push(option);
+        });
+        return out;
+      },
+      disenchantables: (): readonly DisenchantOption[] => {
+        const out: DisenchantOption[] = [];
+        this.sim.inventory.forEach((slot, index) => {
+          const item = ITEMS[slot.itemId];
+          if (!item) return;
+          const input = {
+            itemId: item.id,
+            kind: item.kind,
+            quality: item.quality,
+            armorType: item.armorType,
+            stats: item.stats,
+            itemLevel: requiredLevelFor(item),
+          };
+          if (!isDisenchantable(input)) return;
+          out.push({ index, itemId: slot.itemId, plan: previewDisenchant(input) });
+        });
+        return out;
+      },
+      enchantsFor: (slot: EquipSlot) => enchantsForSlot(slot, ENCHANTS),
+      inventory: () => this.sim.inventory,
+      // Unused while targets are bag-only; kept so the module's contract does
+      // not change when a worn accessor lands on IWorld.
+      wornAt: () => undefined,
+      skill: () =>
+        this.sim.craftingSkills().find((row) => row.professionId === 'enchanting')?.skill ?? 0,
+      onApply: (enchantId: string, target: EnchantTarget, confirmReplace: boolean) => {
+        this.sim.applyEnchant(enchantId, target, confirmReplace);
+        audio.click();
+      },
+      onDisenchant: (index: number) => {
+        this.sim.disenchant(index);
+        audio.click();
+      },
+      confirm: (opts: {
+        title: string;
+        body: string;
+        okText: string;
+        cancelText: string;
+        onOk(): void;
+      }) => this.confirmDialog(opts.title, opts.body, opts.okText, opts.cancelText, opts.onOk),
+      itemName: (itemId: string) => this.itemNameFor(itemId),
+      itemColor: (itemId: string) => QUALITY_COLOR[ITEMS[itemId]?.quality ?? 'common'] ?? '#fff',
+    };
+  }
+
+  /**
+   * Log one crafting / enchanting / disenchanting event and repaint whatever it
+   * invalidated. The event names here must match what src/sim/sim.ts actually
+   * emits: they are compared as strings, so a rename on either side is invisible
+   * to tsc and simply makes the feedback silent.
+   */
+  private handleCraftingEvent(ev: CraftingFeedbackEvent): void {
+    for (const l of craftingEventLines(ev, { crafterName: this.sim.player.name })) {
+      this.combatLog(l.text, l.color);
+    }
+    // A craft and a disenchant grant through the sim's SILENT path (the lines
+    // above replace addItem's loot line), so the two side effects the `loot` arm
+    // would have provided are re-issued here.
+    if (ev.type === 'craftResult' || ev.type === 'disenchantResult') {
+      audio.lootItem();
+      this.onInventoryChanged();
+    }
+    // Every arm changed the bag, the skill, or the reason a row is disabled, so
+    // both windows repaint from live state.
+    renderCraftingWindow();
+    renderEnchantingWindow();
+  }
+
+  /** An item id's localized display name, or the id when no def knows it. */
+  private itemNameFor(itemId: string): string {
+    const item = ITEMS[itemId];
+    return item ? itemDisplayName(item) : itemId;
+  }
+
+  /** The enchant bonus baked into one copy, for the tooltip's attribution
+   *  block. Undefined for a plain copy or an unresolvable marker id. */
+  private enchantBonusFor(instance?: ItemInstance) {
+    return instance?.enchant ? enchantById(instance.enchant)?.statBonus : undefined;
+  }
+
   /** Best owned tool tier per gathering profession; 0 where nothing is carried. */
   private gatherToolTiers(): Partial<Record<GatheringProfessionId, number>> {
     const out: Partial<Record<GatheringProfessionId, number>> = {};
@@ -10051,7 +10343,7 @@ export class Hud {
         const link = !this.vendorOpen
           ? `<div class="tt-sub">${esc(t('hudChrome.itemShare.linkHint'))}</div>`
           : '';
-        return this.itemTooltip(item) + extra + link;
+        return this.itemTooltip(item, true, s.instance) + extra + link;
       });
       grid.appendChild(row);
     }
@@ -15638,7 +15930,16 @@ function auraDisplayNameFromSource(name: string): string {
   // Unstuck Sickness is stamped by src/sim/unstuck.ts, which is language-agnostic
   // like the rest of the sim, so its own resolver runs before the shared sim
   // matcher; without it the debuff renders as raw English in every locale.
-  return localizeUnstuckAuraName(name) ?? localizeSimAuraName(name) ?? name;
+  // The four crafted elixirs stamp an aura whose English name is authored in
+  // src/sim/content/professions/craft_recipes.ts (the sim stays
+  // language-agnostic), so their resolver runs beside the unstuck one, before
+  // the shared sim matcher; without it they render as raw English everywhere.
+  return (
+    localizeUnstuckAuraName(name) ??
+    localizeCraftedElixirAuraName(name) ??
+    localizeSimAuraName(name) ??
+    name
+  );
 }
 
 function combatAbilityName(name: string | null): string {

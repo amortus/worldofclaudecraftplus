@@ -804,6 +804,199 @@ export const ja_JP: EnTranslations = {
         }
       }
     },
+    "crafting": {
+      "panelTitle": "Crafting",
+      "close": "Close crafting",
+      "subheading": "What your hands can still make from what the land gave up.",
+      "empty": "You have taken up no craft yet.",
+      "tablistLabel": "Crafts",
+      "tabAria": "{profession}, skill {skill} of {max}",
+      "names": {
+        "smithing": "Smithing",
+        "woodcraft": "Woodcraft",
+        "alchemy": "Alchemy",
+        "enchanting": "Enchanting"
+      },
+      "descriptions": {
+        "smithing": "Working ore and timber into mail armor and heavy weapons.",
+        "woodcraft": "Shaping timber into staves and hafts, and weaving treated bark into light armor.",
+        "alchemy": "Distilling herbs and river catches into draughts and elixirs.",
+        "enchanting": "Unmaking finished gear for its arcane residue, and binding that residue back into other gear."
+      },
+      "skillValue": "{skill} / {max}",
+      "skillAria": "{profession} skill, {skill} of {max}",
+      "capped": "Mastered",
+      "cappedAria": "{profession} mastered at {max}",
+      "toNextTier": "{points} to the next tier",
+      "totals": "{skill} of {max} craft skill, {craftable} ready to make",
+      "craftableNow": "{count} ready to make",
+      "noRecipes": "This craft keeps no patterns. Its work is done at the bench.",
+      "openEnchanting": "Open the enchanting bench",
+      "recipeTitleBatch": "{item} x{count}",
+      "itemLevel": "Item level {level}",
+      "masterworkChance": "Masterwork chance {chance}",
+      "teaches": "Still teaches you",
+      "teachesNothing": "Teaches you nothing more",
+      "reagentsHeading": "Reagents",
+      "reagentCount": "{held} / {required}",
+      "reagentCost": "{count} {item}",
+      "reagentAriaMet": "{item}, {held} of {required} held",
+      "reagentAriaShort": "{item}, {held} of {required} held, {short} short",
+      "craft": "Craft",
+      "craftAria": "Craft {item}",
+      "deny": {
+        "insufficientMaterials": "You lack the materials for that.",
+        "insufficientNamed": "You need {required} {item} and hold only {held}.",
+        "needMore": "You need more {item}.",
+        "unknownRecipe": "You know no such pattern.",
+        "busy": "Your hands are full with something else.",
+        "dead": "The dead craft nothing."
+      },
+      "skillUp": "{profession} rises to {skill}.",
+      "skillMastered": "You have mastered {profession}.",
+      "result": {
+        "single": "You craft {item}.",
+        "batch": "You craft {item} x{count}.",
+        "masterwork": "A masterwork. {item} comes off the bench better than the pattern.",
+        "masterworkStats": "It carries {stats} beyond the pattern.",
+        "makersBond": "Crafted by {name}.",
+        "signedReagent": "Signed materials steadied the work."
+      },
+      "statLine": "+{value} {stat}",
+      "listJoin": ", ",
+      "tooltip": {
+        "masterwork": "Masterwork",
+        "fromMasterwork": "+{value} {stat} (masterwork)",
+        "makersBond": "Crafted by {name}"
+      },
+      "auras": {
+        "silverVigor": "Silver Vigor",
+        "goldenFocus": "Golden Focus",
+        "sunpetalSwiftness": "Sunpetal Swiftness",
+        "ashenWard": "Ashen Ward"
+      }
+    },
+    "enchanting": {
+      "panelTitle": "Enchanting",
+      "close": "Close the enchanting bench",
+      "subheading": "Bind arcane residue into a piece, or unmake a piece back into residue.",
+      "tablistLabel": "Enchanting bench",
+      "tabEnchant": "Apply Enchant",
+      "tabDisenchant": "Disenchant",
+      "targetsLabel": "Pieces you can enchant",
+      "targetWorn": "{item} (worn)",
+      "targetBagged": "{item} (in bags)",
+      "targetAriaPlain": "{item}, not enchanted",
+      "targetAriaEnchanted": "{item}, already carries {enchant}",
+      "noTargets": "You carry nothing an enchant will take.",
+      "noOptions": "No enchantment known to you will bind to this piece.",
+      "currentOn": "{item} already carries {enchant}.",
+      "currentNone": "{item} carries no enchantment.",
+      "groups": {
+        "base": "Base",
+        "runed": "Runed",
+        "greater": "Greater"
+      },
+      "groupBlurbs": {
+        "base": "The common bindings, bought with dust and essence.",
+        "runed": "Bound with a resonant weave, which only a rare piece gives up.",
+        "greater": "The deep bindings. Each one costs an arcane shard."
+      },
+      "costLabel": "Cost: {cost}",
+      "costRow": "{held}/{required} {item}",
+      "optionAria": "{enchant}, grants {stats}",
+      "replacesNote": "Replaces {destroyed}, which is destroyed.",
+      "currentNote": "Already bound to this piece.",
+      "unknownEnchant": "an unknown enchantment",
+      "result": {
+        "applied": "You bind {enchant} into {item}.",
+        "replaced": "You bind {enchant} into {item}, unmaking {destroyed}."
+      },
+      "deny": {
+        "notHeld": "You no longer hold that piece.",
+        "wrongSlot": "That enchantment will not take on this piece.",
+        "wrongSlotNamed": "That enchantment will not take on {item}.",
+        "insufficientMaterials": "You lack the reagents for that binding.",
+        "alreadyEnchanted": "That piece already carries an enchantment. Confirm to destroy it.",
+        "sameEnchant": "That binding is already on the piece. Nothing would change.",
+        "unknownEnchantId": "You know no such binding.",
+        "busy": "Your hands are full with something else.",
+        "dead": "The dead bind nothing."
+      },
+      "replace": {
+        "title": "Destroy {destroyed}?",
+        "bodyDestroys": "Binding this will destroy {destroyed} on {item}.",
+        "bodyApplies": "In its place you gain {enchant}, granting {stats}.",
+        "bodyCost": "It costs {cost}.",
+        "warningNotRefunded": "The materials in the old enchantment are not refunded.",
+        "warningCannotUndo": "This cannot be undone.",
+        "confirm": "Destroy and rebind",
+        "cancel": "Keep the old enchantment"
+      },
+      "disenchant": {
+        "title": "Unmake {item}?",
+        "bodyYield": "Breaking it down yields {material}.",
+        "bodySecondary": "It also gives up {secondary}.",
+        "warningDestroyed": "The piece itself is destroyed.",
+        "warningCannotUndo": "This cannot be undone.",
+        "confirm": "Unmake it",
+        "cancel": "Keep the piece",
+        "button": "Disenchant",
+        "buttonAria": "Disenchant {item}",
+        "empty": "You carry nothing worth breaking down.",
+        "yieldExact": "{count} {item}",
+        "yieldRange": "{min} to {max} {item}",
+        "yieldsLabel": "Yields {yield}",
+        "unmade": "You unmake {item}.",
+        "recovered": "You recover {item} x{count}.",
+        "denyNotHeld": "You no longer hold that piece.",
+        "denyNotDisenchantable": "That will not come apart into anything useful.",
+        "denyBusy": "Your hands are full with something else.",
+        "denyDead": "The dead unmake nothing."
+      },
+      "tooltip": {
+        "enchanted": "Enchanted: {enchant}",
+        "fromEnchant": "+{value} {stat} (enchant)"
+      },
+      "names": {
+        "enchant_weapon_might": "Enchant Weapon - Might",
+        "enchant_weapon_agility": "Enchant Weapon - Agility",
+        "enchant_weapon_spellpower": "Enchant Weapon - Spellpower",
+        "enchant_helmet_fortitude": "Enchant Helmet - Fortitude",
+        "enchant_helmet_intellect": "Enchant Helmet - Intellect",
+        "enchant_helmet_reinforcement": "Enchant Helmet - Reinforcement",
+        "enchant_shoulder_strength": "Enchant Shoulders - Strength",
+        "enchant_shoulder_agility": "Enchant Shoulders - Agility",
+        "enchant_shoulder_intellect": "Enchant Shoulders - Intellect",
+        "enchant_chest_stamina": "Enchant Chest - Stamina",
+        "enchant_chest_spirit": "Enchant Chest - Spirit",
+        "enchant_chest_reinforcement": "Enchant Chest - Reinforcement",
+        "enchant_waist_stamina": "Enchant Belt - Stamina",
+        "enchant_waist_strength": "Enchant Belt - Strength",
+        "enchant_waist_agility": "Enchant Belt - Agility",
+        "enchant_legs_stamina": "Enchant Legs - Stamina",
+        "enchant_legs_intellect": "Enchant Legs - Intellect",
+        "enchant_legs_agility": "Enchant Legs - Agility",
+        "enchant_gloves_agility": "Enchant Gloves - Agility",
+        "enchant_gloves_intellect": "Enchant Gloves - Spellpower",
+        "enchant_gloves_strength": "Enchant Gloves - Strength",
+        "enchant_feet_agility": "Enchant Boots - Agility",
+        "enchant_feet_strength": "Enchant Boots - Strength",
+        "enchant_feet_stamina": "Enchant Boots - Stamina",
+        "enchant_feet_spirit": "Enchant Boots - Spirit",
+        "enchant_weapon_runed_edge": "Enchant Weapon - Runed Edge",
+        "enchant_weapon_runed_sigil": "Enchant Weapon - Runed Sigil",
+        "enchant_chest_runed_weave": "Enchant Chest - Runed Weave",
+        "enchant_legs_runed_hide": "Enchant Legs - Runed Hide",
+        "enchant_helmet_runed_links": "Enchant Helmet - Runed Links",
+        "enchant_weapon_greater_might": "Enchant Weapon - Greater Might",
+        "enchant_weapon_greater_spellpower": "Enchant Weapon - Greater Spellpower",
+        "enchant_helmet_greater_fortitude": "Enchant Helmet - Greater Fortitude",
+        "enchant_chest_greater_stamina": "Enchant Chest - Greater Stamina",
+        "enchant_legs_greater_stamina": "Enchant Legs - Greater Stamina",
+        "enchant_gloves_greater_agility": "Enchant Gloves - Greater Agility"
+      }
+    },
     "deeds": {
       "panelTitle": "Book of Deeds",
       "close": "Close the Book of Deeds",
@@ -5880,6 +6073,150 @@ export const ja_JP: EnTranslations = {
       },
       "raw_cinderscale_eel": {
         "name": "Raw Cinderscale Eel"
+      },
+      "crownforged_gauntlets": {
+        "name": "Bonewrought Gauntlets"
+      },
+      "crownforged_girdle": {
+        "name": "Bonewrought Girdle"
+      },
+      "nighttalon_grips": {
+        "name": "Direfang Grips"
+      },
+      "nighttalon_waistband": {
+        "name": "Direfang Waistband"
+      },
+      "soulflame_cord": {
+        "name": "Wraithfire Cord"
+      },
+      "soulflame_gloves": {
+        "name": "Wraithfire Gloves"
+      },
+      "stormcallers_handguards": {
+        "name": "Galecall Handguards"
+      },
+      "stormcallers_waistguard": {
+        "name": "Galecall Waistguard"
+      },
+      "arcane_dust": {
+        "name": "Arcane Dust"
+      },
+      "arcane_essence": {
+        "name": "Arcane Essence"
+      },
+      "arcane_shard": {
+        "name": "Arcane Shard"
+      },
+      "resonant_steel": {
+        "name": "Resonant Steel"
+      },
+      "resonant_timber": {
+        "name": "Resonant Timber"
+      },
+      "resonant_thread": {
+        "name": "Resonant Thread"
+      },
+      "resonant_hide": {
+        "name": "Resonant Hide"
+      },
+      "resonant_links": {
+        "name": "Resonant Links"
+      },
+      "copperguard_hauberk": {
+        "name": "Copperguard Hauberk"
+      },
+      "copperguard_greaves": {
+        "name": "Copperguard Greaves"
+      },
+      "vale_forged_blade": {
+        "name": "Vale-Forged Blade"
+      },
+      "ironguard_hauberk": {
+        "name": "Ironguard Hauberk"
+      },
+      "ironguard_helm": {
+        "name": "Ironguard Helm"
+      },
+      "mirefen_forged_maul": {
+        "name": "Mirefen-Forged Maul"
+      },
+      "thorium_battleplate": {
+        "name": "Thorium Battleplate"
+      },
+      "thorium_warboots": {
+        "name": "Thorium Warboots"
+      },
+      "thornpeak_greatblade": {
+        "name": "Thornpeak Greatblade"
+      },
+      "cinderforged_hauberk": {
+        "name": "Cinderforged Hauberk"
+      },
+      "cinderforged_gauntlets": {
+        "name": "Cinderforged Gauntlets"
+      },
+      "cinderforged_reaver": {
+        "name": "Cinderforged Reaver"
+      },
+      "ironbark_stave": {
+        "name": "Ironbark Stave"
+      },
+      "ashwood_stave": {
+        "name": "Ashwood Stave"
+      },
+      "elderwood_stave": {
+        "name": "Elderwood Stave"
+      },
+      "boneash_stave": {
+        "name": "Boneash Stave"
+      },
+      "silverweave_robe": {
+        "name": "Silverweave Robe"
+      },
+      "goldweave_robe": {
+        "name": "Goldweave Robe"
+      },
+      "sunweave_robe": {
+        "name": "Sunweave Robe"
+      },
+      "ashenweave_robe": {
+        "name": "Ashenweave Robe"
+      },
+      "silverbound_kris": {
+        "name": "Silverbound Kris"
+      },
+      "goldbound_kris": {
+        "name": "Goldbound Kris"
+      },
+      "sunbound_kris": {
+        "name": "Sunbound Kris"
+      },
+      "ashenbound_kris": {
+        "name": "Ashenbound Kris"
+      },
+      "silverleaf_draught": {
+        "name": "Silverleaf Draught"
+      },
+      "goldleaf_draught": {
+        "name": "Goldleaf Draught"
+      },
+      "sunpetal_draught": {
+        "name": "Sunpetal Draught"
+      },
+      "gravebloom_draught": {
+        "name": "Gravebloom Draught"
+      },
+      "elixir_of_silver_vigor": {
+        "name": "Elixir of Silver Vigor"
+      },
+      "elixir_of_golden_focus": {
+        "name": "Elixir of Golden Focus"
+      },
+      "elixir_of_sunpetal_swiftness": {
+        "name": "Elixir of Sunpetal Swiftness"
+      },
+      "elixir_of_the_ashen_ward": {
+        "name": "Elixir of the Ashen Ward"
       }
     },
     "mobs": {

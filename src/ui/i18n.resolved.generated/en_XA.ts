@@ -804,6 +804,199 @@ export const en_XA: EnTranslations = {
         }
       }
     },
+    "crafting": {
+      "panelTitle": "[Çŕáƒţíñĝ]",
+      "close": "[Çļóšé çŕáƒţíñĝ]",
+      "subheading": "[Ŵĥáţ ýóúŕ ĥáñðš çáñ šţíļļ ɱáķé ƒŕóɱ ŵĥáţ ţĥé ļáñð ĝáʋé úþ.]",
+      "empty": "[Ýóú ĥáʋé ţáķéñ úþ ñó çŕáƒţ ýéţ.]",
+      "tablistLabel": "[Çŕáƒţš]",
+      "tabAria": "[{profession}, šķíļļ {skill} óƒ {max}]",
+      "names": {
+        "smithing": "[Šɱíţĥíñĝ]",
+        "woodcraft": "[Ŵóóðçŕáƒţ]",
+        "alchemy": "[Áļçĥéɱý]",
+        "enchanting": "[Éñçĥáñţíñĝ]"
+      },
+      "descriptions": {
+        "smithing": "[Ŵóŕķíñĝ óŕé áñð ţíɱƀéŕ íñţó ɱáíļ áŕɱóŕ áñð ĥéáʋý ŵéáþóñš.]",
+        "woodcraft": "[Šĥáþíñĝ ţíɱƀéŕ íñţó šţáʋéš áñð ĥáƒţš, áñð ŵéáʋíñĝ ţŕéáţéð ƀáŕķ íñţó ļíĝĥţ áŕɱóŕ.]",
+        "alchemy": "[Ðíšţíļļíñĝ ĥéŕƀš áñð ŕíʋéŕ çáţçĥéš íñţó ðŕáúĝĥţš áñð éļíẋíŕš.]",
+        "enchanting": "[Úñɱáķíñĝ ƒíñíšĥéð ĝéáŕ ƒóŕ íţš áŕçáñé ŕéšíðúé, áñð ƀíñðíñĝ ţĥáţ ŕéšíðúé ƀáçķ íñţó óţĥéŕ ĝéáŕ.]"
+      },
+      "skillValue": "[{skill} / {max}]",
+      "skillAria": "[{profession} šķíļļ, {skill} óƒ {max}]",
+      "capped": "[Ɱášţéŕéð]",
+      "cappedAria": "[{profession} ɱášţéŕéð áţ {max}]",
+      "toNextTier": "[{points} ţó ţĥé ñéẋţ ţíéŕ]",
+      "totals": "[{skill} óƒ {max} çŕáƒţ šķíļļ, {craftable} ŕéáðý ţó ɱáķé]",
+      "craftableNow": "[{count} ŕéáðý ţó ɱáķé]",
+      "noRecipes": "[Ţĥíš çŕáƒţ ķééþš ñó þáţţéŕñš. Íţš ŵóŕķ íš ðóñé áţ ţĥé ƀéñçĥ.]",
+      "openEnchanting": "[Óþéñ ţĥé éñçĥáñţíñĝ ƀéñçĥ]",
+      "recipeTitleBatch": "[{item} ẋ{count}]",
+      "itemLevel": "[Íţéɱ ļéʋéļ {level}]",
+      "masterworkChance": "[Ɱášţéŕŵóŕķ çĥáñçé {chance}]",
+      "teaches": "[Šţíļļ ţéáçĥéš ýóú]",
+      "teachesNothing": "[Ţéáçĥéš ýóú ñóţĥíñĝ ɱóŕé]",
+      "reagentsHeading": "[Ŕéáĝéñţš]",
+      "reagentCount": "[{held} / {required}]",
+      "reagentCost": "[{count} {item}]",
+      "reagentAriaMet": "[{item}, {held} óƒ {required} ĥéļð]",
+      "reagentAriaShort": "[{item}, {held} óƒ {required} ĥéļð, {short} šĥóŕţ]",
+      "craft": "[Çŕáƒţ]",
+      "craftAria": "[Çŕáƒţ {item}]",
+      "deny": {
+        "insufficientMaterials": "[Ýóú ļáçķ ţĥé ɱáţéŕíáļš ƒóŕ ţĥáţ.]",
+        "insufficientNamed": "[Ýóú ñééð {required} {item} áñð ĥóļð óñļý {held}.]",
+        "needMore": "[Ýóú ñééð ɱóŕé {item}.]",
+        "unknownRecipe": "[Ýóú ķñóŵ ñó šúçĥ þáţţéŕñ.]",
+        "busy": "[Ýóúŕ ĥáñðš áŕé ƒúļļ ŵíţĥ šóɱéţĥíñĝ éļšé.]",
+        "dead": "[Ţĥé ðéáð çŕáƒţ ñóţĥíñĝ.]"
+      },
+      "skillUp": "[{profession} ŕíšéš ţó {skill}.]",
+      "skillMastered": "[Ýóú ĥáʋé ɱášţéŕéð {profession}.]",
+      "result": {
+        "single": "[Ýóú çŕáƒţ {item}.]",
+        "batch": "[Ýóú çŕáƒţ {item} ẋ{count}.]",
+        "masterwork": "[Á ɱášţéŕŵóŕķ. {item} çóɱéš óƒƒ ţĥé ƀéñçĥ ƀéţţéŕ ţĥáñ ţĥé þáţţéŕñ.]",
+        "masterworkStats": "[Íţ çáŕŕíéš {stats} ƀéýóñð ţĥé þáţţéŕñ.]",
+        "makersBond": "[Çŕáƒţéð ƀý {name}.]",
+        "signedReagent": "[Šíĝñéð ɱáţéŕíáļš šţéáðíéð ţĥé ŵóŕķ.]"
+      },
+      "statLine": "[+{value} {stat}]",
+      "listJoin": "[, ]",
+      "tooltip": {
+        "masterwork": "[Ɱášţéŕŵóŕķ]",
+        "fromMasterwork": "[+{value} {stat} (ɱášţéŕŵóŕķ)]",
+        "makersBond": "[Çŕáƒţéð ƀý {name}]"
+      },
+      "auras": {
+        "silverVigor": "[Šíļʋéŕ Ʋíĝóŕ]",
+        "goldenFocus": "[Ĝóļðéñ Ƒóçúš]",
+        "sunpetalSwiftness": "[Šúñþéţáļ Šŵíƒţñéšš]",
+        "ashenWard": "[Ášĥéñ Ŵáŕð]"
+      }
+    },
+    "enchanting": {
+      "panelTitle": "[Éñçĥáñţíñĝ]",
+      "close": "[Çļóšé ţĥé éñçĥáñţíñĝ ƀéñçĥ]",
+      "subheading": "[Ɓíñð áŕçáñé ŕéšíðúé íñţó á þíéçé, óŕ úñɱáķé á þíéçé ƀáçķ íñţó ŕéšíðúé.]",
+      "tablistLabel": "[Éñçĥáñţíñĝ ƀéñçĥ]",
+      "tabEnchant": "[Áþþļý Éñçĥáñţ]",
+      "tabDisenchant": "[Ðíšéñçĥáñţ]",
+      "targetsLabel": "[Þíéçéš ýóú çáñ éñçĥáñţ]",
+      "targetWorn": "[{item} (ŵóŕñ)]",
+      "targetBagged": "[{item} (íñ ƀáĝš)]",
+      "targetAriaPlain": "[{item}, ñóţ éñçĥáñţéð]",
+      "targetAriaEnchanted": "[{item}, áļŕéáðý çáŕŕíéš {enchant}]",
+      "noTargets": "[Ýóú çáŕŕý ñóţĥíñĝ áñ éñçĥáñţ ŵíļļ ţáķé.]",
+      "noOptions": "[Ñó éñçĥáñţɱéñţ ķñóŵñ ţó ýóú ŵíļļ ƀíñð ţó ţĥíš þíéçé.]",
+      "currentOn": "[{item} áļŕéáðý çáŕŕíéš {enchant}.]",
+      "currentNone": "[{item} çáŕŕíéš ñó éñçĥáñţɱéñţ.]",
+      "groups": {
+        "base": "[Ɓášé]",
+        "runed": "[Ŕúñéð]",
+        "greater": "[Ĝŕéáţéŕ]"
+      },
+      "groupBlurbs": {
+        "base": "[Ţĥé çóɱɱóñ ƀíñðíñĝš, ƀóúĝĥţ ŵíţĥ ðúšţ áñð éššéñçé.]",
+        "runed": "[Ɓóúñð ŵíţĥ á ŕéšóñáñţ ŵéáʋé, ŵĥíçĥ óñļý á ŕáŕé þíéçé ĝíʋéš úþ.]",
+        "greater": "[Ţĥé ðééþ ƀíñðíñĝš. Éáçĥ óñé çóšţš áñ áŕçáñé šĥáŕð.]"
+      },
+      "costLabel": "[Çóšţ: {cost}]",
+      "costRow": "[{held}/{required} {item}]",
+      "optionAria": "[{enchant}, ĝŕáñţš {stats}]",
+      "replacesNote": "[Ŕéþļáçéš {destroyed}, ŵĥíçĥ íš ðéšţŕóýéð.]",
+      "currentNote": "[Áļŕéáðý ƀóúñð ţó ţĥíš þíéçé.]",
+      "unknownEnchant": "[áñ úñķñóŵñ éñçĥáñţɱéñţ]",
+      "result": {
+        "applied": "[Ýóú ƀíñð {enchant} íñţó {item}.]",
+        "replaced": "[Ýóú ƀíñð {enchant} íñţó {item}, úñɱáķíñĝ {destroyed}.]"
+      },
+      "deny": {
+        "notHeld": "[Ýóú ñó ļóñĝéŕ ĥóļð ţĥáţ þíéçé.]",
+        "wrongSlot": "[Ţĥáţ éñçĥáñţɱéñţ ŵíļļ ñóţ ţáķé óñ ţĥíš þíéçé.]",
+        "wrongSlotNamed": "[Ţĥáţ éñçĥáñţɱéñţ ŵíļļ ñóţ ţáķé óñ {item}.]",
+        "insufficientMaterials": "[Ýóú ļáçķ ţĥé ŕéáĝéñţš ƒóŕ ţĥáţ ƀíñðíñĝ.]",
+        "alreadyEnchanted": "[Ţĥáţ þíéçé áļŕéáðý çáŕŕíéš áñ éñçĥáñţɱéñţ. Çóñƒíŕɱ ţó ðéšţŕóý íţ.]",
+        "sameEnchant": "[Ţĥáţ ƀíñðíñĝ íš áļŕéáðý óñ ţĥé þíéçé. Ñóţĥíñĝ ŵóúļð çĥáñĝé.]",
+        "unknownEnchantId": "[Ýóú ķñóŵ ñó šúçĥ ƀíñðíñĝ.]",
+        "busy": "[Ýóúŕ ĥáñðš áŕé ƒúļļ ŵíţĥ šóɱéţĥíñĝ éļšé.]",
+        "dead": "[Ţĥé ðéáð ƀíñð ñóţĥíñĝ.]"
+      },
+      "replace": {
+        "title": "[Ðéšţŕóý {destroyed}?]",
+        "bodyDestroys": "[Ɓíñðíñĝ ţĥíš ŵíļļ ðéšţŕóý {destroyed} óñ {item}.]",
+        "bodyApplies": "[Íñ íţš þļáçé ýóú ĝáíñ {enchant}, ĝŕáñţíñĝ {stats}.]",
+        "bodyCost": "[Íţ çóšţš {cost}.]",
+        "warningNotRefunded": "[Ţĥé ɱáţéŕíáļš íñ ţĥé óļð éñçĥáñţɱéñţ áŕé ñóţ ŕéƒúñðéð.]",
+        "warningCannotUndo": "[Ţĥíš çáññóţ ƀé úñðóñé.]",
+        "confirm": "[Ðéšţŕóý áñð ŕéƀíñð]",
+        "cancel": "[Ķééþ ţĥé óļð éñçĥáñţɱéñţ]"
+      },
+      "disenchant": {
+        "title": "[Úñɱáķé {item}?]",
+        "bodyYield": "[Ɓŕéáķíñĝ íţ ðóŵñ ýíéļðš {material}.]",
+        "bodySecondary": "[Íţ áļšó ĝíʋéš úþ {secondary}.]",
+        "warningDestroyed": "[Ţĥé þíéçé íţšéļƒ íš ðéšţŕóýéð.]",
+        "warningCannotUndo": "[Ţĥíš çáññóţ ƀé úñðóñé.]",
+        "confirm": "[Úñɱáķé íţ]",
+        "cancel": "[Ķééþ ţĥé þíéçé]",
+        "button": "[Ðíšéñçĥáñţ]",
+        "buttonAria": "[Ðíšéñçĥáñţ {item}]",
+        "empty": "[Ýóú çáŕŕý ñóţĥíñĝ ŵóŕţĥ ƀŕéáķíñĝ ðóŵñ.]",
+        "yieldExact": "[{count} {item}]",
+        "yieldRange": "[{min} ţó {max} {item}]",
+        "yieldsLabel": "[Ýíéļðš {yield}]",
+        "unmade": "[Ýóú úñɱáķé {item}.]",
+        "recovered": "[Ýóú ŕéçóʋéŕ {item} ẋ{count}.]",
+        "denyNotHeld": "[Ýóú ñó ļóñĝéŕ ĥóļð ţĥáţ þíéçé.]",
+        "denyNotDisenchantable": "[Ţĥáţ ŵíļļ ñóţ çóɱé áþáŕţ íñţó áñýţĥíñĝ úšéƒúļ.]",
+        "denyBusy": "[Ýóúŕ ĥáñðš áŕé ƒúļļ ŵíţĥ šóɱéţĥíñĝ éļšé.]",
+        "denyDead": "[Ţĥé ðéáð úñɱáķé ñóţĥíñĝ.]"
+      },
+      "tooltip": {
+        "enchanted": "[Éñçĥáñţéð: {enchant}]",
+        "fromEnchant": "[+{value} {stat} (éñçĥáñţ)]"
+      },
+      "names": {
+        "enchant_weapon_might": "[Éñçĥáñţ Ŵéáþóñ - Ɱíĝĥţ]",
+        "enchant_weapon_agility": "[Éñçĥáñţ Ŵéáþóñ - Áĝíļíţý]",
+        "enchant_weapon_spellpower": "[Éñçĥáñţ Ŵéáþóñ - Šþéļļþóŵéŕ]",
+        "enchant_helmet_fortitude": "[Éñçĥáñţ Ĥéļɱéţ - Ƒóŕţíţúðé]",
+        "enchant_helmet_intellect": "[Éñçĥáñţ Ĥéļɱéţ - Íñţéļļéçţ]",
+        "enchant_helmet_reinforcement": "[Éñçĥáñţ Ĥéļɱéţ - Ŕéíñƒóŕçéɱéñţ]",
+        "enchant_shoulder_strength": "[Éñçĥáñţ Šĥóúļðéŕš - Šţŕéñĝţĥ]",
+        "enchant_shoulder_agility": "[Éñçĥáñţ Šĥóúļðéŕš - Áĝíļíţý]",
+        "enchant_shoulder_intellect": "[Éñçĥáñţ Šĥóúļðéŕš - Íñţéļļéçţ]",
+        "enchant_chest_stamina": "[Éñçĥáñţ Çĥéšţ - Šţáɱíñá]",
+        "enchant_chest_spirit": "[Éñçĥáñţ Çĥéšţ - Šþíŕíţ]",
+        "enchant_chest_reinforcement": "[Éñçĥáñţ Çĥéšţ - Ŕéíñƒóŕçéɱéñţ]",
+        "enchant_waist_stamina": "[Éñçĥáñţ Ɓéļţ - Šţáɱíñá]",
+        "enchant_waist_strength": "[Éñçĥáñţ Ɓéļţ - Šţŕéñĝţĥ]",
+        "enchant_waist_agility": "[Éñçĥáñţ Ɓéļţ - Áĝíļíţý]",
+        "enchant_legs_stamina": "[Éñçĥáñţ Ļéĝš - Šţáɱíñá]",
+        "enchant_legs_intellect": "[Éñçĥáñţ Ļéĝš - Íñţéļļéçţ]",
+        "enchant_legs_agility": "[Éñçĥáñţ Ļéĝš - Áĝíļíţý]",
+        "enchant_gloves_agility": "[Éñçĥáñţ Ĝļóʋéš - Áĝíļíţý]",
+        "enchant_gloves_intellect": "[Éñçĥáñţ Ĝļóʋéš - Šþéļļþóŵéŕ]",
+        "enchant_gloves_strength": "[Éñçĥáñţ Ĝļóʋéš - Šţŕéñĝţĥ]",
+        "enchant_feet_agility": "[Éñçĥáñţ Ɓóóţš - Áĝíļíţý]",
+        "enchant_feet_strength": "[Éñçĥáñţ Ɓóóţš - Šţŕéñĝţĥ]",
+        "enchant_feet_stamina": "[Éñçĥáñţ Ɓóóţš - Šţáɱíñá]",
+        "enchant_feet_spirit": "[Éñçĥáñţ Ɓóóţš - Šþíŕíţ]",
+        "enchant_weapon_runed_edge": "[Éñçĥáñţ Ŵéáþóñ - Ŕúñéð Éðĝé]",
+        "enchant_weapon_runed_sigil": "[Éñçĥáñţ Ŵéáþóñ - Ŕúñéð Šíĝíļ]",
+        "enchant_chest_runed_weave": "[Éñçĥáñţ Çĥéšţ - Ŕúñéð Ŵéáʋé]",
+        "enchant_legs_runed_hide": "[Éñçĥáñţ Ļéĝš - Ŕúñéð Ĥíðé]",
+        "enchant_helmet_runed_links": "[Éñçĥáñţ Ĥéļɱéţ - Ŕúñéð Ļíñķš]",
+        "enchant_weapon_greater_might": "[Éñçĥáñţ Ŵéáþóñ - Ĝŕéáţéŕ Ɱíĝĥţ]",
+        "enchant_weapon_greater_spellpower": "[Éñçĥáñţ Ŵéáþóñ - Ĝŕéáţéŕ Šþéļļþóŵéŕ]",
+        "enchant_helmet_greater_fortitude": "[Éñçĥáñţ Ĥéļɱéţ - Ĝŕéáţéŕ Ƒóŕţíţúðé]",
+        "enchant_chest_greater_stamina": "[Éñçĥáñţ Çĥéšţ - Ĝŕéáţéŕ Šţáɱíñá]",
+        "enchant_legs_greater_stamina": "[Éñçĥáñţ Ļéĝš - Ĝŕéáţéŕ Šţáɱíñá]",
+        "enchant_gloves_greater_agility": "[Éñçĥáñţ Ĝļóʋéš - Ĝŕéáţéŕ Áĝíļíţý]"
+      }
+    },
     "deeds": {
       "panelTitle": "[Ɓóóķ óƒ Ðééðš]",
       "close": "[Çļóšé ţĥé Ɓóóķ óƒ Ðééðš]",
@@ -5880,6 +6073,150 @@ export const en_XA: EnTranslations = {
       },
       "raw_cinderscale_eel": {
         "name": "[Ŕáŵ Çíñðéŕšçáļé Ééļ]"
+      },
+      "crownforged_gauntlets": {
+        "name": "[Ɓóñéŵŕóúĝĥţ Ĝáúñţļéţš]"
+      },
+      "crownforged_girdle": {
+        "name": "[Ɓóñéŵŕóúĝĥţ Ĝíŕðļé]"
+      },
+      "nighttalon_grips": {
+        "name": "[Ðíŕéƒáñĝ Ĝŕíþš]"
+      },
+      "nighttalon_waistband": {
+        "name": "[Ðíŕéƒáñĝ Ŵáíšţƀáñð]"
+      },
+      "soulflame_cord": {
+        "name": "[Ŵŕáíţĥƒíŕé Çóŕð]"
+      },
+      "soulflame_gloves": {
+        "name": "[Ŵŕáíţĥƒíŕé Ĝļóʋéš]"
+      },
+      "stormcallers_handguards": {
+        "name": "[Ĝáļéçáļļ Ĥáñðĝúáŕðš]"
+      },
+      "stormcallers_waistguard": {
+        "name": "[Ĝáļéçáļļ Ŵáíšţĝúáŕð]"
+      },
+      "arcane_dust": {
+        "name": "[Áŕçáñé Ðúšţ]"
+      },
+      "arcane_essence": {
+        "name": "[Áŕçáñé Éššéñçé]"
+      },
+      "arcane_shard": {
+        "name": "[Áŕçáñé Šĥáŕð]"
+      },
+      "resonant_steel": {
+        "name": "[Ŕéšóñáñţ Šţééļ]"
+      },
+      "resonant_timber": {
+        "name": "[Ŕéšóñáñţ Ţíɱƀéŕ]"
+      },
+      "resonant_thread": {
+        "name": "[Ŕéšóñáñţ Ţĥŕéáð]"
+      },
+      "resonant_hide": {
+        "name": "[Ŕéšóñáñţ Ĥíðé]"
+      },
+      "resonant_links": {
+        "name": "[Ŕéšóñáñţ Ļíñķš]"
+      },
+      "copperguard_hauberk": {
+        "name": "[Çóþþéŕĝúáŕð Ĥáúƀéŕķ]"
+      },
+      "copperguard_greaves": {
+        "name": "[Çóþþéŕĝúáŕð Ĝŕéáʋéš]"
+      },
+      "vale_forged_blade": {
+        "name": "[Ʋáļé-Ƒóŕĝéð Ɓļáðé]"
+      },
+      "ironguard_hauberk": {
+        "name": "[Íŕóñĝúáŕð Ĥáúƀéŕķ]"
+      },
+      "ironguard_helm": {
+        "name": "[Íŕóñĝúáŕð Ĥéļɱ]"
+      },
+      "mirefen_forged_maul": {
+        "name": "[Ɱíŕéƒéñ-Ƒóŕĝéð Ɱáúļ]"
+      },
+      "thorium_battleplate": {
+        "name": "[Ţĥóŕíúɱ Ɓáţţļéþļáţé]"
+      },
+      "thorium_warboots": {
+        "name": "[Ţĥóŕíúɱ Ŵáŕƀóóţš]"
+      },
+      "thornpeak_greatblade": {
+        "name": "[Ţĥóŕñþéáķ Ĝŕéáţƀļáðé]"
+      },
+      "cinderforged_hauberk": {
+        "name": "[Çíñðéŕƒóŕĝéð Ĥáúƀéŕķ]"
+      },
+      "cinderforged_gauntlets": {
+        "name": "[Çíñðéŕƒóŕĝéð Ĝáúñţļéţš]"
+      },
+      "cinderforged_reaver": {
+        "name": "[Çíñðéŕƒóŕĝéð Ŕéáʋéŕ]"
+      },
+      "ironbark_stave": {
+        "name": "[Íŕóñƀáŕķ Šţáʋé]"
+      },
+      "ashwood_stave": {
+        "name": "[Ášĥŵóóð Šţáʋé]"
+      },
+      "elderwood_stave": {
+        "name": "[Éļðéŕŵóóð Šţáʋé]"
+      },
+      "boneash_stave": {
+        "name": "[Ɓóñéášĥ Šţáʋé]"
+      },
+      "silverweave_robe": {
+        "name": "[Šíļʋéŕŵéáʋé Ŕóƀé]"
+      },
+      "goldweave_robe": {
+        "name": "[Ĝóļðŵéáʋé Ŕóƀé]"
+      },
+      "sunweave_robe": {
+        "name": "[Šúñŵéáʋé Ŕóƀé]"
+      },
+      "ashenweave_robe": {
+        "name": "[Ášĥéñŵéáʋé Ŕóƀé]"
+      },
+      "silverbound_kris": {
+        "name": "[Šíļʋéŕƀóúñð Ķŕíš]"
+      },
+      "goldbound_kris": {
+        "name": "[Ĝóļðƀóúñð Ķŕíš]"
+      },
+      "sunbound_kris": {
+        "name": "[Šúñƀóúñð Ķŕíš]"
+      },
+      "ashenbound_kris": {
+        "name": "[Ášĥéñƀóúñð Ķŕíš]"
+      },
+      "silverleaf_draught": {
+        "name": "[Šíļʋéŕļéáƒ Ðŕáúĝĥţ]"
+      },
+      "goldleaf_draught": {
+        "name": "[Ĝóļðļéáƒ Ðŕáúĝĥţ]"
+      },
+      "sunpetal_draught": {
+        "name": "[Šúñþéţáļ Ðŕáúĝĥţ]"
+      },
+      "gravebloom_draught": {
+        "name": "[Ĝŕáʋéƀļóóɱ Ðŕáúĝĥţ]"
+      },
+      "elixir_of_silver_vigor": {
+        "name": "[Éļíẋíŕ óƒ Šíļʋéŕ Ʋíĝóŕ]"
+      },
+      "elixir_of_golden_focus": {
+        "name": "[Éļíẋíŕ óƒ Ĝóļðéñ Ƒóçúš]"
+      },
+      "elixir_of_sunpetal_swiftness": {
+        "name": "[Éļíẋíŕ óƒ Šúñþéţáļ Šŵíƒţñéšš]"
+      },
+      "elixir_of_the_ashen_ward": {
+        "name": "[Éļíẋíŕ óƒ ţĥé Ášĥéñ Ŵáŕð]"
       }
     },
     "mobs": {
