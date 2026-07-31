@@ -235,6 +235,10 @@ export class MobileControls {
 
   private chatPressTimer: ReturnType<typeof setTimeout> | null = null;
   private chatLongFired = false;
+  /** A chat-button press is in progress and its release should still be acted
+   *  on. Cleared the moment the gesture is interrupted, so a stale `pointerup`
+   *  delivered afterwards (Android resume) opens neither peek nor composer. */
+  private chatPressActive = false;
 
   private canvas = document.getElementById('game-canvas') as HTMLElement | null;
   private root = document.getElementById('mobile-controls') as HTMLElement | null;
@@ -296,11 +300,13 @@ export class MobileControls {
     window.addEventListener('blur', () => {
       this.releaseMove();
       this.releaseCamera();
+      this.cancelChatPress();
     });
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') {
         this.releaseMove();
         this.releaseCamera();
+        this.cancelChatPress();
       }
     });
 
@@ -418,6 +424,9 @@ export class MobileControls {
       this.releaseMove();
       this.releaseCamera();
       this.releasePinch();
+      // A press still held when the touch UI goes away must not re-open the
+      // peek on top of hidden controls.
+      this.cancelChatPress();
     } else {
       document.body.classList.remove('mobile-chat-open');
     }
@@ -497,28 +506,57 @@ export class MobileControls {
   private bindChatButton(id: string): void {
     const button = document.getElementById(id);
     if (!button) return;
-    const cancel = () => {
-      if (this.chatPressTimer !== null) { clearTimeout(this.chatPressTimer); this.chatPressTimer = null; }
-    };
     button.addEventListener('pointerdown', (e) => {
       if (!this.active) return;
       e.preventDefault();
-      this.chatLongFired = false;
-      cancel();
+      this.cancelChatPress();
+      this.chatPressActive = true;
       this.chatPressTimer = setTimeout(() => {
-        this.chatLongFired = true;
         this.chatPressTimer = null;
+        // The touch UI can go inactive mid-press (Interface Mode switch, or a
+        // breakpoint flip). setActive(false) cancels this timer, but guard here
+        // too so the peek can never be re-opened over a hidden touch UI.
+        if (!this.active) {
+          this.chatPressActive = false;
+          return;
+        }
+        this.chatLongFired = true;
         this.toggleLogPeek();
       }, CHAT_LONG_PRESS_MS);
     });
     button.addEventListener('pointerup', (e) => {
       if (!this.active) return;
       e.preventDefault();
-      cancel();
-      if (!this.chatLongFired) this.toggleChat();
+      const pressed = this.chatPressActive;
+      const longFired = this.chatLongFired;
+      this.cancelChatPress();
+      // An interrupted gesture (blur, hide, pointercancel, or a drag off the
+      // button) has already ended the press, so its release must open NEITHER
+      // the peek nor the composer: raising the soft keyboard with no touch on
+      // screen is strictly more intrusive than the blind peek this replaced.
+      // Only a press that survived to its own release taps through.
+      if (pressed && !longFired) this.toggleChat();
     });
-    button.addEventListener('pointercancel', cancel);
-    button.addEventListener('pointerleave', cancel);
+    button.addEventListener('pointercancel', () => this.cancelChatPress());
+    button.addEventListener('pointerleave', () => this.cancelChatPress());
+  }
+
+  /** End a chat-button press without acting on it, so a gesture interrupted
+   * before its release (a drag off the button, a pointercancel, the touch UI
+   * going inactive, or the app being backgrounded mid-press) can neither fire
+   * the long-press blind nor be taken as a tap by a later release. On Android
+   * the WebView keeps the timer armed across a task switch and runs it on
+   * resume, which toggled the log peek with no touch on screen; resume may then
+   * deliver the stale `pointerup`, which `chatPressActive` is what swallows.
+   * Clearing `chatLongFired` here is safe precisely because the release is
+   * gated on `chatPressActive`, not on the long-press flag alone. */
+  private cancelChatPress(): void {
+    if (this.chatPressTimer !== null) {
+      clearTimeout(this.chatPressTimer);
+      this.chatPressTimer = null;
+    }
+    this.chatPressActive = false;
+    this.chatLongFired = false;
   }
 
   /** Toggle the read-only chat-log peek. Opening it makes sure the composer (and

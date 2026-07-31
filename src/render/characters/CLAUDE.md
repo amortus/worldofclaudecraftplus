@@ -54,6 +54,19 @@ falling back to `mob_bandit`; NPCs → `NPC_KEYS` (default `npc_villager`). Form
 - Death/revive are **edge-triggered locally** from `s.dead` (clamped one-shot);
   `flourish` plays on respawn. One-shots clamp on the last frame — see the
   T-pose-pop comment in `playOneShot`.
+- **Never leave the rig at zero weight.** A SkinnedMesh blends toward BIND pose
+  (the T-pose) by however much the mixer's scheduled actions sum SHORT of 1, and
+  the base-state fade only runs on an EDGE, so a partner-less `fadeIn` sticks for
+  as long as a held state (strafe/cast/walk) lasts. Start every clip through
+  `beginAction` (crossfade only when the outgoing action still drives the rig,
+  else snap to full weight). The per-frame `scanAnimRepair` watchdog
+  (`anim_state.ts`) is the backstop, but know its **scope**: it catches only the
+  FULL latch (summed weight under `POSE_DRIVE_MIN_WEIGHT`, i.e. nothing driving
+  the rig at all), after 3 starved frames. A partial deficit is still a real
+  bind-pose blend and is **not** covered, by design, since the threshold must sit
+  under a legitimate crossfade's trough. `beginAction`, not the watchdog, is what
+  keeps the weight at 1. The watchdog is allocation-free by contract:
+  `weightScan`/`repairScan` are reused scratch.
 
 ## Adding things
 - **New family/key:** add a `VisualDef` to `VISUALS` (existing `ClipMap` or a new
@@ -64,7 +77,14 @@ falling back to `mob_bandit`; NPCs → `NPC_KEYS` (default `npc_villager`). Form
 - **New animation state:** add the field to `AnimState`, extend `BaseState`, map
   it in `desiredBaseState()` (both in `anim_state.ts`) + `baseAction()`, add the
   clip name to `ClipMap` and `clipNamesOf()`, and have the renderer set the new
-  `AnimState` flag.
+  `AnimState` flag. A new `ClipMap` field must also join
+  `tests/character_clipmaps.test.ts` (it fails loudly if you forget).
+- **Tests:** `tests/visual_manifest.test.ts` pins the `VISUALS`/clip contract,
+  `tests/character_clipmaps.test.ts` gates every ClipMap name against the clips
+  actually in the shipped GLB (both graphics tiers),
+  `tests/character_anim_state.test.ts` the pure pose/watchdog math, and
+  `tests/character_tpose_repair.test.ts` the live mixer weights across death,
+  respawn and repeated one-shots (a stub GLTF: GLTFLoader does not run in Node).
 
 ## Gotchas / never
 - KayKit GLBs ship **every** accessory visible — `VisualDef.show` is an allowlist

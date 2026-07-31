@@ -104,10 +104,14 @@ export class CharacterPreview {
    *  turntable). The asset must already be loaded — callers preload first. */
   setVisualKey(visualKey: string, weaponItemId: string | null = null): void {
     if (this.destroyed) return;
-    // Clean up current visual if it exists
+    // Clean up current visual if it exists. dispose() is REQUIRED, not optional:
+    // SkeletonUtils.clone gives every instance its own Skeletons, whose GPU bone
+    // textures are allocated lazily and are not part of the shared per-asset
+    // caches. Dropping the reference instead strands one set per swap, and the
+    // creation turntable swaps on every class and skin click.
     if (this.currentVisual) {
       this.characterGroup.remove(this.currentVisual.root);
-      // CharacterVisual dispose only releases mixer listeners
+      this.currentVisual.dispose();
       this.currentVisual = null;
     }
 

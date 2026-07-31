@@ -514,7 +514,12 @@ export const VISUALS: Record<string, VisualDef> = {
   mob_stag: {
     url: `${CREATURES}/stag.glb`,
     height: 1.9,
-    clips: animal(['Attack_Headbutt', 'Attack']),
+    // Attack_Kick, not 'Attack': stag.glb ships Attack_Headbutt/Attack_Kick and
+    // no clip called 'Attack', so every second swing in the rotation resolved to
+    // nothing and played no animation at all. The fox-based siblings above are a
+    // DIFFERENT GLB that really does carry 'Attack', which is why they are fine.
+    // tests/character_clipmaps.test.ts now gates this against the shipped GLBs.
+    clips: animal(['Attack_Headbutt', 'Attack_Kick']),
     tint: 'entity',
     tintStrength: 0.35,
   },

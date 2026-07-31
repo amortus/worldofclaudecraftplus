@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   CHAT_LONG_PRESS_MS,
   clampJoystickOrigin,
@@ -356,6 +356,7 @@ function installMobileControlDom(): {
   cameraJoystick: FakeElement;
   jumpButton: FakeElement;
   emoteButton: FakeElement;
+  chatButton: FakeElement;
   windowTarget: EventTarget;
 } {
   const elements = new Map<string, FakeElement>([
@@ -368,6 +369,7 @@ function installMobileControlDom(): {
     ['mobile-camera-stick', new FakeElement()],
     ['mobile-jump', new FakeElement()],
     ['mobile-emote', new FakeElement()],
+    ['mobile-chat', new FakeElement()],
   ]);
   const body = new FakeElement();
   const documentTarget = new EventTarget();
@@ -393,6 +395,7 @@ function installMobileControlDom(): {
     cameraJoystick: elements.get('mobile-camera-joystick')!,
     jumpButton: elements.get('mobile-jump')!,
     emoteButton: elements.get('mobile-emote')!,
+    chatButton: elements.get('mobile-chat')!,
     windowTarget,
   };
 }
@@ -727,5 +730,132 @@ describe('MobileControls pointer lifecycle', () => {
     canvas.dispatchEvent(pointerEvent('pointermove', { pointerId: 42, pointerType: 'touch', clientX: 210, clientY: 100 }));
 
     expect(zooms.length).toBeGreaterThan(0);
+  });
+});
+
+describe('MobileControls chat button long-press', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    // One case flips Interface Mode; restore it here rather than inline so a
+    // failing assertion cannot leak `desktop` into the cases that follow.
+    setInterfaceMode('auto');
+  });
+
+  const noopInput = () =>
+    ({
+      setTouchMove: () => {},
+      clearTouchMove: () => {},
+      setTouchLook: () => {},
+      setTouchLookVector: () => {},
+      applyTouchLookDelta: () => {},
+      zoomBy: () => {},
+    }) as unknown as Input;
+
+  it('toggles the log peek on an uninterrupted long press, and the release afterward does not also open the composer', () => {
+    vi.useFakeTimers();
+    const { chatButton } = installMobileControlDom();
+    new MobileControls(noopInput(), mobileCallbacks()).start();
+
+    chatButton.dispatchEvent(pointerEvent('pointerdown', { pointerId: 1 }));
+    vi.advanceTimersByTime(CHAT_LONG_PRESS_MS);
+    expect(document.body.classList.contains('mobile-chatlog-peek')).toBe(true);
+
+    chatButton.dispatchEvent(pointerEvent('pointerup', { pointerId: 1 }));
+    expect(document.body.classList.contains('mobile-chatlog-peek')).toBe(true);
+    expect(document.body.classList.contains('mobile-chat-open')).toBe(false);
+  });
+
+  it('cancels a pending long press on window blur so it never fires blind once the timer elapses', () => {
+    vi.useFakeTimers();
+    const { chatButton, windowTarget } = installMobileControlDom();
+    new MobileControls(noopInput(), mobileCallbacks()).start();
+
+    chatButton.dispatchEvent(pointerEvent('pointerdown', { pointerId: 2 }));
+    // Interrupt well before the threshold elapses, as backgrounding the Android
+    // app mid-gesture would. The WebView keeps the timer armed and runs it on
+    // resume, so without the cancel the peek toggles with no touch on screen.
+    vi.advanceTimersByTime(CHAT_LONG_PRESS_MS - 100);
+    windowTarget.dispatchEvent(new Event('blur'));
+
+    vi.advanceTimersByTime(CHAT_LONG_PRESS_MS);
+    expect(document.body.classList.contains('mobile-chatlog-peek')).toBe(false);
+  });
+
+  it('cancels a pending long press when the app is hidden (visibilitychange)', () => {
+    vi.useFakeTimers();
+    const { chatButton } = installMobileControlDom();
+    new MobileControls(noopInput(), mobileCallbacks()).start();
+
+    chatButton.dispatchEvent(pointerEvent('pointerdown', { pointerId: 3 }));
+    vi.advanceTimersByTime(CHAT_LONG_PRESS_MS - 100);
+
+    (document as unknown as { visibilityState: string }).visibilityState = 'hidden';
+    (document as unknown as EventTarget).dispatchEvent(new Event('visibilitychange'));
+
+    vi.advanceTimersByTime(CHAT_LONG_PRESS_MS);
+    expect(document.body.classList.contains('mobile-chatlog-peek')).toBe(false);
+  });
+
+  it('swallows the interrupted press own release: neither peek nor composer opens', () => {
+    // The regression this guards. Backgrounding the Android app mid-press and
+    // resuming can deliver the stale pointerup rather than a pointercancel.
+    // Cancelling clears chatLongFired, so a release gated only on that flag
+    // would take the tap arm and raise the soft KEYBOARD with no touch on
+    // screen, which is strictly more intrusive than the blind peek it replaced.
+    vi.useFakeTimers();
+    const { chatButton, windowTarget } = installMobileControlDom();
+    new MobileControls(noopInput(), mobileCallbacks()).start();
+
+    chatButton.dispatchEvent(pointerEvent('pointerdown', { pointerId: 4 }));
+    vi.advanceTimersByTime(CHAT_LONG_PRESS_MS - 100);
+    windowTarget.dispatchEvent(new Event('blur'));
+    vi.advanceTimersByTime(CHAT_LONG_PRESS_MS);
+
+    chatButton.dispatchEvent(pointerEvent('pointerup', { pointerId: 4 }));
+    expect(document.body.classList.contains('mobile-chatlog-peek')).toBe(false);
+    expect(document.body.classList.contains('mobile-chat-open')).toBe(false);
+  });
+
+  it('does not open the composer when the finger drags off the button before release', () => {
+    vi.useFakeTimers();
+    const { chatButton } = installMobileControlDom();
+    new MobileControls(noopInput(), mobileCallbacks()).start();
+
+    chatButton.dispatchEvent(pointerEvent('pointerdown', { pointerId: 6 }));
+    chatButton.dispatchEvent(pointerEvent('pointerleave', { pointerId: 6 }));
+    chatButton.dispatchEvent(pointerEvent('pointerup', { pointerId: 6 }));
+
+    expect(document.body.classList.contains('mobile-chat-open')).toBe(false);
+    expect(document.body.classList.contains('mobile-chatlog-peek')).toBe(false);
+  });
+
+  it('never re-opens the peek over a touch UI that went inactive mid-press', () => {
+    // An Interface Mode switch (or a breakpoint flip) while the button is held.
+    vi.useFakeTimers();
+    const { chatButton } = installMobileControlDom();
+    const controls = new MobileControls(noopInput(), mobileCallbacks());
+    controls.start();
+
+    chatButton.dispatchEvent(pointerEvent('pointerdown', { pointerId: 7 }));
+    vi.advanceTimersByTime(CHAT_LONG_PRESS_MS - 100);
+    setInterfaceMode('desktop');
+    controls.refreshInterfaceMode(); // setActive(false) clears the peek class...
+
+    // ...and the pending timer must not put it straight back.
+    vi.advanceTimersByTime(CHAT_LONG_PRESS_MS);
+    expect(document.body.classList.contains('mobile-chatlog-peek')).toBe(false);
+  });
+
+  it('still taps through on a clean, uninterrupted press and release', () => {
+    // The guard above must not cost the ordinary tap.
+    vi.useFakeTimers();
+    const { chatButton } = installMobileControlDom();
+    new MobileControls(noopInput(), mobileCallbacks()).start();
+
+    chatButton.dispatchEvent(pointerEvent('pointerdown', { pointerId: 8 }));
+    chatButton.dispatchEvent(pointerEvent('pointerup', { pointerId: 8 }));
+
+    expect(document.body.classList.contains('mobile-chat-open')).toBe(true);
+    expect(document.body.classList.contains('mobile-chatlog-peek')).toBe(false);
   });
 });
