@@ -1,5 +1,8 @@
 import * as THREE from 'three';
-import { WORLD_MAX_Z, WORLD_MIN_Z, WORLD_SIZE, ZONES } from '../sim/data';
+import {
+  STRIP_MAX_X, STRIP_MIN_X, WORLD_MAX_X, WORLD_MAX_Z, WORLD_MIN_X, WORLD_MIN_Z,
+  WORLD_SIZE, ZONES,
+} from '../sim/data';
 import { terrainHeight, WATER_LEVEL } from '../sim/world';
 import { loadTexture } from './assets/loader';
 import { registerPreload } from './assets/preload';
@@ -152,9 +155,14 @@ function buildShaderWater(seed: number): WaterView {
   const meshes: THREE.Mesh[] = [];
   for (const zone of ZONES) {
     const depth = zone.zMax - zone.zMin;
-    const geo = new THREE.PlaneGeometry(WORLD_SIZE, depth, SEGMENTS_PER_ZONE, SEGMENTS_PER_ZONE)
+    // Each plane covers its zone's own RECT. A zone that declares no x bounds
+    // spans the strip, as it always did; a grid column zone gets a plane over
+    // itself instead of a second copy stacked on the strip beside it.
+    const x0 = zone.xMin ?? STRIP_MIN_X;
+    const x1 = zone.xMax ?? STRIP_MAX_X;
+    const geo = new THREE.PlaneGeometry(x1 - x0, depth, SEGMENTS_PER_ZONE, SEGMENTS_PER_ZONE)
       .rotateX(-Math.PI / 2);
-    geo.translate(0, 0, (zone.zMin + zone.zMax) / 2);
+    geo.translate((x0 + x1) / 2, 0, (zone.zMin + zone.zMax) / 2);
     const pos = geo.attributes.position as THREE.BufferAttribute;
     const shoreDepth = new Float32Array(pos.count);
     for (let i = 0; i < pos.count; i++) {
@@ -171,10 +179,15 @@ function buildShaderWater(seed: number): WaterView {
 }
 
 function buildPhongWater(): WaterView {
+  // The single low-tier plane covers the world's whole bounding box, so it has
+  // to span every grid column (a strip-wide plane left the column zones, one of
+  // them a fen, with no water at all on the low tier). Both texture repeats
+  // scale with it so the yards per repeat stay what they were on the strip.
+  const columns = (WORLD_MAX_X - WORLD_MIN_X) / WORLD_SIZE;
   const tex = waterNormalish();
-  tex.repeat.set(30, 30);
+  tex.repeat.set(30 * columns, 30);
   const [norm] = waterNormalMaps();
-  norm.repeat.set(26, 78);
+  norm.repeat.set(26 * columns, 78);
   const mat = new THREE.MeshPhongMaterial({
     color: 0x2a6a96, transparent: true, opacity: 0.8, shininess: 140,
     specular: 0xd8ecff, map: tex, normalMap: norm,
@@ -182,7 +195,7 @@ function buildPhongWater(): WaterView {
   });
   const worldDepth = WORLD_MAX_Z - WORLD_MIN_Z;
   const mesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(WORLD_SIZE, worldDepth).rotateX(-Math.PI / 2),
+    new THREE.PlaneGeometry(WORLD_MAX_X - WORLD_MIN_X, worldDepth).rotateX(-Math.PI / 2),
     mat,
   );
   mesh.position.set(0, WATER_LEVEL, (WORLD_MIN_Z + WORLD_MAX_Z) / 2);

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {
-  DUNGEON_X_THRESHOLD, WORLD_MAX_X, WORLD_MAX_Z, WORLD_MIN_Z, ZONES,
+  DUNGEON_X_THRESHOLD, STRIP_ZONES, WORLD_MAX_X, WORLD_MAX_Z, WORLD_MIN_Z,
+  worldHalfWidthAt, WORLD_SIZE, ZONES,
 } from '../sim/data';
 import type { BiomeId } from '../sim/types';
 import { roadDistance, terrainHeight, WATER_LEVEL, zoneBiomeAt } from '../sim/world';
@@ -118,9 +119,15 @@ const LOD_BANDS = {
   ],
 } as const;
 
-// terrain normal map resolution (~0.56u per texel over 360x1080)
-const NORMAL_TEX_W = 640;
-const NORMAL_TEX_H = 1920;
+// Terrain macro-normal resolution. It covers the WHOLE world box in the
+// geometry's planar uv, so 640x1920 was a density (~0.56u per texel over the
+// 360yd strip), not a constant: left as literals it squashed the macro relief
+// 3x along x the moment the world became a 3 column grid. Rescale both axes so
+// the TEXEL BUDGET (1.23M boot terrainHeight samples plus the upload) and the
+// axis density ratio are exactly what they were on the strip.
+const NORMAL_TEX_COLUMNS = (WORLD_MAX_X * 2) / WORLD_SIZE;
+const NORMAL_TEX_W = Math.round((640 * NORMAL_TEX_COLUMNS) / Math.sqrt(NORMAL_TEX_COLUMNS));
+const NORMAL_TEX_H = Math.round(1920 / Math.sqrt(NORMAL_TEX_COLUMNS));
 const NORMAL_TEX_STRENGTH = 1.35;
 
 // Ground colors per biome; boundaries blend across the same window as the
@@ -185,7 +192,11 @@ const hazyPeakC = new THREE.Color(0xa8bdd4); // world-rim mountains, atmospheric
 const snowCapC = new THREE.Color(0xedf3fa);
 const lowSunC = new THREE.Color(0xe7d9a5);
 const lowShadeC = new THREE.Color(0x60745b);
-const zonePalettes = ZONES.map((zn) => {
+// The palette cascade is a NORTH-SOUTH stack, so it walks STRIP_ZONES (the
+// full-width bands) and not ZONES: the grid's column zones are appended to
+// ZONES after the bands, share the vale's z band, and would otherwise blend
+// their palette into the northmost band's rim (see STRIP_ZONES in sim/data).
+const zonePalettes = STRIP_ZONES.map((zn) => {
   const p = BIOME_PALETTE[zn.biome];
   return {
     grass: new THREE.Color(p.grass), grassDark: new THREE.Color(p.grassDark),
@@ -199,8 +210,8 @@ function paletteAt(z: number): void {
   grassYellowC.copy(zonePalettes[0].grassYellow);
   dirtC.copy(zonePalettes[0].dirt);
   sandC.copy(zonePalettes[0].sand);
-  for (let i = 0; i + 1 < ZONES.length; i++) {
-    const b = ZONES[i].zMax;
+  for (let i = 0; i + 1 < STRIP_ZONES.length; i++) {
+    const b = STRIP_ZONES[i].zMax;
     const t = clamp01((z - (b - 30)) / 65);
     const tt = t * t * (3 - 2 * t);
     if (tt <= 0) break;
@@ -215,15 +226,28 @@ function paletteAt(z: number): void {
 // How "marsh" a given z is — mirrors the palette/heightfield blend windows so
 // the mud texture fades in exactly where the marsh palette does.
 function marshWeightAt(z: number): number {
-  let w = ZONES[0].biome === 'marsh' ? 1 : 0;
-  for (let i = 0; i + 1 < ZONES.length; i++) {
-    const b = ZONES[i].zMax;
+  let w = STRIP_ZONES[0].biome === 'marsh' ? 1 : 0;
+  for (let i = 0; i + 1 < STRIP_ZONES.length; i++) {
+    const b = STRIP_ZONES[i].zMax;
     const t = clamp01((z - (b - 30)) / 65);
     const tt = t * t * (3 - 2 * t);
     if (tt <= 0) break;
-    w += ((ZONES[i + 1].biome === 'marsh' ? 1 : 0) - w) * tt;
+    w += ((STRIP_ZONES[i + 1].biome === 'marsh' ? 1 : 0) - w) * tt;
   }
   return w;
+}
+
+// The world's half width at a row, memoized on z. sampleVertex runs down a
+// chunk's inner loop with z held constant, so one slot hits on every vertex but
+// the first of each row and the rim tint costs no per-vertex column scan.
+let rimHalfZ = Number.NaN;
+let rimHalfWidth = 0;
+function rimHalfWidthAt(z: number): number {
+  if (z !== rimHalfZ) {
+    rimHalfZ = z;
+    rimHalfWidth = worldHalfWidthAt(z);
+  }
+  return rimHalfWidth;
 }
 
 // blend the splat weight vector toward a single layer
@@ -330,9 +354,12 @@ function sampleVertex(x: number, z: number, seed: number, out: Float64Array, o: 
     lerpSplat(w, 1, impact.dirt);
     lerpSplat(w, 2, impact.rock);
   }
-  // the rim wall reads as distant sunlit peaks, not a black cliff
+  // the rim wall reads as distant sunlit peaks, not a black cliff. The x half
+  // width is PER ROW (sim/world raises the wall at worldHalfWidthAt(z)), so a
+  // row without a column zone still gets the haze on its own wall at |x| = 180
+  // instead of only at the grid's outer box edge.
   const edge = Math.max(
-    Math.abs(x) - (WORLD_MAX_X - 32),
+    Math.abs(x) - (rimHalfWidthAt(z) - 32),
     WORLD_MIN_Z + 32 - z,
     z - (WORLD_MAX_Z - 32),
   );
@@ -647,10 +674,21 @@ function buildSplatMaterial(seed: number): THREE.MeshStandardMaterial {
   return mat;
 }
 
+// yards per repeat of the low tier's ground detail texture. The uv is planar
+// over the WHOLE world box (see buildChunkGeometry), so the repeat count has to
+// be derived from the box: the historical literal 160 meant "160 repeats across
+// the 360yd strip", and left as a literal it stretched the detail 3x in x the
+// moment the world became a 3 column grid.
+const DETAIL_PERIOD_X = WORLD_SIZE / 160; // 2.25yd
+const DETAIL_PERIOD_Z = (WORLD_MAX_Z - WORLD_MIN_Z) / 480; // 3yd
+
 function buildLambertMaterial(): THREE.MeshLambertMaterial {
   const detail = groundDetailTexture();
-  // strip-planar uv: keep the legacy ~2.25u texture period in both axes
-  detail.repeat.set(160, 480);
+  // strip-planar uv: keep the legacy texture period in both axes
+  detail.repeat.set(
+    Math.round((WORLD_MAX_X * 2) / DETAIL_PERIOD_X),
+    Math.round((WORLD_MAX_Z - WORLD_MIN_Z) / DETAIL_PERIOD_Z),
+  );
   return new THREE.MeshLambertMaterial({
     vertexColors: true,
     map: detail,

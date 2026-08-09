@@ -5,7 +5,17 @@
 // and owns the world-layout constants.
 
 import { BASE_ITEMS, FISHING_RARE_ID, FISHING_TABLES } from './content/items';
-import { COLUMN_CAMPS, COLUMN_MOBS, COLUMN_ROADS, COLUMN_ZONE_DEFS } from './content/columns';
+import {
+  COLUMN_CAMPS,
+  COLUMN_ITEMS,
+  COLUMN_MOBS,
+  COLUMN_NPCS,
+  COLUMN_OBJECTS,
+  COLUMN_QUEST_ORDER,
+  COLUMN_QUESTS,
+  COLUMN_ROADS,
+  COLUMN_ZONE_DEFS,
+} from './content/columns';
 import type {
   CampDef,
   DelveDef,
@@ -177,6 +187,9 @@ export const ITEMS: Record<string, ItemDef> = mergeItems(
   // the 18 new quests. LAST, so a later pack can never be shadowed by an older
   // table redefining one of its ids.
   EXPANSION_ITEMS,
+  // The column ring's own items: five quest objects plus the two capstone
+  // reward sets. Everything else those zones hand out or sell is a shipped id.
+  COLUMN_ITEMS,
   // Reins. The mount system owns its own catalog (src/sim/mounts.ts) because it
   // is a mechanic, not zone content; only the item table is merged here.
   MOUNT_ITEMS,
@@ -212,6 +225,10 @@ export const NPCS: Record<string, NpcDef> = {
   ...ZONE4_NPCS,
   brother_halven: BROTHER_HALVEN,
   ...EXPANSION_NPCS,
+  // The column ring's givers and provisioners. Appended LAST: world-gen walks
+  // Object.values(NPCS) in insertion order, so every shipped NPC keeps its
+  // entity id and its exact placement. NPC placement draws no rng either way.
+  ...COLUMN_NPCS,
 };
 
 // Reins go on a vendor's shelf here rather than in zone content, because the
@@ -239,6 +256,7 @@ export const QUESTS: Record<string, QuestDef> = {
   ...TEMPLE_QUESTS,
   ...ZONE4_QUESTS,
   ...EXPANSION_QUESTS,
+  ...COLUMN_QUESTS,
 };
 
 export const QUEST_ORDER: string[] = [
@@ -248,6 +266,7 @@ export const QUEST_ORDER: string[] = [
   ...TEMPLE_QUEST_ORDER,
   ...ZONE4_QUEST_ORDER,
   ...EXPANSION_QUEST_ORDER,
+  ...COLUMN_QUEST_ORDER,
 ];
 
 // Camps spawn in array order, each drawing world-gen RNG, so an entry inserted
@@ -279,6 +298,10 @@ export const GROUND_OBJECTS: GroundObjectDef[] = [
   // rng, but they DO consume entity ids in array order, so keeping the pack at
   // the end leaves every shipped object's id exactly where it was.
   ...EXPANSION_OBJECTS,
+  // The column ring's quest objects, after the expansion pack for the same
+  // reason: they consume entity ids in array order, so keeping the newest pack
+  // at the end leaves every shipped object's id exactly where it was.
+  ...COLUMN_OBJECTS,
 ];
 
 export const ROADS: { x: number; z: number }[][] = [

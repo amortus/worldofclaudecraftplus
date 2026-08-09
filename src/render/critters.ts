@@ -7,11 +7,10 @@
 
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import {
-  DUNGEON_X_THRESHOLD, WORLD_MAX_X, WORLD_MAX_Z, WORLD_MIN_Z,
-} from '../sim/data';
+import { DUNGEON_X_THRESHOLD, zoneContaining } from '../sim/data';
 import { terrainHeight, WATER_LEVEL } from '../sim/world';
 import { GFX } from './gfx';
+import { insideWorldRim } from './world_bounds';
 
 export interface CritterField {
   group: THREE.Group;
@@ -140,8 +139,11 @@ export function buildCritters(seed: number): CritterField {
   }
 
   const validGround = (x: number, z: number): boolean => {
-    if (Math.abs(x) > WORLD_MAX_X - EDGE) return false;
-    if (z < WORLD_MIN_Z + EDGE || z > WORLD_MAX_Z - EDGE) return false;
+    // The world is a grid with holes now, so "in bounds" is the per-row rim
+    // PLUS strict zone containment: the box beside a column is void in every
+    // row that column does not occupy.
+    if (!insideWorldRim(x, z, EDGE)) return false;
+    if (!zoneContaining(x, z)) return false;
     if (x > DUNGEON_X_THRESHOLD - 24) return false;
     return terrainHeight(x, z, seed) > WATER_LEVEL + 0.8;
   };

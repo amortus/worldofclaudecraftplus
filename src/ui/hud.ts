@@ -77,6 +77,7 @@ import {
   WORLD_MAX_Z,
   WORLD_MIN_X,
   WORLD_MIN_Z,
+  WORLD_SIZE,
   ZONES,
   zoneAt,
 } from '../sim/data';
@@ -280,7 +281,9 @@ import { renderLootSettingsWindow } from './loot_settings_window';
 import { lowHealthVignette } from './low_health';
 import { lowResourceView } from './low_resource';
 import { overworldDungeonPortals } from './map_dungeon_portals';
-import { type MapRegion, mapCanvasHeight, paintTerrainRows } from './map_terrain';
+import {
+  inMapRegion, type MapRegion, mapCanvasHeight, paddedRegion, paintTerrainRows, zoneMapRegion,
+} from './map_terrain';
 import {
   MARKET_ARMOR_TYPE_FILTERS,
   MARKET_ITEM_TYPE_FILTERS,
@@ -757,9 +760,19 @@ const MAP_BG_RES = 480;
 // shows a cheap low-res paint so opening it never blocks the main thread for ~1-3s
 // (the per-pixel terrainHeight x2 hillshade paint). Swapped to full-res when ready.
 const MAP_PLACEHOLDER_RES = 64;
-// The whole-world minimap bg (140 x ~560 px of per-pixel hillshade) is shown at this
-// cheap res first so HUD construction never does the full ~78k-pixel paint synchronously
-// (a login-time main-thread freeze); the full 140px paint is idle-sliced in afterwards.
+// The whole-world minimap bg is a hillshade of the WORLD BOX, so its width in px
+// is a density, not a constant: 140px across the original 360yd strip. Left as a
+// literal it silently tripled the yards per pixel (and blurred the minimap by 3x)
+// when the world became a 3 column grid, so both resolutions are stated as
+// px-per-yard and multiplied by the region's real width.
+const MINIMAP_BG_PX_PER_YARD = 140 / WORLD_SIZE;
+const minimapBgWidth = (region: MapRegion): number =>
+  Math.max(8, Math.round((region.maxX - region.minX) * MINIMAP_BG_PX_PER_YARD));
+// The full-res bg is idle-sliced in; HUD construction shows this cheap paint first
+// so login never blocks the main thread on the per-pixel terrainHeight x2 hillshade.
+// This one stays a fixed PIXEL budget rather than a density: it is on the
+// synchronous login path and is swapped out within a second, so a wider world
+// must not make it cost more.
 const MINIMAP_PLACEHOLDER_RES = 24;
 // Minimap quest-giver glyph typography, drawn from a sprite cache rather than a
 // per-marker fillText (glyph_sprite_cache.ts has the measurements and the why).
@@ -4509,10 +4522,14 @@ export class Hud {
       // from re-triggering the banner/log (and the map canvas regen) every step.
       if (!inDungeon && currentZone.id !== this.lastZoneId) {
         const lastZone = ZONES.find((z) => z.id === this.lastZoneId);
+        // The dead band is the last zone's whole RECT, grown by the band, not
+        // its z range: zones sit side by side now, so an east-west border is
+        // crossed at a constant z. A z-only test could never be satisfied
+        // there, which pinned the banner, the welcome text and the map's
+        // committed zone to whichever column the player started in.
         const pastDeadBand =
           !lastZone ||
-          p.pos.z < lastZone.zMin - ZONE_BANNER_DEADBAND ||
-          p.pos.z >= lastZone.zMax + ZONE_BANNER_DEADBAND;
+          !inMapRegion(paddedRegion(zoneMapRegion(lastZone), ZONE_BANNER_DEADBAND), p.pos.x, p.pos.z);
         if (pastDeadBand) {
           if (this.lastZoneId !== '') {
             const currentZoneName = zoneDisplayName(currentZone.id);
@@ -5659,9 +5676,10 @@ export class Hud {
     return c;
   }
 
-  // The full-zone band used by the world map (and prewarm), keyed only on z.
+  // The zone's own rect, used by the world map (and its prewarm). The math
+  // lives in map_terrain.ts so a test can drive it without a DOM.
   private mapZoneRegion(zone: ZoneDef): MapRegion {
-    return { minX: WORLD_MIN_X, maxX: WORLD_MAX_X, minZ: zone.zMin, maxZ: zone.zMax };
+    return zoneMapRegion(zone);
   }
 
   // The cached terrain background for a zone, rendering it synchronously only if
@@ -5787,12 +5805,12 @@ export class Hud {
     this.scheduleMapPrewarm();
   };
 
-  // Build the full-res (140px) whole-world minimap background OFF the construction path:
+  // Build the full-res whole-world minimap background OFF the construction path:
   // a few rows per idle slice, swapped into minimapBg when complete. The synchronous
   // version froze the main thread for up to ~1.7s at login (see the constructor). One-shot
   // (never re-triggered), so unlike mapPrewarm it needs no cancel / zone tracking.
   private startMinimapPrewarm(region: MapRegion): void {
-    const W = 140;
+    const W = minimapBgWidth(region);
     const H = mapCanvasHeight(W, region);
     const c = document.createElement('canvas');
     c.width = W;
@@ -6721,6 +6739,9 @@ export class Hud {
     // internal door share their parent's doorPos and carry no overworld portal,
     // so their label does not overlap the parent's, see overworldDungeonPortals)
     for (const portal of overworldDungeonPortals(DUNGEON_LIST, zone.zMin, zone.zMax)) {
+      // the zone's band can hold two other grid columns now, so the band test
+      // above is no longer the whole rect test
+      if (!inMapRegion(full, portal.x, portal.z)) continue;
       const { mx, my } = toMap(portal.x, portal.z);
       ctx.fillStyle = '#c084ff';
       ctx.beginPath();
@@ -6738,7 +6759,7 @@ export class Hud {
     // npcs
     for (const e of this.sim.entities.values()) {
       if (e.kind !== 'npc') continue;
-      if (e.pos.z < zone.zMin || e.pos.z >= zone.zMax) continue;
+      if (!inMapRegion(full, e.pos.x, e.pos.z)) continue;
       const { mx, my } = toMap(e.pos.x, e.pos.z);
       const hasAvail = e.questIds.some(
         (q) => QUESTS[q].giverNpcId === e.templateId && this.sim.questState(q) === 'available',
@@ -6756,7 +6777,7 @@ export class Hud {
     // tracked-quest objective markers in this zone: shaded spawn regions + pins,
     // under the player arrow so the player stays readable on top of them.
     for (const m of this.questMarkerCache) {
-      if (m.z < zone.zMin || m.z >= zone.zMax) continue;
+      if (!inMapRegion(full, m.x, m.z)) continue;
       const { mx, my } = toMap(m.x, m.z);
       if (m.radius > 0) {
         ctx.beginPath();
@@ -6777,7 +6798,10 @@ export class Hud {
       }
     }
     // player
-    if (p.pos.z >= zone.zMin && p.pos.z < zone.zMax && p.pos.x <= WORLD_MAX_X) {
+    // the rect test also keeps the arrow off the map while the player is on the
+    // instance plane (x past every zone rect), which the old x <= WORLD_MAX_X
+    // bound was there for
+    if (inMapRegion(full, p.pos.x, p.pos.z)) {
       const { mx, my } = toMap(p.pos.x, p.pos.z);
       ctx.save();
       ctx.translate(mx, my);
@@ -6806,7 +6830,7 @@ export class Hud {
       party: this.sim.partyInfo?.members ?? [],
       friends: social?.friends ?? [],
       guild: social?.guild?.members ?? [],
-      inView: (x, z) => z >= zone.zMin && z < zone.zMax && x <= WORLD_MAX_X,
+      inView: (x, z) => inMapRegion(full, x, z),
       classColor: classCss,
     });
     if (allyMarkers.length > 0) {

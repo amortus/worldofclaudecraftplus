@@ -22,10 +22,10 @@ import {
   MOBS,
   NPCS,
   QUESTS,
+  STRIP_ZONES,
   WORLD_MAX_Z,
   WORLD_MIN_Z,
   zoneAt,
-  ZONES,
 } from '../sim/data';
 import type { DelveModuleId } from '../sim/delve_layout';
 import type { BiomeId } from '../sim/types';
@@ -2757,7 +2757,9 @@ export class Renderer {
         priority: 90,
         required: false,
         run: () => {
-          const zs = [p.pos.z, ...ZONES.map((z) => z.zMax - 8), ...ZONES.map((z) => z.zMax + 8)]
+          // band boundaries only (STRIP_ZONES): the grid's column zones share a
+          // band's z range, so ZONES here spent prewarm passes on duplicate z
+          const zs = [p.pos.z, ...STRIP_ZONES.map((z) => z.zMax - 8), ...STRIP_ZONES.map((z) => z.zMax + 8)]
             .filter((z) => Number.isFinite(z) && z > WORLD_MIN_Z && z < WORLD_MAX_Z)
             .slice(0, this.lowGfx ? 3 : 8);
           for (const z of zs) {

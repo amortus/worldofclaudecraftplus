@@ -6,7 +6,8 @@
 //
 // The colours sample the SAME `terrainHeight`/`roadDistance` the renderer and
 // sim use, so the map always matches the real world, do not diverge them.
-import { ZONES } from '../sim/data';
+import { STRIP_MAX_X, STRIP_MIN_X, ZONES } from '../sim/data';
+import type { ZoneDef } from '../sim/types';
 import { terrainHeight, roadDistance, WATER_LEVEL, zoneBiomeAt } from '../sim/world';
 
 export interface MapRegion {
@@ -14,6 +15,41 @@ export interface MapRegion {
   maxX: number;
   minZ: number;
   maxZ: number;
+}
+
+/**
+ * The map rect of one zone: its OWN rect, never the world's bounding box.
+ *
+ * A zone that declares x bounds owns exactly them; a zone that declares none
+ * spans the original full-width strip. Since the world became a 3 column grid,
+ * `WORLD_MIN_X`/`WORLD_MAX_X` are only the box around every column, so drawing
+ * a zone with those gave a strip zone a 1080yd wide map (two thirds of it
+ * another zone or the void) and gave a column zone the entire grid. Every
+ * marker the map plots is positioned through this rect, so a wrong rect
+ * mislocates all of them at once.
+ */
+export function zoneMapRegion(zone: ZoneDef): MapRegion {
+  return {
+    minX: zone.xMin ?? STRIP_MIN_X,
+    maxX: zone.xMax ?? STRIP_MAX_X,
+    minZ: zone.zMin,
+    maxZ: zone.zMax,
+  };
+}
+
+/** Is (x, z) inside a map region? Half-open, matching the zone rect itself. */
+export function inMapRegion(region: MapRegion, x: number, z: number): boolean {
+  return x >= region.minX && x < region.maxX && z >= region.minZ && z < region.maxZ;
+}
+
+/** The same region grown by `pad` yards on all four sides. */
+export function paddedRegion(region: MapRegion, pad: number): MapRegion {
+  return {
+    minX: region.minX - pad,
+    maxX: region.maxX + pad,
+    minZ: region.minZ - pad,
+    maxZ: region.maxZ + pad,
+  };
 }
 
 // Pixel height of a W-wide terrain canvas covering `region` (square-pixel).

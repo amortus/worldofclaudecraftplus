@@ -1306,7 +1306,7 @@ export const GUIDE_ZONES: GuideZoneInfo[] = [
       "Sedgewatch Ruin",
       "The Drowned Mill"
     ],
-    "welcome": "East of the vale the ground gives way to standing water. Reedwatch holds the crossing."
+    "welcome": "West of the vale the ground gives way to standing water. Reedwatch holds the crossing."
   },
   {
     "id": "grimhold_crags",
@@ -1324,7 +1324,7 @@ export const GUIDE_ZONES: GuideZoneInfo[] = [
       "Ironvein Cut",
       "The Broken Watchtower"
     ],
-    "welcome": "West of the vale the Grimhold Crags climb out of the treeline. Coldhearth burns against them."
+    "welcome": "East of the vale the Grimhold Crags climb out of the treeline. Coldhearth burns against them."
   }
 ];
 

@@ -43,6 +43,7 @@ import {
 } from '../src/sim/data';
 import { DUNGEON_END_WALL_HW, DUNGEON_WALL_HW } from '../src/sim/dungeon_layout';
 import { Sim } from '../src/sim/sim';
+import { COLUMN_OBJECTS } from '../src/sim/content/columns';
 
 const CINDERFORGE_INDEX = 8;
 // Widest primitive a dungeon layout places, plus its half thickness: the whole
@@ -63,9 +64,23 @@ describe('expansion wiring: the pack reaches the flat tables', () => {
     expect(DUNGEONS.cinderforge).toBeTruthy();
   });
 
-  it('appends the pack objects LAST, so no shipped object shifts its entity id', () => {
-    const tail = GROUND_OBJECTS.slice(-EXPANSION_OBJECTS.length);
-    expect(tail).toEqual(EXPANSION_OBJECTS);
+  it('appends the pack objects after everything that predates them, so no shipped object shifts its entity id', () => {
+    // The invariant is about ENTITY IDS, not about being last in the array: ids are
+    // assigned in array order, so a pack may only append. It was written as "the tail
+    // IS this pack" back when this was the newest pack; the column zones then shipped
+    // their own objects after it and that phrasing broke while the invariant held.
+    // Assert the real property instead: the pack is one contiguous run, and nothing
+    // that predates it sits after it.
+    const first = GROUND_OBJECTS.indexOf(EXPANSION_OBJECTS[0]);
+    expect(first, 'the expansion objects are not in GROUND_OBJECTS at all').toBeGreaterThanOrEqual(0);
+    const run = GROUND_OBJECTS.slice(first, first + EXPANSION_OBJECTS.length);
+    expect(run, 'the expansion objects are not contiguous').toEqual(EXPANSION_OBJECTS);
+    // Everything after the run must belong to a pack that shipped LATER, never to the
+    // base world, or a base object's id would have moved when this pack landed.
+    const after = GROUND_OBJECTS.slice(first + EXPANSION_OBJECTS.length);
+    const later = new Set(COLUMN_OBJECTS);
+    const shifted = after.filter((o) => !later.has(o));
+    expect(shifted, 'these predate the expansion pack but sit after it').toEqual([]);
   });
 
   it('spawns the Cinderforge door and its instance slots in a live world', () => {

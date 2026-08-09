@@ -1,8 +1,9 @@
 import * as THREE from 'three';
-import { DUNGEON_X_THRESHOLD, WORLD_MAX_X, WORLD_MAX_Z, WORLD_MIN_Z } from '../sim/data';
+import { DUNGEON_X_THRESHOLD, zoneContaining } from '../sim/data';
 import type { BiomeId } from '../sim/types';
 import { terrainHeight, zoneBiomeAt, WATER_LEVEL } from '../sim/world';
 import { GFX } from './gfx';
+import { insideWorldRim } from './world_bounds';
 
 // ---------------------------------------------------------------------------
 // Ambient motes — a render-only field of drifting airborne specks (pollen in
@@ -23,6 +24,7 @@ export interface MotesView {
 const MOTE_TINT: Record<BiomeId, number> = { vale: 0xf4e6a0, marsh: 0xb8d28a, peaks: 0xdce8f2, blight: 0x8a857a };
 
 const RADIUS = 26; // motes live within this ring of the player
+const EDGE = 8; // keep clear of the world rim
 const FLOOR = 0.6; // min height above the sampled ground
 const CEIL = 3.4; // max height above the sampled ground
 
@@ -88,7 +90,9 @@ export function buildMotes(seed: number): MotesView {
     const r = Math.sqrt(rng()) * RADIUS; // sqrt → even areal spread, not centre-clumped
     const x = px + Math.cos(ang) * r;
     const z = pz + Math.sin(ang) * r;
-    if (Math.abs(x) > WORLD_MAX_X - 8 || z < WORLD_MIN_Z + 8 || z > WORLD_MAX_Z - 8) return false;
+    // per-row rim + strict zone containment: no motes drifting over the void
+    // the grid's holes leave beside a column zone
+    if (!insideWorldRim(x, z, EDGE) || !zoneContaining(x, z)) return false;
     const h = terrainHeight(x, z, seed);
     if (h < WATER_LEVEL + 0.5) return false; // no motes hovering over open water
     homeX[i] = x;

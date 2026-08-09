@@ -2,16 +2,22 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import {
-  CAMPS, DUNGEON_X_THRESHOLD, WORLD_MAX_X, WORLD_MAX_Z, WORLD_MIN_Z, ZONES,
+  DUNGEON_X_THRESHOLD, WORLD_MIN_Z, ZONES, zoneContaining,
 } from '../sim/data';
 import type { BiomeId } from '../sim/types';
 import {
   generateDecorations, roadDistance, terrainHeight, zoneBiomeAt, WATER_LEVEL,
 } from '../sim/world';
 import type { Decoration } from '../sim/world';
+import {
+  DRESS_DENSITY_LOW_SCALE, DRESS_LOW_SCALE_BOOST, DRESS_STEP_HIGH, DRESS_STEP_LOW,
+  hashAt, sweepDressing, tooSteep,
+} from './foliage_scatter';
+import type { DressingSpot, DressKind } from './foliage_scatter';
 import { configureMaskedDoubleSidedVegetationMaterial, GFX, sharedUniforms } from './gfx';
 import { freezeStaticMatrices } from './static_matrices';
 import { grassTuftTexture } from './textures';
+import { insideWorldRim, rectHasZone } from './world_bounds';
 import { loadGltf } from './assets/loader';
 import { registerPreload } from './assets/preload';
 
@@ -115,9 +121,10 @@ const DRESS_TINT_SOFTEN = 0.65;
 // low-altitude peaks-biome foothills stay mossy/bare (white rocks on green
 // grass read as scattered eggs)
 const ROCK_SNOWLINE_Y = 34; // terrain snow tint starts at h~34 (terrain.ts)
-// grass/dressing refuse cliff faces (mirrors ROCK_SLOPE_START in terrain.ts)
-const GRASS_MAX_SLOPE = 0.62;
-const GRASS_SLOPE_EPS = 1.2;
+// (grass and dressing refuse cliff faces via VEG_MAX_SLOPE in
+// foliage_scatter.ts, which mirrors ROCK_SLOPE_START in terrain.ts)
+// yards of clearance kept between the grass ring and the rim wall
+const GRASS_RIM_INSET = 16;
 
 export interface FoliageView {
   group: THREE.Group;
@@ -161,12 +168,6 @@ export interface FoliagePerfStats {
   grassLastBuildMs: number;
   grassBuildMs: number;
   grassCacheLimit: number;
-}
-
-// deterministic 0..1 hash on integer grid cells / world coords
-function hashAt(a: number, b: number, k: number): number {
-  const s = Math.sin(a * 127.1 + b * 311.7 + k * 74.7) * 43758.5453123;
-  return s - Math.floor(s);
 }
 
 // fog-cullable handle for one instanced bucket mesh; optional distance window
@@ -831,85 +832,16 @@ function buildTrees(parent: THREE.Group, seed: number, registry: BucketMesh[], h
 // Ground dressing: bushes, ferns, mushrooms on a deterministic hash grid
 // ---------------------------------------------------------------------------
 
-type DressKind = 'bush' | 'bushFlowers' | 'fern' | 'mushroom';
-
-interface DressingSpot {
-  x: number;
-  z: number;
-  kind: DressKind;
-  scale: number;
-}
-
-const DRESS_STEP_HIGH = 12;
-const DRESS_STEP_LOW = 10;
-// blight: 0 - the dead wasteland has no living ground dressing (no green ferns/
-// bushes); the bare ashen ground + dead trees + rocks carry the look.
-const DRESS_DENSITY: Record<BiomeId, number> = { vale: 0.26, marsh: 0.26, peaks: 0.15, blight: 0 };
-const DRESS_DENSITY_LOW_SCALE = 1.24;
-const DRESS_LOW_SCALE_BOOST = 1.08;
 const DRESS_TINT_SOFTEN_LOW = 0.56;
 
-function dressStep(): number {
-  return GFX.leanFoliage ? DRESS_STEP_LOW : DRESS_STEP_HIGH;
-}
-
-function dressKindFor(biome: BiomeId, r: number): DressKind {
-  if (biome === 'vale') {
-    if (r < 0.36) return 'bush';
-    if (r < 0.46) return 'bushFlowers';
-    if (r < 0.8) return 'fern';
-    return 'mushroom';
-  }
-  if (biome === 'marsh') {
-    if (r < 0.3) return 'bush';
-    if (r < 0.62) return 'fern';
-    return 'mushroom';
-  }
-  if (biome === 'blight') return r < 0.55 ? 'mushroom' : 'fern';
-  return r < 0.62 ? 'bush' : 'fern';
-}
-
-const DRESS_SCALE: Record<DressKind, [number, number]> = {
-  bush: [0.9, 0.7], bushFlowers: [0.9, 0.7], fern: [0.85, 0.6], mushroom: [0.9, 0.8],
-};
-
-function tooSteep(x: number, z: number, seed: number): boolean {
-  const hx = terrainHeight(x + GRASS_SLOPE_EPS, z, seed) - terrainHeight(x - GRASS_SLOPE_EPS, z, seed);
-  const hz = terrainHeight(x, z + GRASS_SLOPE_EPS, seed) - terrainHeight(x, z - GRASS_SLOPE_EPS, seed);
-  return Math.hypot(hx, hz) / (2 * GRASS_SLOPE_EPS) > GRASS_MAX_SLOPE;
-}
-
+// The sweep itself is pure and lives in foliage_scatter.ts; the tier picks the
+// grid pitch, the density scale and the scale boost.
 function generateDressing(seed: number): DressingSpot[] {
-  const out: DressingSpot[] = [];
-  const xHalf = WORLD_MAX_X - 16;
-  const step = dressStep();
-  const scaleBoost = GFX.leanFoliage ? DRESS_LOW_SCALE_BOOST : 1;
-  for (let gx = -xHalf; gx < xHalf; gx += step) {
-    for (let gz = WORLD_MIN_Z + 16; gz < WORLD_MAX_Z - 16; gz += step) {
-      const r = hashAt(gx, gz, 41);
-      const biome = zoneBiomeAt(gx, gz);
-      const density = DRESS_DENSITY[biome] * (GFX.leanFoliage ? DRESS_DENSITY_LOW_SCALE : 1);
-      if (r > density) continue;
-      const x = gx + (hashAt(gx, gz, 42) - 0.5) * step;
-      const z = gz + (hashAt(gx, gz, 43) - 0.5) * step;
-      let blocked = false;
-      for (const zone of ZONES) {
-        if (Math.hypot(x - zone.hub.x, z - zone.hub.z) < zone.hub.radius + 4) { blocked = true; break; }
-      }
-      if (blocked) continue;
-      for (const camp of CAMPS) {
-        if (Math.hypot(x - camp.center.x, z - camp.center.z) < camp.radius + 2) { blocked = true; break; }
-      }
-      if (blocked) continue;
-      if (roadDistance(x, z) < 4) continue;
-      if (terrainHeight(x, z, seed) < WATER_LEVEL + 1.2) continue;
-      if (tooSteep(x, z, seed)) continue;
-      const kind = dressKindFor(biome, hashAt(gx, gz, 44));
-      const [sMin, sRange] = DRESS_SCALE[kind];
-      out.push({ x, z, kind, scale: (sMin + hashAt(gx, gz, 45) * sRange) * scaleBoost });
-    }
-  }
-  return out;
+  return sweepDressing(seed, {
+    step: GFX.leanFoliage ? DRESS_STEP_LOW : DRESS_STEP_HIGH,
+    densityScale: GFX.leanFoliage ? DRESS_DENSITY_LOW_SCALE : 1,
+    scaleBoost: GFX.leanFoliage ? DRESS_LOW_SCALE_BOOST : 1,
+  }).spots;
 }
 
 function buildDressing(parent: THREE.Group, seed: number, registry: BucketMesh[]): void {
@@ -1165,19 +1097,36 @@ function buildGrassRing(parent: THREE.Group, seed: number): GrassRing {
     buildQueue.push(chunk);
   };
 
+  const finishChunk = (chunk: GrassChunk, started: number): void => {
+    chunk.ready = true;
+    builtChunks++;
+    lastBuildMs = Math.round((performance.now() - started) * 100) / 100;
+    buildMs = Math.round((buildMs + lastBuildMs) * 100) / 100;
+  };
+
   const buildChunk = (chunk: GrassChunk): void => {
     const started = performance.now();
     let n = 0;
+
+    const minX = chunk.cx * GRASS_CHUNK_SIZE;
+    const maxX = minX + GRASS_CHUNK_SIZE;
+    const minZ = chunk.cz * GRASS_CHUNK_SIZE;
+    const maxZ = minZ + GRASS_CHUNK_SIZE;
+    // The world is a grid with holes, and the ring pads a whole chunk past the
+    // visible radius, so a player near a border queues chunks that lie entirely
+    // over the void. Cost such a chunk one rect test instead of a full sweep
+    // (and no InstancedMesh at all).
+    if (!rectHasZone(minX, maxX, minZ, maxZ)) {
+      finishChunk(chunk, started);
+      return;
+    }
+
     const im = new THREE.InstancedMesh(geo, mat, maxChunkCount);
     im.userData.renderCategory = 'grass';
     im.frustumCulled = true;
     im.receiveShadow = true; // tufts must darken inside canopy shade, not glow through it
     im.count = 0;
 
-    const minX = chunk.cx * GRASS_CHUNK_SIZE;
-    const maxX = minX + GRASS_CHUNK_SIZE;
-    const minZ = chunk.cz * GRASS_CHUNK_SIZE;
-    const maxZ = minZ + GRASS_CHUNK_SIZE;
     const i0 = Math.floor(minX / step) - 1;
     const i1 = Math.ceil(maxX / step) + 1;
     const j0 = Math.floor(minZ / step) - 1;
@@ -1190,7 +1139,11 @@ function buildGrassRing(parent: THREE.Group, seed: number): GrassRing {
         const x = i * step + (hashAt(i, j, 1) - 0.5) * step * 1.4;
         const z = j * step + (hashAt(i, j, 2) - 0.5) * step * 1.4;
         if (x < minX || x >= maxX || z < minZ || z >= maxZ) continue;
-        if (Math.abs(x) > WORLD_MAX_X - 16 || z < WORLD_MIN_Z + 16 || z > WORLD_MAX_Z - 16) continue;
+        // Keep clear of the rim wall (per row: the world's half width follows
+        // whether that row has a column zone), and off the void the grid's
+        // holes leave beside a column, which is inside no zone at all.
+        if (!insideWorldRim(x, z, GRASS_RIM_INSET)) continue;
+        if (!zoneContaining(x, z)) continue;
         // The blight is a dead wasteland: no living grass blades, just bare ash.
         if (zoneBiomeAt(x, z) === 'blight') continue;
         const h = terrainHeight(x, z, seed);

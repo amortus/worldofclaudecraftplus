@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { WORLD_MAX_Z, WORLD_MIN_Z, ZONES } from '../sim/data';
+import { STRIP_ZONES, WORLD_MAX_Z, WORLD_MIN_Z } from '../sim/data';
 import type { BiomeId } from '../sim/types';
 import { loadHdr, loadTexture } from './assets/loader';
 import { registerPreload } from './assets/preload';
@@ -279,21 +279,25 @@ const SKY_FRAG = /* glsl */ `
 
 // Cross-fade state across the same ±30/35u zone windows the terrain palette
 // uses, keyed by camera z. Boundaries are sequential, so two maps suffice.
+// Walks STRIP_ZONES, not ZONES: this is a north-south band cascade, and the
+// grid's column zones are appended after the bands and share the vale's z band,
+// so walking ZONES would cross-fade the northmost band's sky into a column's
+// biome (see STRIP_ZONES in sim/data).
 function biomeBlendAt(z: number): BiomeBlend {
-  let from: BiomeId = ZONES[0].biome;
-  let to: BiomeId = ZONES[0].biome;
+  let from: BiomeId = STRIP_ZONES[0].biome;
+  let to: BiomeId = STRIP_ZONES[0].biome;
   let t = 0;
-  for (let i = 0; i + 1 < ZONES.length; i++) {
-    const b = ZONES[i].zMax;
+  for (let i = 0; i + 1 < STRIP_ZONES.length; i++) {
+    const b = STRIP_ZONES[i].zMax;
     const raw = Math.max(0, Math.min(1, (z - (b - 30)) / 65));
     const tt = raw * raw * (3 - 2 * raw);
     if (tt <= 0) break;
     if (tt >= 1) {
-      from = ZONES[i + 1].biome;
+      from = STRIP_ZONES[i + 1].biome;
       to = from;
       t = 0;
     } else {
-      to = ZONES[i + 1].biome;
+      to = STRIP_ZONES[i + 1].biome;
       t = tt;
     }
   }

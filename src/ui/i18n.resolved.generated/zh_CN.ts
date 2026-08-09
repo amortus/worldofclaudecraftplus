@@ -6604,6 +6604,39 @@ export const zh_CN: EnTranslations = {
       },
       "cf_quenchless_fang": {
         "name": "Quenchless Fang"
+      },
+      "cut_withy": {
+        "name": "Cut Withy"
+      },
+      "alder_char": {
+        "name": "Alder Char"
+      },
+      "mill_sluice_wheel": {
+        "name": "Mill Sluice Wheel"
+      },
+      "cragcoal": {
+        "name": "Cragcoal"
+      },
+      "plundered_sledload": {
+        "name": "Plundered Sled Load"
+      },
+      "weirguard_hauberk": {
+        "name": "Weirguard Hauberk"
+      },
+      "sedgeweave_robe": {
+        "name": "Sedgeweave Robe"
+      },
+      "millrace_jerkin": {
+        "name": "Millrace Jerkin"
+      },
+      "grimfang_splitter": {
+        "name": "Grimfang Splitter"
+      },
+      "coldhearth_emberstaff": {
+        "name": "Coldhearth Emberstaff"
+      },
+      "cragmaw_fang": {
+        "name": "Cragmaw Fang"
       }
     },
     "mobs": {
@@ -7341,6 +7374,36 @@ export const zh_CN: EnTranslations = {
         "name": "猎人瓦里克",
         "title": "克劳德黎明",
         "greeting": "腐疫已经侵染了野兽，{playerName}。南境荒野的雄鹿眼中燃着绿火复活了，狐狸则啃食它们留下的残骸。我猎杀它们，好让腐化不再蔓延。把你的弓借给我吧，或是你的利刃。"
+      },
+      "weirwarden_ondrey": {
+        "name": "Weirwarden Ondrey",
+        "title": "Keeper of the Alderfen Weir",
+        "greeting": "The weir is eighty years of other men's work, {playerName}, and it is mine for as long as it holds. Stand on the crossing and listen. That is not the fen moving. That is the fen leaning."
+      },
+      "bailiff_hesk": {
+        "name": "Bailiff Hesk",
+        "title": "Reedwatch Crossing",
+        "greeting": "Every soul who comes through Reedwatch owes the crossing a toll and gets a night under a roof for it. What is out in those reeds pays nothing and takes what it likes. That is the whole of my job, {className}, stated plain."
+      },
+      "provisioner_tarrow": {
+        "name": "Provisioner Tarrow",
+        "title": "Provisioner",
+        "greeting": "Bread, salt, oil and a pole. Anything that will not keep three days in this air I do not stock, {playerName}, and I would advise you not to want it."
+      },
+      "hearthwarden_ottil": {
+        "name": "Hearthwarden Ottil",
+        "title": "Keeper of the Coldhearth Fire",
+        "greeting": "The fire in that hall was lit before the hold had walls around it and it has not been out since, {playerName}. Not once. Ask anyone here what happens if it goes out and you will get seven answers, and not one of them from somebody who wants to find out."
+      },
+      "pickmaster_gethin": {
+        "name": "Pickmaster Gethin",
+        "title": "Ironvein Cut",
+        "greeting": "One road, one cut, one seam, {className}. Everything Coldhearth is stands on ore coming down that road, and for six weeks what comes down it has been bad news and empty carts."
+      },
+      "provisioner_dagny": {
+        "name": "Provisioner Dagny",
+        "title": "Provisioner",
+        "greeting": "Everything on this table came up the stair on somebody's back, so do not haggle with me, haggle with the mountain. Fair prices, {playerName}, and up here the pick is worth more to you than the sword."
       },
       "houndmaster_teel": {
         "name": "Houndmaster Teel",
@@ -8587,6 +8650,149 @@ export const zh_CN: EnTranslations = {
           }
         }
       },
+      "q_af_boards": {
+        "title": "What Chews the Boards",
+        "text": "You crossed on my boards coming in, so you have already trusted them once. Do not do it twice without looking. The skitterers nest under the walkway out at Otter Hollow, southeast of here, and they eat the withy lashings out of the underside where nobody thinks to check. Eight of them, {playerName}. I will do the looking after that.",
+        "completion": "Eight, and you brought the mess back on your boots, which tells me you went under the boards and not around them. Most people go around.",
+        "objectives": {
+          "0": {
+            "label": "Sedge Skitterer slain"
+          }
+        }
+      },
+      "q_af_snappers": {
+        "title": "Mudfin Water",
+        "text": "There is a shelf of shallow water southeast of Alderfen Water where the snappers lie up in the weed with only their backs showing. Two of my toll-payers went in there to fill a cask and one came back out. Eight of them, and mind that they are quicker in that water than you are.",
+        "completion": "Good. I will have the cask filled myself tomorrow and I will do it standing in the boat like a coward, which is how a sensible man does it.",
+        "objectives": {
+          "0": {
+            "label": "Mudfin Snapper slain"
+          }
+        }
+      },
+      "q_af_withies": {
+        "title": "Withies for the Weir",
+        "text": "A weir is not stone, {playerName}, whatever the songs have to say about it. It is ten thousand willow withies woven wet and left to dry hard, and every one of them has a life of about nine years. Mine are all of an age. Cut me six good lengths out of the beds southwest of Reedwatch, and take those boots off the peg while you are at it, because you will be standing in water to the knee.",
+        "completion": "Green, straight, and no heart-rot in any of the six. That is one panel of the south face I do not have to lie awake about. There are two hundred panels.",
+        "objectives": {
+          "0": {
+            "label": "Cut Withy"
+          }
+        }
+      },
+      "q_af_poachers": {
+        "title": "The Reed Toll",
+        "text": "The men working out of the Rotting Weir, southwest of Reedwatch, call themselves fowlers. What they are is cutting the withy beds bare to sell the lengths back to Ondrey at four times the honest price, and last month they started charging travellers to use a crossing they did not build. Ten of them, {playerName}. I have written the warrant. I am short the arm to serve it.",
+        "completion": "Served. I will walk out there myself in the morning and pull their toll-post down, and I will do it slowly, in front of whoever is left to watch.",
+        "objectives": {
+          "0": {
+            "label": "Reedwatch Poacher slain"
+          }
+        }
+      },
+      "q_af_char": {
+        "title": "Alder Char",
+        "text": "Everything I sell has to survive a fen summer, and the only thing that gets it there is char burnt from drowned alder. It burns cold, it burns slow, and it does not spit. The dead stands are northwest of Reedwatch on the shore of Alderfen Water. Six baskets. I am not asking you to burn it. Only to carry it.",
+        "completion": "Cold to the hand and it does not crumble. That is the smokehouse fed until the frost, and it means the ones going on north to Fenbridge leave here with food that will still be food when they arrive.",
+        "objectives": {
+          "0": {
+            "label": "Alder Char"
+          }
+        }
+      },
+      "q_af_sedgewatch": {
+        "title": "The Sedgewatch Never Stood Down",
+        "text": "Before there was Reedwatch there was Sedgewatch, northeast of here, and it held this water for two hundred years until the night the fen came over the top of it. There are men still standing at that wall, {playerName}. Not standing guard. Just standing. Ten of them, and be quick about the ones by the gate, because they still know what a gate is for.",
+        "completion": "Ten down. My grandfather's name is cut into that wall and I have never once been able to walk close enough to read it. You have bought me the walk. I will take it alone, if that is all the same to you.",
+        "objectives": {
+          "0": {
+            "label": "Weir Husk slain"
+          }
+        }
+      },
+      "q_af_miller": {
+        "title": "The Drowned Miller",
+        "text": "Now I will tell you the part Reedwatch does not say out loud. Sedgewatch did not drown because the fen rose. It drowned because a miller northwest of here opened his sluice to fill his own race and then could not get it shut again, and he is still down at that wheel, {playerName}, still winding it the wrong way. Take two others with you. Put him under, then wind the sluice closed. Eighty years is long enough for one man's mistake to keep running.",
+        "completion": "The wheel is turning against the water now instead of with it. I felt the level drop at the crossing while you were still walking back. Take what is off the warden's peg. It was cut for somebody who never had to be told any of this.",
+        "objectives": {
+          "0": {
+            "label": "The Drowned Miller slain"
+          },
+          "1": {
+            "label": "Mill Sluice Wheel wound shut"
+          }
+        }
+      },
+      "q_gh_lurkers": {
+        "title": "What Comes Down the Scree",
+        "text": "Wood does not grow above the cut, so Coldhearth burns what it can drag up, and the drag road runs under Scree Fall, southwest of here. The lurkers have learned to sit above it and come down with the stones. My haulers will not walk it any more and I do not blame them. Ten, {playerName}, and the fire eats tonight.",
+        "completion": "The road is walked again. You will hear the haulers before you see them. They sing going up and they are silent coming down, and both of those are about the weight.",
+        "objectives": {
+          "0": {
+            "label": "Crag Lurker slain"
+          }
+        }
+      },
+      "q_gh_ironvein": {
+        "title": "The Cut",
+        "text": "The scavengers are in my gallery. Not raiding it, living in it. They have hung the ore road with their own lamps and they are working my face with my own picks, and every cart that does come down comes down light. Ten of them out of the Ironvein Cut, northwest of the hold. Take the gloves off the rack. You will want them on that rock.",
+        "completion": "Ten, and they left their lamps burning. I will work by that light for a week out of pure spite and then I will pull every one of them down.",
+        "objectives": {
+          "0": {
+            "label": "Grimhold Scavenger slain"
+          }
+        }
+      },
+      "q_gh_coal": {
+        "title": "Fuel for the Coldhearth",
+        "text": "Dragging timber up a stair is what we do because we must, not because it is sense. There is better fuel lying loose on the scree southwest of Coldhearth: black stone the mountain has been making since before there were men to burn it. Six loads, {playerName}. If it takes, I will never send another hauler down that road again.",
+        "completion": "It caught in under a minute and it burns without a flame worth the name, just heat and a smell like a struck flint. Eighty years of dragging wood up a stair, and it was under our feet the whole time.",
+        "objectives": {
+          "0": {
+            "label": "Cragcoal"
+          }
+        }
+      },
+      "q_gh_binders": {
+        "title": "The Mountain Answers",
+        "text": "We took the coal and the crags have answered. There are things standing up out of the scree southwest of Coldhearth Tarn that were scree yesterday, and they come down toward the drag road with the deliberation of a man walking to a duel. Eight of them. I have kept this hold's fire for thirty years and this is the first time the mountain has said anything back.",
+        "completion": "Eight, and every one of them came apart into exactly the stone it was made of, which I find worse than if it had bled. We will keep burning the coal. I want it written down that the decision was mine and nobody else's.",
+        "objectives": {
+          "0": {
+            "label": "Scree Binder slain"
+          }
+        }
+      },
+      "q_gh_sled": {
+        "title": "The Sled That Did Not Come Back",
+        "text": "Six weeks of stock went up the northeast road on one sled and never reached the watchtower, and I have since had it described to me by three separate men who saw marauders wearing my oilcloth. Bring five loads back off them, {playerName}. I am not sentimental about the sled. I am extremely sentimental about the salt.",
+        "completion": "Salt, lamp oil and two crates of nails, which up here is the same as gold and rather more use. You will notice I have not raised my prices. That is not generosity. That is you having earned it.",
+        "objectives": {
+          "0": {
+            "label": "Plundered Sled Load"
+          }
+        }
+      },
+      "q_gh_watchtower": {
+        "title": "The Broken Watchtower",
+        "text": "The tower northeast of Coldhearth was our eyes for four hundred years, and the marauders are camped in what is left of it, which means they watch us coming and we never see them at all. That is the whole of why the ore road is not safe, and it stays the whole of it until somebody goes up there. Ten.",
+        "completion": "I stood on the stump of that tower this morning and I could see the smoke off the hold, the tarn and every foot of the cut at once. Four hundred years of men knew what I know now, and I had to be told it by a stranger with a wet weapon.",
+        "objectives": {
+          "0": {
+            "label": "Coldhearth Marauder slain"
+          }
+        }
+      },
+      "q_gh_grimfang": {
+        "title": "Old Grimfang",
+        "text": "Every hauler I have lost in thirty years I lost on the drag road, and every one of them I put down to the stone. That was easier than the truth. There is an old thing denned up in the Cragmaw Dens southeast of here that has taken one man a season out of my line since before I held the hearth, and it has never once needed to hurry. Take two others and end it, {playerName}. Then I will go and say the names properly.",
+        "completion": "Thirty years I wrote rockfall on the paper, because rockfall is nobody's fault. Take the weapon. It came off a hauler's sled the year I took the hearth and I have kept it hanging where I could see it, which I understand now was not respect. It was a debt.",
+        "objectives": {
+          "0": {
+            "label": "Old Grimfang slain"
+          }
+        }
+      },
       "q_ev_kennels": {
         "title": "What the Wolves Left",
         "text": "They came over the kennel wall on a still night and they did not eat what they killed, {playerName}. That is the part I cannot square. A hungry wolf takes one hound and runs. These ones stayed until the runs were quiet. Go up the Wolf Run and put ten of them down for me.",
@@ -8972,7 +9178,7 @@ export const zh_CN: EnTranslations = {
       },
       "alderfen_shallows": {
         "name": "Alderfen Shallows",
-        "welcome": "East of the vale the ground gives way to standing water. Reedwatch holds the crossing.",
+        "welcome": "West of the vale the ground gives way to standing water. Reedwatch holds the crossing.",
         "pois": {
           "0": {
             "label": "Reedwatch"
@@ -8999,7 +9205,7 @@ export const zh_CN: EnTranslations = {
       },
       "grimhold_crags": {
         "name": "Grimhold Crags",
-        "welcome": "West of the vale the Grimhold Crags climb out of the treeline. Coldhearth burns against them.",
+        "welcome": "East of the vale the Grimhold Crags climb out of the treeline. Coldhearth burns against them.",
         "pois": {
           "0": {
             "label": "Coldhearth"

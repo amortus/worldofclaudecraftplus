@@ -173,6 +173,13 @@ const NPC_IDS = [
   'dawn_warbringer_torv',
   'dawn_loreseeker_miren',
   'dawn_huntsman_varik',
+  // Alderfen Shallows and Grimhold Crags (the two column zones)
+  'weirwarden_ondrey',
+  'bailiff_hesk',
+  'provisioner_tarrow',
+  'hearthwarden_ottil',
+  'pickmaster_gethin',
+  'provisioner_dagny',
 ] as const;
 
 const QUEST_IDS = [
@@ -290,6 +297,22 @@ const QUEST_IDS = [
   // Claudexxaramas raid
   'q_cx_breach', 'q_cx_plague', 'q_cx_barracks', 'q_cx_spinning', 'q_cx_throne',
   'q_cx_legend_1', 'q_cx_legend_2', 'q_cx_legend_3',
+  // Alderfen Shallows: the weir under the crossing is failing
+  'q_af_boards',
+  'q_af_snappers',
+  'q_af_withies',
+  'q_af_poachers',
+  'q_af_char',
+  'q_af_sedgewatch',
+  'q_af_miller',
+  // Grimhold Crags: one fire that has never gone out, fed by one ore road
+  'q_gh_lurkers',
+  'q_gh_ironvein',
+  'q_gh_coal',
+  'q_gh_binders',
+  'q_gh_sled',
+  'q_gh_watchtower',
+  'q_gh_grimfang',
 ] as const;
 
 // The four strip bands plus the two column zones that flank the Vale's band east

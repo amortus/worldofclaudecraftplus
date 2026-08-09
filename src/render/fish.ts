@@ -1,10 +1,9 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import {
-  DUNGEON_X_THRESHOLD, WORLD_MAX_X, WORLD_MAX_Z, WORLD_MIN_Z,
-} from '../sim/data';
+import { DUNGEON_X_THRESHOLD, zoneContaining } from '../sim/data';
 import { terrainHeight, WATER_LEVEL } from '../sim/world';
 import { GFX } from './gfx';
+import { insideWorldRim } from './world_bounds';
 
 // Ambient leaping fish — a RENDER-ONLY decoration, no sim/IWorld/server state.
 //
@@ -22,6 +21,7 @@ import { GFX } from './gfx';
 const SPAWN_RADIUS = 72; // fish surface within this distance of the player
 const MIN_RADIUS = 9; // ...but never right on top of the camera
 const WATER_MARGIN = 1.6; // require this much depth so leaps avoid the foam line
+const EDGE = 8; // keep clear of the world rim
 const LEAP_DURATION = 1.15; // seconds spent out of the water
 const LEAP_HEIGHT = 1.8; // arc apex above the surface (yards)
 const LEAP_TRAVEL = 3.2; // horizontal distance covered across a leap
@@ -65,8 +65,11 @@ export function fishLeapPose(t: number, duration: number, height: number): { y: 
 // PURE (unit-tested): is (x, z) deep, in-bounds open water fit for a leap?
 // `depthAt` returns WATER_LEVEL - terrainHeight at that spot (negative on land).
 export function isLeapableWater(x: number, z: number, depthAt: (x: number, z: number) => number): boolean {
-  if (Math.abs(x) > WORLD_MAX_X - 8) return false;
-  if (z < WORLD_MIN_Z + 8 || z > WORLD_MAX_Z - 8) return false;
+  // in bounds = clear of the per-row rim AND inside an authored zone: the
+  // world's bounding box now spans three grid columns, most rows of which have
+  // no column zone beside the strip (see world_bounds.ts).
+  if (!insideWorldRim(x, z, EDGE)) return false;
+  if (!zoneContaining(x, z)) return false;
   return depthAt(x, z) >= WATER_MARGIN;
 }
 

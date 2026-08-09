@@ -120,6 +120,27 @@ export const GROUND_PICKUP_LINES: Record<string, GroundPickupLines> = {
     deny: 'The slag is still fused to the floor.',
     enough: 'You have carried off enough slag.',
   },
+  // The column ring (src/sim/content/columns), under the same rule.
+  cut_withy: {
+    deny: "The withies are somebody else's stand. Cut them when the weir asks.",
+    enough: 'You are carrying all the withy Ondrey asked for.',
+  },
+  alder_char: {
+    deny: 'The burn is cold and unclaimed. Leave it for whoever ordered it.',
+    enough: 'Your baskets of char are full.',
+  },
+  mill_sluice_wheel: {
+    deny: 'The wheel is turning under the weight of the whole fen. You would need a reason.',
+    enough: 'The sluice is shut. Leave it shut.',
+  },
+  cragcoal: {
+    deny: 'Black stone, loose on the scree. Nobody up here has called it fuel yet.',
+    enough: 'You are carrying all the cragcoal you can drag.',
+  },
+  plundered_sledload: {
+    deny: "Somebody else's stock, stacked under somebody else's oilcloth.",
+    enough: "You have recovered enough of Dagny's load.",
+  },
 };
 
 export function groundPickupDeny(itemId: string, itemName: string): string {

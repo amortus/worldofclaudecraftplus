@@ -23,6 +23,16 @@
 // Camps here place EXACT positions (`positions`), so world generation draws no
 // new rng and every shipped spawn keeps its seed-exact placement.
 //
+// COMPASS. This world is +z NORTH and +x WEST, so east is -x (pinned by
+// `tests/compass_directions.test.ts` against the HUD's own bearing math). The
+// `EAST_COLUMN_*` / `WEST_COLUMN_*` constant names and `eastPassZ`/`westPassZ`
+// below are SCREEN-SPACE names for the +x and -x sides of the strip, and
+// world.ts reads the pass fields by which border edge they describe, not by
+// compass word, so they are left alone. In compass terms the +x column
+// (Alderfen) lies WEST of the vale and the -x column (Grimhold) lies EAST of
+// it, and the two `welcome` lines below say so; they are the only strings here
+// a player ever reads.
+//
 // The mobs are NEW templates rather than reused shipped ones, and that is not
 // decoration. A quest kill objective matches on `targetMobId` worldwide, so a
 // column camp of a Mirefen mob would silently credit the Mirefen's quest from a
@@ -33,7 +43,7 @@
 // renderer or the item tables.
 // ---------------------------------------------------------------------------
 
-import type { CampDef, MobTemplate, ZoneDef } from '../types';
+import type { CampDef, MobTemplate, ZoneDef } from '../../types';
 
 // The x extent of one grid column, mirrored east and west of the strip. The
 // world stays SYMMETRIC about x = 0 because WORLD_MAX_X is read as a half
@@ -82,7 +92,7 @@ export const ALDERFEN_ZONE: ZoneDef = {
     { x: 284, z: 138, label: 'Sedgewatch Ruin' },
     { x: 480, z: 152, label: 'The Drowned Mill' },
   ],
-  welcome: 'East of the vale the ground gives way to standing water. Reedwatch holds the crossing.',
+  welcome: 'West of the vale the ground gives way to standing water. Reedwatch holds the crossing.',
 };
 
 export const ALDERFEN_ROADS: { x: number; z: number }[][] = [
@@ -252,7 +262,7 @@ export const GRIMHOLD_ZONE: ZoneDef = {
     { x: -292, z: 136, label: 'Ironvein Cut' },
     { x: -482, z: 154, label: 'The Broken Watchtower' },
   ],
-  welcome: 'West of the vale the Grimhold Crags climb out of the treeline. Coldhearth burns against them.',
+  welcome: 'East of the vale the Grimhold Crags climb out of the treeline. Coldhearth burns against them.',
 };
 
 export const GRIMHOLD_ROADS: { x: number; z: number }[][] = [
