@@ -19,7 +19,7 @@ Sizes are measured source bytes in upstream's tree (excluding their tests), not 
 Also landed outside the waves: the build no longer ships every media asset twice
 (72.7 MiB of exact duplication), which took the signed AAB from 199.78 to 144.80 MiB.
 
-## Wave 4, not started
+## Wave 4 (SHIPPED)
 
 ### Dungeon finder / LFG (SHIPPED)
 Built as a pure matchmaking core in `src/sim/lfg/`. All four obstacles were resolved
@@ -29,7 +29,7 @@ returns no coordinates so the host reuses its one teleport path, the runtime id 
 dungeon's spawn table rather than authored on `DungeonDef`. Composition-preferred, not
 strict: only 3 of 9 classes tank and 4 heal, so a strict queue never pops here.
 
-### Mounts (~85 KB upstream)
+### Mounts (SHIPPED, built from scratch)
 **Corrected 2026-08-09: this is a BUILD FROM SCRATCH, not a refactor.** An earlier note
 claimed "we already have mounts, 55 files reference them"; that was a false positive from
 grepping the bare word `mount`. Every hit is DOM mounting (`mountRiftHud`, `unmount`, the
