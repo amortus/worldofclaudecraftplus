@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {
-  WORLD_MAX_X, WORLD_MAX_Z, WORLD_MIN_Z, ZONES,
+  DUNGEON_X_THRESHOLD, WORLD_MAX_X, WORLD_MAX_Z, WORLD_MIN_Z, ZONES,
 } from '../sim/data';
 import type { BiomeId } from '../sim/types';
 import { roadDistance, terrainHeight, WATER_LEVEL, zoneBiomeAt } from '../sim/world';
@@ -16,6 +16,8 @@ import {
   planTerrainResidency,
   type TerrainChunkFootprint,
   type TerrainResidencyPlan,
+  terrainChunkDivisions,
+  terrainChunkVertexCount,
 } from './terrain_residency';
 import { groundDetailTexture, groundSplatMaps, macroNoiseTexture } from './textures';
 
@@ -27,9 +29,17 @@ import { groundDetailTexture, groundSplatMaps, macroNoiseTexture } from './textu
 //   the camera lingers) get dense vertices, the wilderness gets coarse ones.
 // - Distance-based RESIDENCY (see terrain_residency.ts): only chunks near the
 //   camera are meshed, far ones release their geometry, and approaching one
-//   rebuilds it under a per-frame budget. A rebuilt chunk is byte-identical to
-//   the one it replaced because the geometry is a pure function of
+//   rebuilds it under a per-frame vertex budget. A rebuilt chunk is byte-identical
+//   to the one it replaced because the geometry is a pure function of
 //   (x0, z0, size, spacing, seed) and the seed never changes.
+//   KNOWN COST: renderer.ts's `world.geometry-upload` prewarm force-shows every
+//   chunk once behind the loading screen so their buffers reach the GPU before
+//   the camera can rotate one into view. It can only reach the chunks that exist
+//   at that moment, so a chunk meshed later during play still pays a lazy upload
+//   on its first draw. Bounded in practice: the residency disc covers the whole
+//   fog plane, so late builds happen at the horizon under near-opaque fog, a few
+//   at a time, and the instance freeze above removes the one case (leaving a
+//   dungeon) that would otherwise rebuild a whole disc at once.
 // - 0.3u skirts hang from every chunk edge to hide LOD cracks.
 // - High tier: MeshStandardMaterial + splat shading (grass/dirt/rock/sand
 //   weights precomputed per vertex from slope/height/roadDistance into a vec4
@@ -129,13 +139,38 @@ const ROCK_SLOPE_START: Record<BiomeId, number> = { vale: 0.55, marsh: 0.62, pea
 
 const clamp01 = (v: number): number => Math.max(0, Math.min(1, v));
 
-interface VertexSample {
-  height: number;
-  slope: number;
-  normal: [number, number, number];
-  color: [number, number, number];
-  splat: [number, number, number, number]; // grass, dirt, rock, sand
-  extra: [number, number, number, number]; // mud, snow, impact scorch, impact ash
+// One terrain sample, written into a flat Float64Array rather than returned as an
+// object. Chunks are meshed DURING GAMEPLAY now (residency rebuilds them on
+// approach), not just once at boot, so the old shape -- a Map<number, VertexSample>
+// holding one object per grid cell, each owning four sub-arrays -- was about 14k
+// short-lived objects per chunk landing in the middle of a frame. GC churn is a
+// root cause of this project's stutter that we have already had to fix once.
+// Float64 (not Float32) so a rebuilt chunk stays BYTE-IDENTICAL: the values reach
+// the geometry's Float32Arrays through the same single rounding step they always
+// did, instead of being rounded once here and again on write.
+const S_HEIGHT = 0;
+const S_NORMAL = 1; // 3 floats
+const S_COLOR = 4; // 3 floats
+const S_SPLAT = 7; // 4 floats: grass, dirt, rock, sand
+const S_EXTRA = 11; // 4 floats: mud, snow, impact scorch, impact ash
+const SAMPLE_STRIDE = 15;
+
+let sampleData = new Float64Array(0);
+let sampleMark = new Int32Array(0);
+// Monotonic per-build stamp, so a rebuild never has to clear the mark array.
+let sampleStamp = 0;
+
+function beginSampleScratch(cells: number): void {
+  if (sampleMark.length < cells) {
+    sampleData = new Float64Array(cells * SAMPLE_STRIDE);
+    sampleMark = new Int32Array(cells);
+    sampleStamp = 0;
+  }
+  if (sampleStamp >= 0x7fff_fff0) {
+    sampleMark.fill(0);
+    sampleStamp = 0;
+  }
+  sampleStamp++;
 }
 
 // Shared scratch colors for the palette blend (hot loop, avoid allocation).
@@ -192,7 +227,7 @@ function marshWeightAt(z: number): number {
 }
 
 // blend the splat weight vector toward a single layer
-function lerpSplat(w: [number, number, number, number], layer: 0 | 1 | 2 | 3, t: number): void {
+function lerpSplat(w: number[], layer: 0 | 1 | 2 | 3, t: number): void {
   if (t <= 0) return;
   w[0] -= w[0] * t;
   w[1] -= w[1] * t;
@@ -201,21 +236,39 @@ function lerpSplat(w: [number, number, number, number], layer: 0 | 1 | 2 | 3, t:
   w[layer] += t;
 }
 
-// One terrain sample: height, analytic normal, legacy tint color and splat
-// weights. Both tiers use the color; only the splat tier consumes weights.
-function sampleVertex(x: number, z: number, seed: number): VertexSample {
+// Reused splat accumulator: one array for the whole session instead of one per
+// vertex (see the SAMPLE_STRIDE note above).
+const splatScratch = [1, 0, 0, 0];
+
+/**
+ * One terrain sample -- height, analytic normal, legacy tint color and splat
+ * weights -- written into `out` at `o`. Both tiers use the color; only the splat
+ * tier consumes the weights.
+ *
+ * Reads `GFX.lowPlus` / `GFX.terrainSplat` live. `GFX` is an `export let` that
+ * `initGfxTier` reassigns, which is safe TODAY because that runs once, before
+ * `buildTerrain`. If a runtime tier switch is ever added it MUST rebuild the whole
+ * terrain view: chunks are rebuilt on approach now, so a mid-session tier change
+ * would otherwise give a rebuilt chunk a different tint from the neighbours it
+ * shares an edge with.
+ */
+function sampleVertex(x: number, z: number, seed: number, out: Float64Array, o: number): void {
   const h = terrainHeight(x, z, seed);
   const hx = terrainHeight(x + SLOPE_EPS, z, seed) - terrainHeight(x - SLOPE_EPS, z, seed);
   const hz = terrainHeight(x, z + SLOPE_EPS, seed) - terrainHeight(x, z - SLOPE_EPS, seed);
   const slope = Math.sqrt(hx * hx + hz * hz) / (2 * SLOPE_EPS);
   const invLen = 1 / Math.hypot(hx / (2 * SLOPE_EPS), 1, hz / (2 * SLOPE_EPS));
-  const normal: [number, number, number] = [
-    -(hx / (2 * SLOPE_EPS)) * invLen, invLen, -(hz / (2 * SLOPE_EPS)) * invLen,
-  ];
+  out[o + S_NORMAL] = -(hx / (2 * SLOPE_EPS)) * invLen;
+  out[o + S_NORMAL + 1] = invLen;
+  out[o + S_NORMAL + 2] = -(hz / (2 * SLOPE_EPS)) * invLen;
 
   paletteAt(z);
   const biome = zoneBiomeAt(z);
-  const w: [number, number, number, number] = [1, 0, 0, 0];
+  const w = splatScratch;
+  w[0] = 1;
+  w[1] = 0;
+  w[2] = 0;
+  w[3] = 0;
   const impact = impactCraterTerrainBlend(x, z);
 
   // base grass with patchy variation
@@ -301,10 +354,18 @@ function sampleVertex(x: number, z: number, seed: number): VertexSample {
     cTmp.lerp(lowSunC, 0.035 * (1 - shore) + 0.045 * upland);
     cTmp.multiplyScalar(0.98 + upland * 0.04 - ridge * 0.025);
   }
-  return {
-    height: h, slope, normal, color: [cTmp.r, cTmp.g, cTmp.b], splat: w,
-    extra: [mud, snow, impact.scorch, impact.ash],
-  };
+  out[o + S_HEIGHT] = h;
+  out[o + S_COLOR] = cTmp.r;
+  out[o + S_COLOR + 1] = cTmp.g;
+  out[o + S_COLOR + 2] = cTmp.b;
+  out[o + S_SPLAT] = w[0];
+  out[o + S_SPLAT + 1] = w[1];
+  out[o + S_SPLAT + 2] = w[2];
+  out[o + S_SPLAT + 3] = w[3];
+  out[o + S_EXTRA] = mud;
+  out[o + S_EXTRA + 1] = snow;
+  out[o + S_EXTRA + 2] = impact.scorch;
+  out[o + S_EXTRA + 3] = impact.ash;
 }
 
 // ---------------------------------------------------------------------------
@@ -328,7 +389,7 @@ export function terrainIndexArray(
 }
 
 function buildChunkGeometry(x0: number, z0: number, size: number, spacing: number, seed: number, withSplat: boolean): THREE.BufferGeometry {
-  const nx = Math.max(4, Math.round(size / spacing));
+  const nx = terrainChunkDivisions(size, spacing);
   const nz = nx;
   const stepX = size / nx;
   const stepZ = size / nz;
@@ -344,7 +405,10 @@ function buildChunkGeometry(x0: number, z0: number, size: number, spacing: numbe
   const extras = withSplat ? new Float32Array(count * 4) : null;
 
   const worldDepth = WORLD_MAX_Z - WORLD_MIN_Z;
-  const sampleCache = new Map<number, VertexSample>();
+  beginSampleScratch(count);
+  const samples = sampleData;
+  const marks = sampleMark;
+  const stamp = sampleStamp;
   for (let gj = 0; gj < gh; gj++) {
     for (let gi = 0; gi < gw; gi++) {
       const i = gi - 1, j = gj - 1; // interior indices; -1 / n+1 are skirt
@@ -355,34 +419,34 @@ function buildChunkGeometry(x0: number, z0: number, size: number, spacing: numbe
       const z = z0 + cj * stepZ;
       // skirt verts share the border sample — cache by clamped grid index
       const cacheKey = cj * gw + ci;
-      let s = sampleCache.get(cacheKey);
-      if (!s) {
-        s = sampleVertex(x, z, seed);
-        sampleCache.set(cacheKey, s);
+      const s = cacheKey * SAMPLE_STRIDE;
+      if (marks[cacheKey] !== stamp) {
+        sampleVertex(x, z, seed, samples, s);
+        marks[cacheKey] = stamp;
       }
       const vi = gj * gw + gi;
       positions[vi * 3] = x;
-      positions[vi * 3 + 1] = s.height - (isSkirt ? SKIRT_DROP : 0);
+      positions[vi * 3 + 1] = samples[s + S_HEIGHT] - (isSkirt ? SKIRT_DROP : 0);
       positions[vi * 3 + 2] = z;
-      normals[vi * 3] = s.normal[0];
-      normals[vi * 3 + 1] = s.normal[1];
-      normals[vi * 3 + 2] = s.normal[2];
-      colors[vi * 3] = s.color[0];
-      colors[vi * 3 + 1] = s.color[1];
-      colors[vi * 3 + 2] = s.color[2];
+      normals[vi * 3] = samples[s + S_NORMAL];
+      normals[vi * 3 + 1] = samples[s + S_NORMAL + 1];
+      normals[vi * 3 + 2] = samples[s + S_NORMAL + 2];
+      colors[vi * 3] = samples[s + S_COLOR];
+      colors[vi * 3 + 1] = samples[s + S_COLOR + 1];
+      colors[vi * 3 + 2] = samples[s + S_COLOR + 2];
       uvs[vi * 2] = (x + WORLD_MAX_X) / (WORLD_MAX_X * 2);
       uvs[vi * 2 + 1] = (z - WORLD_MIN_Z) / worldDepth;
       if (splats) {
-        splats[vi * 4] = s.splat[0];
-        splats[vi * 4 + 1] = s.splat[1];
-        splats[vi * 4 + 2] = s.splat[2];
-        splats[vi * 4 + 3] = s.splat[3];
+        splats[vi * 4] = samples[s + S_SPLAT];
+        splats[vi * 4 + 1] = samples[s + S_SPLAT + 1];
+        splats[vi * 4 + 2] = samples[s + S_SPLAT + 2];
+        splats[vi * 4 + 3] = samples[s + S_SPLAT + 3];
       }
       if (extras) {
-        extras[vi * 4] = s.extra[0];
-        extras[vi * 4 + 1] = s.extra[1];
-        extras[vi * 4 + 2] = s.extra[2];
-        extras[vi * 4 + 3] = s.extra[3];
+        extras[vi * 4] = samples[s + S_EXTRA];
+        extras[vi * 4 + 1] = samples[s + S_EXTRA + 1];
+        extras[vi * 4 + 2] = samples[s + S_EXTRA + 2];
+        extras[vi * 4 + 3] = samples[s + S_EXTRA + 3];
       }
     }
   }
@@ -599,30 +663,35 @@ function buildLambertMaterial(): THREE.MeshLambertMaterial {
 // Entry point
 // ---------------------------------------------------------------------------
 
+/** Live residency counters. Every field is recomputed on read, never a stale plan field. */
 export interface TerrainResidencyStats {
   /** chunks currently meshed and in `group` */
   resident: number;
-  /** chunks the residency policy wants meshed at the last camera position */
+  /** chunks the residency policy wants meshed as of the last plan */
   desired: number;
   /** chunk slots in the whole world, i.e. what the pre-residency build kept resident */
   total: number;
-  /** wanted-but-not-yet-built chunks still waiting on the per-frame build budget */
+  /** wanted-but-not-yet-meshed chunks still waiting on the per-frame build budget */
   pending: number;
   /** chunk geometries released since this view was built (disposal evidence) */
   released: number;
   /** chunk geometries meshed since this view was built (initial builds included) */
   built: number;
+  /** true while the camera is on the instance plane and residency is frozen */
+  frozen: boolean;
 }
 
 export interface TerrainView {
   group: THREE.Group;
   /**
    * Per-frame terrain maintenance, in two passes:
-   *  1. RESIDENCY: meshes chunks that came within the tier's keep radius (at most
-   *     `terrainBuildBudget(tier)` of them, nearest first) and releases the
-   *     geometry of chunks that passed the release radius. Ignores `fogFar` on
+   *  1. RESIDENCY: meshes chunks that came within the tier's keep radius (as many
+   *     as `terrainBuildBudget(tier)` vertices buy, nearest first) and releases
+   *     the geometry of chunks that passed the release radius. Ignores `fogFar` on
    *     purpose, so the loading screen's force-everything-visible upload pass
    *     (`update(x, z, 1e9)`) cannot drag the whole world back into memory.
+   *     FROZEN while the camera is on the instance plane, and skipped entirely
+   *     while the camera has not moved and nothing is pending.
    *  2. VISIBILITY: hides resident chunks that sit entirely past the fog far
    *     plane, since those are pure overdraw.
    */
@@ -698,6 +767,13 @@ export function orderFarChunkJobs(
   };
   return ordered.sort((a, b) => distSq(a) - distSq(b));
 }
+
+/**
+ * How far the camera must move before residency is replanned, in yards. The
+ * hysteresis band is 120 yd wide and `keep` clears the widest fog plane by at
+ * least 20 yd, so a yard of staleness cannot make a drawn chunk missing.
+ */
+const REPLAN_EPS = 1;
 
 /** One chunk slot: its immutable build recipe, its footprint, and its mesh when resident. */
 interface ChunkSlot {
@@ -780,6 +856,7 @@ export function buildTerrain(seed: number, priorityPoint?: { x: number; z: numbe
       centerX: job.x0 + job.size / 2,
       centerZ: job.z0 + job.size / 2,
       half: job.size / 2,
+      cost: terrainChunkVertexCount(job.size, job.spacing),
     },
     mesh: null,
   }));
@@ -790,6 +867,11 @@ export function buildTerrain(seed: number, priorityPoint?: { x: number; z: numbe
   const plan: TerrainResidencyPlan = emptyTerrainResidencyPlan();
   let builtCount = 0;
   let releasedCount = 0;
+  // Replanning state (see update()).
+  let planCamX = Number.NaN;
+  let planCamZ = Number.NaN;
+  let settled = false;
+  let frozen = false;
 
   const buildSlot = (index: number): void => {
     const slot = slots[index];
@@ -828,23 +910,31 @@ export function buildTerrain(seed: number, priorityPoint?: { x: number; z: numbe
 
   // The initial resident set is the disc around the entry point, so boot only
   // pays for terrain the player can see from where they log in, not for the map.
+  // Budget 0: this call is asked only for `want`, never for a build list, which
+  // is also what keeps boot planning O(n) instead of ranking all n candidates.
   const origin = priorityPoint ?? { x: 0, z: 0 };
-  planTerrainResidency(footprints, resident, origin.x, origin.z, radii, slots.length, plan);
-  const initial = new Set(plan.build);
+  planTerrainResidency(footprints, resident, origin.x, origin.z, radii, 0, plan);
+  planCamX = origin.x;
+  planCamZ = origin.z;
   const jobIndex = new Map<ChunkJob, number>();
   jobs.forEach((job, i) => jobIndex.set(job, i));
 
-  for (const index of initial) {
-    if (slots[index].job.near) buildSlot(index);
+  for (let i = 0; i < slots.length; i++) {
+    if (plan.want[i] && slots[i].job.near) buildSlot(i);
   }
   const farJobs = orderFarChunkJobs(
-    jobs.filter((job) => !job.near && initial.has(jobIndex.get(job) as number)),
+    jobs.filter((job) => !job.near && plan.want[jobIndex.get(job) as number]),
     priorityPoint,
   );
   let cancelled = false;
   const streamingDone = runIdleQueue(
     farJobs,
-    (job) => buildSlot(jobIndex.get(job) as number),
+    (job) => {
+      // The camera can move during login, so re-check against the LIVE plan:
+      // otherwise the queue happily rebuilds a chunk update() just released.
+      const index = jobIndex.get(job) as number;
+      if (plan.want[index]) buildSlot(index);
+    },
     { batchSize: STREAM_BATCH_SIZE, timeoutMs: STREAM_TIMEOUT_MS, cancelled: () => cancelled },
   );
 
@@ -856,23 +946,52 @@ export function buildTerrain(seed: number, priorityPoint?: { x: number; z: numbe
     },
     residency(): TerrainResidencyStats {
       let count = 0;
-      for (const slot of slots) if (slot.mesh) count++;
+      let desired = 0;
+      let pending = 0;
+      for (let i = 0; i < slots.length; i++) {
+        const meshed = slots[i].mesh !== null;
+        if (meshed) count++;
+        if (plan.want[i]) {
+          desired++;
+          if (!meshed) pending++;
+        }
+      }
       return {
         resident: count,
-        desired: plan.desiredResident,
+        desired,
         total: slots.length,
-        pending: plan.pendingBuilds,
+        pending,
         released: releasedCount,
         built: builtCount,
+        frozen,
       };
     },
     update(camX: number, camZ: number, fogFar: number): void {
       // 1. residency. Deliberately independent of fogFar: the loading screen's
       // upload pass calls update(x, z, 1e9) to force every resident chunk visible
       // once, and that must not pull the whole world back into memory.
-      planTerrainResidency(footprints, resident, camX, camZ, radii, buildBudget, plan);
-      for (let i = 0; i < plan.release.length; i++) releaseSlot(plan.release[i]);
-      for (let i = 0; i < plan.build.length; i++) buildSlot(plan.build[i]);
+      //
+      // FREEZE on the instance plane. Dungeons, delves, the arena and rifts all
+      // live past DUNGEON_X_THRESHOLD, hundreds of yards from any terrain chunk,
+      // so planning there would evict the ENTIRE overworld on every instance
+      // entry and make the player watch it reassemble on the way out. Evicting
+      // buys nothing while inside either: interior fog (far 90 at most) already
+      // culls every overworld chunk to zero draw cost. So hold the overworld set
+      // exactly as the player left it and resume planning on return.
+      frozen = camX > DUNGEON_X_THRESHOLD;
+      // Nothing can change while the camera sits still with the plan converged,
+      // and on our narrow strip the high tiers are converged nearly everywhere,
+      // so this skip is what keeps residency from costing an O(n) scan a frame
+      // for no reason.
+      const moved = !(Math.abs(camX - planCamX) <= REPLAN_EPS && Math.abs(camZ - planCamZ) <= REPLAN_EPS);
+      if (!frozen && (moved || !settled)) {
+        planTerrainResidency(footprints, resident, camX, camZ, radii, buildBudget, plan);
+        planCamX = camX;
+        planCamZ = camZ;
+        for (let i = 0; i < plan.release.length; i++) releaseSlot(plan.release[i]);
+        for (let i = 0; i < plan.build.length; i++) buildSlot(plan.build[i]);
+        settled = plan.pendingBuilds === plan.build.length;
+      }
 
       // 2. visibility: fully-fogged chunks are pure overdraw; drop them before
       // the frustum. Squared compare, same result as the old hypot < fogFar.

@@ -1,9 +1,11 @@
 // Distance-based residency policy for the chunked terrain.
 //
 // terrain.ts used to build every chunk in the world at boot and keep it forever.
-// That is invisible on a 360x1440 zone strip (144 chunk cells) and fatal on a
-// world several times that size: both resident geometry and boot cost scale with
-// the whole map instead of with what the player can actually see.
+// That is nearly invisible on a 360x1440 zone strip (144 chunk cells) and fatal on
+// a world several times that size: both resident geometry and meshing cost scale
+// with the whole map instead of with what the player can actually see. See the
+// honesty note on TERRAIN_RESIDENCY_BY_TIER in gfx.ts about how little this buys
+// on TODAY's world; the payoff is the 3-column world it unblocks.
 //
 // This module is the pure decision half. Given every chunk's footprint, the
 // camera position and the tier's radii, it says which chunks should be meshed and
@@ -12,12 +14,21 @@
 // unit-testable in plain Node, and terrain.ts is the thin consumer that meshes,
 // disposes and draws.
 
-/** A chunk's square world-space footprint, in yards. */
+/** A chunk's square world-space footprint, plus what it costs to mesh. */
 export interface TerrainChunkFootprint {
   readonly centerX: number;
   readonly centerZ: number;
-  /** half the footprint's side (a 60 yd chunk has half = 30) */
+  /** half the footprint's side, in yards (a 60 yd chunk has half = 30) */
   readonly half: number;
+  /**
+   * Build cost in vertices. Known before building (it is a pure function of the
+   * chunk's size and LOD spacing) and very nearly proportional to the wall-clock
+   * meshing time, since the cost is dominated by per-vertex terrainHeight
+   * sampling. This is what the frame budget is denominated in: counting CHUNKS
+   * treats a 2809-vertex settlement chunk and a 400-vertex wilderness chunk as
+   * the same 7x-different amount of work.
+   */
+  readonly cost: number;
 }
 
 /**
@@ -36,16 +47,53 @@ export interface TerrainResidencyRadii {
 }
 
 export interface TerrainResidencyPlan {
-  /** slot indices to mesh this frame, nearest first, at most the caller's budget */
+  /**
+   * The authoritative desired state, one entry per footprint. This, not `build`,
+   * is what a caller should consult to ask "should slot i be resident?" -- `build`
+   * is only the slice of it this frame's budget can afford.
+   */
+  want: boolean[];
+  /** slot indices to mesh this frame, nearest first, within the vertex budget */
   build: number[];
   /** slot indices whose geometry should be released now (never budget-capped) */
   release: number[];
-  /** how many chunks the policy wants resident once the plan has converged */
+  /** how many chunks the policy wants resident (the number of true entries in `want`) */
   desiredResident: number;
-  /** wanted-but-not-yet-built chunks, including the ones this frame's budget deferred */
+  /** wanted-but-not-yet-built chunks, INCLUDING the ones this frame's budget deferred */
   pendingBuilds: number;
+  /** total vertex cost of `build`; the frame's actual meshing spend */
+  buildCost: number;
   /** squared distances parallel to `build`; scratch, reused across frames */
   buildDistSq: number[];
+}
+
+/**
+ * How many nearest candidates the planner ranks before applying the cost budget.
+ * The budget is a vertex count, so the number of chunks it admits varies with
+ * their LOD; 24 is more than any tier's budget can pay for even at the very
+ * cheapest LOD in the game (144 vertices, the Lambert far band), and bounding it
+ * is what keeps the per-frame ranking O(n * 24) instead of a full sort of every
+ * candidate. tests/terrain_residency.test.ts pins that relationship.
+ */
+export const MAX_BUILD_CANDIDATES = 24;
+
+/**
+ * Interior grid divisions for a chunk of `size` yards at `spacing` yard vertex
+ * spacing. terrain.ts's chunk builder uses this too, so the cost the planner
+ * budgets against and the grid the builder walks cannot drift.
+ */
+export function terrainChunkDivisions(size: number, spacing: number): number {
+  return Math.max(4, Math.round(size / spacing));
+}
+
+/**
+ * A chunk's vertex count, derived WITHOUT building it: the (n+1)x(n+1) interior
+ * grid wrapped in a one-vertex skirt ring, so (n+3)^2. This is what makes a
+ * cost-weighted frame budget possible at all.
+ */
+export function terrainChunkVertexCount(size: number, spacing: number): number {
+  const gw = terrainChunkDivisions(size, spacing) + 3; // + the skirt ring
+  return gw * gw;
 }
 
 /** Distance from the camera to the nearest point of a chunk's footprint (0 inside it). */
@@ -75,24 +123,26 @@ export function nextChunkResidency(
 }
 
 export function emptyTerrainResidencyPlan(): TerrainResidencyPlan {
-  return { build: [], release: [], desiredResident: 0, pendingBuilds: 0, buildDistSq: [] };
+  return {
+    want: [],
+    build: [],
+    release: [],
+    desiredResident: 0,
+    pendingBuilds: 0,
+    buildCost: 0,
+    buildDistSq: [],
+  };
 }
 
 /**
  * Insertion-sorts (index, distSq) into a capped nearest-first list, shifting by
  * hand rather than via splice so a per-frame call allocates nothing at all. The
- * cap is the frame's build budget (single digits), so the shift is trivial.
+ * cap is MAX_BUILD_CANDIDATES, so the shift is trivial.
  */
-function insertNearest(
-  build: number[],
-  distSq: number[],
-  index: number,
-  d: number,
-  cap: number,
-): void {
-  const full = build.length >= cap;
-  if (full && d >= distSq[cap - 1]) return;
-  let at = full ? cap - 1 : build.length;
+function insertNearest(build: number[], distSq: number[], index: number, d: number): void {
+  const full = build.length >= MAX_BUILD_CANDIDATES;
+  if (full && d >= distSq[MAX_BUILD_CANDIDATES - 1]) return;
+  let at = full ? MAX_BUILD_CANDIDATES - 1 : build.length;
   while (at > 0 && distSq[at - 1] > d) {
     build[at] = build[at - 1];
     distSq[at] = distSq[at - 1];
@@ -107,10 +157,19 @@ function insertNearest(
  *
  * Pure with respect to its inputs: it never touches `footprints` or `resident`,
  * and writes its answer into `out` (reused across frames so a 60 Hz caller
- * allocates nothing). Builds are capped at `budget` and ordered nearest first,
- * because the chunk under the player's feet matters and the one at the horizon
- * does not; releases are never capped, since holding evicted geometry is exactly
- * the leak this policy exists to avoid.
+ * allocates nothing).
+ *
+ * `vertexBudget` is a COST budget, not a chunk count. Candidates are taken
+ * nearest first -- the chunk under the player's feet matters and the one at the
+ * horizon does not -- and the walk stops at the first chunk that would overrun
+ * the budget rather than skipping it for a cheaper one further away, so the
+ * nearest-first ordering is never broken to save a millisecond. The single
+ * nearest candidate is always admitted even when it alone exceeds the budget:
+ * chunk meshing cannot be split across frames, so refusing it would stall
+ * residency forever and leave a permanent hole instead of a one-frame hitch.
+ *
+ * Releases are never capped, since holding evicted geometry is exactly the leak
+ * this policy exists to avoid.
  */
 export function planTerrainResidency(
   footprints: readonly TerrainChunkFootprint[],
@@ -118,18 +177,19 @@ export function planTerrainResidency(
   camX: number,
   camZ: number,
   radii: TerrainResidencyRadii,
-  budget: number,
+  vertexBudget: number,
   out: TerrainResidencyPlan = emptyTerrainResidencyPlan(),
 ): TerrainResidencyPlan {
+  const want = out.want;
   const build = out.build;
   const distSq = out.buildDistSq;
   const release = out.release;
   build.length = 0;
   distSq.length = 0;
   release.length = 0;
+  if (want.length !== footprints.length) want.length = footprints.length;
   const keepSq = radii.keep * radii.keep;
   const releaseSq = radii.release * radii.release;
-  const cap = Math.max(0, Math.floor(budget));
   let desired = 0;
   let pending = 0;
   for (let i = 0; i < footprints.length; i++) {
@@ -138,16 +198,30 @@ export function planTerrainResidency(
     const dz = Math.max(Math.abs(camZ - chunk.centerZ) - chunk.half, 0);
     const d = dx * dx + dz * dz;
     const isResident = resident[i] === true;
-    const want = d <= keepSq ? true : d > releaseSq ? false : isResident;
-    if (want) desired++;
-    if (want && !isResident) {
+    const wanted = d <= keepSq ? true : d > releaseSq ? false : isResident;
+    want[i] = wanted;
+    if (wanted) desired++;
+    if (wanted && !isResident) {
       pending++;
-      if (cap > 0) insertNearest(build, distSq, i, d, cap);
-    } else if (!want && isResident) {
+      if (vertexBudget > 0) insertNearest(build, distSq, i, d);
+    } else if (!wanted && isResident) {
       release.push(i);
     }
   }
   out.desiredResident = desired;
   out.pendingBuilds = pending;
+
+  // Spend the vertex budget over the ranked candidates.
+  let spent = 0;
+  let taken = 0;
+  for (let i = 0; i < build.length; i++) {
+    const next = spent + footprints[build[i]].cost;
+    if (i > 0 && next > vertexBudget) break;
+    spent = next;
+    taken++;
+  }
+  build.length = taken;
+  distSq.length = taken;
+  out.buildCost = spent;
   return out;
 }

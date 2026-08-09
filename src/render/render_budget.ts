@@ -115,20 +115,34 @@ const CAPS_BY_TIER: Record<GfxTier, RenderBudgetCaps> = {
 };
 
 /**
- * Terrain chunk builds allowed in one frame, per tier.
+ * Terrain chunk meshing allowed in one frame, per tier, in VERTICES.
  *
- * Meshing a chunk means a few thousand `terrainHeight` samples plus the splat and
- * palette blends on top of them, so a handful in one frame IS the hitch that
- * distance-based residency exists to avoid: the point of evicting far terrain is
- * lost if walking back toward it stalls the frame. These sit alongside CAPS_BY_TIER
- * for the same reason the draw caps do, so every frame-level budget in the renderer
- * is declared in one file and keyed off the same tier ladder.
+ * Denominated in vertices rather than chunks because chunks are not
+ * interchangeable: on the splat tiers a settlement chunk is 2809 vertices and a
+ * wilderness chunk is 400, a 7x spread, and meshing cost is dominated by the
+ * per-vertex terrainHeight sampling. Measured in Node on a desktop CPU, the splat
+ * path costs about 5.1 us per vertex and the Lambert path about 4.7, so a
+ * chunk-counted budget of 4 was up to 4 x 2809 vertices, a 57 ms stall, in exactly
+ * the frame the player walked toward new ground. These budgets buy ONE dense chunk
+ * or SEVERAL far ones.
+ *
+ * The floor is one chunk: meshing cannot be split across frames, so the worst case
+ * per frame is a single densest chunk (2809 vertices, about 14 ms on that desktop
+ * CPU) no matter how small the budget gets. Shrinking it further would only stall
+ * residency without shortening that frame.
+ *
+ * These sit alongside CAPS_BY_TIER for the same reason the draw caps do: every
+ * frame-level budget in the renderer is declared in one file, keyed off one tier
+ * ladder.
  */
-export const TERRAIN_BUILD_CAPS_BY_TIER: Record<GfxTier, number> = {
-  low: 1,
-  medium: 2,
-  high: 3,
-  ultra: 4,
+export const TERRAIN_BUILD_VERTEX_BUDGET_BY_TIER: Record<GfxTier, number> = {
+  // low is the Lambert LOD ladder (529 / 289 / 144 vertices): one dense chunk, or
+  // three far ones
+  low: 560,
+  // the splat ladder is 2809 / 1089 / 400 (plus 1369 for a 2x2 far super-chunk)
+  medium: 1_100,
+  high: 1_600,
+  ultra: 2_400,
 };
 
 /**
@@ -136,7 +150,7 @@ export const TERRAIN_BUILD_CAPS_BY_TIER: Record<GfxTier, number> = {
  * leave a permanent hole in the ground rather than a temporary one.
  */
 export function terrainBuildBudget(tier: GfxTier): number {
-  return Math.max(1, TERRAIN_BUILD_CAPS_BY_TIER[tier]);
+  return Math.max(1, TERRAIN_BUILD_VERTEX_BUDGET_BY_TIER[tier]);
 }
 
 function round2(v: number): number {

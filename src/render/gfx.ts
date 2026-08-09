@@ -274,8 +274,15 @@ export const TERRAIN_RESIDENCY_MIN_HYSTERESIS = 120;
  * Per-tier terrain residency. Every tier sits at or above the floor above, so
  * nothing visible is ever missing; what differs is how much INVISIBLE terrain a
  * device is willing to hold in memory beyond the fog. A phone (low, or medium on
- * a recognized flagship) keeps roughly half the area ultra does, and pays roughly
- * half the geometry and boot cost for it.
+ * a recognized flagship) keeps roughly half the area ultra does.
+ *
+ * BE HONEST ABOUT WHAT THIS BUYS TODAY. Our world is a 360 yd wide strip, so at
+ * z 540 (its middle) a keep radius of 560+ already covers essentially all of it:
+ * measured desired-resident share at x 0, z 540 is 120/144 on low and 144/144 on
+ * high and ultra. Only near the strip's ends does anything get evicted (78/144 at
+ * spawn on low). This is a FORWARD-LOOKING change: it exists so the 3-column world
+ * in docs/design/parity-backlog.md costs 212-316 of 792 chunks instead of 792.
+ * Do not sell it as a present-day frame-rate win.
  */
 export const TERRAIN_RESIDENCY_BY_TIER: Record<GfxTier, TerrainResidencyRadii> = {
   low: { keep: 580, release: 700 },

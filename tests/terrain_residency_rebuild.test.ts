@@ -211,7 +211,7 @@ describe('terrain chunk residency', () => {
       const box = mesh.geometry.boundingBox as THREE.Box3;
       const half = (box.max.x - box.min.x) / 2;
       const d = chunkEdgeDistance(
-        { centerX: sphere.center.x, centerZ: sphere.center.z, half },
+        { centerX: sphere.center.x, centerZ: sphere.center.z, half, cost: 0 },
         spot.x,
         spot.z,
       );
