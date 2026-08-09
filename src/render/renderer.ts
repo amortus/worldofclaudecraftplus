@@ -83,6 +83,12 @@ import { type LocoTrack, newLocoTrack, updateLocomotion } from './locomotion';
 import { buildMotes, type MotesView } from './motes';
 import { COMBO_PIP_MAX, comboPipsFor } from './nameplate_combo';
 import {
+  fireFlickerIntensity,
+  fireFlickerPhase,
+  planPointLightSlots,
+  slotContributes,
+} from './point_light_budget';
+import {
   isProjectedNameplateAnchorVisible,
   nameplateScreenTransform,
 } from './nameplate_projection';
@@ -99,7 +105,11 @@ import { buildGroundQuestObject } from './quest_objects';
 import { FRIENDLY, isFriendlyPet, isOwnedPetHostile, mobNameColor } from './reaction';
 import { RenderBudgetGovernor, type RenderBudgetState } from './render_budget';
 import { downscaleDims } from './screenshot';
-import { drapeRingLocalY } from './selection_ring';
+import {
+  drapeRingLocalY,
+  type RingDrapeState,
+  selectionRingNeedsRedrape,
+} from './selection_ring';
 import { buildClouds, buildSky, type SkyView } from './sky';
 import { nearestSloppyPickId, type SloppyPickCandidate } from './sloppy_pick';
 import { SkyLandmark } from './sky_landmark';
@@ -212,6 +222,10 @@ const LIGHT_BUDGET_RANGE_SQ = 55 * 55;
 // HDR boosts so the bloom pass picks these out (composer tiers only)
 const SELECTION_RING_BOOST = 1.5;
 const SELECTION_RING_SPIN = 0.6; // rad/s — slow classic target-reticle rotation
+// Re-drape the selection ring only once the target has moved this far (squared,
+// in yards). Below it the 48 terrain samples reproduce last frame's values to
+// well under a millimetre, so the work and the buffer upload are pure waste.
+const SELECTION_RING_SETTLE_SQ = 0.08 * 0.08;
 const CLICK_MARKER_POOL = 4; // concurrent click-feedback markers before reuse
 const SPARKLE_BOOST = 1.5;
 const PORTAL_BOOST = 2;
@@ -887,7 +901,29 @@ export class Renderer {
       fogFar: number,
     ): void;
   };
-  private lightRank: { light: THREE.PointLight; d2: number; worldPos: THREE.Vector3 }[] = [];
+  // Ranking pool over the world's fire lights. The lights themselves never
+  // render (see mintPointLightSlots); these entries only carry the data the
+  // fixed slots copy in. Extended when interiors add lights, never shrunk.
+  private lightRank: {
+    light: THREE.PointLight;
+    d2: number;
+    worldPos: THREE.Vector3;
+    base: number;
+    phase: number;
+  }[] = [];
+  // Exactly GFX.maxPointLights point lights, minted once and attached forever.
+  private lightSlots: THREE.PointLight[] = [];
+  // One terrain sampler for every per-frame drape (selection ring, target cone),
+  // bound once instead of allocating a fresh closure per drape per frame.
+  private groundSample = (sx: number, sz: number): number =>
+    groundHeight(sx, sz, this.sim.cfg.seed);
+  // Last state the selection ring was draped for; see SELECTION_RING_SETTLE_SQ.
+  private selectionRingSettle: RingDrapeState = {
+    targetId: -1,
+    x: Infinity,
+    z: Infinity,
+    scale: 0,
+  };
   private doomedIds: number[] = [];
   private dungeons: DungeonInteriors | null = null;
   private envRTs = new Map<BiomeId, THREE.WebGLRenderTarget>();
@@ -1238,6 +1274,12 @@ export class Renderer {
     this.flames = props.flames;
     this.fireLights = props.fireLights;
     this.propsView = props;
+    // The Mirefen crater light is a static world light like a campfire, and its
+    // group is distance-culled: left to itself it took the scene's visible light
+    // count with it (measured 6 <-> 7 crossing the vale). Register it with the
+    // slot pool so the count cannot move.
+    this.fireLights.push(this.impactSite.fireLight);
+    this.mintPointLightSlots();
 
     if (GFX.blobShadows) {
       // 48 discs covers every character the entity draw range admits; past the cap the
@@ -4290,21 +4332,42 @@ export class Renderer {
         const gy = groundHeight(cx, cz, seed);
         this.selectionRing.position.set(cx, gy, cz);
         this.selectionRing.scale.setScalar(target.scale);
-        const drape = drapeRingLocalY(
-          this.selectionRingLocalXZ,
-          cx,
-          cz,
-          gy,
-          target.scale,
-          0.08,
-          (sx, sz) => groundHeight(sx, sz, seed),
-          this.selectionRingDrapeY,
-        );
-        const ringPos = this.selectionRingMesh.geometry.getAttribute(
-          'position',
-        ) as THREE.BufferAttribute;
-        for (let i = 0; i < drape.length; i++) ringPos.setY(i, drape[i]);
-        ringPos.needsUpdate = true;
+        // The drape (48 groundHeight samples plus a full position upload) only
+        // changes when the ring actually moves across the terrain. A standing or
+        // barely-drifting target re-draped identical values every frame, so it
+        // settles instead: below the threshold the terrain under the ring has not
+        // meaningfully changed and last frame's geometry is still correct.
+        const settle = this.selectionRingSettle;
+        if (
+          selectionRingNeedsRedrape(
+            settle,
+            target.id,
+            cx,
+            cz,
+            target.scale,
+            SELECTION_RING_SETTLE_SQ,
+          )
+        ) {
+          settle.targetId = target.id;
+          settle.scale = target.scale;
+          settle.x = cx;
+          settle.z = cz;
+          const drape = drapeRingLocalY(
+            this.selectionRingLocalXZ,
+            cx,
+            cz,
+            gy,
+            target.scale,
+            0.08,
+            this.groundSample,
+            this.selectionRingDrapeY,
+          );
+          const ringPos = this.selectionRingMesh.geometry.getAttribute(
+            'position',
+          ) as THREE.BufferAttribute;
+          for (let i = 0; i < drape.length; i++) ringPos.setY(i, drape[i]);
+          ringPos.needsUpdate = true;
+        }
         this.selectionRingTicks.position.y = 0.08; // ticks float just above the footing
         this.selectionRingTicks.rotation.y += dt * SELECTION_RING_SPIN; // slow reticle spin
         const ringMat = this.selectionRingMat;
@@ -4325,10 +4388,9 @@ export class Renderer {
       if (p.dead) {
         this.targetCone.group.visible = false;
       } else {
-        const seed = this.sim.cfg.seed;
         const lv = this.views.get(p.id);
         const facing = lv ? lv.group.rotation.y : p.facing;
-        const sample = (sx: number, sz: number): number => groundHeight(sx, sz, seed);
+        const sample = this.groundSample;
         drapeConeWorld(
           this.targetCone.localXZ,
           selfPos.x,
@@ -4369,11 +4431,9 @@ export class Renderer {
         this.vfx.campfireEmber(this.tmpV, dt);
       }
     }
-    for (let i = 0; i < this.fireLights.length; i++) {
-      const light = this.fireLights[i];
-      const base = (light.userData.baseIntensity as number | undefined) ?? 11;
-      light.intensity = base + Math.sin(this.time * 11 + i * 1.7) * 2.5 * (base / 11);
-    }
+    // Flicker is folded into budgetFireLights: it only touches the handful of
+    // slots that actually shine, instead of every fire light in the world
+    // (including the ones whose contribution is then zeroed anyway).
     this.budgetFireLights(p.pos.x, p.pos.z);
     worldStart = markWorldPhase('lights', worldStart);
 
@@ -4638,38 +4698,72 @@ export class Renderer {
     }
   }
 
-  // Forward-renderer point-light budget: every campfire/torch light exists,
-  // but only the nearest GFX.maxPointLights within range shine each frame.
-  // Rank entries are pooled (extended only when interiors add lights) and
-  // world positions cached once — the lights never move — so this hot loop
-  // allocates nothing and skips the sort while the budget isn't contended.
+  // Mint the tier's point-light slots ONCE, at scene-build time, and attach them
+  // forever. Three.js bakes the VISIBLE light count into every lit material's
+  // shader, so any change to it recompiles all lit programs at once: a measured
+  // ~21-program, multi-second in-world freeze (programDelta 21, tex/geo 0, on an
+  // RTX 3080; far worse on an A14). Deriving the count from the world's fire
+  // lights drifts three ways - `fireLights` GROWS when DungeonInteriors streams
+  // an interior in, a sparse zone or a fresh boot has fewer fires than slots,
+  // and props.ts hides a whole bonfire GROUP (light included) once it fogs out.
+  // So the world's fire lights never render at all; these slots stand in for the
+  // nearest few and unused slots simply carry zero intensity.
+  private mintPointLightSlots(): void {
+    for (let i = 0; i < GFX.maxPointLights; i++) {
+      const slot = new THREE.PointLight(0xff8830, 0, 16, 2);
+      slot.castShadow = false; // point shadows are baked into the program key too
+      slot.visible = true; // never toggled: that is the whole point
+      this.scene.add(slot);
+      this.lightSlots.push(slot);
+    }
+  }
+
+  // Forward-renderer point-light budget: every campfire/torch light exists in the
+  // world, but only the nearest GFX.maxPointLights within range are copied into a
+  // slot each frame. Rank entries are pooled (extended only when interiors add
+  // lights) and world positions cached once - the lights never move - so this hot
+  // loop allocates nothing and skips the sort while the budget isn't contended.
   private budgetFireLights(px: number, pz: number): void {
+    const slots = this.lightSlots;
+    if (slots.length === 0) return;
     const ranked = this.lightRank;
     while (ranked.length < this.fireLights.length) {
       const light = this.fireLights[ranked.length];
-      ranked.push({ light, d2: 0, worldPos: light.getWorldPosition(new THREE.Vector3()) });
+      // Take the source out of the render permanently: only the slots light.
+      light.visible = false;
+      ranked.push({
+        light,
+        d2: 0,
+        worldPos: light.getWorldPosition(new THREE.Vector3()),
+        base: (light.userData.baseIntensity as number | undefined) ?? 11,
+        phase: fireFlickerPhase(ranked.length),
+      });
     }
     for (const entry of ranked) {
       const dx = entry.worldPos.x - px,
         dz = entry.worldPos.z - pz;
       entry.d2 = dx * dx + dz * dz;
     }
-    const lightBudget = this.effectivePointLights || GFX.maxPointLights;
-    // Keep the VISIBLE point-light COUNT constant (never toggle it as fires enter/leave
-    // range). Three.js bakes the visible-light count into every lit material's shader,
-    // so changing it recompiles ALL lit materials at once - a ~21-program, multi-second
-    // in-world freeze confirmed by the real-GPU profile (programDelta 21, tex/geo 0, on
-    // an RTX 3080). Keep the nearest `visibleCount` slots visible ALWAYS and gate the
-    // CONTRIBUTION via intensity (a zero-intensity light still counts in the shader but
-    // adds no light), so the shader light count is fixed and nothing recompiles at play.
-    const visibleCount = Math.min(GFX.maxPointLights, ranked.length);
-    if (ranked.length > visibleCount) ranked.sort((a, b) => a.d2 - b.d2);
-    for (let i = 0; i < ranked.length; i++) {
-      const entry = ranked[i];
-      entry.light.visible = i < visibleCount;
-      if (i < visibleCount && (i >= lightBudget || entry.d2 >= LIGHT_BUDGET_RANGE_SQ)) {
-        entry.light.intensity = 0;
+    const plan = planPointLightSlots({
+      slotCount: slots.length,
+      sourceCount: ranked.length,
+      contributingBudget: this.effectivePointLights || GFX.maxPointLights,
+    });
+    if (plan.needsSort) ranked.sort((a, b) => a.d2 - b.d2);
+    for (let i = 0; i < slots.length; i++) {
+      const slot = slots[i];
+      const entry = i < plan.filledSlots ? ranked[i] : null;
+      if (!entry || !slotContributes(i, entry.d2, plan, LIGHT_BUDGET_RANGE_SQ)) {
+        slot.intensity = 0; // attached but dark: no recompile, no light
+        continue;
       }
+      slot.position.copy(entry.worldPos);
+      slot.color.copy(entry.light.color);
+      slot.distance = entry.light.distance;
+      slot.decay = entry.light.decay;
+      // Flicker only what actually shines: at most GFX.maxPointLights sines a
+      // frame instead of one per fire light in the world.
+      slot.intensity = fireFlickerIntensity(entry.base, entry.phase, this.time);
     }
   }
 

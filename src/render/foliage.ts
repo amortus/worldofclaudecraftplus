@@ -10,6 +10,7 @@ import {
 } from '../sim/world';
 import type { Decoration } from '../sim/world';
 import { configureMaskedDoubleSidedVegetationMaterial, GFX, sharedUniforms } from './gfx';
+import { freezeStaticMatrices } from './static_matrices';
 import { grassTuftTexture } from './textures';
 import { loadGltf } from './assets/loader';
 import { registerPreload } from './assets/preload';
@@ -1424,6 +1425,11 @@ export function buildFoliage(seed: number): FoliageView {
     modelDrawsByLod[b.lod] = (modelDrawsByLod[b.lod] ?? 0) + b.draws;
     modelTrianglesByLod[b.lod] = (modelTrianglesByLod[b.lod] ?? 0) + b.triangles;
   }
+  // Trees, rocks and dressing are placed once; the LOD/hide passes work through
+  // `visible` and instance matrices, never object transforms. Freeze before the
+  // grass ring exists so its streamed chunks (added and disposed as the player
+  // walks) keep their own auto-update.
+  freezeStaticMatrices(group);
   const grass = localGrassDisabled()
     ? {
       update(): void {},

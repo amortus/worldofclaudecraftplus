@@ -6,6 +6,7 @@
 // on exactly this kind of disc) instead of shadow maps.
 
 import * as THREE from 'three';
+import { uploadPrefix } from './upload_range';
 
 const TEX_SIZE = 64;
 
@@ -82,7 +83,10 @@ export function buildBlobShadows(max: number): BlobShadowsView {
     },
     commit() {
       mesh.count = used;
-      if (used > 0) mesh.instanceMatrix.needsUpdate = true;
+      // Upload only the discs actually placed this frame, not the whole 48-disc
+      // pool (one instance matrix is 16 floats, which uploadPrefix derives from
+      // the attribute's itemSize).
+      uploadPrefix(mesh.instanceMatrix, used);
     },
     dispose() {
       geo.dispose();

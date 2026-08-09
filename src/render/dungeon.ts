@@ -34,6 +34,7 @@ import {
 } from '../sim/dungeon_layout';
 import { loadGltf, releaseGltf } from './assets/loader';
 import { sharedUniforms } from './gfx';
+import { freezeStaticMatrices } from './static_matrices';
 import { radialGlowTexture } from './textures';
 
 const FLAME_EMISSIVE_HIGH = 2.2;
@@ -570,6 +571,7 @@ export class DungeonInteriors {
                   ? CLAUDEXX_LAYOUT
                   : CRYPT_LAYOUT);
     const variant = opts?.variant ?? this.variantFor(interior, ox);
+    const flamesBefore = this.flames.length;
     const group = new THREE.Group();
     const p = new Placements();
     const arenaWalls = variant === 'arena' ? this.pendingArenaWalls(layout, ox, oz) : undefined;
@@ -592,6 +594,10 @@ export class DungeonInteriors {
       for (const wall of arenaWalls.all) this.emitArenaHideable(group, wall);
     }
     group.position.set(ox, 0, oz);
+    // An interior is built once and never moves; the arena hideables only flip
+    // material writes. The torch flame cones are the exception (the renderer
+    // rescales them each frame), so they keep their auto-update.
+    freezeStaticMatrices(group, new Set(this.flames.slice(flamesBefore)));
     this.scene.add(group);
   }
 

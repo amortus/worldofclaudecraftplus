@@ -55,3 +55,38 @@ export function drapeRingLocalY(
   }
   return outY;
 }
+
+/**
+ * What the ring was last draped for. The renderer keeps one of these and hands
+ * it to `selectionRingNeedsRedrape` each frame.
+ */
+export interface RingDrapeState {
+  targetId: number;
+  x: number;
+  z: number;
+  scale: number;
+}
+
+/**
+ * Should the ring be re-draped this frame?
+ *
+ * Draping costs one terrain sample per ring vertex plus a position-buffer
+ * upload, and it used to run unconditionally: a standing target recomputed
+ * identical values 60 times a second. It only actually changes when the ring
+ * moves across the terrain or resizes, so a settle threshold (squared world
+ * distance) skips the rest. A new target always re-drapes, however close it
+ * stands to the old one, so the ring can never inherit stale geometry.
+ */
+export function selectionRingNeedsRedrape(
+  state: RingDrapeState,
+  targetId: number,
+  x: number,
+  z: number,
+  scale: number,
+  thresholdSq: number,
+): boolean {
+  if (state.targetId !== targetId || state.scale !== scale) return true;
+  const dx = x - state.x;
+  const dz = z - state.z;
+  return dx * dx + dz * dz > thresholdSq;
+}

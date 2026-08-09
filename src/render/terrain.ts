@@ -9,6 +9,7 @@ import { registerPreload } from './assets/preload';
 import { GFX } from './gfx';
 import { runIdleQueue } from './idle_queue';
 import { impactCraterTerrainBlend } from './impact_terrain';
+import { freezeStaticMatrices } from './static_matrices';
 import { groundDetailTexture, groundSplatMaps, macroNoiseTexture } from './textures';
 
 // Chunked terrain across the whole 360x1080 zone strip.
@@ -299,6 +300,21 @@ function sampleVertex(x: number, z: number, seed: number): VertexSample {
 // vertices sit on the chunk border but 0.3u lower, hiding LOD cracks.
 // ---------------------------------------------------------------------------
 
+/**
+ * Index buffer for a chunk of `vertexCount` vertices. Index width follows the
+ * chunk instead of the worst case: the densest chunk here is about 530 vertices,
+ * so 16-bit indices address it with room to spare at half the buffer memory and
+ * half the upload of the unconditional Uint32 this used to allocate (and no
+ * OES_element_index_uint dependency). The guard keeps a hypothetical dense chunk
+ * correct: the largest index written is vertexCount - 1.
+ */
+export function terrainIndexArray(
+  vertexCount: number,
+  indexCount: number,
+): Uint16Array | Uint32Array {
+  return vertexCount <= 65535 ? new Uint16Array(indexCount) : new Uint32Array(indexCount);
+}
+
 function buildChunkGeometry(x0: number, z0: number, size: number, spacing: number, seed: number, withSplat: boolean): THREE.BufferGeometry {
   const nx = Math.max(4, Math.round(size / spacing));
   const nz = nx;
@@ -360,7 +376,7 @@ function buildChunkGeometry(x0: number, z0: number, size: number, spacing: numbe
   }
 
   const quadsX = gw - 1, quadsZ = gh - 1;
-  const indices = new Uint32Array(quadsX * quadsZ * 6);
+  const indices = terrainIndexArray(gw * gh, quadsX * quadsZ * 6);
   let k = 0;
   for (let gj = 0; gj < quadsZ; gj++) {
     for (let gi = 0; gi < quadsX; gi++) {
@@ -675,8 +691,7 @@ export function buildTerrain(seed: number, priorityPoint?: { x: number; z: numbe
     // A chunk's transform never changes after this point (its shape lives in the
     // geometry, not the mesh matrix), so freeze it now: otherwise every chunk
     // recomposes its world matrix every frame for the rest of the session.
-    mesh.updateMatrixWorld(true);
-    mesh.matrixAutoUpdate = false;
+    freezeStaticMatrices(mesh);
     chunks.push({
       mesh, x: x0 + size / 2, z: z0 + size / 2,
       half: size / 2,

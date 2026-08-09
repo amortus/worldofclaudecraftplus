@@ -7,6 +7,7 @@ import { terrainHeight, WATER_LEVEL } from '../sim/world';
 import { loadGltf } from './assets/loader';
 import { registerPreload } from './assets/preload';
 import { GFX, sharedUniforms, surfaceMat } from './gfx';
+import { freezeStaticMatrices } from './static_matrices';
 
 // Static world props: buildings, tents, campfires, mines, ruins, docks,
 // fences, graveyards — all real CC0 glTF assets (Quaternius medieval village +
@@ -1342,6 +1343,12 @@ export function buildProps(seed: number, delveLabel?: (delveId: string) => strin
     const bounds = cullableBounds(sm, sm.geometry.boundingBox, sm.geometry.boundingSphere);
     if (bounds) cullables.push(bounds);
   }
+
+  // Props are placed once and never move: hideables only flip visibility and
+  // material writes, and instanced/merged batches carry their variation in the
+  // geometry. The flame cones are the sole exception (the renderer rescales them
+  // every frame for the fire flicker), so they keep their auto-update.
+  freezeStaticMatrices(group, new Set(flames));
 
   return {
     group,

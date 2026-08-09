@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { loadTexture } from './assets/loader';
 import { registerPreload } from './assets/preload';
 import { GFX } from './gfx';
+import { uploadPrefix } from './upload_range';
 
 // Spell & ambience particle system. One pooled THREE.Points cloud drawn with
 // additive blending; projectiles are lightweight emitters that home on their
@@ -669,13 +670,28 @@ export class Vfx {
     // (its size was just zeroed above and must reach the GPU or the sprite
     // would linger on screen); only after that one flush does the pool skip
     // all six attribute uploads until the next spawn.
-    if (this.ledger.endFrame() === 'skip') return;
     const geo = this.points.geometry;
-    (geo.attributes.position as THREE.BufferAttribute).needsUpdate = true;
-    (geo.attributes.aSize as THREE.BufferAttribute).needsUpdate = true;
-    (geo.attributes.aAlpha as THREE.BufferAttribute).needsUpdate = true;
-    (geo.attributes.aColor as THREE.BufferAttribute).needsUpdate = true;
-    (geo.attributes.aSprite as THREE.BufferAttribute).needsUpdate = true;
-    (geo.attributes.aRot as THREE.BufferAttribute).needsUpdate = true;
+    // The ledger's high-water mark is an exact LIVE PREFIX of the ring: every
+    // live particle sits in [0, bound). So both the GPU upload and the draw are
+    // bounded by it instead of running the whole pool. Before this, a single
+    // spark uploaded all six attributes across all 512 mobile slots every frame
+    // and ran the vertex shader on all 512 points (the dead ones merely hidden
+    // by size = 0) - pure waste, worst exactly during combat.
+    if (this.ledger.endFrame() === 'skip') {
+      // Idle: everything is already zeroed on the GPU, so stop submitting the
+      // pool's points entirely instead of shading size-0 sprites.
+      if (geo.drawRange.count !== 0) geo.setDrawRange(0, 0);
+      return;
+    }
+    geo.setDrawRange(0, bound);
+    // bound 0 only happens right after clear(), which flags a FULL upload of the
+    // zeroed buffers; a zero-length range here would swallow it.
+    if (bound === 0) return;
+    uploadPrefix(geo.attributes.position as THREE.BufferAttribute, bound);
+    uploadPrefix(geo.attributes.aSize as THREE.BufferAttribute, bound);
+    uploadPrefix(geo.attributes.aAlpha as THREE.BufferAttribute, bound);
+    uploadPrefix(geo.attributes.aColor as THREE.BufferAttribute, bound);
+    uploadPrefix(geo.attributes.aSprite as THREE.BufferAttribute, bound);
+    uploadPrefix(geo.attributes.aRot as THREE.BufferAttribute, bound);
   }
 }

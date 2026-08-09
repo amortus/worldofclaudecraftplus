@@ -33,6 +33,15 @@ const SMOKE_COUNT_LOW = 3;
 
 export interface ImpactSiteView {
   group: THREE.Group;
+  /**
+   * The crater's point light. It is a STATIC world light like a campfire, so the
+   * renderer registers it with the fixed point-light slot pool
+   * (renderer.mintPointLightSlots) rather than letting it light the scene
+   * directly: this group is distance-culled, and a point light that comes and
+   * goes with the cull changes the scene's visible light count, which recompiles
+   * every lit material at once. The pool owns its intensity (flicker included).
+   */
+  fireLight: THREE.PointLight;
   update(px: number, pz: number, dt: number): void;
 }
 
@@ -384,6 +393,8 @@ export function buildImpactSite(seed: number): ImpactSiteView {
 
   const light = new THREE.PointLight(0xff6a1a, GFX.standardMaterials ? 2.4 : 1.3, 12, 2);
   light.name = 'mirefen-impact-light';
+  // Drives the slot pool's flicker; see ImpactSiteView.fireLight.
+  light.userData.baseIntensity = GFX.standardMaterials ? 2.4 : 1.3;
   light.position.set(MIREFEN_IMPACT_SITE.meteor.x, meteorY + 1.1, MIREFEN_IMPACT_SITE.meteor.z);
   group.add(light);
 
@@ -412,6 +423,7 @@ export function buildImpactSite(seed: number): ImpactSiteView {
   let time = 0;
   return {
     group,
+    fireLight: light,
     update(px: number, pz: number, dt: number): void {
       if (px > DUNGEON_X_THRESHOLD) {
         group.visible = false;
@@ -423,7 +435,7 @@ export function buildImpactSite(seed: number): ImpactSiteView {
       if (!group.visible) return;
 
       time += dt;
-      light.intensity = (GFX.standardMaterials ? 2.4 : 1.3) + Math.sin(time * 4.5) * 0.24;
+      // intensity is owned by the renderer's point-light slot pool now
       (glow.material as THREE.MeshBasicMaterial).opacity = 0.12 + Math.sin(time * 3.1) * 0.035;
       glow.rotation.z += dt * 0.15;
       emberMat.opacity = 0.34 + Math.sin(time * 5.2) * 0.12;

@@ -75,6 +75,10 @@ export function buildMotes(seed: number): MotesView {
   const homeZ = new Float32Array(count);
 
   const tmpColor = new THREE.Color();
+  // A mote's tint only changes when it is re-homed (place() below), which is
+  // rare: the positions drift every frame, the colours do not. Tracking that
+  // drops one full colour upload per frame for free.
+  let colorsDirty = false;
 
   // (re)home a single mote to a random spot inside the ring around the player,
   // re-sampling terrain + biome tint. Returns false when the spot is unusable
@@ -99,6 +103,7 @@ export function buildMotes(seed: number): MotesView {
     colors[i * 3] = tmpColor.r;
     colors[i * 3 + 1] = tmpColor.g;
     colors[i * 3 + 2] = tmpColor.b;
+    colorsDirty = true;
     return true;
   }
 
@@ -154,7 +159,10 @@ export function buildMotes(seed: number): MotesView {
         positions[i * 3 + 2] = homeZ[i] + Math.cos(ph * 0.8) * 0.5;
       }
       geo.attributes.position.needsUpdate = true;
-      geo.attributes.color.needsUpdate = true;
+      if (colorsDirty) {
+        geo.attributes.color.needsUpdate = true;
+        colorsDirty = false;
+      }
     },
   };
 }
