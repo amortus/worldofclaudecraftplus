@@ -29,6 +29,7 @@ import {
   QUEST_ORDER,
   RIFT_BAND_X_MIN,
   RIFT_X,
+  STRIP_ZONES,
   ZONES,
   arenaOrigin,
   delveOrigin,
@@ -176,10 +177,14 @@ describe('expansion wiring: the one-time save migration', () => {
   });
 
   it('sends each level to the hub it actually belongs to', () => {
-    expect(zoneForLevel(1)).toBe(ZONES[0]);
-    expect(zoneForLevel(20)).toBe(ZONES[ZONES.length - 1]);
-    expect(reload(5400, 1).pos.z).toBeCloseTo(ZONES[0].hub.z, 3);
-    expect(reload(5400, 20).pos.z).toBeCloseTo(ZONES[ZONES.length - 1].hub.z, 3);
+    // zoneForLevel walks the STRIP (the level progression), not every zone:
+    // column zones are side content beside a band, and the world grid appends
+    // them last, so "the last entry of ZONES" stopped meaning "the endgame".
+    const endgame = STRIP_ZONES[STRIP_ZONES.length - 1];
+    expect(zoneForLevel(1)).toBe(STRIP_ZONES[0]);
+    expect(zoneForLevel(20)).toBe(endgame);
+    expect(reload(5400, 1).pos.z).toBeCloseTo(STRIP_ZONES[0].hub.z, 3);
+    expect(reload(5400, 20).pos.z).toBeCloseTo(endgame.hub.z, 3);
   });
 
   it('still ejects a genuine Cinderforge save to the Cinderforge door', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { paintTerrainRows, mapCanvasHeight, type MapRegion } from '../src/ui/map_terrain';
-import { ZONES, WORLD_MIN_X, WORLD_MAX_X, zoneAt } from '../src/sim/data';
+import { STRIP_ZONES, ZONES, WORLD_MIN_X, WORLD_MAX_X, zoneAt } from '../src/sim/data';
 import { zoneBiomeAt } from '../src/sim/world';
 
 const SEED = 20061;
@@ -49,8 +49,12 @@ describe('map terrain painter', () => {
   });
 
   it('produces different terrain for different zones', () => {
-    const a = renderFull(W, zoneRegion(ZONES[0].id), SEED);
-    const b = renderFull(W, zoneRegion(ZONES[ZONES.length - 1].id), SEED);
+    // Walks the STRIP: its bands each own a distinct z range, so two of them
+    // can never share a region rect. ZONES now also holds column zones, which
+    // SHARE a band with a strip zone by definition, so "first and last of
+    // ZONES" would compare a rect against itself.
+    const a = renderFull(W, zoneRegion(STRIP_ZONES[0].id), SEED);
+    const b = renderFull(W, zoneRegion(STRIP_ZONES[STRIP_ZONES.length - 1].id), SEED);
     expect(a).not.toEqual(b);
   });
 

@@ -125,6 +125,18 @@ const MOB_IDS = [
   'cx_gutpile', 'cx_fleshwright', 'cx_grosh', 'cx_vexil', 'cx_apothecary', 'cx_maggath',
   'cx_vanguard', 'cx_korreth', 'cx_triad', 'cx_vrallka', 'cx_silkbound', 'cx_sethelle',
   'cx_rimecore', 'cx_wardens', 'cx_vorothne',
+  // Alderfen Shallows (east column)
+  'sedge_skitterer',
+  'mudfin_snapper',
+  'reedwatch_poacher',
+  'weir_husk',
+  'the_drowned_miller',
+  // Grimhold Crags (west column)
+  'crag_lurker',
+  'grimhold_scavenger',
+  'scree_binder',
+  'coldhearth_marauder',
+  'old_grimfang',
 ] as const;
 
 const NPC_IDS = [
@@ -280,7 +292,16 @@ const QUEST_IDS = [
   'q_cx_legend_1', 'q_cx_legend_2', 'q_cx_legend_3',
 ] as const;
 
-const ZONE_IDS = ['eastbrook_vale', 'mirefen_marsh', 'thornpeak_heights', 'ashen_wastes'] as const;
+// The four strip bands plus the two column zones that flank the Vale's band east
+// and west. Names, welcomes, hub names and POI labels all resolve from here.
+const ZONE_IDS = [
+  'eastbrook_vale',
+  'mirefen_marsh',
+  'thornpeak_heights',
+  'ashen_wastes',
+  'alderfen_shallows',
+  'grimhold_crags',
+] as const;
 
 /**
  * Gatherable world nodes are named per (node type, zone), not per node: all

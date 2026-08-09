@@ -5,6 +5,7 @@
 // and owns the world-layout constants.
 
 import { BASE_ITEMS, FISHING_RARE_ID, FISHING_TABLES } from './content/items';
+import { COLUMN_CAMPS, COLUMN_MOBS, COLUMN_ROADS, COLUMN_ZONE_DEFS } from './content/columns';
 import type {
   CampDef,
   DelveDef,
@@ -197,6 +198,10 @@ export const MOBS: Record<string, MobTemplate> = {
   // The Cinderforge roster (4 trash + 1 summoned add + 3 bosses). Instance-only,
   // like the other dungeon rosters: no camp spawns any of them.
   ...CINDERFORGE_MOBS,
+  // The east/west column ring. Its own roster on purpose: a quest kill
+  // objective matches `targetMobId` worldwide, so a column camp of a Mirefen
+  // mob would credit the Mirefen's quests from a zone away.
+  ...COLUMN_MOBS,
 };
 
 export const NPCS: Record<string, NpcDef> = {
@@ -256,7 +261,12 @@ export const CAMPS: CampDef[] = [
   ...TEMPLE_CAMPS,
   ...ZONE1_CHAPEL_CAMPS,
   { mobId: 'grix_the_tunnelking', center: { x: -95, z: -78 }, radius: 4, count: 1 },
-  ...ZONE4_CAMPS, // appended LAST: keep every existing camp's RNG draw order
+  ...ZONE4_CAMPS,
+  // The first east/west column ring. Appended LAST so every shipped camp keeps
+  // its array index (and therefore its exact rng draws). Every column camp
+  // declares `positions`, so world generation draws NO new rng at all and the
+  // post-worldgen rng cursor is bit-identical to the strip-only world.
+  ...COLUMN_CAMPS,
 ];
 
 export const GROUND_OBJECTS: GroundObjectDef[] = [
@@ -271,7 +281,16 @@ export const GROUND_OBJECTS: GroundObjectDef[] = [
   ...EXPANSION_OBJECTS,
 ];
 
-export const ROADS: { x: number; z: number }[][] = [...ZONE1_ROADS, ...ZONE2_ROADS, ...ZONE3_ROADS, ...ZONE4_ROADS];
+export const ROADS: { x: number; z: number }[][] = [
+  ...ZONE1_ROADS,
+  ...ZONE2_ROADS,
+  ...ZONE3_ROADS,
+  ...ZONE4_ROADS,
+  // The column roads run OUTWARD from the border (their first vertex is 4yd
+  // past it), so `roadDistance` inside the strip is unchanged everywhere the
+  // decoration road clearance (5yd) can reach.
+  ...COLUMN_ROADS,
+];
 
 export const PROPS: ZonePropsDef = mergeProps([
   ZONE1_PROPS,
@@ -335,19 +354,47 @@ export const GROUP_XP_BONUS = [1, 1, 1.166, 1.3, 1.43];
 // graveyard, its lakes, and a biome palette the renderer keys off.
 // ---------------------------------------------------------------------------
 
-export const ZONES: ZoneDef[] = [ZONE1_ZONE, ZONE2_ZONE, ZONE3_ZONE, ZONE4_ZONE];
+export const ZONES: ZoneDef[] = [
+  ZONE1_ZONE,
+  ZONE2_ZONE,
+  ZONE3_ZONE,
+  ZONE4_ZONE,
+  // The first east/west column ring, appended LAST. Append order (not band
+  // order) is what keeps every shipped index stable, which is why "the last
+  // entry" stopped meaning "the north end" here (see WORLD_MAX_Z below).
+  ...COLUMN_ZONE_DEFS,
+];
 
 export const WORLD_SIZE = 360; // the original strip's width (one grid column)
 // The strip column: the x extent a zone spans when it declares no xMin/xMax.
 export const STRIP_MIN_X = -WORLD_SIZE / 2;
 export const STRIP_MAX_X = WORLD_SIZE / 2;
-// The grid's real bounds, derived from the zones themselves. With every zone
-// on the strip (today) these are exactly the strip's edges, so nothing that
-// reads them moves; a later column zone widens them by declaring x bounds.
+// The grid's real bounds, the bounding box of every zone rect.
+//
+// WORLD_MAX_X IS READ AS A SYMMETRIC HALF WIDTH in nine call sites outside this
+// file (`Math.abs(x) > WORLD_MAX_X - n`, `WORLD_MAX_X * 2`, `(x + WORLD_MAX_X) /
+// (WORLD_MAX_X * 2)`, and `p.pos.x / WORLD_MAX_X` in obs.ts). The grid therefore
+// stays SYMMETRIC about x = 0: a column added east must have its mirror west, or
+// every one of those sites has to be rewritten first.
+// `tests/world_phase2_bands.test.ts` fails if the two ever stop mirroring.
 export const WORLD_MIN_X = Math.min(...ZONES.map((zn) => zn.xMin ?? STRIP_MIN_X));
 export const WORLD_MAX_X = Math.max(...ZONES.map((zn) => zn.xMax ?? STRIP_MAX_X));
-export const WORLD_MIN_Z = ZONES[0].zMin;
-export const WORLD_MAX_Z = ZONES[ZONES.length - 1].zMax;
+// Derived over ALL zone rects, not the array ends: with columns appended last,
+// ZONES[ZONES.length - 1] is no longer the northmost band.
+export const WORLD_MIN_Z = Math.min(...ZONES.map((zn) => zn.zMin));
+export const WORLD_MAX_Z = Math.max(...ZONES.map((zn) => zn.zMax));
+
+// The original full-width strip column and the columns beside it. Sequential
+// band cascades (the terrain shape blend, the map, the sky) walk STRIP_ZONES in
+// stack order exactly as they always did; COLUMN_ZONES blend in sideways
+// through `columnBlendAt`. With no columns registered both are inert and the
+// world is byte-identical to the strip era.
+export const STRIP_ZONES: readonly ZoneDef[] = ZONES.filter(
+  (zn) => (zn.xMin ?? STRIP_MIN_X) <= STRIP_MIN_X && (zn.xMax ?? STRIP_MAX_X) >= STRIP_MAX_X,
+);
+export const COLUMN_ZONES: readonly ZoneDef[] = ZONES.filter(
+  (zn) => (zn.xMin ?? STRIP_MIN_X) > STRIP_MIN_X || (zn.xMax ?? STRIP_MAX_X) < STRIP_MAX_X,
+);
 
 export const PLAYER_START = { x: 2, z: -2 };
 
@@ -378,6 +425,80 @@ export function zoneAt(x: number, z: number): ZoneDef {
   }
   return fallback ?? ZONES.reduce((a, b) => (b.zMax > a.zMax ? b : a));
 }
+
+// Strict rect containment: the zone whose rectangle literally contains (x, z),
+// or null when the point lies outside every authored zone. Unlike `zoneAt`,
+// which clamps through a southmost-band fallback so an overworld query always
+// yields a zone, this reports "nowhere" honestly. Callers that must tell the
+// open world from an instanced interior (the far-east dungeon/arena/delve/rift
+// plane, which `zoneAt` would report as a real zone) or from the void a grid
+// row leaves beside a column want this one.
+export function zoneContaining(x: number, z: number): ZoneDef | null {
+  for (const zone of ZONES) {
+    if (z < zone.zMin || z >= zone.zMax) continue;
+    const x0 = zone.xMin ?? STRIP_MIN_X;
+    const x1 = zone.xMax ?? STRIP_MAX_X;
+    if (x >= x0 && x < x1) return zone;
+  }
+  return null;
+}
+
+function smoothstep01(raw: number): number {
+  const t = Math.max(0, Math.min(1, raw));
+  return t * t * (3 - 2 * t);
+}
+
+// Blend weight of a COLUMN zone at a position: 1 deep inside its rect, easing
+// to 0 across the same -30/+35yd window the north-south band cascade uses, so a
+// column's shape and palette arrive sideways at exactly the rate a band's
+// arrives northward. Returns exactly +0 (not a denormal) outside the window, so
+// a caller that skips on `t <= 0` leaves the strip's arithmetic bit-identical.
+export function columnBlendAt(zone: ZoneDef, x: number, z: number): number {
+  const x0 = zone.xMin ?? STRIP_MIN_X;
+  const x1 = zone.xMax ?? STRIP_MAX_X;
+  if (z <= zone.zMin - 30 || z >= zone.zMax + 35) return 0;
+  const east = x0 >= STRIP_MAX_X;
+  if (east ? x <= x0 - 30 : x >= x1 + 30) return 0;
+  const xT = east
+    ? smoothstep01((x - (x0 - 30)) / 65) // an east column, entered moving +x
+    : 1 - smoothstep01((x - (x1 - 35)) / 65); // a west column, entered moving -x
+  const zT =
+    smoothstep01((z - (zone.zMin - 30)) / 65) * (1 - smoothstep01((z - (zone.zMax - 30)) / 65));
+  return xT * zT;
+}
+
+// How much of a column zone's ROW a given z is inside: 1 across the band's
+// interior, easing to exactly 0 across the same -30/+35yd window, with no x
+// term. This is what widens the world rim (world.ts) only in the rows a column
+// actually occupies, so the rows without one keep the strip's rim exactly.
+export function columnRowWeight(zone: ZoneDef, z: number): number {
+  if (z <= zone.zMin - 30 || z >= zone.zMax + 35) return 0;
+  return (
+    smoothstep01((z - (zone.zMin - 30)) / 65) * (1 - smoothstep01((z - (zone.zMax - 30)) / 65))
+  );
+}
+
+// Half-width of the world at a given z, eased in z so the rim never steps.
+// The grid is symmetric about x = 0 (see WORLD_MAX_X), so one half-width says
+// everything. Returns exactly STRIP_MAX_X in every row no column touches.
+export function worldHalfWidthAt(z: number): number {
+  let half = STRIP_MAX_X;
+  for (let i = 0; i < COLUMN_ZONES.length; i++) {
+    const col = COLUMN_ZONES[i];
+    const t = columnRowWeight(col, z);
+    if (t <= 0) continue;
+    const colHalf = COLUMN_HALF_WIDTHS[i];
+    if (colHalf <= half) continue;
+    half = half + (colHalf - half) * t;
+  }
+  return half;
+}
+
+// Precomputed |x| reach of each column, so the per-sample rim lookup does no
+// property loads on a ZoneDef (this runs once per terrainHeight call).
+const COLUMN_HALF_WIDTHS: readonly number[] = COLUMN_ZONES.map((col) =>
+  Math.max(Math.abs(col.xMin ?? STRIP_MIN_X), Math.abs(col.xMax ?? STRIP_MAX_X)),
+);
 
 export function zoneWelcomeText(
   zone: ZoneDef,
@@ -561,11 +682,15 @@ export function isLegacyInstancePos(x: number): boolean {
   return !insideDungeonColumn(x);
 }
 
-/** The hub settlement a character of this level belongs to. Zones are authored
- *  in ascending level order, so the last zone whose band has opened is theirs. */
+/** The hub settlement a character of this level belongs to. STRIP zones are the
+ *  main progression and are authored in ascending level order, so the last one
+ *  whose band has opened is theirs. Column zones are deliberately excluded: they
+ *  are side content authored beside a band rather than after it, so including
+ *  them would let a low-level column zone shadow the level-20 hub for a capped
+ *  character being ejected out of a stale instance position. */
 export function zoneForLevel(level: number): ZoneDef {
-  let best = ZONES[0];
-  for (const zone of ZONES) {
+  let best = STRIP_ZONES[0];
+  for (const zone of STRIP_ZONES) {
     if (level >= zone.levelRange[0]) best = zone;
   }
   return best;

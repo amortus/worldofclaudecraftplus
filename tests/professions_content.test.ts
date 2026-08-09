@@ -33,7 +33,11 @@ import {
   gatherSkillGain,
 } from '../src/sim/professions';
 
+// The strip's four bands, one per tier rung: these carry the whole progression.
 const ZONE_IDS = ['eastbrook_vale', 'mirefen_marsh', 'thornpeak_heights', 'ashen_wastes'];
+// ...plus the column zones, which are side content at the rung of the band they
+// border rather than a fifth rung of their own.
+const ALL_ZONE_IDS = [...ZONE_IDS, 'alderfen_shallows', 'grimhold_crags'];
 
 describe('professions', () => {
   it('registers exactly the four gathering professions with upstream’s caps', () => {
@@ -57,9 +61,10 @@ describe('professions', () => {
 
 describe('zone tiers', () => {
   it('assigns one tier per real zone, matching the world’s zone ids', () => {
-    expect(Object.keys(ZONE_GATHER_TIER).sort()).toEqual([...ZONE_IDS].sort());
-    expect(ZONES.map((z) => z.id).sort()).toEqual([...ZONE_IDS].sort());
+    expect(Object.keys(ZONE_GATHER_TIER).sort()).toEqual([...ALL_ZONE_IDS].sort());
+    expect(ZONES.map((z) => z.id).sort()).toEqual([...ALL_ZONE_IDS].sort());
     expect(ZONE_IDS.map(zoneGatherTier)).toEqual([1, 2, 3, 4]);
+    expect(['alderfen_shallows', 'grimhold_crags'].map(zoneGatherTier)).toEqual([1, 2]);
   });
 
   it('falls back to the starter tier for an unmapped zone', () => {

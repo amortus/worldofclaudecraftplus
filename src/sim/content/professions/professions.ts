@@ -63,6 +63,11 @@ export const ZONE_GATHER_TIER: Record<string, number> = {
   mirefen_marsh: 2, // levels 6-13
   thornpeak_heights: 3, // levels 13-20
   ashen_wastes: 4, // level 20 endgame
+  // The column zones beside the vale. A column is side content at the level of
+  // the band it borders, so it takes an existing rung rather than adding a
+  // fifth: the four rungs are what make the mastery curve land on the cap.
+  alderfen_shallows: 1, // levels 4-8, east of the vale
+  grimhold_crags: 2, // levels 6-10, west of the vale
 };
 
 /** The gather tier of a zone. An unmapped zone (a dungeon interior, the arena)

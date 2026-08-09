@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CAMPS, CLASSES, ABILITIES, DUNGEON_LIST, GROUND_OBJECTS, ITEMS, MOBS, NPCS,
-  QUESTS, QUEST_ORDER, REWARD_ARCHETYPE, ROADS, ZONES,
+  QUESTS, QUEST_ORDER, REWARD_ARCHETYPE, ROADS, STRIP_ZONES, ZONES,
   WORLD_MAX_X, WORLD_MAX_Z, WORLD_MIN_X, WORLD_MIN_Z,
 } from '../src/sim/data';
 import { ALL_CLASSES, XP_TABLE, MAX_LEVEL, ZoneDef } from '../src/sim/types';
@@ -101,8 +101,11 @@ describe('content referential integrity', () => {
   });
 
   it('zones tile the world strip and content sits inside its zone band', () => {
-    for (let i = 0; i + 1 < ZONES.length; i++) {
-      expect(ZONES[i].zMax).toBe(ZONES[i + 1].zMin);
+    // The STRIP is the stack of bands: it must still tile z contiguously. The
+    // column zones share a band rather than adding one, so they are not part of
+    // this chain (see tests/world_topology.test.ts for the grid's own rules).
+    for (let i = 0; i + 1 < STRIP_ZONES.length; i++) {
+      expect(STRIP_ZONES[i].zMax).toBe(STRIP_ZONES[i + 1].zMin);
     }
     const problems: string[] = [];
     const inWorld = (x: number, z: number) =>

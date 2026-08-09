@@ -137,9 +137,14 @@ describe('collision & terrain', () => {
   });
 
   it('steep rims are walls, not ramps', () => {
+    // Probed in the Mirefen band, NOT the vale's: the vale's east and west
+    // borders are open column borders now (Alderfen Shallows / Grimhold Crags),
+    // so walking east from (150, 0) is supposed to reach another zone. Every
+    // row without a column still ends at the strip rim, which is the property
+    // under test (see src/sim/data.ts worldHalfWidthAt).
     const sim = makeSim();
     const p = sim.player;
-    teleportTo(sim, 150, 0);
+    teleportTo(sim, 150, 300);
     p.facing = Math.PI / 2; // +x, toward the world rim
     sim.moveInput.forward = true;
     for (let i = 0; i < 400; i++) sim.tick();

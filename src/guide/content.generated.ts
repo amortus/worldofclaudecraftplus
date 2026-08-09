@@ -1289,6 +1289,42 @@ export const GUIDE_ZONES: GuideZoneInfo[] = [
       "The Pale Reach"
     ],
     "welcome": "The Ashen Wastes stretch out, grey and lifeless. Something vast drifts low over the dead ground."
+  },
+  {
+    "id": "alderfen_shallows",
+    "name": "Alderfen Shallows",
+    "min": 4,
+    "max": 8,
+    "biome": "marsh",
+    "hub": "Reedwatch",
+    "pois": [
+      "Reedwatch",
+      "The Alderfen Crossing",
+      "Otter Hollow",
+      "The Rotting Weir",
+      "Alderfen Water",
+      "Sedgewatch Ruin",
+      "The Drowned Mill"
+    ],
+    "welcome": "East of the vale the ground gives way to standing water. Reedwatch holds the crossing."
+  },
+  {
+    "id": "grimhold_crags",
+    "name": "Grimhold Crags",
+    "min": 6,
+    "max": 10,
+    "biome": "peaks",
+    "hub": "Coldhearth",
+    "pois": [
+      "Coldhearth",
+      "The Grimhold Stair",
+      "Scree Fall",
+      "The Cragmaw Dens",
+      "Coldhearth Tarn",
+      "Ironvein Cut",
+      "The Broken Watchtower"
+    ],
+    "welcome": "West of the vale the Grimhold Crags climb out of the treeline. Coldhearth burns against them."
   }
 ];
 

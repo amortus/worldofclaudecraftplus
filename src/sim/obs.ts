@@ -92,6 +92,12 @@ export function encodeObs(sim: Sim): number[] {
   obs.push(p.resource / Math.max(1, p.maxResource));
   obs.push(p.level / MAX_LEVEL);
   obs.push(p.level >= MAX_LEVEL ? 1 : sim.xp / xpForLevel(p.level));
+  // x is normalized by the world's HALF WIDTH, which the grid keeps symmetric
+  // about x = 0 (data.ts WORLD_MAX_X). Adding a column ring therefore RESCALES
+  // this feature rather than adding one: WORLD_MAX_X went 180 -> 540 with the
+  // first east/west columns, so the same world x now reads a third as large.
+  // The observation SIZE is unchanged, but a policy trained before the widening
+  // sees a different input distribution here and must be retrained or refit.
   obs.push(clamp(p.pos.x / WORLD_MAX_X, -1, 1));
   obs.push(clamp((p.pos.z - (WORLD_MIN_Z + WORLD_MAX_Z) / 2) / ((WORLD_MAX_Z - WORLD_MIN_Z) / 2), -1, 1));
   obs.push(Math.sin(p.facing));

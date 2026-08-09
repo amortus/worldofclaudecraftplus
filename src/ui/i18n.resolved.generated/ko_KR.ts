@@ -6940,6 +6940,36 @@ export const ko_KR: EnTranslations = {
       "cx_vorothne": {
         "name": "대리치 보로스네"
       },
+      "sedge_skitterer": {
+        "name": "Sedge Skitterer"
+      },
+      "mudfin_snapper": {
+        "name": "Mudfin Snapper"
+      },
+      "reedwatch_poacher": {
+        "name": "Reedwatch Poacher"
+      },
+      "weir_husk": {
+        "name": "Weir Husk"
+      },
+      "the_drowned_miller": {
+        "name": "The Drowned Miller"
+      },
+      "crag_lurker": {
+        "name": "Crag Lurker"
+      },
+      "grimhold_scavenger": {
+        "name": "Grimhold Scavenger"
+      },
+      "scree_binder": {
+        "name": "Scree Binder"
+      },
+      "coldhearth_marauder": {
+        "name": "Coldhearth Marauder"
+      },
+      "old_grimfang": {
+        "name": "Old Grimfang"
+      },
       "rift_frost_revenant": {
         "name": "Frostbound Revenant"
       },
@@ -8937,6 +8967,60 @@ export const ko_KR: EnTranslations = {
           },
           "5": {
             "label": "창백한 영역"
+          }
+        }
+      },
+      "alderfen_shallows": {
+        "name": "Alderfen Shallows",
+        "welcome": "East of the vale the ground gives way to standing water. Reedwatch holds the crossing.",
+        "pois": {
+          "0": {
+            "label": "Reedwatch"
+          },
+          "1": {
+            "label": "The Alderfen Crossing"
+          },
+          "2": {
+            "label": "Otter Hollow"
+          },
+          "3": {
+            "label": "The Rotting Weir"
+          },
+          "4": {
+            "label": "Alderfen Water"
+          },
+          "5": {
+            "label": "Sedgewatch Ruin"
+          },
+          "6": {
+            "label": "The Drowned Mill"
+          }
+        }
+      },
+      "grimhold_crags": {
+        "name": "Grimhold Crags",
+        "welcome": "West of the vale the Grimhold Crags climb out of the treeline. Coldhearth burns against them.",
+        "pois": {
+          "0": {
+            "label": "Coldhearth"
+          },
+          "1": {
+            "label": "The Grimhold Stair"
+          },
+          "2": {
+            "label": "Scree Fall"
+          },
+          "3": {
+            "label": "The Cragmaw Dens"
+          },
+          "4": {
+            "label": "Coldhearth Tarn"
+          },
+          "5": {
+            "label": "Ironvein Cut"
+          },
+          "6": {
+            "label": "The Broken Watchtower"
           }
         }
       }
