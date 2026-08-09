@@ -97,6 +97,10 @@ capacitor-cordova-android-plugins
 # Copied web assets
 app/src/main/assets/public
 
+# Play Asset Delivery pack payload, staged from dist/media by
+# scripts/android_asset_pack.mjs after every `npx cap sync android`
+mediapack/src/main/assets
+
 # Generated Config files
 app/src/main/assets/capacitor.config.json
 app/src/main/assets/capacitor.plugins.json

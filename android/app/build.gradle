@@ -19,6 +19,11 @@ if (keystorePropertiesFile.exists()) {
 android {
     namespace = "com.worldofclaudecraft"
     compileSdk = rootProject.ext.compileSdkVersion
+    // The hashed media set (dist/media) ships in an install-time Play Asset
+    // Delivery pack instead of the base module, so it does not count against the
+    // base module download limit. scripts/android_asset_pack.mjs stages the files
+    // into ../mediapack after every `npx cap sync android`.
+    assetPacks = [":mediapack"]
     buildFeatures {
         buildConfig true
     }
@@ -51,6 +56,36 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+}
+
+// `npx cap sync android` wipes and re-copies dist/ into
+// app/src/main/assets/public, which puts the hashed media set back in the BASE
+// module. scripts/android_asset_pack.mjs (npm run android:pack) moves it into
+// the mediapack asset pack afterwards. Forgetting that step is invisible in a
+// successful build and would silently push about 55 MiB of compressed media
+// back into the base module, so fail the build instead.
+def checkMediaAssetPackStaged = tasks.register("checkMediaAssetPackStaged") {
+    def strayMedia = file("src/main/assets/public/media")
+    def packedMedia = file("../mediapack/src/main/assets/public/media")
+    doLast {
+        if (strayMedia.exists()) {
+            throw new GradleException(
+                "The hashed media set is still in the base module at " +
+                "android/app/src/main/assets/public/media. Run `npm run android:pack` " +
+                "after `npx cap sync android` so it ships in the mediapack asset pack."
+            )
+        }
+        if (!packedMedia.exists() || (packedMedia.listFiles()?.length ?: 0) == 0) {
+            throw new GradleException(
+                "The mediapack asset pack is empty. Run the native build, " +
+                "`npx cap sync android`, then `npm run android:pack` before building."
+            )
+        }
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn(checkMediaAssetPackStaged)
 }
 
 repositories {

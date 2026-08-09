@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { TerrainResidencyRadii } from './terrain_residency';
 
 // Quality tiers: every tier-dependent knob keys off this module instead of
 // scattered LOW_GFX ternaries.
@@ -101,6 +102,8 @@ export interface GfxSettings {
   readonly hudThrottled: boolean;
   /** Phone-class device (touch + coarse/narrow): the mobile render profile switches. */
   readonly mobileProfile: boolean;
+  /** How much terrain stays meshed around the camera (see TERRAIN_RESIDENCY_BY_TIER). */
+  readonly terrainResidency: TerrainResidencyRadii;
 }
 
 export interface GfxRuntimeBudget {
@@ -243,6 +246,44 @@ export const GFX_BUCKET_BANDS: Record<GfxTier, GfxBucketBands> = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// Terrain chunk residency (see render/terrain_residency.ts for the policy)
+// ---------------------------------------------------------------------------
+
+/**
+ * The lowest `keep` any tier may use, in yards.
+ *
+ * This is a CORRECTNESS floor, not taste. The renderer draws terrain out to the
+ * current fog far plane and hides nothing before it, so terrain that stops short
+ * of that plane is a hole in the ground, not a saving. The widest outdoor plane
+ * we ever set is the peaks preset at 560 (renderer.ts BIOME_FOG), and the
+ * constructor's initial fog opens at 520 before the first fog-state change, so
+ * 560 covers every outdoor case. Residency below this would reintroduce exactly
+ * the fog wall docs/design/parity-backlog.md tells us not to import from upstream.
+ */
+export const TERRAIN_RESIDENCY_MIN_KEEP = 560;
+
+/**
+ * Minimum gap between `keep` and `release`, in yards: two 60 yd chunk widths.
+ * A player has to cross the whole band to make a chunk toggle, so walking the
+ * boundary cannot thrash one chunk on and off frame after frame.
+ */
+export const TERRAIN_RESIDENCY_MIN_HYSTERESIS = 120;
+
+/**
+ * Per-tier terrain residency. Every tier sits at or above the floor above, so
+ * nothing visible is ever missing; what differs is how much INVISIBLE terrain a
+ * device is willing to hold in memory beyond the fog. A phone (low, or medium on
+ * a recognized flagship) keeps roughly half the area ultra does, and pays roughly
+ * half the geometry and boot cost for it.
+ */
+export const TERRAIN_RESIDENCY_BY_TIER: Record<GfxTier, TerrainResidencyRadii> = {
+  low: { keep: 580, release: 700 },
+  medium: { keep: 620, release: 740 },
+  high: { keep: 700, release: 820 },
+  ultra: { keep: 820, release: 940 },
+};
+
 function bucketBaselines(bands: GfxBucketBands): GfxBucketLevels {
   return {
     resolution: bands.resolution.baseline,
@@ -356,6 +397,7 @@ function settingsFor(
     nameplateMax: mobileHints ? 8 : 0,
     hudThrottled: mobileHints,
     mobileProfile: mobileHints,
+    terrainResidency: TERRAIN_RESIDENCY_BY_TIER[tier],
   };
   if (hints?.graphicsPreset === PRESET_ADVANCED) {
     if ((hints.terrainDetail ?? 1) < 0.5) settings = { ...settings, terrainSplat: false };

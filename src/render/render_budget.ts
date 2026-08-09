@@ -114,6 +114,31 @@ const CAPS_BY_TIER: Record<GfxTier, RenderBudgetCaps> = {
   },
 };
 
+/**
+ * Terrain chunk builds allowed in one frame, per tier.
+ *
+ * Meshing a chunk means a few thousand `terrainHeight` samples plus the splat and
+ * palette blends on top of them, so a handful in one frame IS the hitch that
+ * distance-based residency exists to avoid: the point of evicting far terrain is
+ * lost if walking back toward it stalls the frame. These sit alongside CAPS_BY_TIER
+ * for the same reason the draw caps do, so every frame-level budget in the renderer
+ * is declared in one file and keyed off the same tier ladder.
+ */
+export const TERRAIN_BUILD_CAPS_BY_TIER: Record<GfxTier, number> = {
+  low: 1,
+  medium: 2,
+  high: 3,
+  ultra: 4,
+};
+
+/**
+ * Never returns 0: residency has to converge, and a permanently zero budget would
+ * leave a permanent hole in the ground rather than a temporary one.
+ */
+export function terrainBuildBudget(tier: GfxTier): number {
+  return Math.max(1, TERRAIN_BUILD_CAPS_BY_TIER[tier]);
+}
+
 function round2(v: number): number {
   return Math.round(v * 100) / 100;
 }

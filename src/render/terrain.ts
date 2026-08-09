@@ -9,7 +9,14 @@ import { registerPreload } from './assets/preload';
 import { GFX } from './gfx';
 import { runIdleQueue } from './idle_queue';
 import { impactCraterTerrainBlend } from './impact_terrain';
+import { terrainBuildBudget } from './render_budget';
 import { freezeStaticMatrices } from './static_matrices';
+import {
+  emptyTerrainResidencyPlan,
+  planTerrainResidency,
+  type TerrainChunkFootprint,
+  type TerrainResidencyPlan,
+} from './terrain_residency';
 import { groundDetailTexture, groundSplatMaps, macroNoiseTexture } from './textures';
 
 // Chunked terrain across the whole 360x1080 zone strip.
@@ -18,6 +25,11 @@ import { groundDetailTexture, groundSplatMaps, macroNoiseTexture } from './textu
 //   works (the old single-plane-per-zone terrain was always fully submitted).
 // - LOD by distance from the nearest hub at build time: settlements (where
 //   the camera lingers) get dense vertices, the wilderness gets coarse ones.
+// - Distance-based RESIDENCY (see terrain_residency.ts): only chunks near the
+//   camera are meshed, far ones release their geometry, and approaching one
+//   rebuilds it under a per-frame budget. A rebuilt chunk is byte-identical to
+//   the one it replaced because the geometry is a pure function of
+//   (x0, z0, size, spacing, seed) and the seed never changes.
 // - 0.3u skirts hang from every chunk edge to hide LOD cracks.
 // - High tier: MeshStandardMaterial + splat shading (grass/dirt/rock/sand
 //   weights precomputed per vertex from slope/height/roadDistance into a vec4
@@ -587,23 +599,49 @@ function buildLambertMaterial(): THREE.MeshLambertMaterial {
 // Entry point
 // ---------------------------------------------------------------------------
 
+export interface TerrainResidencyStats {
+  /** chunks currently meshed and in `group` */
+  resident: number;
+  /** chunks the residency policy wants meshed at the last camera position */
+  desired: number;
+  /** chunk slots in the whole world, i.e. what the pre-residency build kept resident */
+  total: number;
+  /** wanted-but-not-yet-built chunks still waiting on the per-frame build budget */
+  pending: number;
+  /** chunk geometries released since this view was built (disposal evidence) */
+  released: number;
+  /** chunk geometries meshed since this view was built (initial builds included) */
+  built: number;
+}
+
 export interface TerrainView {
   group: THREE.Group;
-  /** hides chunks that sit entirely past the fog far plane */
-  update(camX: number, camZ: number, fogFar: number): void;
   /**
-   * Resolves once every streamed-in far chunk (see buildTerrain) has been added
-   * to `group`. Only the near ring around the world's zone hubs is built
-   * synchronously; everything else streams in across idle slots so first paint
-   * isn't gated on the whole map's geometry. Most callers don't need this:
-   * `chunks` is a live array shared with update(), so the fog cull already sees
-   * streamed chunks as they arrive. Use it only when a caller needs the FULL map
-   * built before doing something else (e.g. a screenshot tour).
+   * Per-frame terrain maintenance, in two passes:
+   *  1. RESIDENCY: meshes chunks that came within the tier's keep radius (at most
+   *     `terrainBuildBudget(tier)` of them, nearest first) and releases the
+   *     geometry of chunks that passed the release radius. Ignores `fogFar` on
+   *     purpose, so the loading screen's force-everything-visible upload pass
+   *     (`update(x, z, 1e9)`) cannot drag the whole world back into memory.
+   *  2. VISIBILITY: hides resident chunks that sit entirely past the fog far
+   *     plane, since those are pure overdraw.
+   */
+  update(camX: number, camZ: number, fogFar: number): void;
+  /** Live residency counters, for tests and the perf harness. */
+  residency(): TerrainResidencyStats;
+  /**
+   * Resolves once the initial resident set has finished streaming in. Only the
+   * near ring around the world's zone hubs is built synchronously; the rest of
+   * the resident set streams in across idle slots so first paint isn't gated on
+   * geometry. Most callers don't need this: the chunk table is live, so the fog
+   * cull already sees streamed chunks as they arrive. Use it only when a caller
+   * needs the resident map built before doing something else (e.g. a screenshot
+   * tour).
    *
    * This is safe because nothing about gameplay reads this mesh: ground height,
    * collision, pathing and player motion all sample the pure math in
-   * `src/sim/world.ts`. A not-yet-streamed chunk is a visual gap, never a
-   * physics gap.
+   * `src/sim/world.ts`. A not-yet-streamed (or evicted) chunk is a visual gap,
+   * never a physics gap.
    */
   streamingDone: Promise<void>;
   /** Stops any in-flight far-chunk streaming. Call before discarding this view. */
@@ -661,6 +699,13 @@ export function orderFarChunkJobs(
   return ordered.sort((a, b) => distSq(a) - distSq(b));
 }
 
+/** One chunk slot: its immutable build recipe, its footprint, and its mesh when resident. */
+interface ChunkSlot {
+  job: ChunkJob;
+  footprint: TerrainChunkFootprint;
+  mesh: THREE.Mesh | null;
+}
+
 export function buildTerrain(seed: number, priorityPoint?: { x: number; z: number }): TerrainView {
   const lowGfx = !GFX.terrainSplat || !hasTerrainSplatAssets();
   const mat = lowGfx ? buildLambertMaterial() : buildSplatMaterial(seed);
@@ -670,7 +715,6 @@ export function buildTerrain(seed: number, priorityPoint?: { x: number; z: numbe
   const worldDepth = WORLD_MAX_Z - WORLD_MIN_Z;
   const chunksX = Math.ceil((WORLD_MAX_X * 2) / CHUNK_SIZE);
   const chunksZ = Math.ceil(worldDepth / CHUNK_SIZE);
-  const chunks: { mesh: THREE.Mesh; x: number; z: number; half: number }[] = [];
 
   const bandIndexAt = (cx: number, cz: number): number => {
     const centerX = -WORLD_MAX_X + cx * CHUNK_SIZE + CHUNK_SIZE / 2;
@@ -681,21 +725,6 @@ export function buildTerrain(seed: number, priorityPoint?: { x: number; z: numbe
     }
     const idx = bands.findIndex((b) => hubDist <= b.maxHubDist);
     return idx === -1 ? bands.length - 1 : idx;
-  };
-
-  const addChunk = (x0: number, z0: number, size: number, spacing: number): void => {
-    const geo = buildChunkGeometry(x0, z0, size, spacing, seed, !lowGfx);
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.receiveShadow = true;
-    group.add(mesh);
-    // A chunk's transform never changes after this point (its shape lives in the
-    // geometry, not the mesh matrix), so freeze it now: otherwise every chunk
-    // recomposes its world matrix every frame for the rest of the session.
-    freezeStaticMatrices(mesh);
-    chunks.push({
-      mesh, x: x0 + size / 2, z: z0 + size / 2,
-      half: size / 2,
-    });
   };
 
   // Collect every chunk to build as a job first, instead of building inline, so
@@ -742,14 +771,80 @@ export function buildTerrain(seed: number, priorityPoint?: { x: number; z: numbe
     }
   }
 
-  for (const job of jobs) {
-    if (job.near) addChunk(job.x0, job.z0, job.size, job.spacing);
+  // Every chunk in the world gets a SLOT; only the ones the residency policy
+  // wants get a mesh. The slot table is the full map (cheap: a few hundred plain
+  // objects), the meshes are the expensive part and come and go.
+  const slots: ChunkSlot[] = jobs.map((job) => ({
+    job,
+    footprint: {
+      centerX: job.x0 + job.size / 2,
+      centerZ: job.z0 + job.size / 2,
+      half: job.size / 2,
+    },
+    mesh: null,
+  }));
+  const footprints = slots.map((slot) => slot.footprint);
+  const resident: boolean[] = slots.map(() => false);
+  const radii = GFX.terrainResidency;
+  const buildBudget = terrainBuildBudget(GFX.tier);
+  const plan: TerrainResidencyPlan = emptyTerrainResidencyPlan();
+  let builtCount = 0;
+  let releasedCount = 0;
+
+  const buildSlot = (index: number): void => {
+    const slot = slots[index];
+    if (slot.mesh) return;
+    const { x0, z0, size, spacing } = slot.job;
+    const geo = buildChunkGeometry(x0, z0, size, spacing, seed, !lowGfx);
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.name = `terrain:${index}`;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+    // A chunk's transform never changes while it is resident (its shape lives in
+    // the geometry, not the mesh matrix), so freeze it now: otherwise every chunk
+    // recomposes its world matrix every frame for the rest of the session. A
+    // rebuilt chunk is a fresh mesh, so this has to run on every build, not once.
+    freezeStaticMatrices(mesh);
+    slot.mesh = mesh;
+    resident[index] = true;
+    builtCount++;
+  };
+
+  const releaseSlot = (index: number): void => {
+    const slot = slots[index];
+    const mesh = slot.mesh;
+    if (!mesh) return;
+    group.remove(mesh);
+    // The one GPU resource a chunk owns is its geometry: the material (and its
+    // baked normal map) is shared by every chunk of this view and outlives any
+    // single eviction, so disposing it here would blank the terrain. Without this
+    // dispose the vertex buffers stay live in the WebGLRenderer's memory pool and
+    // residency would just trade boot cost for a leak.
+    mesh.geometry.dispose();
+    slot.mesh = null;
+    resident[index] = false;
+    releasedCount++;
+  };
+
+  // The initial resident set is the disc around the entry point, so boot only
+  // pays for terrain the player can see from where they log in, not for the map.
+  const origin = priorityPoint ?? { x: 0, z: 0 };
+  planTerrainResidency(footprints, resident, origin.x, origin.z, radii, slots.length, plan);
+  const initial = new Set(plan.build);
+  const jobIndex = new Map<ChunkJob, number>();
+  jobs.forEach((job, i) => jobIndex.set(job, i));
+
+  for (const index of initial) {
+    if (slots[index].job.near) buildSlot(index);
   }
-  const farJobs = orderFarChunkJobs(jobs.filter((job) => !job.near), priorityPoint);
+  const farJobs = orderFarChunkJobs(
+    jobs.filter((job) => !job.near && initial.has(jobIndex.get(job) as number)),
+    priorityPoint,
+  );
   let cancelled = false;
   const streamingDone = runIdleQueue(
     farJobs,
-    (job) => addChunk(job.x0, job.z0, job.size, job.spacing),
+    (job) => buildSlot(jobIndex.get(job) as number),
     { batchSize: STREAM_BATCH_SIZE, timeoutMs: STREAM_TIMEOUT_MS, cancelled: () => cancelled },
   );
 
@@ -759,12 +854,36 @@ export function buildTerrain(seed: number, priorityPoint?: { x: number; z: numbe
     cancelStreaming(): void {
       cancelled = true;
     },
+    residency(): TerrainResidencyStats {
+      let count = 0;
+      for (const slot of slots) if (slot.mesh) count++;
+      return {
+        resident: count,
+        desired: plan.desiredResident,
+        total: slots.length,
+        pending: plan.pendingBuilds,
+        released: releasedCount,
+        built: builtCount,
+      };
+    },
     update(camX: number, camZ: number, fogFar: number): void {
-      // fully-fogged chunks are pure overdraw; drop them before the frustum
-      for (const chunk of chunks) {
-        const dx = Math.max(Math.abs(camX - chunk.x) - chunk.half, 0);
-        const dz = Math.max(Math.abs(camZ - chunk.z) - chunk.half, 0);
-        chunk.mesh.visible = Math.hypot(dx, dz) < fogFar;
+      // 1. residency. Deliberately independent of fogFar: the loading screen's
+      // upload pass calls update(x, z, 1e9) to force every resident chunk visible
+      // once, and that must not pull the whole world back into memory.
+      planTerrainResidency(footprints, resident, camX, camZ, radii, buildBudget, plan);
+      for (let i = 0; i < plan.release.length; i++) releaseSlot(plan.release[i]);
+      for (let i = 0; i < plan.build.length; i++) buildSlot(plan.build[i]);
+
+      // 2. visibility: fully-fogged chunks are pure overdraw; drop them before
+      // the frustum. Squared compare, same result as the old hypot < fogFar.
+      const fogFarSq = fogFar * fogFar;
+      for (let i = 0; i < slots.length; i++) {
+        const mesh = slots[i].mesh;
+        if (!mesh) continue;
+        const chunk = footprints[i];
+        const dx = Math.max(Math.abs(camX - chunk.centerX) - chunk.half, 0);
+        const dz = Math.max(Math.abs(camZ - chunk.centerZ) - chunk.half, 0);
+        mesh.visible = dx * dx + dz * dz < fogFarSq;
       }
     },
   };

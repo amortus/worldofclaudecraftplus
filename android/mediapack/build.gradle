@@ -1,0 +1,26 @@
+// Play Asset Delivery pack that carries the content-hashed media set
+// (models, textures, HDRIs, vfx sheets) emitted by
+// scripts/build_media_manifest.mjs into dist/media.
+//
+// Delivery is install-time on purpose. Install-time packs are served as split
+// APKs and are merged into the app's AssetManager namespace, so the files stay
+// reachable through context.getAssets() exactly like base-module assets. The
+// staging script puts them under src/main/assets/public/media, which is the
+// same asset path Capacitor's WebViewLocalServer already resolves for
+// http://localhost/media/... (Bridge.DEFAULT_WEB_ASSET_DIR is "public").
+// That is what lets the pack ship with no runtime bridge, no download step and
+// no change to the web build.
+//
+// Do NOT switch deliveryType to fast-follow or on-demand without also adding a
+// native bridge: those modes are expanded to app storage and are only reachable
+// through AssetPackManager.getPackLocation(), never through getAssets().
+plugins {
+    id 'com.android.asset-pack'
+}
+
+assetPack {
+    packName = "mediapack"
+    dynamicDelivery {
+        deliveryType = "install-time"
+    }
+}
