@@ -12,46 +12,88 @@ Sizes are measured source bytes in upstream's tree (excluding their tests), not 
 |---|---|---|
 | 1 | Per-item instance identity; gathering (mining, logging, herbalism, fishing + bite minigame); `/unstuck`; 54 deeds; Skills and Deeds panels | AAB 1.8.0 |
 | 2 | Crafting (4 crafts, 32 recipes) and enchanting (35 enchants, replace, disenchant); crafting and enchanting windows | AAB 1.9.0 |
-| 3 | Procedural rifts: generator, content, instance wiring, portals, loot, floor tracker | in progress |
+| 3 | Procedural rifts: generator, content, instance wiring, portals, loot, floor tracker | AAB 1.10.0 |
+| 4 | Dungeon finder (queue, ready check); mounts built from scratch; traversal physics core | AAB 1.11.0 |
+| 5 | The Cinderforge five-man, 18 quests, 4 questgivers | AAB 1.11.0 |
 
 Also landed outside the waves: the build no longer ships every media asset twice
 (72.7 MiB of exact duplication), which took the signed AAB from 199.78 to 144.80 MiB.
 
 ## Wave 4, not started
 
-### Dungeon finder / LFG (~114 KB upstream)
-A matchmaking queue for our five-mans. Four obstacles were identified in an earlier
-session and still stand:
-- `INSTANCE_SLOT_COUNT` caps concurrent instances at 6.
-- Group teleport goes through an authority path that a queue pop would need to reuse
-  rather than duplicate.
-- The channel name `lfg` is already taken by a chat channel.
-- `DungeonDef` carries no difficulty or level fields, which a queue needs to match on.
-The arena's `matchmakeTeamFormat` is roughly 70 percent reusable and is the right
-starting point rather than a fresh queue.
+### Dungeon finder / LFG (SHIPPED)
+Built as a pure matchmaking core in `src/sim/lfg/`. All four obstacles were resolved
+rather than worked around: instance slots are reserved per open proposal, group formation
+returns no coordinates so the host reuses its one teleport path, the runtime id is
+`dungeonFinder` because `lfg` is a chat channel, and the level band is DERIVED from each
+dungeon's spawn table rather than authored on `DungeonDef`. Composition-preferred, not
+strict: only 3 of 9 classes tank and 4 heal, so a strict queue never pops here.
 
-### Mounts as items (~85 KB upstream)
-This is a REFACTOR, not a new system: we already have mounts (55 files reference them).
-Upstream retired the mount picker and the persisted "selected mount" concept, making
-reins a bag item usable from the action bar with an instant dismount. Worth doing for the
-action-bar integration; check `reins` (2 files here) before assuming our shape matches.
+### Mounts (~85 KB upstream)
+**Corrected 2026-08-09: this is a BUILD FROM SCRATCH, not a refactor.** An earlier note
+claimed "we already have mounts, 55 files reference them"; that was a false positive from
+grepping the bare word `mount`. Every hit is DOM mounting (`mountRiftHud`, `unmount`, the
+editor's `mount` element) or the English verb ("torches mount on these pillars"). There is
+no mount entity, no speed buff, no `reins` item, and no summon or dismiss path anywhere in
+`src/sim/`. Verify with:
+`grep -rIn "\bmount\b" src/ --include=*.ts | grep -viE "mountRift|unmount|mountCrafting"`
 
-### Traversal physics (~36 KB upstream)
-Swept collision, multi-pass sliding, depenetration and step-up, with a traversal ladder
-(stride under 0.9, vault through the jump arc, ledge climb above head height, wall above
-that). Highest risk item in the backlog: it changes movement in the shared sim, so it
-must resolve identically offline, on the server and in the client extrapolator or
-prediction desyncs. Upstream pins the bands with an invariant test proving no gap exists
-that can be neither crossed nor climbed; port that test with the feature.
+So the work is the whole system, not upstream's later refactor of it: a summon with a cast,
+a movement speed aura, dismount on damage and on entering combat, and the item that grants
+it. Upstream's shape is still the right target (reins as a bag item usable from the action
+bar, no separate mount picker and no persisted "selected mount"), because it means the
+feature needs no new UI surface of its own.
 
-## Wave 5, not started
+### Traversal physics (CORE BUILT, DELIBERATELY NOT WIRED)
+`src/sim/traversal/` is complete and tested; nothing calls it yet. Wiring it into live
+movement is the single riskiest change in the program, because movement resolves in all
+three hosts and feeds the online client's prediction: a mismatch shows up as rubber-banding
+for every player, not as a bug in an opt-in feature. Every other wave was additive, so a
+defect only reached players who used the new thing.
 
-### New realms and content (~252 KB upstream, plus assets)
-Eleven realms, 105 quests, 48 NPCs and a five-man dungeon (Wildheart Basin). The only
-wave that needs real art. There is now ~55 MiB of AAB headroom; if it is exceeded, the
-answer is Play Asset Delivery, which is the official multi-GB mechanism and hosts the
-packs on Play's own CDN. Note the Capacitor complication: PAD assets do NOT land in the
-normal assets folder, so the WebView needs a custom path handler.
+The most valuable finding is already banked: our jump apex is **0.98, not the analytic
+1.125**, because semi-implicit Euler at 20 Hz undershoots by 13 percent. Deriving the bands
+from the closed form would have shipped a real 0.145 yard band of obstacles too high to
+jump and refused on the grounds that you could have jumped them. The invariant test sweeps
+every height at 0.001 yard with three negative controls, including that exact bug.
+
+What the wiring step must decide, from the module's own report:
+- `Collider` has no movement top today (`cameraTopY` is camera-only). The core takes a
+  caller-supplied `ColliderTopFn`, so the wiring must decide once what each collider class
+  means vertically. **Adding `moveTopY` to `Collider` is the one unavoidable edit to
+  `colliders.ts`**; everything else is additive.
+- Prop tops are climbable to the core but impassable to `isBlocked`/`findPlayerPath`, so
+  mobs would path around ground players can stand on. Intended asymmetry or not, bound it.
+- Collider ORDER is part of the result (TOI ties go to the earlier entry), so the broadphase
+  must hand all three hosts the same order. Never sort inside a solve.
+- `MAX_STEP_HEIGHT` should replace the bare `0.4` in sim.ts's `maxStepDown` so the two
+  cannot drift; `tests/traversal_constants.test.ts` currently parses sim.ts to catch it.
+- Step-up must never apply to the heightfield: it would raise the effective climb limit to
+  2.64 against a 1.5 slope cap. A source-scan guard fails if a ground sampler is added.
+
+## Wave 5 (SHIPPED, and not what the heading used to say)
+
+**Upstream's eleven realms do not port, and this is the evidence.** Their level cap is 20,
+same as ours, so the cap was never the blocker; the TOPOLOGY is. Their world is a 2D grid
+(`ZoneDef` carries `xMin/xMax`, `eastPassZ/westPassZ`, `southPassX`, `portals`; `data.ts`
+splits `STRIP_ZONES` from `COLUMN_ZONES`), and the Willowfen alone spans `x -540..-180`
+while our entire world is `x -180..180`. Their `BiomeId` has 17 members to our 4, each with
+its own terrain tables and dedicated render modules driving commissioned art we cannot
+take (`render/realm_flora.ts` alone is 46 KB). Wildheart Basin is an open-field dungeon on
+its own interior key with a `bossExitPortal` field we do not have. A literal port means
+rewriting `types.ts`, `world.ts`, `data.ts`, `colliders.ts` and most of `src/render/` to
+become their world. That is trap 3.
+
+What shipped instead is new content shaped for our world: **the Cinderforge**, a five-man
+at the cap with three bosses, plus 18 quests and 4 questgivers across the existing zones.
+Every number is anchored on a named piece of shipped content, cited at the row, and the
+tests re-derive those bands from the live tables rather than hardcoding them. It adds no
+camps, so world generation draws no new rng and every existing spawn keeps its position.
+
+**The instance band moved to fit it.** Dungeon index 8 lands at x 5700 and `dungeonAt`
+returned null past the arena at 5400, so the arena moved to 6000 and the delves to 6600.
+A stale saved position from the old bands now ejects to the character's own zone hub
+rather than to a door in the level-20 zone.
 
 ## Deliberately excluded, do not "fix"
 
