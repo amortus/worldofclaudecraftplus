@@ -109,6 +109,34 @@ export function removeFromSlots(slots: InvSlot[], itemId: string, count: number)
   return out;
 }
 
+/**
+ * Express a batch of copies (what a removal took, or what a listing holds in
+ * escrow) as slots you can hand to someone else. The plain copies ride ONE
+ * ordinary stack; every instanced copy gets its own single-copy slot, because a
+ * shared `count` is exactly what would destroy the identity (`canStack`).
+ *
+ * This is the hand-off shape: a boundary that moves items between owners (the
+ * market, a trade, vendor buyback) removes copies on one side and re-grants
+ * these rows on the other, so nothing arrives as a plain stack that did not
+ * leave as one. Instances are cloned, so the rows never alias the source
+ * payload; `instances` beyond `count` are ignored.
+ */
+export function copiesToSlots(
+  itemId: string,
+  count: number,
+  instances: readonly ItemInstance[] = [],
+): InvSlot[] {
+  const total = Math.max(0, Math.floor(count));
+  const instanced = Math.min(instances.length, total);
+  const plain = total - instanced;
+  const rows: InvSlot[] = [];
+  if (plain > 0) rows.push({ itemId, count: plain });
+  for (let i = 0; i < instanced; i++) {
+    rows.push({ itemId, count: 1, instance: cloneItemInstance(instances[i]) });
+  }
+  return rows;
+}
+
 // -----------------------------------------------------------------------------
 // Cloning
 // -----------------------------------------------------------------------------
@@ -255,6 +283,22 @@ export function parseInvSlots(raw: unknown): InvSlot[] {
   for (const entry of raw) {
     const slot = parseInvSlot(entry);
     if (slot) out.push(slot);
+  }
+  return out;
+}
+
+/**
+ * Parse a persisted / wire-borne LIST of instances (market escrow: one entry per
+ * instanced copy held in a listing). A non-array degrades to an empty list and an
+ * unusable entry is dropped, so those copies simply come back plain instead of
+ * failing the load.
+ */
+export function parseItemInstances(raw: unknown): ItemInstance[] {
+  if (!Array.isArray(raw)) return [];
+  const out: ItemInstance[] = [];
+  for (const entry of raw) {
+    const parsed = parseItemInstance(entry);
+    if (parsed) out.push(parsed);
   }
   return out;
 }

@@ -95,6 +95,54 @@ returned null past the arena at 5400, so the arena moved to 6000 and the delves 
 A stale saved position from the old bands now ejects to the character's own zone hub
 rather than to a door in the level-20 zone.
 
+## The map question: moving toward their 2D world
+
+Asked 2026-08-09: make our map and gameplay resemble theirs, on our base, focused on mobile.
+Measured rather than estimated, so the decision starts from numbers.
+
+**Their world, current and exact** (unchanged since our previous look; `ZoneDef`'s field
+list at `main` is byte-identical to `v0.32.4`): **14 zones in 3 columns** of 360 yd each
+(west -540..-180, the original strip -180..180, east 180..540). Bounding box 1080 x 2600 =
+2.81M sq yd against our 360 x 1440 = 518k. **5.4x our footprint.** Zone rects are
+non-rectangular overall, with holes. Ours and theirs share the first three zones by id AND
+by z band exactly (`eastbrook_vale` -180..180, `mirefen_marsh` 180..540, `thornpeak_heights`
+540..900); we diverge at z 900, where they put `veiled_hollow` (dusk) and we put
+`ashen_wastes` (blight).
+
+**The number that actually decides it, and it is a mobile number.** `src/render/terrain.ts`
+is already 2D-chunked (`CHUNK_SIZE = 60`, LOD banded by distance, 2x2 far super-chunks),
+which is the good news. But it **builds the entire world at boot with no residency
+eviction**. Today that is 6 x 24 = **144 chunks**. Their footprint would be 18 x 44 =
+**792 chunks: 5.5x resident geometry and 5.5x boot cost on a Samsung A14.**
+
+That is a residency problem we already have; our world is merely small enough to hide it.
+**Fix terrain residency BEFORE any map expansion**, or the new zones kill the A14 before a
+player ever sees them.
+
+**What the change actually costs, split by tractability:**
+- **Topology: CHEAP and additive.** Their `zoneAt(x, z)` / `zoneBiomeAt(x, z)` versus our
+  `zoneAt(z)` / `zoneBiomeAt(z)` is the entire 1D-vs-2D story in one signature. Omitting
+  `xMin/xMax` on an existing zone keeps behaviour byte-identical, which is exactly how
+  upstream shipped it. Cost here: **48 `zoneAt(` call sites across 21 files and 20
+  `zoneBiomeAt(`**, plus `eastPassZ`/`westPassZ`/`southPassX`/`sealedSouthBorder` and a
+  `PortalDef`. Wide but shallow.
+- **Biomes: EXPENSIVE, and it is art, not code.** Theirs has **17** members to our 4. We
+  carry **22 exhaustive `Record<BiomeId, ...>` maps across 6 files** (`render/foliage.ts`,
+  `motes.ts`, `renderer.ts`, `sky.ts`, `terrain.ts`, `sim/world.ts`) plus 17 literal
+  biome-string sites in 10 more, so 4 -> 17 means roughly **286 new palette and parameter
+  rows before a single asset exists**. And their `src/sim/world.ts` is **252 KB with 56
+  exported shaper functions** against our **9.9 KB with 6**. That gap, not the zone count,
+  is the honest measure.
+- **Instance plane collision.** A 3-column world reaches x +-540 but our instance threshold
+  is `x > 600`, so widening the overworld forces moving the whole instance band again, with
+  the saved-position migration that implies (see what the arena move to 6000 already cost).
+- Their instance plane starts at `INSTANCE_X_BASE = 99_400`; ours starts at 600.
+
+**Recommended order if this is pursued:** (1) terrain residency and eviction, measured on a
+real A14; (2) `xMin/xMax` + `zoneAt(x, z)` as a pure no-op refactor with existing zones
+unchanged; (3) ONE new column zone reusing an existing biome, to prove the pipeline;
+(4) only then consider new biomes, and only as many as there is art for.
+
 ## Deliberately excluded, do not "fix"
 
 - **Claudium storefront and $WOC crypto.** Removed on purpose.
