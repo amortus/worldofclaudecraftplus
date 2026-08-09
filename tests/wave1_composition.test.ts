@@ -113,7 +113,21 @@ describe('hud.ts handles every SimEvent this wave added', () => {
 
 describe('the Unstuck Sickness debuff never renders as raw English', () => {
   it('the aura display name chains the unstuck resolver ahead of the sim matcher', () => {
-    expect(hudBody).toContain('localizeUnstuckAuraName(name) ?? localizeSimAuraName(name) ?? name');
+    // Assert the ORDER, not a literal line. The chain is formatted across several
+    // lines and has since grown a third resolver (crafted elixirs), so matching the
+    // exact one-line form failed on a pure reformat while the behaviour was correct.
+    // What actually matters is that the unstuck resolver is consulted before the
+    // shared sim matcher, or the debuff renders as raw English in all 14 locales.
+    // Scope to the resolver itself: localizeSimAuraName is also called elsewhere in
+    // hud.ts, so a whole-file indexOf compares two unrelated call sites.
+    const fnAt = hudBody.indexOf('function auraDisplayNameFromSource');
+    expect(fnAt, 'auraDisplayNameFromSource is gone').toBeGreaterThan(-1);
+    const body = hudBody.slice(fnAt, fnAt + 1200);
+    const unstuckAt = body.indexOf('localizeUnstuckAuraName(name)');
+    const simAt = body.indexOf('localizeSimAuraName(name)');
+    expect(unstuckAt, 'the resolver never calls localizeUnstuckAuraName').toBeGreaterThan(-1);
+    expect(simAt, 'the resolver never calls localizeSimAuraName').toBeGreaterThan(-1);
+    expect(unstuckAt, 'the unstuck resolver must run before the sim matcher').toBeLessThan(simAt);
   });
 });
 

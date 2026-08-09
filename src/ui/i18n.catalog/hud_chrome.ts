@@ -1588,4 +1588,157 @@ export const hudChromeStrings = {
       switch: 'Pressure Plate',
     },
   },
+  // The Dungeon Finder (the matchmaking queue in src/sim/lfg/).
+  //
+  // THE NAMESPACE IS `dungeonFinder`, NEVER `lfg`. `lfg` is already a joinable
+  // chat channel with its own `hud.core.chatChannels.names.lfg` key, so a second
+  // `lfg` namespace here would put two unrelated features one typo apart in
+  // every one of the fourteen locale files.
+  //
+  // The sim emits stable ids and numbers only, so every word below is authored
+  // here and every digit is spliced into a placeholder rather than concatenated,
+  // which lets a locale reorder a level band, a clock or a penalty freely.
+  dungeonFinder: {
+    title: 'Dungeon Finder',
+    close: 'Close the Dungeon Finder',
+    subheading:
+      'Queue for a five-player dungeon on your own or with your party. The group forms as soon as enough players are waiting.',
+    empty: 'No dungeon is offered yet. Keep levelling and the first one will open up.',
+    listHeading: 'Dungeons',
+    queueHeading: 'Your queue',
+    roleHeading: 'Your roles',
+    roleHint: 'Leave every role on to be matched fastest.',
+    // Level bands and group sizes. Both halves of a band are placeholders so a
+    // locale can render the range in either direction.
+    levelBand: 'Levels {min} to {max}',
+    requiresLevel: 'requires level {level}',
+    levelsToGo: '{levels} more levels',
+    // The joining key for a locked row's accessible name. The separator and the
+    // order belong to the locale, so the two halves are NEVER concatenated at
+    // the call site.
+    lockedRowAria: '{dungeon}, {requirement}',
+    groupSize: 'Group of {size}, pops with {min} or more',
+    groupSizeStrict: 'Group of {size}, never shorted',
+    rowQueued: 'In queue',
+    tier: {
+      leveling: 'Levelling',
+      endgame: 'Endgame',
+      heroic: 'Heroic',
+    },
+    role: {
+      tank: 'Tank',
+      healer: 'Healer',
+      dps: 'Damage',
+    },
+    roleOn: 'selected',
+    roleOff: 'not selected',
+    roleToggleAria: '{role}, {state}',
+    roleUnavailableAria: '{role}, not available to your class',
+    roleCount: '{role}: {count}',
+    roleCountAria: '{count} waiting who can fill {role}, {needed} needed',
+    roleEnough: 'enough',
+    roleShort: 'wants {needed}',
+    waitingNow: 'Waiting now',
+    state: {
+      idle: 'Not queued.',
+      queued: 'Waiting for a group.',
+      proposed: 'Group found. Answer the ready check.',
+      cooldown: 'The Dungeon Finder is locked for now.',
+    },
+    waiting: 'In queue {time}',
+    waitingAria: 'Time in queue: {time}',
+    queuedFor: 'Queued for {dungeon}',
+    queuedPlayers: '{count} waiting for this dungeon',
+    // How hard the matchmaker is currently trying. Strictness decays with the
+    // wait, so naming the step is the honest answer to "why is this so slow".
+    relax: {
+      ideal: 'Looking for a balanced group.',
+      anchored: 'Looking wider: any full group with a tank or a healer.',
+      any: 'Looking widest: any full group at all.',
+      short: 'Long wait, so a smaller group will do.',
+    },
+    cooldownLeft: 'You may queue again in {time}.',
+    cooldownPlain: 'You may queue again shortly.',
+    join: 'Join Queue',
+    joinAria: 'Join the queue for {dungeon}',
+    leave: 'Leave Queue',
+    // The ready check. Both costs are stated before the buttons, deliberately:
+    // this dialog is the only moment the choice exists, and both answers are
+    // expensive.
+    ready: {
+      title: 'Ready Check',
+      body: 'A group for {dungeon} is ready. Everyone has to accept before the timer runs out.',
+      role: 'You go in as the {role}.',
+      tally: '{accepted} of {size} have accepted.',
+      declineCost: 'Declining locks the Dungeon Finder for {time}.',
+      timeoutCost: 'Not answering at all locks it for {time}.',
+      timeLeft: '{time}',
+      timeLeftAria: 'Time left to answer: {time}',
+      progressLabel: 'Time left to answer',
+      accept: 'Accept',
+      decline: 'Decline',
+      expired: 'The ready check ran out.',
+      banner: 'GROUP FOUND',
+      opened: 'A group for {dungeon} is ready. Answer the ready check.',
+    },
+    formed: {
+      banner: 'GROUP FORMED',
+      line: 'Your group for {dungeon} is formed. Good luck.',
+    },
+    // Pressing Leave Queue during a ready check is a decline and costs the same,
+    // so it asks first (through the HUD's own confirm dialog).
+    abandon: {
+      title: 'Leave the ready check?',
+      body: 'Leaving now counts as declining and locks the Dungeon Finder for {time}.',
+      ok: 'Leave anyway',
+      cancel: 'Stay',
+    },
+    time: {
+      hoursMinutes: '{h}h {m}m',
+      minutesSeconds: '{m}:{s}',
+      seconds: '{s}s',
+      expired: 'over',
+    },
+    // The joining key for a refusal that also carries a penalty. Two sentences
+    // are NEVER concatenated at a call site; the locale owns the join.
+    denyWithPenalty: '{reason} The Dungeon Finder is locked for {time}.',
+    deny: {
+      unknownDungeon: 'That dungeon is not offered by the Dungeon Finder.',
+      emptyGroup: 'There is nobody to queue.',
+      groupTooLarge: 'Your party is larger than that dungeon takes.',
+      duplicateMember: 'Somebody is listed twice in that group.',
+      alreadyQueued: 'You are already in a queue. Leave it first.',
+      inProposal: 'Answer your ready check first.',
+      levelTooLow: 'You are not high enough level for that dungeon yet.',
+      onCooldown: 'The Dungeon Finder is still locked for you.',
+      noProposal: 'There is no ready check to answer.',
+      wrongProposal: 'That ready check is no longer the current one.',
+      alreadyResponded: 'You have already answered that ready check.',
+      declined: 'Somebody declined, so the group broke up.',
+      timedOut: 'The ready check ran out, so the group broke up.',
+      memberLeft: 'Somebody left, so the group broke up.',
+      memberUnavailable: 'Somebody is no longer available, so the group broke up.',
+      noSlot: 'Every instance of that dungeon is busy. You are back in the queue.',
+      unknown: 'The Dungeon Finder could not do that.',
+    },
+  },
+  // Mounts. There is no mount collection window by design: a mount is a set of
+  // reins carried in the bags and used from there or from the action bar, so the
+  // whole surface is the summon line, the dismount reason, and the action bar's
+  // accessible name for the item.
+  mount: {
+    up: 'You climb onto {mount}.',
+    slotAria: '{mount}, mount',
+    down: {
+      damage: 'A blow throws you from the saddle.',
+      combat: 'You cannot stay mounted in combat.',
+      manual: 'You dismount.',
+      cast: 'Casting takes you out of the saddle.',
+      dead: 'Death takes you out of the saddle.',
+      water: 'Deep water takes you out of the saddle.',
+      zone: 'You cannot ride here.',
+      indoors: 'You cannot ride indoors.',
+      unknown: 'You are no longer mounted.',
+    },
+  },
 };

@@ -969,6 +969,51 @@ export const en = {
       elixir_of_golden_focus: { name: 'Elixir of Golden Focus' },
       elixir_of_sunpetal_swiftness: { name: 'Elixir of Sunpetal Swiftness' },
       elixir_of_the_ashen_ward: { name: 'Elixir of the Ashen Ward' },
+      // Mounts. One set of reins ships (the feature is the system, not a
+      // collection), used from the bag or the action bar. Mirrors MOUNT_ITEMS in
+      // src/sim/mounts.ts.
+      reins_dawnstrider: { name: 'Reins of the Dawnstrider' },
+      // The rift chase legendaries. They shipped with the rift loot pools but
+      // without a name key, which left all three falling back to the canonical
+      // English and failing the item-coverage sweep. Mirrors RIFT_ITEMS in
+      // src/sim/content/rift/items.ts.
+      rift_aetherbreach: { name: 'Aetherbreach, Blade of the Closed Way' },
+      rift_voidhymn: { name: 'Voidhymn, Staff of the Unmade Hour' },
+      rift_silentfang: { name: 'Silentfang, Edge of the Last Door' },
+      // The expansion pack: the Cinderforge loot table plus every quest object
+      // for the four new quest lines. Mirrors the English source in
+      // src/sim/content/expansion/items.ts (EXPANSION_ITEMS), one line per id in
+      // source order. Added here rather than to the positional array in
+      // i18n.catalog/items.ts, which is tsc-enforced across all fourteen locales
+      // and would red-fail an English-only add.
+      houndsbane_root: { name: 'Houndsbane Root' },
+      cairn_of_bramble: { name: "Bramble's Cairn" },
+      cairn_of_old_seld: { name: "Old Seld's Cairn" },
+      cairn_of_the_first_pack: { name: 'Cairn of the First Pack' },
+      drowned_lantern: { name: 'Drowned Lantern' },
+      quarried_keystone: { name: 'Quarried Keystone' },
+      cooled_slag: { name: 'Cooled Slag' },
+      cf_covenant_ledger: { name: 'Ember Covenant Ledger' },
+      cf_quenchless_ember: { name: 'Quenchless Ember' },
+      cf_slag_ingot: { name: 'Slagged Ingot' },
+      cf_ef_gloves: { name: 'Emberforged Gauntlets' },
+      cf_cs_gloves: { name: 'Cindersilk Handwraps' },
+      cf_ss_gloves: { name: 'Slagstalker Grips' },
+      cf_ef_waist: { name: 'Emberforged Girdle' },
+      cf_cs_waist: { name: 'Cindersilk Cord' },
+      cf_ss_waist: { name: 'Slagstalker Belt' },
+      cf_ef_feet: { name: 'Emberforged Sabatons' },
+      cf_cs_feet: { name: 'Cindersilk Slippers' },
+      cf_ss_feet: { name: 'Slagstalker Treads' },
+      cf_ef_helmet: { name: 'Emberforged Greathelm' },
+      cf_cs_helmet: { name: 'Cindersilk Cowl' },
+      cf_ss_helmet: { name: 'Slagstalker Mask' },
+      cf_ef_chest: { name: 'Emberforged Breastplate' },
+      cf_cs_chest: { name: 'Cindersilk Robe' },
+      cf_ss_chest: { name: 'Slagstalker Tunic' },
+      cf_quenchless_cleaver: { name: 'Quenchless Cleaver' },
+      cf_quenchless_brand: { name: 'Brand of the Unquenched' },
+      cf_quenchless_fang: { name: 'Quenchless Fang' },
     },
     mobs: { ...worldNames.en.entities.mobs, ...mergeEntities.en.mobs, ...mergeExtra.en.mobs },
     npcs: { ...worldNames.en.entities.npcs, ...mergeExtra.en.npcs },

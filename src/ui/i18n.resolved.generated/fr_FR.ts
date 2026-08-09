@@ -1446,6 +1446,130 @@ export const fr_FR: EnTranslations = {
         "gate": "Portcullis",
         "switch": "Pressure Plate"
       }
+    },
+    "dungeonFinder": {
+      "title": "Dungeon Finder",
+      "close": "Close the Dungeon Finder",
+      "subheading": "Queue for a five-player dungeon on your own or with your party. The group forms as soon as enough players are waiting.",
+      "empty": "No dungeon is offered yet. Keep levelling and the first one will open up.",
+      "listHeading": "Dungeons",
+      "queueHeading": "Your queue",
+      "roleHeading": "Your roles",
+      "roleHint": "Leave every role on to be matched fastest.",
+      "levelBand": "Levels {min} to {max}",
+      "requiresLevel": "requires level {level}",
+      "levelsToGo": "{levels} more levels",
+      "lockedRowAria": "{dungeon}, {requirement}",
+      "groupSize": "Group of {size}, pops with {min} or more",
+      "groupSizeStrict": "Group of {size}, never shorted",
+      "rowQueued": "In queue",
+      "tier": {
+        "leveling": "Levelling",
+        "endgame": "Endgame",
+        "heroic": "Heroic"
+      },
+      "role": {
+        "tank": "Tank",
+        "healer": "Healer",
+        "dps": "Damage"
+      },
+      "roleOn": "selected",
+      "roleOff": "not selected",
+      "roleToggleAria": "{role}, {state}",
+      "roleUnavailableAria": "{role}, not available to your class",
+      "roleCount": "{role}: {count}",
+      "roleCountAria": "{count} waiting who can fill {role}, {needed} needed",
+      "roleEnough": "enough",
+      "roleShort": "wants {needed}",
+      "waitingNow": "Waiting now",
+      "state": {
+        "idle": "Not queued.",
+        "queued": "Waiting for a group.",
+        "proposed": "Group found. Answer the ready check.",
+        "cooldown": "The Dungeon Finder is locked for now."
+      },
+      "waiting": "In queue {time}",
+      "waitingAria": "Time in queue: {time}",
+      "queuedFor": "Queued for {dungeon}",
+      "queuedPlayers": "{count} waiting for this dungeon",
+      "relax": {
+        "ideal": "Looking for a balanced group.",
+        "anchored": "Looking wider: any full group with a tank or a healer.",
+        "any": "Looking widest: any full group at all.",
+        "short": "Long wait, so a smaller group will do."
+      },
+      "cooldownLeft": "You may queue again in {time}.",
+      "cooldownPlain": "You may queue again shortly.",
+      "join": "Join Queue",
+      "joinAria": "Join the queue for {dungeon}",
+      "leave": "Leave Queue",
+      "ready": {
+        "title": "Ready Check",
+        "body": "A group for {dungeon} is ready. Everyone has to accept before the timer runs out.",
+        "role": "You go in as the {role}.",
+        "tally": "{accepted} of {size} have accepted.",
+        "declineCost": "Declining locks the Dungeon Finder for {time}.",
+        "timeoutCost": "Not answering at all locks it for {time}.",
+        "timeLeft": "{time}",
+        "timeLeftAria": "Time left to answer: {time}",
+        "progressLabel": "Time left to answer",
+        "accept": "Accept",
+        "decline": "Decline",
+        "expired": "The ready check ran out.",
+        "banner": "GROUP FOUND",
+        "opened": "A group for {dungeon} is ready. Answer the ready check."
+      },
+      "formed": {
+        "banner": "GROUP FORMED",
+        "line": "Your group for {dungeon} is formed. Good luck."
+      },
+      "abandon": {
+        "title": "Leave the ready check?",
+        "body": "Leaving now counts as declining and locks the Dungeon Finder for {time}.",
+        "ok": "Leave anyway",
+        "cancel": "Stay"
+      },
+      "time": {
+        "hoursMinutes": "{h}h {m}m",
+        "minutesSeconds": "{m}:{s}",
+        "seconds": "{s}s",
+        "expired": "over"
+      },
+      "denyWithPenalty": "{reason} The Dungeon Finder is locked for {time}.",
+      "deny": {
+        "unknownDungeon": "That dungeon is not offered by the Dungeon Finder.",
+        "emptyGroup": "There is nobody to queue.",
+        "groupTooLarge": "Your party is larger than that dungeon takes.",
+        "duplicateMember": "Somebody is listed twice in that group.",
+        "alreadyQueued": "You are already in a queue. Leave it first.",
+        "inProposal": "Answer your ready check first.",
+        "levelTooLow": "You are not high enough level for that dungeon yet.",
+        "onCooldown": "The Dungeon Finder is still locked for you.",
+        "noProposal": "There is no ready check to answer.",
+        "wrongProposal": "That ready check is no longer the current one.",
+        "alreadyResponded": "You have already answered that ready check.",
+        "declined": "Somebody declined, so the group broke up.",
+        "timedOut": "The ready check ran out, so the group broke up.",
+        "memberLeft": "Somebody left, so the group broke up.",
+        "memberUnavailable": "Somebody is no longer available, so the group broke up.",
+        "noSlot": "Every instance of that dungeon is busy. You are back in the queue.",
+        "unknown": "The Dungeon Finder could not do that."
+      }
+    },
+    "mount": {
+      "up": "You climb onto {mount}.",
+      "slotAria": "{mount}, mount",
+      "down": {
+        "damage": "A blow throws you from the saddle.",
+        "combat": "You cannot stay mounted in combat.",
+        "manual": "You dismount.",
+        "cast": "Casting takes you out of the saddle.",
+        "dead": "Death takes you out of the saddle.",
+        "water": "Deep water takes you out of the saddle.",
+        "zone": "You cannot ride here.",
+        "indoors": "You cannot ride indoors.",
+        "unknown": "You are no longer mounted."
+      }
     }
   },
   "guide": {
@@ -6384,6 +6508,102 @@ export const fr_FR: EnTranslations = {
       },
       "elixir_of_the_ashen_ward": {
         "name": "Elixir of the Ashen Ward"
+      },
+      "reins_dawnstrider": {
+        "name": "Reins of the Dawnstrider"
+      },
+      "rift_aetherbreach": {
+        "name": "Aetherbreach, Blade of the Closed Way"
+      },
+      "rift_voidhymn": {
+        "name": "Voidhymn, Staff of the Unmade Hour"
+      },
+      "rift_silentfang": {
+        "name": "Silentfang, Edge of the Last Door"
+      },
+      "houndsbane_root": {
+        "name": "Houndsbane Root"
+      },
+      "cairn_of_bramble": {
+        "name": "Bramble's Cairn"
+      },
+      "cairn_of_old_seld": {
+        "name": "Old Seld's Cairn"
+      },
+      "cairn_of_the_first_pack": {
+        "name": "Cairn of the First Pack"
+      },
+      "drowned_lantern": {
+        "name": "Drowned Lantern"
+      },
+      "quarried_keystone": {
+        "name": "Quarried Keystone"
+      },
+      "cooled_slag": {
+        "name": "Cooled Slag"
+      },
+      "cf_covenant_ledger": {
+        "name": "Ember Covenant Ledger"
+      },
+      "cf_quenchless_ember": {
+        "name": "Quenchless Ember"
+      },
+      "cf_slag_ingot": {
+        "name": "Slagged Ingot"
+      },
+      "cf_ef_gloves": {
+        "name": "Emberforged Gauntlets"
+      },
+      "cf_cs_gloves": {
+        "name": "Cindersilk Handwraps"
+      },
+      "cf_ss_gloves": {
+        "name": "Slagstalker Grips"
+      },
+      "cf_ef_waist": {
+        "name": "Emberforged Girdle"
+      },
+      "cf_cs_waist": {
+        "name": "Cindersilk Cord"
+      },
+      "cf_ss_waist": {
+        "name": "Slagstalker Belt"
+      },
+      "cf_ef_feet": {
+        "name": "Emberforged Sabatons"
+      },
+      "cf_cs_feet": {
+        "name": "Cindersilk Slippers"
+      },
+      "cf_ss_feet": {
+        "name": "Slagstalker Treads"
+      },
+      "cf_ef_helmet": {
+        "name": "Emberforged Greathelm"
+      },
+      "cf_cs_helmet": {
+        "name": "Cindersilk Cowl"
+      },
+      "cf_ss_helmet": {
+        "name": "Slagstalker Mask"
+      },
+      "cf_ef_chest": {
+        "name": "Emberforged Breastplate"
+      },
+      "cf_cs_chest": {
+        "name": "Cindersilk Robe"
+      },
+      "cf_ss_chest": {
+        "name": "Slagstalker Tunic"
+      },
+      "cf_quenchless_cleaver": {
+        "name": "Quenchless Cleaver"
+      },
+      "cf_quenchless_brand": {
+        "name": "Brand of the Unquenched"
+      },
+      "cf_quenchless_fang": {
+        "name": "Quenchless Fang"
       }
     },
     "mobs": {
@@ -6798,6 +7018,30 @@ export const fr_FR: EnTranslations = {
       "rift_shardling": {
         "name": "Rift Shardling"
       },
+      "cf_covenant_smith": {
+        "name": "Ember Covenant Smith"
+      },
+      "cf_ashbound_zealot": {
+        "name": "Ashbound Zealot"
+      },
+      "cf_slag_elemental": {
+        "name": "Slagbound Elemental"
+      },
+      "cf_emberling": {
+        "name": "Forge Emberling"
+      },
+      "cf_cinder_wisp": {
+        "name": "Cinder Wisp"
+      },
+      "cf_forgewarden_bexley": {
+        "name": "Forgewarden Bexley"
+      },
+      "cf_slagheart": {
+        "name": "The Slagheart"
+      },
+      "cf_vharkul": {
+        "name": "Vharkul the Unquenched"
+      },
       "ironvein_foreman": {
         "name": "Contremaître Veinefer"
       },
@@ -7067,6 +7311,26 @@ export const fr_FR: EnTranslations = {
         "name": "Chasseur Varik",
         "title": "Dawn of Claude",
         "greeting": "La pourriture a gagne les betes, {playerName}. Les cerfs des terres desolees du sud se relevent, un feu vert dans les yeux, et les renards se repaissent de ce qu'ils laissent derriere eux. Je les chasse pour que la corruption ne s'etende pas davantage. Pretez-moi votre arc, ou votre lame."
+      },
+      "houndmaster_teel": {
+        "name": "Houndmaster Teel",
+        "title": "Eastbrook Kennels",
+        "greeting": "Mind the empty runs, {playerName}. I bred hounds in this yard for thirty years and I have four left. The Wolf Run took the rest of them in one night."
+      },
+      "ferrywoman_odalie": {
+        "name": "Ferrywoman Odalie",
+        "title": "Fenbridge Crossing",
+        "greeting": "You want across, you wait your turn and you keep your hands inside the boat. I have poled this crossing since I was nine, {playerName}, and I have never once looked over the side at night."
+      },
+      "stonewright_hulda": {
+        "name": "Stonewright Hulda",
+        "title": "Highwatch Masons",
+        "greeting": "A wall is arithmetic, {className}. So many stones, so many hands, so many days before the thing outside gets bored of waiting. Highwatch is behind on all three."
+      },
+      "dawn_forgewright_calla": {
+        "name": "Forgewright Calla",
+        "title": "Dawn of Claude",
+        "greeting": "Stand upwind of the mouth, {playerName}. My chapter went down that stair eleven winters ago to pour blades that could burn the blight, and the forge has not gone cold a single hour since. Nobody has ever fed it."
       },
       "tidewatcher_ondrel": {
         "name": "Ondrel Vane",
@@ -8293,6 +8557,198 @@ export const fr_FR: EnTranslations = {
           }
         }
       },
+      "q_ev_kennels": {
+        "title": "What the Wolves Left",
+        "text": "They came over the kennel wall on a still night and they did not eat what they killed, {playerName}. That is the part I cannot square. A hungry wolf takes one hound and runs. These ones stayed until the runs were quiet. Go up the Wolf Run and put ten of them down for me.",
+        "completion": "Ten. Good. It will not bring a single one of mine back, but I sleep better knowing there are ten fewer of them breathing up there tonight.",
+        "objectives": {
+          "0": {
+            "label": "Forest Wolf slain"
+          }
+        }
+      },
+      "q_ev_houndsbane": {
+        "title": "Houndsbane",
+        "text": "Four hounds left, and two of them will not eat. Houndsbane grows in the wet ground along the Wolf Run, white flower, black root, and boiled down it draws the fever out of a bitten dog. Bring me five roots, {playerName}, and take these boots for the walking. The ground up there will ruin what you have on.",
+        "completion": "Five, and they smell right. Give me an hour with the pot and Bramble will be up on her feet again. She was the first one born in this yard, you know. I would like her to not be the last.",
+        "objectives": {
+          "0": {
+            "label": "Houndsbane Root"
+          }
+        }
+      },
+      "q_ev_boars": {
+        "title": "Meat for the Kennels",
+        "text": "A working hound eats better than a militiaman, and Eastbrook is not about to vote me the difference. The boars in the east meadow are fat and stupid and there are far too many of them. Ten, {playerName}. Bring the carcasses to the edge of the meadow and I will send a cart.",
+        "completion": "Ten head. That is the kennels fed into the frost, and the meadow will thank you for it come planting. Not every job worth doing has a song in it.",
+        "objectives": {
+          "0": {
+            "label": "Wild Boar slain"
+          }
+        }
+      },
+      "q_ev_last_hound": {
+        "title": "The Last Hound",
+        "text": "I buried the pack north of the road, under three cairns, because I could not make myself dig one big enough for all of them. I have not been able to walk up there since. Go for me, {playerName}. Stand at each cairn a moment. That is all I am asking. A man ought not leave his dead unvisited because his legs have gone coward.",
+        "completion": "You went. Thank you. Bramble is out in the yard chewing a strap she has no business chewing, and I find I can breathe again. Take this off the rack. It is honest work, and so were you.",
+        "objectives": {
+          "0": {
+            "label": "Stand at Bramble's Cairn"
+          },
+          "1": {
+            "label": "Stand at Old Seld's Cairn"
+          },
+          "2": {
+            "label": "Stand at the Cairn of the First Pack"
+          }
+        }
+      },
+      "q_mf_polings": {
+        "title": "The Poling Road",
+        "text": "The channel south of the causeway is my road, {playerName}, and something has moved onto it. Prowlers, laired up in the reeds where I have to stand to push off. I lost my second pole to one last week and my nerve with it. Twelve of them, and I will run the crossing after dark again.",
+        "completion": "Twelve. I took the boat down at dusk and the reeds were just reeds. You have no idea what that is worth to a woman who has been poling in daylight only, like a child.",
+        "objectives": {
+          "0": {
+            "label": "Mire Prowler slain"
+          }
+        }
+      },
+      "q_mf_lanterns": {
+        "title": "Lanterns for the Crossing",
+        "text": "Every ferry that ever worked this water hung a lamp at the bow, and every one of them is out there in the shallows by the drowned chapel, still hanging. Fetch me five, {playerName}. I will not ask how they got there. I will only say that a lamp taken up out of the fen burns longer than a lamp bought new, and I have stopped asking why.",
+        "completion": "Five, and three of them still had oil. Look at the brass on this one - that is Corran's mark, and Corran went under in my grandmother's time. Take the boots. You will be back in that water before the season turns.",
+        "objectives": {
+          "0": {
+            "label": "Drowned Lantern"
+          }
+        }
+      },
+      "q_mf_drowned_toll": {
+        "title": "The Ferryman's Toll",
+        "text": "I have carried the dead across this water for coin my whole life and never once carried one back. Now they walk out of the shallows by the chapel on their own feet, {playerName}, and that is a debt I did not agree to. Twelve of them. Put them under properly.",
+        "completion": "Down and staying down. There is a right order to things: the living go over the water, the dead go under it, and nobody swaps. You just put twelve of them back on the correct side of it.",
+        "objectives": {
+          "0": {
+            "label": "Drowned Dead slain"
+          }
+        }
+      },
+      "q_mf_trollbridge": {
+        "title": "What Sits Under the Bridge",
+        "text": "The barrow trolls have started coming west out of the mounds and sitting under the causeway pilings at low water, waiting for the boards to creak. That is my crossing they are under, {playerName}. Twelve of them, and go in daylight - they hear a boat coming a quarter mile off in the dark. Take your pick of the ferry lockers when it is done.",
+        "completion": "Quiet under the boards again. I walked the whole causeway this morning and stamped every plank of it like a fool, just to hear nothing answer.",
+        "objectives": {
+          "0": {
+            "label": "Fen Troll slain"
+          }
+        }
+      },
+      "q_tp_quarry": {
+        "title": "Stone from the Deeprock",
+        "text": "Highwatch has one good quarry face and the kobolds have been under it for two seasons, hollowing out galleries I cannot see and did not survey. The west curtain is already sitting on air, {playerName}. Kill twelve of them in the Deeprock burrows. I need the digging stopped before I can start measuring what they have ruined.",
+        "completion": "Twelve fewer picks in the dark. I have my apprentices down there now with a plumb line and a lot of swearing. If the curtain stands through the thaw it will be because you went first.",
+        "objectives": {
+          "0": {
+            "label": "Deeprock Kobold slain"
+          }
+        }
+      },
+      "q_tp_keystones": {
+        "title": "Keystones",
+        "text": "The kobolds dragged our cut stone down into the galleries to shore their own tunnels. Dressed keystone, {playerName} - a season of my life in every block, and they are propping mud with it. Six. Bring me six and the gatehouse arch closes before the snow.",
+        "completion": "Six, and only one of them chipped. Set a keystone right and the whole arch spends the next four hundred years holding itself up out of spite. That is the only kind of defence I actually trust.",
+        "objectives": {
+          "0": {
+            "label": "Quarried Keystone"
+          }
+        }
+      },
+      "q_tp_ogre_wall": {
+        "title": "They Come Down at Night",
+        "text": "I can build against weather and I can build against men. I cannot build against something that walks down out of the foothills at night and pulls the scaffold off the wall for the fun of hearing it fall. Twelve ogres, {playerName}, and take them at the edges where they wander alone. My people need three clear nights, that is all.",
+        "completion": "Three nights, and the east span went up in two of them. My mortar has finally been allowed to set. You would not believe what a mason will forgive a person for that.",
+        "objectives": {
+          "0": {
+            "label": "Thornpeak Ogre slain"
+          }
+        }
+      },
+      "q_tp_stormcut": {
+        "title": "Stormcut",
+        "text": "There is a stone out on Stormcrag that takes an edge like nothing else in these mountains, and I cannot send a single apprentice within a mile of it. The living rock walks out there, {playerName}. Twelve of them, and my cutters go up the day after. Bring me back a whole crew and you may have anything off my rack.",
+        "completion": "The cutters came down at dusk singing, which for a Highwatch mason is close to a riot. Storm-cut stone in the gatehouse arch, {playerName}. That gate will still be standing when nobody remembers either of our names.",
+        "objectives": {
+          "0": {
+            "label": "Stormcrag Elemental slain"
+          }
+        }
+      },
+      "q_cf_approach": {
+        "title": "Clearing the Approach",
+        "text": "The bone reavers out of the Bonefields have worked their way along the ridge to within a stone's throw of my watch-post, {playerName}, and I have two people and a signal horn. Ten of them, off the approach. Whatever else the Dawn decides to do about that stair, we are not deciding it while fighting on the doorstep.",
+        "completion": "The ridge is clear and my two are asleep for the first time in a week. Now we can talk about the hole in the ground.",
+        "objectives": {
+          "0": {
+            "label": "Bone Reaver slain"
+          }
+        }
+      },
+      "q_cf_slagfall": {
+        "title": "Slag and Cinder",
+        "text": "The forge vents onto the slope and has been raining spoil out of that mouth for eleven years. I want five pieces off the fall, {playerName}, cooled ones, from as deep in the throat as you are willing to reach. Slag remembers what went into the pour. If my chapter was making blades down there, the spoil will say so. If they were making something else, it will say that too.",
+        "completion": "Iron, ash, and bone. Not cattle bone. I have carried this suspicion for eleven years and I would have given a great deal to be wrong about it, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Cooled Slag"
+          }
+        }
+      },
+      "q_cf_covenant": {
+        "title": "The Ember Covenant",
+        "text": "Then we go down. My chapter called itself the Ember Covenant and it kept a ledger the way a chapel keeps a register, {playerName} - every pour, every price. Break eight of the smiths still working those anvils and take five ledgers off them. I want to read what my own people agreed to before I say one word about them to Gravewatch.",
+        "completion": "It is all here in a clean hand. Fuel, ore, hours. And on the fourth page the fuel column stops saying charcoal. They kept writing it down, {playerName}. That is the part that will not leave me. They kept the books tidy the whole way down.",
+        "objectives": {
+          "0": {
+            "label": "Ember Covenant Smith slain"
+          },
+          "1": {
+            "label": "Ember Covenant Ledger"
+          }
+        }
+      },
+      "q_cf_forgewarden": {
+        "title": "Forgewarden Bexley",
+        "text": "Bexley signed every page. He was our master smith and he was a kind man, and he is standing at the head anvil in the Forgehall with cinders where his eyes used to be, still working. He will not stop for me. Take a full band, {playerName}. Do not go down there thinking you can talk him out of it - I already spent eleven years thinking that.",
+        "completion": "He went out like a fire with the air cut off. Quick, and then nothing. Take these, they came off his own rack and they are the last honest thing the Covenant ever made.",
+        "objectives": {
+          "0": {
+            "label": "Forgewarden Bexley slain"
+          }
+        }
+      },
+      "q_cf_bellows": {
+        "title": "The Slagheart",
+        "text": "Past the Forgehall is the bellows vault, and the bellows in it have not been worked by hands in eleven years. Something down there is doing the breathing for them, {playerName} - the spoil says it is more slag than creature by now. Kill it and the whole lower forge loses its draught. Five of you, and keep moving when it blows.",
+        "completion": "The draught dropped the moment it died. I felt the air change at the mouth up here, eleven years of exhale finally stopping. And then, {playerName}, I felt something further down take a breath to make up the difference.",
+        "objectives": {
+          "0": {
+            "label": "The Slagheart slain"
+          }
+        }
+      },
+      "q_cf_unquenched": {
+        "title": "The Unquenched",
+        "text": "The last page of the ledger is one line: \"It asked for the fire back and we said it could keep it.\" That is Vharkul, {playerName}, sitting in the heat at the bottom of my chapter's mistake, and it has been paid for eleven years without ever once being fed. Take five and end it. Bring me the ember out of its chest so that Gravewatch has something to look at while I explain what the Dawn of Claude did down there.",
+        "completion": "Cold in my palm inside a minute. Eleven years, and it goes out like a coal on a hearthstone. I will carry this to Commander Sera myself and I will not soften a word of it. My chapter went looking for a fire that could burn the blight, and it found one, and it charged us everything. Whatever else the Dawn owes you, {playerName}, it owes me this: someone finally went down there.",
+        "objectives": {
+          "0": {
+            "label": "Vharkul the Unquenched slain"
+          },
+          "1": {
+            "label": "Quenchless Ember"
+          }
+        }
+      },
       "q_drowned_choir": {
         "title": "Le Chœur noyé",
         "text": "Les pataugeurs n'agissent pas seuls. Parmi eux marchent les Dévots noyés — la secte qui a sombré avec le temple, encore vêtue de ses ornements putréfiés, chantant toujours la prière depuis les rochers du rivage. Réduis-en huit au silence et rapporte-moi six des offrandes qu'ils portent. Je veux savoir ce qu'ils comptent donner à leur déesse.",
@@ -8520,6 +8976,11 @@ export const fr_FR: EnTranslations = {
         "name": "Claudexxaramas",
         "enterText": "Vous percez la necropole de Claudexxaramas. Les morts vous attendent.",
         "leaveText": "Vous vous retirez de Claudexxaramas dans le vent de cendres."
+      },
+      "cinderforge": {
+        "name": "The Cinderforge",
+        "enterText": "Heat rolls up the stair to meet you. Somewhere below, hammers are still falling.",
+        "leaveText": "You climb out of the heat into the ashen wind."
       },
       "drowned_temple": {
         "name": "Le Temple noyé",

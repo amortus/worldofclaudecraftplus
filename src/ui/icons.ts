@@ -2226,6 +2226,10 @@ const ABILITY_RECIPES: Record<string, IconRecipe> = {
   defensive_stance: r('steel', 'steel', ['shield'], ['arcs']),
   sunder_armor: r('steel', 'steel', ['chestplate', { p: 'mace', ...BR }]),
   taunt: r('fury', 'blood', ['fist'], ['arcs']),
+  // Ironhold: brace behind the guard, 40 percent damage taken reduction. Shares
+  // defensive_stance's steel shield but adds the gauntlet gripping it, so the two
+  // warrior defensives read apart at action-bar size.
+  ironhold: r('steel', 'steel', ['shield', { p: 'gauntlet', ...BR }], ['glow']),
   mortal_strike: r('blood', 'blood', ['sword', { p: 'claw_slash', ...BR }]),
   bloodthirst: r('blood', 'blood', ['heart', { p: 'dagger', ...BR }], ['drips']),
   shield_slam: r('steel', 'steel', ['shield', { p: 'mace', ...BR }]),
@@ -2286,6 +2290,11 @@ const ABILITY_RECIPES: Record<string, IconRecipe> = {
   swipe: r('earth', 'earthBrown', ['claw_slash'], ['arcs']),
   regrowth: r('nature', 'leafGreen', ['heart', { p: 'leaf', ...BR }], ['sparkle']),
   barkskin: r('earth', 'earthBrown', ['shield', { p: 'leaf', ...BR }]),
+  // Primal Reflexes: 50 percent dodge for 6 sec. The shared dodge vocabulary is a
+  // shield plus motion (aura_buff_dodge / talent_dodge); this keeps that read and
+  // adds the feral claw. A bare claw plus motion is already the `claw` ability, so
+  // the shield is what separates the defensive cooldown from the attack.
+  primal_reflexes: r('nature', 'leafGreen', ['shield', { p: 'claw_slash', ...BR }], ['motion']),
   starfire: r('arcane', 'silverWhite', ['moon', { p: 'sunburst', ...BR }], ['sparkle', 'glow']),
 };
 

@@ -1,3 +1,9 @@
+import {
+  CINDERFORGE_DUNGEON_DEFS,
+  CINDERFORGE_MOBS,
+  EXPANSION_NPCS,
+  EXPANSION_QUESTS,
+} from '../sim/content/expansion';
 import { GATHER_NODES } from '../sim/content/professions';
 import { RIFT_MOBS } from '../sim/content/rift';
 import { DELVES, DUNGEONS, MOBS, NPCS, QUESTS, ZONES } from '../sim/data';
@@ -326,6 +332,63 @@ const RIFT_MOB_IDS = [
   'rift_shardling',
 ] as const;
 
+/**
+ * The expansion content pack (src/sim/content/expansion/): the Cinderforge and
+ * the four new quest lines.
+ *
+ * Sourced STRAIGHT from the pack rather than through the merged `MOBS` / `NPCS`
+ * / `QUESTS` / `DUNGEONS` tables, exactly as the rift creatures above are, and
+ * for the same reason: `data.ts` is the wiring wave's file, and a Cinderforge
+ * boss's NAME should not ship untranslated in fourteen locales while it waits on
+ * a merge in a different change. The ids land in the same `entities.*`
+ * namespaces as every other entity, so `tEntity` resolves them with no special
+ * case, and the lists stay correct once the merge does land.
+ */
+const EXPANSION_MOB_IDS = [
+  'cf_covenant_smith',
+  'cf_ashbound_zealot',
+  'cf_slag_elemental',
+  'cf_emberling',
+  'cf_cinder_wisp',
+  'cf_forgewarden_bexley',
+  'cf_slagheart',
+  'cf_vharkul',
+] as const;
+
+const EXPANSION_NPC_IDS = [
+  'houndmaster_teel',
+  'ferrywoman_odalie',
+  'stonewright_hulda',
+  'dawn_forgewright_calla',
+] as const;
+
+const EXPANSION_QUEST_IDS = [
+  // Eastbrook Vale
+  'q_ev_kennels',
+  'q_ev_houndsbane',
+  'q_ev_boars',
+  'q_ev_last_hound',
+  // Mirefen Marsh
+  'q_mf_polings',
+  'q_mf_lanterns',
+  'q_mf_drowned_toll',
+  'q_mf_trollbridge',
+  // Thornpeak Heights
+  'q_tp_quarry',
+  'q_tp_keystones',
+  'q_tp_ogre_wall',
+  'q_tp_stormcut',
+  // The Ashen Wastes and the Cinderforge
+  'q_cf_approach',
+  'q_cf_slagfall',
+  'q_cf_covenant',
+  'q_cf_forgewarden',
+  'q_cf_bellows',
+  'q_cf_unquenched',
+] as const;
+
+const EXPANSION_DUNGEON_IDS = ['cinderforge'] as const;
+
 /** The translation id for a rift boss's signature pulse. One per boss that
  *  carries an `aoePulse`; the two bosses whose kit is summons and healing cast
  *  nothing named, so they have no row. */
@@ -358,11 +421,14 @@ const DUNGEON_IDS = [
 ] as const;
 const DELVE_IDS = ['collapsed_reliquary'] as const;
 
-type MobId = (typeof MOB_IDS)[number] | (typeof RIFT_MOB_IDS)[number];
-type NpcId = (typeof NPC_IDS)[number];
-type QuestId = (typeof QUEST_IDS)[number];
+type MobId =
+  | (typeof MOB_IDS)[number]
+  | (typeof RIFT_MOB_IDS)[number]
+  | (typeof EXPANSION_MOB_IDS)[number];
+type NpcId = (typeof NPC_IDS)[number] | (typeof EXPANSION_NPC_IDS)[number];
+type QuestId = (typeof QUEST_IDS)[number] | (typeof EXPANSION_QUEST_IDS)[number];
 type ZoneId = (typeof ZONE_IDS)[number];
-type DungeonId = (typeof DUNGEON_IDS)[number];
+type DungeonId = (typeof DUNGEON_IDS)[number] | (typeof EXPANSION_DUNGEON_IDS)[number];
 type DelveId = (typeof DELVE_IDS)[number];
 
 type MobTranslations = Record<MobId, { name: string }>;
@@ -429,6 +495,9 @@ function makeEnglishWorldEntities(): WorldEntityTranslations {
   orderedValues(RIFT_MOB_IDS, RIFT_MOBS).forEach((mob) => {
     mobs[mob.id as MobId] = { name: mob.name };
   });
+  orderedValues(EXPANSION_MOB_IDS, CINDERFORGE_MOBS).forEach((mob) => {
+    mobs[mob.id as MobId] = { name: mob.name };
+  });
 
   const mobAbilities = {} as MobAbilityTranslations;
   for (const [id, name] of Object.entries(RIFT_MOB_ABILITY_NAMES)) {
@@ -436,16 +505,24 @@ function makeEnglishWorldEntities(): WorldEntityTranslations {
   }
 
   const npcs = {} as NpcTranslations;
-  orderedValues(NPC_IDS, NPCS).forEach((npc) => {
+  const addNpc = (npc: { id: string; name: string; title: string; greeting: string }): void => {
     npcs[npc.id as NpcId] = {
       name: npc.name,
       title: npc.title,
       greeting: normalizeSourceText(npc.greeting),
     };
-  });
+  };
+  orderedValues(NPC_IDS, NPCS).forEach(addNpc);
+  orderedValues(EXPANSION_NPC_IDS, EXPANSION_NPCS).forEach(addNpc);
 
   const quests = {} as QuestTranslations;
-  orderedValues(QUEST_IDS, QUESTS).forEach((quest) => {
+  const addQuest = (quest: {
+    id: string;
+    name: string;
+    text: string;
+    completionText: string;
+    objectives: readonly { label: string }[];
+  }): void => {
     const objectiveRecord = {} as Record<number, { label: string }>;
     quest.objectives.forEach((objective, objectiveIndex) => {
       objectiveRecord[objectiveIndex] = { label: objective.label };
@@ -456,7 +533,9 @@ function makeEnglishWorldEntities(): WorldEntityTranslations {
       completion: normalizeSourceText(quest.completionText),
       objectives: objectiveRecord,
     };
-  });
+  };
+  orderedValues(QUEST_IDS, QUESTS).forEach(addQuest);
+  orderedValues(EXPANSION_QUEST_IDS, EXPANSION_QUESTS).forEach(addQuest);
 
   const zones = {} as ZoneTranslations;
   ZONES.forEach((zone) => {
@@ -472,13 +551,20 @@ function makeEnglishWorldEntities(): WorldEntityTranslations {
   });
 
   const dungeons = {} as DungeonTranslations;
-  orderedValues(DUNGEON_IDS, DUNGEONS).forEach((dungeon) => {
+  const addDungeon = (dungeon: {
+    id: string;
+    name: string;
+    enterText: string;
+    leaveText: string;
+  }): void => {
     dungeons[dungeon.id as DungeonId] = {
       name: dungeon.name,
       enterText: normalizeSourceText(dungeon.enterText),
       leaveText: normalizeSourceText(dungeon.leaveText),
     };
-  });
+  };
+  orderedValues(DUNGEON_IDS, DUNGEONS).forEach(addDungeon);
+  orderedValues(EXPANSION_DUNGEON_IDS, CINDERFORGE_DUNGEON_DEFS).forEach(addDungeon);
 
   const delves = {} as DelveTranslations;
   orderedValues(DELVE_IDS, DELVES).forEach((delve) => {

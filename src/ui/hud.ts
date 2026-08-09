@@ -103,6 +103,10 @@ import {
 } from '../sim/professions';
 import { requiredLevelFor } from '../sim/item_level_req';
 import { LEADERBOARD_PAGE_SIZE } from '../sim/leaderboard_page';
+// The Dungeon Finder's offer list and class/role table. Both are pure authored
+// leaves (no data.ts import, no rng), read directly the way the Crafting window
+// reads CRAFT_RECIPES: only MUTABLE queue state travels over the event contract.
+import { DUNGEON_FINDER_LISTINGS, LFG_CLASS_ROLES } from '../sim/lfg';
 import type { Ante, PickAction } from '../sim/lockpick';
 import { PICK_ACTIONS } from '../sim/lockpick';
 import { FACTION_IDS, FACTIONS, type ReputationStanding, reputationFor } from '../sim/reputation';
@@ -349,6 +353,24 @@ import {
   riftCountdownUntil,
   riftPortalPhase,
 } from './rift_ui_model';
+import {
+  closeDungeonFinderReadyCheck,
+  isDungeonFinderReadyCheckOpen,
+  mountDungeonFinder,
+  openDungeonFinderReadyCheck,
+  refreshDungeonFinder,
+  renderDungeonFinder,
+  toggleDungeonFinderWindow,
+} from './dungeon_finder_window';
+import { dungeonFinderEventFeedback } from './lfg_ui_labels';
+import {
+  type DungeonFinderUiEvent,
+  denyEndsReadyCheck,
+  dungeonFinderDenyReason,
+  isDungeonFinderEventType,
+} from './lfg_ui_model';
+import { mountEventFeedback, mountSlotAria } from './mount_ui_labels';
+import { type MountUiEvent, isMountItem, isMountUiEventType } from './mount_ui_model';
 import { rovingTarget } from './roving_index';
 import { localizeServerText, localizeZone } from './server_i18n';
 import { localizeSimAuraName, localizeSimText } from './sim_i18n';
@@ -467,6 +489,13 @@ const $ = <T extends HTMLElement = HTMLElement>(sel: string): T => document.quer
 // tests/keybinds.test.ts as its unbound probe, which leaves T.
 const CRAFTING_KEY_CODE = 'KeyT';
 const CRAFTING_KEY_LABEL = 't';
+// The Dungeon Finder's default key, resolved the same way and for the same
+// reason (src/game/keybinds.ts is not this change's file either). Everything the
+// classic layout claims plus the two waves above it leaves KeyZ as the only
+// unclaimed letter that is not tests/keybinds.test.ts's KeyY probe. It YIELDS to
+// the bindings profile exactly as crafting's does.
+const DUNGEON_FINDER_KEY_CODE = 'KeyZ';
+const DUNGEON_FINDER_KEY_LABEL = 'z';
 const trackMetaPixel = (eventName: string, data?: Record<string, unknown>): void => {
   const fbq = (window as Window & { fbq?: (...args: unknown[]) => void }).fbq;
   if (typeof fbq !== 'function') return;
@@ -1569,9 +1598,11 @@ export class Hud {
     hudPanelButtons.skills = () => this.toggleSkills();
     hudPanelButtons.deeds = () => this.toggleDeeds();
     this.mountCraftingButtons();
+    this.mountDungeonFinderButtons();
     this.bindPanelKeys();
     this.initGatherNodeTooltip();
     this.mountRift();
+    this.mountDungeonFinderUi();
     $('#mm-options')?.addEventListener('click', () => this.toggleOptionsMenu());
     $('#mm-arena').addEventListener('click', () => this.toggleArena());
     $('#mm-leaderboard').addEventListener('click', () => this.toggleLeaderboard());
@@ -3012,6 +3043,12 @@ export class Hud {
     this.refreshKeybindLabels();
     this.updateQuestTracker();
     this.updateDelveTracker();
+    // Both rift surfaces and both Dungeon Finder surfaces gate their repaint on
+    // a TEXT-INDEPENDENT signature, so a language switch leaves every word in
+    // them stale until the state happens to move. Drop the gates explicitly.
+    refreshRiftHud();
+    refreshDungeonFinder();
+    this.refreshMintedButtonLabels();
     const log = $('#quest-log-window');
     if (log.style.display === 'block') this.renderQuestLog();
     if ($('#bags').style.display === 'block') this.renderBags();
@@ -3122,7 +3159,13 @@ export class Hud {
       item?.kind === 'food' ||
       item?.kind === 'drink' ||
       item?.kind === 'potion' ||
-      item?.use?.type === 'fishing'
+      item?.use?.type === 'fishing' ||
+      // A set of reins. Mounts deliberately ship with NO collection window, so
+      // the action bar is the only place a player can bind one, and this gate is
+      // what decides whether the slot accepts it at all. `isMountItem` reads the
+      // encoding structurally (kind, use.type, or the documented `reins` id) so
+      // the bar works whichever of the three the item schema settles on.
+      isMountItem(item)
     );
   }
 
@@ -4099,6 +4142,11 @@ export class Hud {
     if (slowHud) this.lastHudSlowAt = now;
 
     this.meters.update();
+    // Self-mounting furniture whose countdowns tick against the wall clock, so
+    // both need a per-frame pass. Each compares a signature before it touches
+    // the DOM, so an unchanged frame costs one string build and no write.
+    renderRiftHud();
+    renderDungeonFinder();
     this.lockpickWindow.repaintIfChanged();
     this.tutorial.update(sim, this.renderer, this.keybinds);
     this.reconcileLootRolls();
@@ -4342,11 +4390,15 @@ export class Hud {
       }
       ab.btn.classList.remove('empty');
       if (item && action?.type === 'item') {
+        // A mount names itself AS a mount in the slot's accessible name: with no
+        // collection window anywhere, a bare item name is the only thing a
+        // screen-reader user would otherwise get for the reins.
+        const mount = isMountItem(item);
         ab.btn.setAttribute(
           'aria-label',
           t('abilityUi.actionBar.slotAria', {
             slot: slotLabel,
-            ability: itemDisplayName(item),
+            ability: mount ? mountSlotAria(item.id) : itemDisplayName(item),
           }),
         );
         const iconKey = `item:${item.id}`;
@@ -4355,7 +4407,9 @@ export class Hud {
           ab.label.style.backgroundImage = `url(${iconDataUrl('item', item.id)})`;
         }
         const count = this.inventoryCount(item.id);
-        this.setText(ab.countEl, String(count));
+        // Reins are not consumed, so the stack badge would permanently read "1"
+        // on a slot where the number means nothing.
+        this.setText(ab.countEl, mount ? '' : String(count));
         // Potions share one global cooldown, so any potion slot paints the same
         // swipe; other items have no cooldown.
         const potionCd = item.kind === 'potion' ? p.potionCdRemaining : 0;
@@ -5197,6 +5251,86 @@ export class Hud {
   }
 
   /**
+   * Mount the Dungeon Finder entry points, on desktop AND on the phone.
+   *
+   * Same shape and same reason as `mountCraftingButtons`: index.html and
+   * src/game/ are outside this change's file ownership, so the markup is minted
+   * here instead of authored statically, which keeps the whole feature inside
+   * src/ui/.
+   *
+   * Desktop: a `.micro-btn` in #side-buttons beside Skills, Deeds and Crafting.
+   * Phone: a `.mobile-btn` in #mobile-extra-grid (the More drawer), where waves 1
+   * and 2 put theirs, closing the drawer on press exactly as MobileControls' own
+   * binder does so the window is not left behind a full-screen modal.
+   */
+  /**
+   * Re-label the entry buttons this class MINTS (Crafting, Dungeon Finder) after
+   * a language switch.
+   *
+   * The buttons authored in index.html carry `data-i18n-title` / `data-i18n-aria`
+   * and are swept by `translatePage()`; a button built here is not in that
+   * markup, so without this it keeps the locale it was born in for the rest of
+   * the session.
+   */
+  private refreshMintedButtonLabels(): void {
+    const rows: [string[], string][] = [
+      [['mm-crafting', 'mobile-crafting'], t('hudChrome.crafting.panelTitle')],
+      [['mm-dungeon-finder', 'mobile-dungeon-finder'], t('hudChrome.dungeonFinder.title')],
+    ];
+    for (const [ids, label] of rows) {
+      for (const id of ids) {
+        const btn = document.getElementById(id);
+        if (!btn) continue;
+        btn.title = label;
+        btn.setAttribute('aria-label', label);
+        const text = btn.querySelector<HTMLElement>('.mobile-label');
+        if (text) text.textContent = label;
+      }
+    }
+  }
+
+  private mountDungeonFinderButtons(): void {
+    const label = t('hudChrome.dungeonFinder.title');
+    const side = document.getElementById('side-buttons');
+    if (side && !document.getElementById('mm-dungeon-finder')) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'micro-btn';
+      btn.id = 'mm-dungeon-finder';
+      btn.dataset.icon = 'social';
+      btn.title = label;
+      btn.setAttribute('aria-label', label);
+      btn.innerHTML = `<span class="keybind">${esc(DUNGEON_FINDER_KEY_LABEL)}</span>`;
+      const options = document.getElementById('mm-options');
+      if (options) side.insertBefore(btn, options);
+      else side.appendChild(btn);
+      btn.addEventListener('click', () => this.toggleDungeonFinder());
+    }
+    const grid = document.getElementById('mobile-extra-grid');
+    if (grid && !document.getElementById('mobile-dungeon-finder')) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'mobile-btn';
+      btn.id = 'mobile-dungeon-finder';
+      btn.dataset.icon = 'social';
+      btn.title = label;
+      btn.setAttribute('aria-label', label);
+      const text = document.createElement('span');
+      text.className = 'mobile-label';
+      text.textContent = label;
+      btn.appendChild(text);
+      grid.appendChild(btn);
+      btn.addEventListener('click', () => {
+        // Close the More drawer first: it is `aria-modal`, so leaving it open
+        // would bury the window under a full-screen dialog.
+        document.body.classList.remove('mobile-more-open');
+        document.getElementById('mobile-controls')?.classList.remove('expanded');
+        this.toggleDungeonFinder();
+      });
+    }
+  }
+
+  /**
    * Desktop keybind dispatch for the two windows the HUD composes end to end.
    *
    * Every other window is routed by main.ts, which relays Input's `onUiKey` into
@@ -5239,6 +5373,18 @@ export class Hud {
       ) {
         e.preventDefault();
         this.toggleCrafting();
+        return;
+      }
+      // The Dungeon Finder's key, resolved the same way and yielding the same
+      // way: the bindings lookup above runs first, so the moment a rebind (or a
+      // later BIND_ACTIONS row) claims this code, that owner wins.
+      if (
+        action === null &&
+        combo === DUNGEON_FINDER_KEY_CODE &&
+        this.keybinds.actionForCode(combo) === null
+      ) {
+        e.preventDefault();
+        this.toggleDungeonFinder();
         return;
       }
       if (action !== 'skills' && action !== 'deeds') return;
@@ -6965,6 +7111,19 @@ export class Hud {
         // `professionSkill` is shared with the gathering wave, so it must fall
         // through to the switch as well; every other crafting event is ours.
         if (ev.type !== 'professionSkill') continue;
+      }
+      // Dungeon Finder and mounts, routed the same way and for the same reason:
+      // the sim-side SimEvent variants land in a separate change, and a name
+      // check keeps the HUD compiling either way. The per-event `case` arms live
+      // in handleDungeonFinderEvent / handleMountEvent, which is where
+      // tests/lfg_ui_event_contract.test.ts and its mount twin look for them.
+      if (isDungeonFinderEventType(ev.type)) {
+        this.handleDungeonFinderEvent(ev as unknown as DungeonFinderUiEvent);
+        continue;
+      }
+      if (isMountUiEventType(ev.type)) {
+        this.handleMountEvent(ev as unknown as MountUiEvent);
+        continue;
       }
       switch (ev.type) {
         case 'damage': {
@@ -10127,6 +10286,122 @@ export class Hud {
     // Entering, advancing and clearing all change what the tracker shows, and a
     // portal event changes the panel, so both repaint from live state.
     refreshRiftHud();
+  }
+
+  // -------------------------------------------------------------------------
+  // Dungeon Finder + mounts
+  // -------------------------------------------------------------------------
+
+  /**
+   * Compose the Dungeon Finder into the HUD: the queue window and the
+   * ready-check dialog.
+   *
+   * The window is a managed `.window.panel` the player toggles; the ready check
+   * is self-raising furniture, because a proposal can pop at any moment and a
+   * player must never have to have a window open to see one.
+   */
+  private mountDungeonFinderUi(): void {
+    mountDungeonFinder({
+      // The offer list is derived from the dungeons' own spawn tables, so it is
+      // read off IWorld rather than restated; the authored catalog is only the
+      // fallback for a world that has not mirrored the offers yet.
+      listings: () => {
+        const offers = this.sim.dungeonFinderOffers();
+        return offers.length > 0 ? offers : DUNGEON_FINDER_LISTINGS;
+      },
+      status: () => this.sim.dungeonFinderStatus,
+      proposal: () => this.sim.dungeonFinderProposal,
+      playerLevel: () => this.sim.player.level,
+      eligibleRoles: () => LFG_CLASS_ROLES[this.sim.cfg.playerClass] ?? ['dps'],
+      onJoin: (dungeonId, roles) => {
+        this.sim.dungeonFinderJoin(dungeonId, roles);
+        audio.click();
+      },
+      onLeave: () => {
+        this.sim.dungeonFinderLeave();
+        audio.click();
+      },
+      onRespond: (proposalId, accept) => {
+        this.sim.dungeonFinderRespond(accept, proposalId);
+        audio.click();
+      },
+      confirm: (opts) =>
+        this.confirmDialog(opts.title, opts.body, opts.okText, opts.cancelText, opts.onOk),
+    });
+  }
+
+  toggleDungeonFinder(): void {
+    this.closeOtherWindows('#dungeon-finder-window');
+    toggleDungeonFinderWindow();
+  }
+
+  /**
+   * Log one Dungeon Finder event and repaint whatever it invalidated.
+   *
+   * The four names here MUST match what src/sim/sim.ts actually emits: they are
+   * compared as strings, so a rename on either side is invisible to tsc and just
+   * makes the feature silent (tests/lfg_ui_event_contract.test.ts guards it, and
+   * guards that this router is reached from handleEvents at all).
+   */
+  private handleDungeonFinderEvent(ev: DungeonFinderUiEvent): void {
+    switch (ev.type) {
+      case 'lfgStatus':
+        // The queue readout. Silent in the log by design (it arrives on a
+        // cadence while a player waits) and carried on IWorld as well, so the
+        // arm's whole job is to invalidate the panel's change gate below.
+        break;
+      case 'lfgProposal':
+        openDungeonFinderReadyCheck({
+          proposalId: ev.proposalId,
+          dungeonId: ev.dungeonId,
+          expiresAt: ev.expiresAt,
+        });
+        break;
+      case 'lfgFormed':
+        // The group is real and everyone is in. Nothing is left to answer.
+        closeDungeonFinderReadyCheck();
+        break;
+      case 'lfgDeny':
+        // ONLY the reasons that mean the proposal is gone take the dialog down.
+        // A plain refusal (a redundant second answer, a second join attempt)
+        // arrives while the ready check is still counting, and tearing it down
+        // for one of those would hand the player the 300 second timeout penalty
+        // for a keypress that changed nothing.
+        if (denyEndsReadyCheck(dungeonFinderDenyReason(ev.reason))) {
+          closeDungeonFinderReadyCheck();
+        }
+        break;
+    }
+    const fb = dungeonFinderEventFeedback(ev);
+    if (fb.banner) this.showBanner(fb.banner);
+    for (const l of fb.lines) this.combatLog(l.text, l.color);
+    if (fb.error) this.showError(fb.error);
+    // The GATE-AWARE repaint, not the gate-dropping `refreshDungeonFinder`.
+    // `lfgStatus` arrives on a cadence while a player waits, and rebuilding the
+    // panel on every tick would have a screen reader re-read the whole queue
+    // readout (a `role="status"` live region) once a second for the entire wait.
+    // The signature check repaints only when something a player can see changed.
+    renderDungeonFinder();
+  }
+
+  /**
+   * Log one mount event.
+   *
+   * Mounts ship as a reins item with no collection window by design, so this is
+   * the whole mount surface besides the action-bar slot: `mountUp` is a log line
+   * and `mountDown` adds a toast when the player did not choose it.
+   */
+  private handleMountEvent(ev: MountUiEvent): void {
+    switch (ev.type) {
+      case 'mountUp':
+      case 'mountDown': {
+        const fb = mountEventFeedback(ev);
+        if (fb.banner) this.showBanner(fb.banner);
+        for (const l of fb.lines) this.combatLog(l.text, l.color);
+        if (fb.error) this.showError(fb.error);
+        break;
+      }
+    }
   }
 
   private handleCraftingEvent(ev: CraftingFeedbackEvent): void {
@@ -14527,6 +14802,11 @@ export class Hud {
       this.optionsOpen ||
       this.emoteWheelOpen ||
       $('#emote-editor').style.display === 'block' ||
+      // The ready check is a full-screen aria-modal dialog with a 40 second
+      // deadline, but it is deliberately NOT a `.window.panel` (Escape's
+      // closeAll would otherwise time it out), so the managed-window scan
+      // cannot see it. Name it here or every panel keybind fires underneath it.
+      isDungeonFinderReadyCheckOpen() ||
       this.cardModalEl !== null
     );
   }
