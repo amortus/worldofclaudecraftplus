@@ -2426,6 +2426,40 @@ export class GameServer {
         this.resyncRifts(session);
         break;
       }
+      // Dungeon Finder. Every gate (level, cooldown, already queued, premade
+      // leadership, instance slots) lives in `Sim` + `src/sim/lfg` and answers
+      // with a text-free `lfgDeny`, so the server validates the SHAPE only and
+      // forwards. There is deliberately no proximity gate: the whole point of a
+      // queue is that you join it from wherever you are.
+      case 'df_join': {
+        if (typeof msg.dungeonId !== 'string') break;
+        const roles = Array.isArray(msg.roles)
+          ? msg.roles.filter((r: unknown): r is string => typeof r === 'string').slice(0, 3)
+          : undefined;
+        sim.dungeonFinderJoin(msg.dungeonId, roles, pid);
+        this.resyncDungeonFinder(session);
+        break;
+      }
+      case 'df_leave': {
+        sim.dungeonFinderLeave(pid);
+        this.resyncDungeonFinder(session);
+        break;
+      }
+      case 'df_respond': {
+        if (typeof msg.accept !== 'boolean') break;
+        const proposalId = typeof msg.proposalId === 'string' && msg.proposalId !== ''
+          ? msg.proposalId
+          : undefined;
+        sim.dungeonFinderRespond(msg.accept, proposalId, pid);
+        this.resyncDungeonFinder(session);
+        break;
+      }
+      // Mounts. Summoning goes through `use_item` like any other bag item; this
+      // is only the instant manual dismount, which is never refused.
+      case 'dismount': {
+        sim.dismount(pid);
+        break;
+      }
       case 'companion_upgrade': {
         if (typeof msg.companionId !== 'string') break;
         const e = sim.entities.get(pid);
@@ -2747,6 +2781,13 @@ export class GameServer {
     // collapses.
     maybe('rrun', this.sim.riftRunWire(anchorSession.pid));
     maybe('rportals', this.sim.riftPortalsWire());
+    // Dungeon Finder: the viewer's own queue readout and the ready check they
+    // are sitting in. Both are ids and numbers only, and both hold STILL while
+    // nothing changes (the two deadlines are host-clock stamps taken once, not
+    // per-tick projections), so `maybe` suppresses them for an idle player and
+    // the readout costs a payload only when the queue actually moves.
+    maybe('dfstatus', this.sim.dungeonFinderStatusWire(anchorSession.pid));
+    maybe('dfprop', this.sim.dungeonFinderProposalWire(anchorSession.pid));
     // Gathering proficiency, as the raw per-profession counters. The client
     // derives its own rows from them via the same `gatheringSkillsView` helper
     // the sim uses, so the derivation is never duplicated.
@@ -3299,6 +3340,11 @@ export class GameServer {
   private resyncRifts(session: ClientSession): void {
     delete session.lastSent.rrun;
     delete session.lastSent.rportals;
+  }
+
+  private resyncDungeonFinder(session: ClientSession): void {
+    delete session.lastSent.dfstatus;
+    delete session.lastSent.dfprop;
   }
 
   private send(session: ClientSession, obj: unknown): void {

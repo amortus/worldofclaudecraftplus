@@ -135,6 +135,22 @@ export const DUNGEON_FINDER_LISTINGS: readonly LfgListing[] = [
     contentMinLevel: 20,
     contentMaxLevel: 22,
   },
+  // Added by the expansion wiring wave, which merged src/sim/content/expansion
+  // into data.ts. `tests/lfg_catalog.test.ts` re-derives this table from the
+  // real DUNGEON_DEFS + MOBS and failed until this row existed, which is
+  // exactly what that guard is for: a new five-man with an overworld door is
+  // queue content, and leaving it out would have made the Cinderforge the one
+  // dungeon the finder silently ignores.
+  {
+    dungeonId: 'cinderforge',
+    tier: 'heroic',
+    groupSize: 5,
+    minGroupSize: 5,
+    minQueueLevel: 20,
+    recommendedLevel: 22,
+    contentMinLevel: 20,
+    contentMaxLevel: 22,
+  },
 ];
 
 export function listingFor(dungeonId: string): LfgListing | null {

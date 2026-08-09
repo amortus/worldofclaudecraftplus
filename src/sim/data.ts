@@ -32,6 +32,15 @@ import {
   DELVE_MOBS,
 } from './content/delves';
 import { CLAUDEHOLME_ITEMS, CLAUDEXX_ITEMS, DUNGEON_DEFS, DUNGEON_MOBS } from './content/dungeons';
+import {
+  CINDERFORGE_DUNGEON_DEFS,
+  CINDERFORGE_MOBS,
+  EXPANSION_ITEMS,
+  EXPANSION_NPCS,
+  EXPANSION_OBJECTS,
+  EXPANSION_QUEST_ORDER,
+  EXPANSION_QUESTS,
+} from './content/expansion';
 import { GROUND_PICKUP_LINES } from './content/ground_pickup_lines';
 import {
   TEMPLE_CAMPS,
@@ -115,6 +124,7 @@ export {
 } from './content/delves';
 
 import { DELVE_ITEMS } from './content/delves/items';
+import { MOUNT_ITEMS } from './mounts';
 import { DELVE_MODULE_LAYOUTS, type DelveModuleId, delveModuleSpan } from './delve_layout';
 
 function mergeItems(...parts: Record<string, ItemDef>[]): Record<string, ItemDef> {
@@ -162,6 +172,13 @@ export const ITEMS: Record<string, ItemDef> = mergeItems(
   // Rift legendaries. Prestige colour, not a power jump: each is budgeted at the
   // raid's off-set weapon level and sits strictly under its counterpart on dps.
   RIFT_ITEMS,
+  // The expansion pack: the Cinderforge loot table plus every quest object of
+  // the 18 new quests. LAST, so a later pack can never be shadowed by an older
+  // table redefining one of its ids.
+  EXPANSION_ITEMS,
+  // Reins. The mount system owns its own catalog (src/sim/mounts.ts) because it
+  // is a mechanic, not zone content; only the item table is merged here.
+  MOUNT_ITEMS,
 );
 
 export const MOBS: Record<string, MobTemplate> = {
@@ -177,6 +194,9 @@ export const MOBS: Record<string, MobTemplate> = {
   // Procedural rift elites and bosses. The generator picks from these by theme;
   // they never spawn in the overworld.
   ...RIFT_MOBS,
+  // The Cinderforge roster (4 trash + 1 summoned add + 3 bosses). Instance-only,
+  // like the other dungeon rosters: no camp spawns any of them.
+  ...CINDERFORGE_MOBS,
 };
 
 export const NPCS: Record<string, NpcDef> = {
@@ -186,7 +206,26 @@ export const NPCS: Record<string, NpcDef> = {
   ...TEMPLE_NPCS,
   ...ZONE4_NPCS,
   brother_halven: BROTHER_HALVEN,
+  ...EXPANSION_NPCS,
 };
+
+// Reins go on a vendor's shelf here rather than in zone content, because the
+// mount catalog is a mechanic module and zone4 should not have to know it
+// exists. It is NOT optional polish: Wave 1 shipped 15 gathering tools no
+// vendor sold, and gathering hard-requires a tool, so 42 nodes were permanent
+// scenery (tests/gather_tools_obtainable.test.ts guards that class of bug now).
+// The Dawn of Claude quartermaster is the right shelf: he is the level-cap
+// convenience vendor, and the reins price is anchored on his own stock.
+export const MOUNT_VENDOR_NPC_ID = 'dawn_quartermaster_henning';
+{
+  const vendor = NPCS[MOUNT_VENDOR_NPC_ID];
+  if (vendor) {
+    NPCS[MOUNT_VENDOR_NPC_ID] = {
+      ...vendor,
+      vendorItems: [...(vendor.vendorItems ?? []), ...Object.keys(MOUNT_ITEMS)],
+    };
+  }
+}
 
 export const QUESTS: Record<string, QuestDef> = {
   ...ZONE1_QUESTS,
@@ -194,6 +233,7 @@ export const QUESTS: Record<string, QuestDef> = {
   ...ZONE3_QUESTS,
   ...TEMPLE_QUESTS,
   ...ZONE4_QUESTS,
+  ...EXPANSION_QUESTS,
 };
 
 export const QUEST_ORDER: string[] = [
@@ -202,6 +242,7 @@ export const QUEST_ORDER: string[] = [
   ...ZONE3_QUEST_ORDER,
   ...TEMPLE_QUEST_ORDER,
   ...ZONE4_QUEST_ORDER,
+  ...EXPANSION_QUEST_ORDER,
 ];
 
 // Camps spawn in array order, each drawing world-gen RNG, so an entry inserted
@@ -224,6 +265,10 @@ export const GROUND_OBJECTS: GroundObjectDef[] = [
   ...ZONE3_OBJECTS,
   ...TEMPLE_OBJECTS,
   ...ZONE4_OBJECTS,
+  // Appended LAST. Ground objects have explicit positions and draw no world-gen
+  // rng, but they DO consume entity ids in array order, so keeping the pack at
+  // the end leaves every shipped object's id exactly where it was.
+  ...EXPANSION_OBJECTS,
 ];
 
 export const ROADS: { x: number; z: number }[][] = [...ZONE1_ROADS, ...ZONE2_ROADS, ...ZONE3_ROADS, ...ZONE4_ROADS];
@@ -344,7 +389,14 @@ export function instanceOrigin(dungeonIndex: number, slot: number): { x: number;
   return { x: 900 + dungeonIndex * 600, z: -1250 + slot * 500 };
 }
 
-export const DUNGEONS: Record<string, DungeonDef> = { ...DUNGEON_DEFS, ...TEMPLE_DUNGEON_DEFS };
+export const DUNGEONS: Record<string, DungeonDef> = {
+  ...DUNGEON_DEFS,
+  ...TEMPLE_DUNGEON_DEFS,
+  // The Cinderforge takes dungeon index 8 (x = 900 + 8*600 = 5700), which is why
+  // the arena and delve bands below sit 600 further out than they used to. See
+  // the ARENA_X comment for the full band arithmetic.
+  ...CINDERFORGE_DUNGEON_DEFS,
+};
 
 export const DUNGEON_LIST: DungeonDef[] = Object.values(DUNGEONS).sort((a, b) => a.index - b.index);
 
@@ -366,9 +418,20 @@ export function dungeonAt(x: number): DungeonDef | null {
 // the band split below keeps arena positions from being read as a dungeon.
 // ---------------------------------------------------------------------------
 
-// Arena sits past the dungeon bands (900 + index*600). Pushed out to 5400 to leave
-// room for dungeon index 6 (x=4500, Claudeholme) and a future index 7 (5100) below it.
-export const ARENA_X = 5400; // arena instances share this x; slots stack along z
+// Arena sits past the dungeon bands (900 + index*600). It was at 5400 while
+// indices 0..7 (up to Claudeholme at 4500 and Claudexxaramas at 5100) were the
+// whole ladder. The Cinderforge takes index 8, i.e. x = 900 + 8*600 = 5700, and
+// `dungeonAt` refuses everything at or past ARENA_X_MIN, so the arena and the
+// delve band both moved out by exactly one dungeon stride (600):
+//
+//   dungeon 8 footprint   5700 +/- 24  = [5676, 5724]   (DUNGEON_END_WALL_HW + HW)
+//   arena footprint       6000 +/- 24  = [5976, 6024]   -> 252u clear of the above
+//   delve 0 footprint     6600 +/- 26  = [6574, 6626]   (DELVE_WALL_X + HW + 1)
+//   rift band edge        RIFT_BAND_X_MIN = 11966       -> 540u clear of delve 8
+//
+// `dungeonAt` rounds (x - 900) / 600, so the whole dungeon-8 footprint resolves
+// to index 8 and the whole arena/delve range still resolves to its own predicate.
+export const ARENA_X = 6000; // arena instances share this x; slots stack along z
 export const ARENA_X_MIN = ARENA_X; // x at/after this = an arena instance, not a dungeon
 export const ARENA_SLOT_COUNT = 4; // concurrent 1v1 matches the world can host
 const ARENA_Z0 = -1250;
@@ -407,18 +470,20 @@ export const CRYPT_SPAWNS = DUNGEONS.hollow_crypt.spawns;
 
 // ---------------------------------------------------------------------------
 // Delves, private party instances past the arena x-band (see docs/prd/delves.md).
-// DELVE_X_MIN must stay above ARENA_X_MIN (4000) and ARENA_X (4200).
+// DELVE_X_MIN must stay above ARENA_X_MIN and ARENA_X.
 // ---------------------------------------------------------------------------
 
-// 6000 sits clear of the relocated layout: the highest dungeon band is index 7
-// (x=5100), the arena pit is centred at ARENA_X (5400, ~±22u footprint), and the
-// delve band's west edge (DELVE_BAND_X_MIN) leaves a comfortable margin past it.
-export const DELVE_X_MIN = 6000;
+// 6600 sits clear of the relocated layout: the highest dungeon band is index 8
+// (x=5700, the Cinderforge), the arena pit is centred at ARENA_X (6000, ±24u
+// footprint), and the delve band's west edge (DELVE_BAND_X_MIN = 6573) leaves a
+// comfortable margin past it. Moved from 6000 with the arena when the Cinderforge
+// claimed dungeon index 8; see the ARENA_X comment for the band arithmetic.
+export const DELVE_X_MIN = 6600;
 // Each delve room is centred at DELVE_X_MIN + index*600. Delve modules use wider
 // side walls than the base crypt kit: the side-wall centre is at instance-local
 // |x| = DELVE_WALL_X (25, mirror of delve_layout.ts WALL_X) and the collider's
 // outer face sits 1u beyond that (|x| = 26), i.e. world-x = DELVE_X_MIN - 26 =
-// 4774 for slot 0. We set the band edge 1u further west again (4773) so
+// 6574 for slot 0. We set the band edge 1u further west again (6573) so
 // isDelvePos covers the ENTIRE room footprint, including the west wall face,
 // and the west half is never misclassified as arena. Still >500u clear of ARENA_X.
 const DELVE_WALL_X = 25; // mirror of delve_layout.ts WALL_X (delve side-wall centre)
@@ -439,6 +504,54 @@ export function delveOrigin(delveIndex: number, slot: number): { x: number; z: n
 // x >= RIFT_BAND_X_MIN, so adding the upper bound changes no existing behavior.
 export function isDelvePos(x: number): boolean {
   return x >= DELVE_BAND_X_MIN && x < RIFT_BAND_X_MIN;
+}
+
+// ---------------------------------------------------------------------------
+// One-time migration for the Cinderforge band shift.
+//
+// The arena moved 5400 -> 6000 and the delve band 6000 -> 6600 when dungeon
+// index 8 claimed x = 5700. A character who logged out inside an arena match or
+// a delve holds a saved x in the OLD band, and `dungeonAt` now answers
+// "Cinderforge" for most of that range (it rounds (x - 900) / 600, so anything
+// in [5400, 6000) rounds to index 8). Ejecting them to the Cinderforge door
+// would drop a level-8 arena player into the level-20 endgame zone, so a saved
+// position anywhere in the stale range goes to that character's own zone hub
+// instead. The dungeon COLUMNS are carved out: nothing was ever saved at
+// x = 5700 +/- 25, so a position there is a genuine new-band dungeon position
+// and must keep ejecting to its dungeon door.
+// ---------------------------------------------------------------------------
+
+/** Old ARENA_X_MIN, i.e. the west edge of the stale arena/delve territory. */
+const LEGACY_INSTANCE_X_MIN = 5400;
+
+/** Half-width of a dungeon instance footprint: the end wall is the widest
+ *  primitive a layout places (DUNGEON_END_WALL_HW), plus its half thickness. */
+const DUNGEON_COLUMN_HALF_X = 24 + DUNGEON_WALL_HW;
+
+/** True when `x` sits inside SOME dungeon instance column, i.e. inside a real
+ *  interior rather than in the dead space the bands left behind. */
+function insideDungeonColumn(x: number): boolean {
+  return DUNGEON_LIST.some(
+    (d) => Math.abs(x - instanceOrigin(d.index, 0).x) <= DUNGEON_COLUMN_HALF_X,
+  );
+}
+
+/** A saved x that belonged to the pre-shift arena or delve bands and no longer
+ *  resolves to the plane it was written for. Bounded above by the CURRENT delve
+ *  band edge, so a live delve position is never migrated. */
+export function isLegacyInstancePos(x: number): boolean {
+  if (x < LEGACY_INSTANCE_X_MIN || x >= DELVE_BAND_X_MIN) return false;
+  return !insideDungeonColumn(x);
+}
+
+/** The hub settlement a character of this level belongs to. Zones are authored
+ *  in ascending level order, so the last zone whose band has opened is theirs. */
+export function zoneForLevel(level: number): ZoneDef {
+  let best = ZONES[0];
+  for (const zone of ZONES) {
+    if (level >= zone.levelRange[0]) best = zone;
+  }
+  return best;
 }
 
 export function delveAt(x: number): DelveDef | null {
@@ -580,10 +693,11 @@ export function delveModuleLocal(
 //
 // Why a new band rather than another dungeon index: `instanceOrigin` puts
 // dungeon index i at x = 900 + i*600, and `dungeonAt` returns null at
-// x >= ARENA_X_MIN (5400). Indices 0..7 fill 900..5100, so index 8 would land at
-// 5700, PAST the arena, and be unreachable through `dungeonAt`. Rifts therefore
-// get their own origin function and their own `riftAt` resolver, exactly as the
-// arena and the delves each did.
+// x >= ARENA_X_MIN. Every added dungeon index costs the arena and the delve band
+// a 600-wide shift out (that is exactly what the Cinderforge at index 8 did),
+// which is a migration for every saved position in the old bands. Rifts
+// therefore get their own origin function and their own `riftAt` resolver,
+// exactly as the arena and the delves each did.
 //
 // Why ABOVE the delve band: the delve band was the only open-ended predicate in
 // the file (`isDelvePos` was `x >= DELVE_BAND_X_MIN` with no ceiling), so every
@@ -592,8 +706,9 @@ export function delveModuleLocal(
 // (`dungeonAt`, `isArenaPos`, `isDelvePos`, `zoneAt`) answering exactly as they
 // do today for every position the world can actually produce.
 //
-// RIFT_X = 12000 leaves the delve band ten future indices (6000..11400, each
-// 600 wide) before it is reached.
+// RIFT_X = 12000 leaves the delve band nine future indices (6600..11400, each
+// 600 wide) before it is reached; it was ten before the Cinderforge pushed
+// DELVE_X_MIN from 6000 to 6600.
 // ---------------------------------------------------------------------------
 
 /** Every rift instance shares this x; slots stack along z (mirrors the arena). */

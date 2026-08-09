@@ -1,12 +1,12 @@
 // The Cinderforge: layout expressibility, spawn placement and encounter budget.
 //
-// The dungeon is authored in src/sim/content/expansion/cinderforge.ts and is not
-// merged into data.ts yet, so this file checks it against the real layout and
-// collider primitives directly.
+// The dungeon is authored in src/sim/content/expansion/cinderforge.ts and is
+// merged into data.ts by the wiring wave, so this file checks it against the
+// real layout and collider primitives directly.
 import { describe, expect, it } from 'vitest';
 
 import { CINDERFORGE_DUNGEON_DEFS, CINDERFORGE_LAYOUT, CINDERFORGE_MOBS } from '../src/sim/content/expansion';
-import { DUNGEONS, ARENA_X_MIN, instanceOrigin } from '../src/sim/data';
+import { DUNGEONS, ARENA_X_MIN, dungeonAt, instanceOrigin } from '../src/sim/data';
 import type { DungeonLayout } from '../src/sim/dungeon_layout';
 import {
   DUNGEON_WALK_HALF_X,
@@ -43,13 +43,16 @@ describe('Cinderforge: the def', () => {
     expect(['crypt', 'sanctum', 'temple']).toContain(CINDERFORGE.interior);
   });
 
-  it('takes the next free instance index, and records the band it needs', () => {
+  it('takes the highest instance index, and its band actually resolves', () => {
     const used = Object.values(DUNGEONS).map((d) => d.index);
-    expect(CINDERFORGE.index).toBe(Math.max(...used) + 1);
-    // Documented wiring debt: index 8 lands past the current arena band edge, so
-    // `dungeonAt` cannot resolve it until ARENA_X/DELVE_X_MIN move out by 600.
-    // This assertion is the tripwire that keeps that fact from being forgotten.
-    expect(instanceOrigin(CINDERFORGE.index, 0).x).toBeGreaterThanOrEqual(ARENA_X_MIN);
+    expect(CINDERFORGE.index).toBe(Math.max(...used));
+    // The wiring wave moved ARENA_X 5400 -> 6000 and DELVE_X_MIN 6000 -> 6600 so
+    // index 8 (x = 5700) sits INSIDE the dungeon band again. This is the
+    // tripwire that catches a future index landing past the arena unnoticed,
+    // which would make the dungeon silently unreachable.
+    const x = instanceOrigin(CINDERFORGE.index, 0).x;
+    expect(x).toBeLessThan(ARENA_X_MIN);
+    expect(dungeonAt(x)?.id).toBe(CINDERFORGE.id);
   });
 
   it('has an overworld door inside the Ashen Wastes and the shipped world width', () => {

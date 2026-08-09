@@ -89,6 +89,37 @@ export const GROUND_PICKUP_LINES: Record<string, GroundPickupLines> = {
     deny: 'The ritual focus is bound to its rite; it ignores your hand.',
     enough: 'You already have enough ritual foci.',
   },
+  // The expansion pack (src/sim/content/expansion). Every ground object it adds
+  // needs a line here: `tests/sim.test.ts` asserts this table and the merged
+  // GROUND_OBJECTS have exactly the same item ids.
+  houndsbane_root: {
+    deny: 'The root clings to the stone; nobody has asked you to pull it.',
+    enough: 'You have gathered enough houndsbane.',
+  },
+  cairn_of_bramble: {
+    deny: "Bramble's stones lie undisturbed. Leave them so.",
+    enough: 'You have already paid your respects here.',
+  },
+  cairn_of_old_seld: {
+    deny: "Old Seld's stones lie undisturbed. Leave them so.",
+    enough: 'You have already paid your respects here.',
+  },
+  cairn_of_the_first_pack: {
+    deny: 'The first pack sleeps under these stones. Leave them so.',
+    enough: 'You have already paid your respects here.',
+  },
+  drowned_lantern: {
+    deny: 'The lantern is silted into the bank and will not lift.',
+    enough: 'You have recovered enough lanterns.',
+  },
+  quarried_keystone: {
+    deny: 'The keystone is wedged tight in the quarry face.',
+    enough: 'You have cut enough keystones.',
+  },
+  cooled_slag: {
+    deny: 'The slag is still fused to the floor.',
+    enough: 'You have carried off enough slag.',
+  },
 };
 
 export function groundPickupDeny(itemId: string, itemName: string): string {

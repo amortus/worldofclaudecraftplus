@@ -1334,6 +1334,14 @@ export const GUIDE_DUNGEONS: GuideDungeon[] = [
     "name": "Claudeholme"
   },
   {
+    "id": "cinderforge",
+    "isRaid": false,
+    "suggestedPlayers": 5,
+    "min": 20,
+    "max": 22,
+    "name": "The Cinderforge"
+  },
+  {
     "id": "raid",
     "isRaid": true,
     "suggestedPlayers": 10,

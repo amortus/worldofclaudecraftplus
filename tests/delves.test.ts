@@ -142,9 +142,11 @@ describe('delve spatial band', () => {
 
   it('pins the absolute delve boundary against the arena seam (relocation regression)', () => {
     // DELVE_X_MIN moved 3600 -> 4800 (v0.10.0) -> 6000 when the arena was pushed out
-    // to x=5400 to open dungeon index 6 (Claudeholme). Pin the load-bearing constant
-    // and the arena/delve seam so a future respacing that re-introduces overlap fails.
-    expect(DELVE_X_MIN).toBe(6000);
+    // to x=5400 to open dungeon index 6 (Claudeholme) -> 6600 when the Cinderforge
+    // took dungeon index 8 (x=5700) and pushed the arena out to 6000. Pin the
+    // load-bearing constant and the arena/delve seam so a future respacing that
+    // re-introduces overlap fails.
+    expect(DELVE_X_MIN).toBe(6600);
     // The seam: DELVE_BAND_X_MIN is the first delve x; the x just below it is arena.
     expect(isArenaPos(DELVE_BAND_X_MIN - 1)).toBe(true);
     expect(isDelvePos(DELVE_BAND_X_MIN - 1)).toBe(false);

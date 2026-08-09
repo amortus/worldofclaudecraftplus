@@ -217,6 +217,11 @@ export type SkinCatalog = 'class' | 'mech';
 
 export type ItemUse =
   | { type: 'fishing' }
+  // A set of reins. Used straight from the bag or the action bar, which is the
+  // whole client surface a mount has (upstream retired the picker window), so
+  // there is no separate "selected mount" anywhere in state. Rules and tuning
+  // live in src/sim/mounts.ts.
+  | { type: 'mount'; mountId: string }
   | { type: 'mechChroma'; chromaId: string }
   // Opens the client-side event skin-select overlay. The server rolls a rank on
   // use (see Sim.openSkinSelect) and the player locks one in via claimEventSkin.
@@ -1715,6 +1720,50 @@ export type SimEvent = { pid?: number } & (
   | { type: 'riftClear'; rank: string; floors: number; firstClear: boolean }
   // A rift action the gates refused. `reason` is a stable id, never prose.
   | { type: 'riftDeny'; reason: string }
+  // ---------------------------------------------------------------------
+  // Dungeon Finder and mounts. Six events, all TEXT-FREE and all personal
+  // (they carry a `pid`): stable ids and numbers only, so the client composes
+  // and localizes every line and none of them needs a `sim_i18n.ts` matcher
+  // rule (the same contract as `riftDeny` / `gatherDeny` / `skinEvent`).
+  //
+  // The NAMES are a FIXED contract shared with the HUD, pinned from both sides
+  // by tests/lfg_wiring_event_contract.test.ts and the UI's own contract test.
+  // tsc cannot see a string mismatch here, and Wave 2 shipped with four of
+  // seven crafting events dead for exactly that reason.
+  //
+  // NOTE ON THE NAME: the sim subsystem is `src/sim/lfg/` for upstream
+  // continuity, but its runtime identifier is `dungeonFinder` and the token
+  // `lfg` is already a joinable chat channel. These four event names are the
+  // ONLY place `lfg` may appear; no id, key or label may ever use it.
+  // ---------------------------------------------------------------------
+  // The viewer's live queue readout. `state` is an `LfgPlayerState`
+  // ('idle' | 'queued' | 'proposed' | 'cooldown'); `queuedByRole` counts every
+  // player WILLING to fill each role, so a druid is counted in all three.
+  | {
+      type: 'lfgStatus';
+      state: string;
+      dungeonId: string | null;
+      waitSeconds: number;
+      queuedByRole: Record<string, number>;
+    }
+  // A ready check opened. `expiresAt` is absolute MILLISECONDS on the HOST
+  // clock (the same clock `SimConfig.lockoutNowMs` feeds, exactly like
+  // `riftPortal.expiresAt`), because the client derives its countdown by
+  // subtracting its own now and never asks the server for a tick.
+  | { type: 'lfgProposal'; proposalId: string; dungeonId: string; expiresAt: number }
+  // Everyone accepted: the party is formed and every member has been moved
+  // inside. Emitted AFTER the teleport, so it only reaches players who are
+  // already standing in the instance.
+  | { type: 'lfgFormed'; dungeonId: string }
+  // A join or answer the gates refused, or a proposal that collapsed.
+  // `reason` is a stable id (an `LfgJoinDeny`, `LfgRespondDeny` or
+  // `LfgCloseReason`), never prose.
+  | { type: 'lfgDeny'; reason: string }
+  // The player is now mounted. `mountId` is a stable id (see src/sim/mounts.ts).
+  | { type: 'mountUp'; mountId: string }
+  // The ride ended, or a summon was refused. `reason` is a stable
+  // `MountDownReason` / `MountDenyReason` id, never prose.
+  | { type: 'mountDown'; reason: string }
   | { type: 'companionBark'; barkId: string; pid?: number }
   // Lockpicking minigame ("Tumbler's Path"). All personal (pid-scoped). The sim
   // emits structured data only, the client builds every visible string. Cells

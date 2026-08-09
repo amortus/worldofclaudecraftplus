@@ -14,6 +14,7 @@ import {
 } from '../sim/content/talents';
 import { CRAFTING_MAX_SKILL, GATHERING_MAX_SKILL } from '../sim/content/professions';
 import { abilitiesKnownAt, CLASSES, NPCS, resolveDelveShopOffers } from '../sim/data';
+import { DUNGEON_FINDER_LISTINGS } from '../sim/lfg';
 import { type DeedProgress, freshDeedProgress, restoreDeedProgress } from '../sim/deeds';
 import { parseInstanceMap, parseInvSlots } from '../sim/item_instance';
 import {
@@ -76,6 +77,9 @@ import {
   isOverheadEmoteId,
   type LeaderboardEntry,
   type LeaderboardPage,
+  type LfgOfferInfo,
+  type LfgProposalInfo,
+  type LfgStatusInfo,
   type LockpickView,
   type MarketInfo,
   type OverheadEmoteId,
@@ -847,6 +851,11 @@ export class ClientWorld implements IWorld {
   // needs no conversion here.
   riftRun: RiftRunInfo | null = null;
   private riftPortalList: RiftPortalInfo[] = [];
+  // Dungeon Finder. Both mirror the self-wire; the sim already projects the two
+  // deadlines onto the server's own clock, so the HUD's `Date.now()` countdown
+  // needs no conversion here either.
+  dungeonFinderStatus: LfgStatusInfo | null = null;
+  dungeonFinderProposal: LfgProposalInfo | null = null;
   companionState: DelveCompanionInfo | null = null;
   // Lockpicking: rebuilt from the lockpick* events (there is no snapshot field).
   // Holds only the fog-windowed cells the server discloses.
@@ -1705,6 +1714,8 @@ export class ClientWorld implements IWorld {
       if (s.drun !== undefined) this.delveRun = s.drun;
       if (s.rrun !== undefined) this.riftRun = s.rrun;
       if (s.rportals !== undefined) this.riftPortalList = s.rportals ?? [];
+      if (s.dfstatus !== undefined) this.dungeonFinderStatus = s.dfstatus;
+      if (s.dfprop !== undefined) this.dungeonFinderProposal = s.dfprop;
       if (s.dcompanion !== undefined) this.companionState = s.dcompanion;
       if (s.dmarks !== undefined) this.delveMarks = s.dmarks ?? 0;
       if (s.dcomp !== undefined) this.companionUpgrades = s.dcomp ?? {};
@@ -2199,6 +2210,31 @@ export class ClientWorld implements IWorld {
     // client's snapshot state (an online-only bug the offline world could not
     // reproduce).
     return [...this.riftPortalList];
+  }
+  dungeonFinderOffers(): LfgOfferInfo[] {
+    // Derived from the same authored catalog the sim matches on, so there is
+    // nothing to stream: a COPY per call, matching what `Sim.dungeonFinderOffers`
+    // hands back, because the panel sorts the list it is given.
+    return DUNGEON_FINDER_LISTINGS.map((listing) => ({
+      dungeonId: listing.dungeonId,
+      tier: listing.tier,
+      groupSize: listing.groupSize,
+      minGroupSize: listing.minGroupSize,
+      minQueueLevel: listing.minQueueLevel,
+      recommendedLevel: listing.recommendedLevel,
+    }));
+  }
+  dungeonFinderJoin(dungeonId: string, roles?: readonly string[]): void {
+    this.cmd({ cmd: 'df_join', dungeonId, roles: roles ? [...roles] : [] });
+  }
+  dungeonFinderLeave(): void {
+    this.cmd({ cmd: 'df_leave' });
+  }
+  dungeonFinderRespond(accept: boolean, proposalId?: string): void {
+    this.cmd({ cmd: 'df_respond', accept, proposalId: proposalId ?? '' });
+  }
+  dismount(): void {
+    this.cmd({ cmd: 'dismount' });
   }
   companionUpgrade(companionId: string): void {
     this.cmd({ cmd: 'companion_upgrade', companionId });

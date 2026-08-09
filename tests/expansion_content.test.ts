@@ -1,7 +1,8 @@
 // Integrity + balance-band gates for the expansion content pack
-// (src/sim/content/expansion). The pack is NOT merged into data.ts yet, so
-// these tests import both the pack and the shipped tables directly and check
-// the pack against them.
+// (src/sim/content/expansion). The pack IS merged into data.ts now (the wiring
+// wave), so the id checks below assert the post-merge invariant: every pack
+// record survives into the flat tables exactly as it was authored, and nothing
+// shipped was shadowed on the way in.
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -24,34 +25,44 @@ const allQuests = { ...QUESTS, ...EXPANSION_QUESTS };
 
 const objectItemIds = new Set(EXPANSION_OBJECTS.map((o) => o.itemId));
 
-describe('expansion: id uniqueness against the shipped tables', () => {
-  it('adds no colliding item id', () => {
-    const clashes = Object.keys(EXPANSION_ITEMS).filter((id) => id in ITEMS);
-    expect(clashes).toEqual([]);
-  });
-
-  it('adds no colliding mob id', () => {
-    const clashes = Object.keys(packMobs).filter((id) => id in MOBS);
-    expect(clashes).toEqual([]);
-  });
-
-  it('adds no colliding npc id', () => {
-    const clashes = Object.keys(EXPANSION_NPCS).filter((id) => id in NPCS);
-    expect(clashes).toEqual([]);
-  });
-
-  it('adds no colliding quest id', () => {
-    const clashes = Object.keys(EXPANSION_QUESTS).filter((id) => id in QUESTS);
-    expect(clashes).toEqual([]);
-    expect(EXPANSION_QUEST_ORDER.filter((id) => QUEST_ORDER.includes(id))).toEqual([]);
-  });
-
-  it('adds no colliding dungeon id or index', () => {
-    const usedIndices = new Set(Object.values(DUNGEONS).map((d) => d.index));
-    for (const def of Object.values(CINDERFORGE_DUNGEON_DEFS)) {
-      expect(def.id in DUNGEONS).toBe(false);
-      expect(usedIndices.has(def.index)).toBe(false);
+describe('expansion: the pack reaches the flat tables intact', () => {
+  it('every pack item is in ITEMS as it was authored', () => {
+    // Compared field by field rather than with toEqual: mergeItems decorates an
+    // item that has GROUND_PICKUP_LINES with pickupDeny/pickupEnough, which is
+    // the merge layer doing its job, not a collision.
+    for (const [id, item] of Object.entries(EXPANSION_ITEMS)) {
+      expect(ITEMS[id]?.id, id).toBe(item.id);
+      expect(ITEMS[id]?.name, id).toBe(item.name);
+      expect(ITEMS[id]?.kind, id).toBe(item.kind);
+      expect(ITEMS[id]?.sellValue, id).toBe(item.sellValue);
     }
+  });
+
+  it('every pack mob is in MOBS unshadowed', () => {
+    for (const [id, mob] of Object.entries(packMobs)) expect(MOBS[id], id).toEqual(mob);
+  });
+
+  it('every pack npc is in NPCS unshadowed', () => {
+    for (const [id, npc] of Object.entries(EXPANSION_NPCS)) expect(NPCS[id], id).toEqual(npc);
+  });
+
+  it('every pack quest is in QUESTS, and in QUEST_ORDER exactly once', () => {
+    for (const [id, quest] of Object.entries(EXPANSION_QUESTS)) {
+      expect(QUESTS[id], id).toEqual(quest);
+    }
+    for (const id of EXPANSION_QUEST_ORDER) {
+      expect(QUEST_ORDER.filter((q) => q === id), id).toHaveLength(1);
+    }
+  });
+
+  it('the dungeon is in DUNGEONS and every index is still unique', () => {
+    for (const def of Object.values(CINDERFORGE_DUNGEON_DEFS)) {
+      expect(DUNGEONS[def.id]).toEqual(def);
+    }
+    // An index collision would put two dungeons in one instance x-band, which
+    // `dungeonAt` resolves by rounding and so cannot tell apart.
+    const indices = Object.values(DUNGEONS).map((d) => d.index);
+    expect(new Set(indices).size).toBe(indices.length);
   });
 
   it('adds no colliding ground-object item id', () => {

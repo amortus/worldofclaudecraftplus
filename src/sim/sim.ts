@@ -5,6 +5,9 @@ import type {
   DelveCompanionInfo,
   DelveRunInfo,
   EnchantOptionView,
+  LfgOfferInfo,
+  LfgProposalInfo,
+  LfgStatusInfo,
   LockpickView,
   RiftPortalInfo,
   RiftRunInfo,
@@ -183,6 +186,7 @@ import {
   riftEligibleZones,
   isArenaPos,
   isDelvePos,
+  isLegacyInstancePos,
   isRiftPos,
   MOBS,
   NPCS,
@@ -196,12 +200,45 @@ import {
   riftSlotAt,
   ZONES,
   zoneAt,
+  zoneForLevel,
 } from './data';
 import {
   DELVE_MODULE_LAYOUTS,
   type DelveModuleId,
   delveModuleEntry as delveLayoutEntry,
 } from './delve_layout';
+import {
+  DUNGEON_FINDER_LISTINGS,
+  LFG_READY_WINDOW_SEC,
+  createLfgQueueState,
+  joinDungeonFinder,
+  leaveDungeonFinder,
+  lfgStatusFor,
+  listingFor,
+  proposalForPid,
+  respondToLfgProposal,
+  tickDungeonFinder,
+  type LfgFormGroupIntent,
+  type LfgIntent,
+  type LfgJoinMember,
+  type LfgQueueState,
+  type LfgRole,
+  type LfgStatusView,
+} from './lfg';
+import {
+  MOUNT_AURA_KIND,
+  MOUNT_AURA_SECONDS,
+  MOUNT_CAST_ID,
+  isMountAuraId,
+  mountAuraId,
+  mountById,
+  mountDenyReason,
+  mountIdFromAuraId,
+  rideEndReason,
+  type MountDef,
+  type MountDownReason,
+  type MountSituation,
+} from './mounts';
 import {
   ARENA_SPAWN_A,
   ARENA_SPAWN_B,
@@ -1163,6 +1200,10 @@ export interface PlayerMeta {
   // Live `/unstuck` attempt, or null. Session-only: an attempt never survives a
   // disconnect (the countdown's whole point is that the player stood still).
   pendingUnstuck: PendingUnstuck | null;
+  // The mount whose summon cast is in flight, or null. Session-only and
+  // deliberately NOT persisted: upstream retired the "selected mount", so what
+  // a character owns is the reins in their bags and nothing else.
+  pendingMountId: string | null;
   // Overworld zone the player was last seen in, for the zoneEnter deed fact.
   // Session-only; the deed mark it feeds is a Set, so re-firing on a relog is a
   // no-op rather than a double count.
@@ -1708,6 +1749,15 @@ export class Sim {
   // riftOrigin) plus the per-zone overworld portal rotation.
   riftRuns: RiftRun[] = [];
   riftRotation: RiftZoneRotation[] = [];
+  // The Dungeon Finder queue. The matchmaker (src/sim/lfg) is a pure module that
+  // owns no state: this record IS the queue, and every function there takes it
+  // as an explicit argument. Session-only, exactly like an arena queue: a
+  // realm restart empties the line rather than resurrecting stale entries.
+  lfgQueue: LfgQueueState = createLfgQueueState();
+  // Sim-clock second the next `lfgStatus` heartbeat is due. The status event
+  // carries a live `waitSeconds`, so a queued player gets one every
+  // LFG_STATUS_HEARTBEAT_SEC on top of the transition emits.
+  private nextLfgStatusAt = 0;
   // Real-world UTC day ('YYYY-MM-DD') for the delve daily reset (FR-5.1). The sim
   // core must stay deterministic, so it never reads the wall clock itself: the host
   // (server/offline client) sets this each tick from `new Date()`. Empty string =
@@ -2103,6 +2153,15 @@ export class Sim {
     if (savedPos && isDelvePos(savedPos.x)) {
       const delve = delveAt(savedPos.x) ?? DELVE_LIST[0];
       savedPos = { x: delve.doorPos.x, z: delve.doorPos.z - 4 };
+    } else if (savedPos && isLegacyInstancePos(savedPos.x)) {
+      // BAND-SHIFT MIGRATION (the Cinderforge took dungeon index 8, pushing the
+      // arena 5400 -> 6000 and the delve band 6000 -> 6600). A position saved in
+      // the stale range now rounds into the Cinderforge's dungeon band, and the
+      // branch below would eject a level-8 arena player to a door in the
+      // level-20 endgame zone. Their own zone hub is the safe answer, and it is
+      // the only place in this file that ejects somewhere other than a door.
+      const hub = zoneForLevel(savedState?.level ?? 1).hub;
+      savedPos = { x: hub.x, z: hub.z };
     } else if (savedPos && savedPos.x > DUNGEON_X_THRESHOLD) {
       const dungeon = dungeonAt(savedPos.x) ?? DUNGEON_LIST[0];
       savedPos = { x: dungeon.doorPos.x, z: dungeon.doorPos.z - 4 };
@@ -2182,6 +2241,7 @@ export class Sim {
       deeds: freshDeedProgress(),
       deedQueue: [],
       pendingUnstuck: null,
+      pendingMountId: null,
       // Deliberately EMPTY rather than the login zone: the first tick then fires
       // a zoneEnter for wherever the character actually stands, so a veteran who
       // logs in in Thornpeak gets that mark without having to leave and come
@@ -3229,6 +3289,12 @@ export class Sim {
       if (p) p.inCombat = this.engagedPids.has(p.id) || p.combatTimer < 5;
     }
 
+    // Mounts run HERE, immediately after the combat resolve above: "dismount on
+    // entering combat" is read off the flag that loop just wrote, so a pull and
+    // the dismount it causes land in the same tick rather than one apart.
+    // Draw-free, so it cannot fork the world's rng order.
+    this.updateMounts();
+
     // /unstuck runs HERE, immediately after player movement and the combat
     // resolve above and before the spatial re-bucket below. That position is
     // load-bearing: the state machine reads the post-movement position (its
@@ -3245,6 +3311,13 @@ export class Sim {
     this.updateDelveRuns();
     this.updateRiftPortals();
     this.updateRiftRuns();
+    // The Dungeon Finder runs AFTER the instance sweeps above, so the free-slot
+    // count it is handed is this tick's truth rather than last tick's. Player
+    // commands (join / leave / ready-check answers) are all processed before
+    // `tick()` is entered, which is the ordering the module's host contract
+    // requires: `expireProposals` runs before promotion, so an accept arriving
+    // in the same sim second as `expiresAt` still saves the group.
+    this.updateDungeonFinder();
     this.updateMarket();
     this.emitDueDelayedEvents();
 
@@ -4057,6 +4130,10 @@ export class Sim {
         this.completeHarvest(meta);
         return;
       }
+      if (castId === MOUNT_CAST_ID) {
+        this.completeMountSummon(meta, p);
+        return;
+      }
       const res = this.resolvedAbility(castId, p.id);
       if (res) this.applyAbility(p, meta, res);
       this.fireQueuedCast(p);
@@ -4078,6 +4155,13 @@ export class Sim {
   private cancelCast(p: Entity): void {
     const wasFishing = p.castingAbility === FISHING_CAST_ID;
     const wasGathering = p.castingAbility === GATHER_CAST_ID;
+    // An abandoned summon leaves no ride behind, so it emits no `mountDown`:
+    // `castStop success:false` is already the whole story, and a dismount line
+    // for a mount that never appeared would just be confusing.
+    if (p.castingAbility === MOUNT_CAST_ID) {
+      const meta = this.players.get(p.id);
+      if (meta) meta.pendingMountId = null;
+    }
     p.castingAbility = null;
     p.castRemaining = 0;
     p.channeling = false;
@@ -4156,6 +4240,11 @@ export class Sim {
     // else abandons it rather than eating a "busy" error. It costs the player
     // nothing (resolveHarvest never ran, so no draw and no respawn stamp).
     if (p.castingAbility === GATHER_CAST_ID) this.cancelCast(p);
+    // The same rule for a mount summon, and (classic) casting anything at all
+    // while already mounted drops you off. Both are deliberate actions, so
+    // neither eats a "busy" error.
+    if (p.castingAbility === MOUNT_CAST_ID) this.cancelCast(p);
+    this.endRide('cast', p.id);
     if (p.castingAbility) {
       // Pressing your next spell in the tail of the current cast queues it rather than
       // eating a "busy" error, so a cast chain does not need frame-perfect timing. The
@@ -6585,13 +6674,20 @@ export class Sim {
       }
       for (let i = target.auras.length - 1; i >= 0; i--) {
         if (target.auras[i].breaksOnDamage) {
+          const broken = target.auras[i];
           this.emit({
             type: 'aura',
             targetId: target.id,
-            name: target.auras[i].name,
+            name: broken.name,
             gained: false,
           });
           target.auras.splice(i, 1);
+          // A mount ends the instant its rider is hit (classic). The aura
+          // already carries `breaksOnDamage`, so this arm only adds the
+          // text-free event the HUD needs in order to say WHY it ended.
+          if (target.kind === 'player' && isMountAuraId(broken.id)) {
+            this.emit({ type: 'mountDown', reason: 'damage', pid: target.id });
+          }
         }
       }
     }
@@ -6676,11 +6772,14 @@ export class Sim {
         amount > 0 &&
         kind === 'hit'
       ) {
-        // Neither profession session survives a hit: they are interactions, not
-        // spells, so there is nothing for the vanilla pushback rule to shorten.
+        // Neither profession session nor a mount summon survives a hit: they are
+        // interactions, not spells, so there is nothing for the vanilla pushback
+        // rule to shorten. A summon that could be pushed back instead of broken
+        // would also be a 3-second escape from any pull.
         if (
           target.castingAbility === FISHING_CAST_ID ||
-          target.castingAbility === GATHER_CAST_ID
+          target.castingAbility === GATHER_CAST_ID ||
+          target.castingAbility === MOUNT_CAST_ID
         ) {
           this.cancelCast(target);
         } else if (!ignoresDamagePushback(target.castingAbility)) this.pushbackCast(target);
@@ -12042,6 +12141,12 @@ export class Sim {
     }
     if (p.castingAbility === FISHING_CAST_ID) {
       this.error(meta.entityId, 'You are busy.');
+      return;
+    }
+    if (def.use?.type === 'mount') {
+      // Pressing the reins while mounted dismounts, the way every mount button
+      // has always worked. Reins are never consumed.
+      this.toggleMount(def.use.mountId, meta, p);
       return;
     }
     if (p.dead) return;
@@ -20431,6 +20536,472 @@ export class Sim {
 
   riftPortals(): RiftPortalInfo[] {
     return this.riftPortalsWire();
+  }
+
+  // -------------------------------------------------------------------------
+  // Mounts. The RULES and the tuning live in src/sim/mounts.ts (a pure leaf
+  // that takes no Rng and reads no clock); this section owns only the state:
+  // the summon cast, the aura, and the two text-free events.
+  //
+  // There is no "owned mounts" list and no persisted selection: what a
+  // character owns is the reins in their bags, which is why this feature adds
+  // no CharacterState field at all.
+  // -------------------------------------------------------------------------
+
+  /** Everything the mount gates look at, read off the live entity. `indoors` is
+   *  the whole far-off instance plane in one test: every dungeon, arena, delve
+   *  and rift position sits past DUNGEON_X_THRESHOLD. */
+  private mountSituation(p: Entity): MountSituation {
+    return {
+      dead: p.dead,
+      inCombat: p.inCombat,
+      swimming: this.isSwimming(p),
+      indoors: p.pos.x > DUNGEON_X_THRESHOLD,
+      casting: p.castingAbility !== null,
+    };
+  }
+
+  private activeMountAura(e: Entity): Aura | null {
+    return e.auras.find((a) => isMountAuraId(a.id)) ?? null;
+  }
+
+  /** The mount this player is riding, or null. */
+  mountedOn(pid: number): string | null {
+    const e = this.entities.get(pid);
+    const aura = e ? this.activeMountAura(e) : null;
+    return aura ? mountIdFromAuraId(aura.id) : null;
+  }
+
+  /** End the ride, if there is one. Returns true when a mount actually ended,
+   *  so callers can use it as "was mounted" without a second scan. */
+  private endRide(reason: MountDownReason, pid: number): boolean {
+    const p = this.entities.get(pid);
+    if (!p) return false;
+    const index = p.auras.findIndex((a) => isMountAuraId(a.id));
+    if (index < 0) return false;
+    const aura = p.auras[index];
+    p.auras.splice(index, 1);
+    this.emit({ type: 'aura', targetId: p.id, name: aura.name, gained: false });
+    this.emit({ type: 'mountDown', reason, pid: p.id });
+    return true;
+  }
+
+  /** The instant manual dismount (the IWorld action and the client command).
+   *  Never refused and never delayed: getting off is always allowed. */
+  dismount(pid?: number): void {
+    const r = this.resolve(pid);
+    if (!r) return;
+    this.endRide('manual', r.meta.entityId);
+  }
+
+  /** Pressing the reins. Mounted, it dismounts; summoning, it abandons the
+   *  summon; otherwise it starts the cast. One button, three states, exactly
+   *  how a mount button has always behaved. */
+  private toggleMount(mountId: string, meta: PlayerMeta, p: Entity): void {
+    if (this.endRide('manual', meta.entityId)) return;
+    if (p.castingAbility === MOUNT_CAST_ID) {
+      this.cancelCast(p);
+      return;
+    }
+    const mount = mountById(mountId);
+    if (!mount) return;
+    const deny = mountDenyReason(this.mountSituation(p));
+    if (deny) {
+      this.emit({ type: 'mountDown', reason: deny, pid: meta.entityId });
+      return;
+    }
+    if (p.sitting) this.standUp(p);
+    meta.pendingMountId = mount.id;
+    p.castingAbility = MOUNT_CAST_ID;
+    p.castTotal = mount.castSeconds;
+    p.castRemaining = mount.castSeconds;
+    p.channeling = false;
+    this.emit({
+      type: 'castStart',
+      entityId: p.id,
+      ability: MOUNT_CAST_ID,
+      time: mount.castSeconds,
+    });
+  }
+
+  /** The summon cast landed. Draw-free. */
+  private completeMountSummon(meta: PlayerMeta, p: Entity): void {
+    const mountId = meta.pendingMountId;
+    meta.pendingMountId = null;
+    const mount: MountDef | null = mountId ? mountById(mountId) : null;
+    if (!mount) return;
+    // Re-checked at LANDING time, not only at press time: three seconds is long
+    // enough to walk into the water or be pulled into a fight. `casting` is
+    // excluded here because the cast that is landing IS the summon.
+    const deny = mountDenyReason({ ...this.mountSituation(p), casting: false });
+    if (deny) {
+      this.emit({ type: 'mountDown', reason: deny, pid: meta.entityId });
+      return;
+    }
+    // Still holding the reins. They are never consumed; owning them is the
+    // whole requirement, which is what makes a mount a permanent unlock.
+    if (this.countItem(mount.itemId, meta.entityId) <= 0) return;
+    this.applyAura(p, {
+      id: mountAuraId(mount.id),
+      name: ITEMS[mount.itemId]?.name ?? mount.id,
+      kind: MOUNT_AURA_KIND,
+      remaining: MOUNT_AURA_SECONDS,
+      duration: MOUNT_AURA_SECONDS,
+      value: mount.speedMult,
+      sourceId: p.id,
+      school: 'physical',
+      // The dismount-on-damage rule, expressed through the aura flag the damage
+      // path already honours; `dealDamage` adds the `mountDown` event.
+      breaksOnDamage: true,
+    });
+    this.emit({ type: 'mountUp', mountId: mount.id, pid: meta.entityId });
+  }
+
+  /** Per-tick re-check of every live ride. Damage is NOT here (it is an event,
+   *  handled on the damage path); everything here is a STATE, so a ride cannot
+   *  survive walking into water, being pulled into combat, or dying. */
+  private updateMounts(): void {
+    for (const meta of this.players.values()) {
+      const p = this.entities.get(meta.entityId);
+      if (!p || this.activeMountAura(p) === null) continue;
+      const reason = rideEndReason(this.mountSituation(p));
+      if (reason) this.endRide(reason, p.id);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Dungeon Finder. The matchmaker is src/sim/lfg, a pure module that draws
+  // ZERO rng and owns no state: `this.lfgQueue` IS the queue, and the module
+  // returns INTENTS this section performs. There is no second teleport path:
+  // a pop forms a party the usual way and then calls the existing
+  // `enterDungeon` per member.
+  //
+  // NOTE ON THE NAME: `lfg` is already a joinable chat channel, so the runtime
+  // identifier is `dungeonFinder` everywhere. The four SimEvent names are the
+  // only place the token `lfg` is allowed to appear.
+  // -------------------------------------------------------------------------
+
+  /** How often a queued player gets an unprompted `lfgStatus`. The event
+   *  carries a live `waitSeconds`, so it needs a heartbeat on top of the
+   *  transition emits; 10 s is frequent enough to read as a live clock and
+   *  cheap enough to be free (one tiny personal event per queued player). */
+  private static readonly LFG_STATUS_HEARTBEAT_SEC = 10;
+
+  // Host-clock stamps for the two deadlines the CLIENT counts down. Each is
+  // stamped ONCE, when the intent that creates it is performed, and read back
+  // verbatim. Re-projecting `lockoutNowMs() + (deadline - this.time) * 1000`
+  // every tick would jitter with `Date.now` and re-send the whole readout on
+  // every snapshot: exactly the reason `RiftPortal.openedAtMs` exists.
+  private lfgProposalOpenedMs = new Map<number, number>();
+  private lfgCooldownUntilMs = new Map<number, number>();
+
+  /** Free instance slots per OFFERED dungeon, counted right now. The module's
+   *  host contract requires an entry for EVERY offered dungeon: a missing key
+   *  reads as zero and that dungeon would silently never pop. */
+  private lfgFreeInstanceSlots(): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const listing of DUNGEON_FINDER_LISTINGS) out[listing.dungeonId] = 0;
+    for (const inst of this.instances) {
+      if (inst.partyKey === null && out[inst.dungeonId] !== undefined) out[inst.dungeonId] += 1;
+    }
+    return out;
+  }
+
+  /** The queue's ONLY liveness signal. A player pruned out by it gets no intent
+   *  and no penalty, deliberately: the host flipped the predicate, so the host
+   *  already knows and can say so in its own voice. */
+  private lfgIsAvailable(pid: number): boolean {
+    if (!this.players.has(pid)) return false;
+    const e = this.entities.get(pid);
+    if (!e || e.kind !== 'player' || e.dead) return false;
+    // Already standing in an instance: popping them would teleport them out of
+    // whatever they are in the middle of.
+    return e.pos.x <= DUNGEON_X_THRESHOLD;
+  }
+
+  private updateDungeonFinder(): void {
+    const result = tickDungeonFinder(this.lfgQueue, {
+      now: this.time,
+      freeInstanceSlots: this.lfgFreeInstanceSlots(),
+      isAvailable: (pid) => this.lfgIsAvailable(pid),
+    });
+    for (const intent of result.intents) this.performLfgIntent(intent);
+    if (this.time >= this.nextLfgStatusAt) {
+      this.nextLfgStatusAt = this.time + Sim.LFG_STATUS_HEARTBEAT_SEC;
+      for (const unit of this.lfgQueue.units) {
+        for (const member of unit.members) this.emitLfgStatus(member.pid);
+      }
+    }
+  }
+
+  private performLfgIntent(intent: LfgIntent): void {
+    switch (intent.kind) {
+      case 'dungeonFinderProposalOpened': {
+        this.lfgProposalOpenedMs.set(intent.proposalId, this.lockoutNowMs());
+        for (const member of intent.members) {
+          this.emit({
+            type: 'lfgProposal',
+            proposalId: String(intent.proposalId),
+            dungeonId: intent.dungeonId,
+            expiresAt: this.lfgProposalExpiresMs(intent.proposalId),
+            pid: member.pid,
+          });
+          this.emitLfgStatus(member.pid);
+        }
+        break;
+      }
+      case 'dungeonFinderProposalClosed': {
+        this.lfgProposalOpenedMs.delete(intent.proposalId);
+        // Every member hears WHY the group broke, including the ones who were
+        // requeued: four people who accepted deserve to know a fifth declined.
+        for (const pid of intent.pids) {
+          this.emit({ type: 'lfgDeny', reason: intent.reason, pid });
+          this.emitLfgStatus(pid);
+        }
+        break;
+      }
+      case 'dungeonFinderFormGroup': {
+        this.lfgProposalOpenedMs.delete(intent.proposalId);
+        this.formDungeonFinderGroup(intent);
+        break;
+      }
+      case 'dungeonFinderPenalty': {
+        // The cooldown itself is already recorded in `this.lfgQueue`, and the
+        // join gate reads it from there, so performing this intent is purely
+        // stamping the host-clock deadline the client counts down against. The
+        // reason already rode the proposalClosed deny above.
+        this.lfgCooldownUntilMs.set(
+          intent.pid,
+          this.lockoutNowMs() + Math.round((intent.readyAt - this.time) * 1000),
+        );
+        break;
+      }
+    }
+  }
+
+  private lfgProposalExpiresMs(proposalId: number): number {
+    const openedAt = this.lfgProposalOpenedMs.get(proposalId);
+    if (openedAt === undefined) return 0;
+    return openedAt + LFG_READY_WINDOW_SEC * 1000;
+  }
+
+  /** Perform the pop. The instance slot MUST be claimed in the SAME tick this
+   *  intent is performed (the module's host contract): the reservation is
+   *  tick-local, so deferring it by even one tick would let the next tick see
+   *  the slot as free and promise it to a second group. `enterDungeon` claims
+   *  synchronously and resolves `instanceKeyFor` to the party key built just
+   *  above, so the first call claims the slot and the rest join it. */
+  private formDungeonFinderGroup(intent: LfgFormGroupIntent): void {
+    const pids = intent.members.map((m) => m.pid).filter((pid) => this.players.has(pid));
+    if (pids.length === 0) return;
+    const leader = pids.includes(intent.leaderPid) ? intent.leaderPid : pids[0];
+    this.formPartyForPids(pids, leader);
+    for (const pid of pids) this.enterDungeon(intent.dungeonId, pid);
+    // AFTER the teleport, so the line only ever reaches a player who is already
+    // standing inside (the same ordering `enterRift` uses for its floor call).
+    for (const pid of pids) this.emit({ type: 'lfgFormed', dungeonId: intent.dungeonId, pid });
+    for (const pid of pids) this.emitLfgStatus(pid);
+  }
+
+  /** Build one party out of `pids`. A premade that already matches exactly is
+   *  reused; anything else is dissolved through the ONE existing party-leave
+   *  path first, so leadership hand-off and disband behave exactly as a manual
+   *  leave does (and the verb is an existing localized line, not a new string). */
+  private formPartyForPids(pids: number[], leaderPid: number): void {
+    const existing = this.partyOf(leaderPid);
+    if (
+      existing &&
+      !existing.raid &&
+      existing.members.length === pids.length &&
+      pids.every((pid) => existing.members.includes(pid))
+    ) {
+      existing.leader = leaderPid;
+      return;
+    }
+    for (const pid of pids) {
+      if (this.partyOf(pid)) this.removeFromParty(pid, 'leaves the party');
+    }
+    if (pids.length < 2) return;
+    const party: Party = {
+      id: this.nextPartyId++,
+      leader: leaderPid,
+      members: [...pids],
+      raid: false,
+      raidGroups: new Map(pids.map((pid) => [pid, 1 as const])),
+      lootStrategies: { ...DEFAULT_PARTY_LOOT_STRATEGIES },
+    };
+    this.parties.set(party.id, party);
+    for (const pid of pids) this.partyByPid.set(pid, party.id);
+  }
+
+  private denyLfg(pid: number, reason: string): void {
+    this.emit({ type: 'lfgDeny', reason, pid });
+  }
+
+  private emitLfgStatus(pid: number): void {
+    const view = lfgStatusFor(this.lfgQueue, pid, this.time);
+    this.emit({
+      type: 'lfgStatus',
+      state: view.state,
+      dungeonId: view.dungeonId,
+      waitSeconds: Math.round(view.waitSeconds),
+      queuedByRole: { ...view.queuedByRole },
+      pid,
+    });
+  }
+
+  private lfgRolesFrom(roles: readonly string[] | undefined): LfgRole[] {
+    if (!roles) return [];
+    return roles.filter((r): r is LfgRole => r === 'tank' || r === 'healer' || r === 'dps');
+  }
+
+  /** Queue for one dungeon. A player in a party queues the WHOLE party as a
+   *  premade, which is what stops a group being split across two pops; only the
+   *  leader may do it, for the same reason the leader owns every other
+   *  group-wide decision. */
+  dungeonFinderJoin(dungeonId: string, roles?: readonly string[], pid?: number): void {
+    const r = this.resolve(pid);
+    if (!r) return;
+    const me = r.meta.entityId;
+    if (!listingFor(dungeonId)) {
+      this.denyLfg(me, 'unknownDungeon');
+      return;
+    }
+    if (!this.lfgIsAvailable(me)) {
+      this.denyLfg(me, 'memberUnavailable');
+      return;
+    }
+    const party = this.partyOf(me);
+    if (party?.raid) {
+      this.denyLfg(me, 'groupTooLarge');
+      return;
+    }
+    if (party && party.leader !== me) {
+      this.denyLfg(me, 'notLeader');
+      return;
+    }
+    const members: LfgJoinMember[] = [];
+    for (const memberPid of party ? party.members : [me]) {
+      const meta = this.players.get(memberPid);
+      const e = this.entities.get(memberPid);
+      if (!meta || !e) continue;
+      members.push({
+        pid: memberPid,
+        cls: meta.cls,
+        level: e.level,
+        // Only the player who pressed the button gets to pick roles; every
+        // other member queues as "anything my class can do", which is the
+        // pop-friendly default (`resolveRoles`).
+        roles: memberPid === me ? this.lfgRolesFrom(roles) : [],
+      });
+    }
+    const res = joinDungeonFinder(this.lfgQueue, {
+      dungeonId,
+      members,
+      premade: party !== null && party !== undefined,
+      now: this.time,
+    });
+    if (!res.ok) {
+      this.denyLfg(me, res.deny ?? 'unknown');
+      return;
+    }
+    for (const member of members) this.emitLfgStatus(member.pid);
+  }
+
+  /** Leave the queue, or walk out of an open ready check (which is a decline
+   *  and costs the same cooldown). */
+  dungeonFinderLeave(pid?: number): void {
+    const r = this.resolve(pid);
+    if (!r) return;
+    const me = r.meta.entityId;
+    const res = leaveDungeonFinder(this.lfgQueue, me, this.time);
+    if (!res.ok) {
+      this.denyLfg(me, res.deny ?? 'unknown');
+      return;
+    }
+    for (const intent of res.intents) this.performLfgIntent(intent);
+    this.emitLfgStatus(me);
+  }
+
+  /** Answer a ready check. Accepting never forms the group here: promotion
+   *  happens in the tick, where the instance-slot budget is re-checked. */
+  dungeonFinderRespond(accept: boolean, proposalId?: string, pid?: number): void {
+    const r = this.resolve(pid);
+    if (!r) return;
+    const me = r.meta.entityId;
+    const parsed = proposalId === undefined ? NaN : Number(proposalId);
+    const res = respondToLfgProposal(this.lfgQueue, {
+      pid: me,
+      accept,
+      now: this.time,
+      ...(Number.isFinite(parsed) && { proposalId: parsed }),
+    });
+    if (!res.ok) {
+      this.denyLfg(me, res.deny ?? 'unknown');
+      return;
+    }
+    for (const intent of res.intents) this.performLfgIntent(intent);
+    this.emitLfgStatus(me);
+  }
+
+  // Wire projections (the same shapes the server sends and ClientWorld mirrors).
+
+  dungeonFinderStatusWire(pid: number): LfgStatusInfo | null {
+    if (!this.players.has(pid)) return null;
+    const view: LfgStatusView = lfgStatusFor(this.lfgQueue, pid, this.time);
+    if (view.cooldownUntil === null) this.lfgCooldownUntilMs.delete(pid);
+    return {
+      state: view.state,
+      dungeonId: view.dungeonId,
+      roles: [...view.roles],
+      waitSeconds: Math.round(view.waitSeconds),
+      relax: view.relax,
+      queuedUnits: view.queuedUnits,
+      queuedPlayers: view.queuedPlayers,
+      queuedByRole: { ...view.queuedByRole },
+      // 0 means "no cooldown", the same "no deadline" convention
+      // `RiftRunInfo.entranceClosesAt` uses.
+      cooldownUntil: view.cooldownUntil === null ? 0 : (this.lfgCooldownUntilMs.get(pid) ?? 0),
+    };
+  }
+
+  dungeonFinderProposalWire(pid: number): LfgProposalInfo | null {
+    const proposal = proposalForPid(this.lfgQueue, pid);
+    if (!proposal) return null;
+    const me = proposal.members.find((m) => m.pid === pid);
+    return {
+      proposalId: String(proposal.id),
+      dungeonId: proposal.dungeonId,
+      expiresAt: this.lfgProposalExpiresMs(proposal.id),
+      role: me?.role ?? 'dps',
+      responded: me?.responded ?? false,
+      accepted: me?.accepted ?? false,
+      size: proposal.members.length,
+      acceptedCount: proposal.members.filter((m) => m.accepted).length,
+    };
+  }
+
+  dungeonFinderOffersWire(): LfgOfferInfo[] {
+    return DUNGEON_FINDER_LISTINGS.map((listing) => ({
+      dungeonId: listing.dungeonId,
+      tier: listing.tier,
+      groupSize: listing.groupSize,
+      minGroupSize: listing.minGroupSize,
+      minQueueLevel: listing.minQueueLevel,
+      recommendedLevel: listing.recommendedLevel,
+    }));
+  }
+
+  get dungeonFinderStatus(): LfgStatusInfo | null {
+    return this.dungeonFinderStatusWire(this.primaryId);
+  }
+
+  get dungeonFinderProposal(): LfgProposalInfo | null {
+    return this.dungeonFinderProposalWire(this.primaryId);
+  }
+
+  dungeonFinderOffers(): LfgOfferInfo[] {
+    return this.dungeonFinderOffersWire();
   }
 
   // -------------------------------------------------------------------------

@@ -140,6 +140,68 @@ export interface RiftPortalInfo {
   open: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Dungeon Finder. Every field below is a stable id or a number: the sim is
+// language-agnostic, so the client owns every word under `dungeonFinder.*`.
+//
+// The runtime identifier is `dungeonFinder`, NEVER `lfg`: that token is already
+// a joinable chat channel. Only the four SimEvent names keep the old spelling.
+// ---------------------------------------------------------------------------
+
+/** One offered dungeon. Derived from the dungeon's own spawn table, so it can
+ *  never go stale against a boss retune. */
+export interface LfgOfferInfo {
+  dungeonId: string;
+  /** 'leveling' | 'endgame' | 'heroic'. */
+  tier: string;
+  groupSize: number;
+  /** The smallest group the queue will ever pop for this dungeon. */
+  minGroupSize: number;
+  /** Hard lower gate. There is deliberately no upper gate. */
+  minQueueLevel: number;
+  recommendedLevel: number;
+}
+
+/** The viewer's live place in the queue. */
+export interface LfgStatusInfo {
+  /** 'idle' | 'queued' | 'proposed' | 'cooldown'. */
+  state: string;
+  dungeonId: string | null;
+  /** The roles this player queued as, already intersected with what their class
+   *  can fill. */
+  roles: string[];
+  waitSeconds: number;
+  /** How strict the matchmaker currently is for THIS player's wait:
+   *  'ideal' | 'anchored' | 'any' | 'short'. */
+  relax: string;
+  queuedUnits: number;
+  queuedPlayers: number;
+  /** Players WILLING to fill each role, so a druid counts in all three (the way
+   *  every dungeon-finder readout has always counted). Never sum these. */
+  queuedByRole: Record<string, number>;
+  /**
+   * Absolute milliseconds (the `Date.now()` epoch on the authoritative server)
+   * at which a decline / timeout cooldown lifts, on the same clock as
+   * `RiftPortalInfo.expiresAt`. 0 means no cooldown is running.
+   */
+  cooldownUntil: number;
+}
+
+/** The ready check the viewer is sitting in. */
+export interface LfgProposalInfo {
+  proposalId: string;
+  dungeonId: string;
+  /** Absolute ms on the same clock as `LfgStatusInfo.cooldownUntil`. */
+  expiresAt: number;
+  /** The role this player was assigned: 'tank' | 'healer' | 'dps'. */
+  role: string;
+  responded: boolean;
+  accepted: boolean;
+  /** Group size and how many have accepted so far, for the "3 of 5 ready" row. */
+  size: number;
+  acceptedCount: number;
+}
+
 // Render-safe projection of an active lockpicking attempt. Only ever holds cells
 // inside the fog window, the full lock layout never reaches the client.
 export interface LockpickView {
@@ -639,6 +701,27 @@ export interface IWorld {
   riftRun: RiftRunInfo | null;
   /** Every overworld tear the client knows about (the panel narrows by zone). */
   riftPortals(): RiftPortalInfo[];
+  // Dungeon Finder. Server-authoritative like the rift: the client asks and
+  // renders the answer (an `lfgStatus` / `lfgProposal` / `lfgFormed` /
+  // `lfgDeny`), it never predicts a pop.
+  /** The viewer's live queue readout, or null when there is no character yet. */
+  dungeonFinderStatus: LfgStatusInfo | null;
+  /** The ready check the viewer is sitting in, or null. */
+  dungeonFinderProposal: LfgProposalInfo | null;
+  /** The dungeons the queue offers, in the order the catalog lists them. */
+  dungeonFinderOffers(): LfgOfferInfo[];
+  /** Queue for one dungeon. In a party this queues the WHOLE party as a
+   *  premade, and only the leader may do it. An empty/omitted `roles` means
+   *  "anything my class can fill", which is the fastest way to match. */
+  dungeonFinderJoin(dungeonId: string, roles?: readonly string[]): void;
+  /** Leave the queue, or walk out of an open ready check (a decline). */
+  dungeonFinderLeave(): void;
+  /** Answer a ready check. `proposalId` guards against a stale popup. */
+  dungeonFinderRespond(accept: boolean, proposalId?: string): void;
+  // Mounts. A reins item is used from the bag or the action bar (`useItem`),
+  // which is the whole summon surface; this is only the instant manual
+  // dismount, which is never refused.
+  dismount(): void;
   delveRun: DelveRunInfo | null;
   companionState: DelveCompanionInfo | null;
   delveMarks: number;
