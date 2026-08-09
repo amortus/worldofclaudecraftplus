@@ -338,6 +338,17 @@ import { QuestTracking } from './quest_tracking';
 import { lockoutParts, lockoutShape } from './raid_lockout';
 import { type RaidLockoutI18n, raidLockoutPanelHtml } from './raid_lockout_view';
 import { restView } from './rest_indicator';
+import { riftEventFeedback } from './rift_feedback';
+import { mountRiftHud, refreshRiftHud, renderRiftHud } from './rift_hud';
+import { riftEntryConfirmText } from './rift_ui_labels';
+import {
+  isRiftUiEventType,
+  type RiftPortalInfo,
+  type RiftRunInfo,
+  type RiftUiEvent,
+  riftCountdownUntil,
+  riftPortalPhase,
+} from './rift_ui_model';
 import { rovingTarget } from './roving_index';
 import { localizeServerText, localizeZone } from './server_i18n';
 import { localizeSimAuraName, localizeSimText } from './sim_i18n';
@@ -1560,6 +1571,7 @@ export class Hud {
     this.mountCraftingButtons();
     this.bindPanelKeys();
     this.initGatherNodeTooltip();
+    this.mountRift();
     $('#mm-options')?.addEventListener('click', () => this.toggleOptionsMenu());
     $('#mm-arena').addEventListener('click', () => this.toggleArena());
     $('#mm-leaderboard').addEventListener('click', () => this.toggleLeaderboard());
@@ -7693,6 +7705,17 @@ export class Hud {
           for (const text of deedEventLines(ev)) this.combatLog(text, '#ffd100');
           break;
         }
+        // Rifts. The five names here MUST match what src/sim/sim.ts emits: they are
+        // compared as strings, so a rename on either side is invisible to tsc and just
+        // makes the feedback silent (tests/rift_event_contract.test.ts guards it).
+        case 'riftPortal':
+        case 'riftEnter':
+        case 'riftFloor':
+        case 'riftClear':
+        case 'riftDeny': {
+          this.handleRiftEvent(ev);
+          break;
+        }
       }
     }
   }
@@ -10058,6 +10081,54 @@ export class Hud {
    * emits: they are compared as strings, so a rename on either side is invisible
    * to tsc and simply makes the feedback silent.
    */
+  /**
+   * Mount the rift tracker and portal panel. Both are self-mounting furniture: the
+   * tracker only paints while a run is active and the panel only while a tear is open
+   * in the player's zone, so there is nothing to toggle and no keybind to spend.
+   */
+  private mountRift(): void {
+    mountRiftHud({
+      run: () => this.sim.riftRun,
+      portals: () => this.sim.riftPortals(),
+      zoneId: () => zoneAt(this.sim.player.pos.z).id,
+      onEnter: (portalId) => this.confirmRiftEntry(portalId),
+    });
+  }
+
+  /**
+   * Stepping through a tear is one-way for the run's lifetime, so it asks first. The
+   * countdown in the warning is resolved at open time from the portal the player is
+   * actually standing at, not from whatever was last painted.
+   */
+  private confirmRiftEntry(portalId: string): void {
+    const portal = this.sim.riftPortals().find((r) => r.portalId === portalId);
+    if (!portal) return;
+    const text = riftEntryConfirmText(
+      portal.rank,
+      portal.zoneId,
+      riftCountdownUntil(portal.expiresAt, Date.now()),
+    );
+    const body = text.warning
+      ? t('hudChrome.rift.confirm.bodyWithWarning', { body: text.body, warning: text.warning })
+      : text.body;
+    this.confirmDialog(text.title, body, text.ok, text.cancel, () => this.sim.enterRift(portalId));
+  }
+
+  /**
+   * Log one rift event and repaint the tracker. `riftEventFeedback` returns the
+   * banner, the log lines and the error arm already localized, so this stays a
+   * router: the copy decisions live in rift_feedback.ts.
+   */
+  private handleRiftEvent(ev: Parameters<typeof riftEventFeedback>[0]): void {
+    const fb = riftEventFeedback(ev, { zoneId: zoneAt(this.sim.player.pos.z).id });
+    if (fb.banner) this.showBanner(fb.banner);
+    for (const l of fb.lines) this.combatLog(l.text, l.color);
+    if (fb.error) this.showError(fb.error);
+    // Entering, advancing and clearing all change what the tracker shows, and a
+    // portal event changes the panel, so both repaint from live state.
+    refreshRiftHud();
+  }
+
   private handleCraftingEvent(ev: CraftingFeedbackEvent): void {
     for (const l of craftingEventLines(ev, { crafterName: this.sim.player.name })) {
       this.combatLog(l.text, l.color);

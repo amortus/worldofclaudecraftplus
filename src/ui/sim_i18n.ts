@@ -11,9 +11,11 @@
 // The S3 guard in tests/localization_fixes.test.ts parses src/sim/sim.ts, enumerates
 // every player-facing emit site, and fails if any is no longer recognized by a client
 // matcher — so a new unhandled sim string cannot ship silently.
+import { RIFT_MOBS } from '../sim/content/rift';
 import { ABILITIES, DELVES, ITEMS, MOBS } from '../sim/data';
 import { DELVE_MODULE_NAMES } from '../sim/sim';
 import { tEntity } from './entity_i18n';
+import { RIFT_MOB_ABILITY_NAMES } from './world_entity_i18n';
 import {
   formatNumber,
   getLanguage,
@@ -2699,8 +2701,20 @@ const itemNameToId = new Map<string, string>();
 for (const [id, it] of Object.entries(ITEMS)) itemNameToId.set(it.name, id);
 const mobNameToId = new Map<string, string>();
 for (const [id, m] of Object.entries(MOBS)) mobNameToId.set(m.name, id);
+// Rift creatures are generated content: their templates live in
+// `content/rift` and only reach the flat `MOBS` table once the run-lifecycle
+// wave spreads them there. Reverse them from the source table so a rift mob's
+// name localizes in combat text either way (first writer wins, so a hand-
+// authored creature can never be shadowed by one of these).
+for (const [id, m] of Object.entries(RIFT_MOBS)) {
+  if (!mobNameToId.has(m.name)) mobNameToId.set(m.name, id);
+}
 const abilityNameToId = new Map<string, string>();
 for (const [id, a] of Object.entries(ABILITIES)) abilityNameToId.set(a.name, id);
+// A rift boss's signature pulse is spliced into damage text by name, like a
+// player ability, but it is a world-entity name (world_entity_i18n.ts).
+const mobAbilityNameToId = new Map<string, string>();
+for (const [id, name] of Object.entries(RIFT_MOB_ABILITY_NAMES)) mobAbilityNameToId.set(name, id);
 const delveNameToId = new Map<string, string>();
 for (const [id, d] of Object.entries(DELVES)) delveNameToId.set(d.name, id);
 // Module display names are also the delveUi.moduleName.* source values; reverse
@@ -2718,7 +2732,9 @@ function locMob(name: string): string {
 }
 function locAbility(name: string): string {
   const id = abilityNameToId.get(name);
-  return id ? tEntity({ kind: 'ability', id, field: 'name' }) : name;
+  if (id) return tEntity({ kind: 'ability', id, field: 'name' });
+  const mobAbilityId = mobAbilityNameToId.get(name);
+  return mobAbilityId ? tEntity({ kind: 'mobAbility', id: mobAbilityId, field: 'name' }) : name;
 }
 function locDelve(name: string): string {
   const id = delveNameToId.get(name);

@@ -10,7 +10,7 @@ import {
   QUESTS,
   ZONES,
 } from '../sim/data';
-import { gatherNodeNameKey } from './world_entity_i18n';
+import { gatherNodeNameKey, RIFT_MOB_ABILITY_NAMES } from './world_entity_i18n';
 import type { ItemDef, PlayerClass } from '../sim/types';
 import {
   en,
@@ -35,7 +35,8 @@ export type EntityTranslationKind =
   | 'zonePoi'
   | 'dungeon'
   | 'delve'
-  | 'gatherNode';
+  | 'gatherNode'
+  | 'mobAbility';
 export type EntityTranslationField =
   | 'name'
   | 'description'
@@ -90,7 +91,11 @@ export type EntityTranslationRequest =
   // A gatherable world node (ore vein, timber stand, herb patch). `id` is the
   // NODE id, e.g. 'ore_eastbrook_1'; the key it resolves to is shared by every
   // node of the same type in the same zone, since they all carry one name.
-  | { kind: 'gatherNode'; id: string; field: 'name'; values?: InterpolationValues };
+  | { kind: 'gatherNode'; id: string; field: 'name'; values?: InterpolationValues }
+  // A named creature ability (a rift boss's signature pulse). `id` is the
+  // `riftMobAbilityId` slug, not a player `ABILITIES` id: these are cast BY the
+  // world at the player, so they belong to the world-entity name set.
+  | { kind: 'mobAbility'; id: string; field: 'name'; values?: InterpolationValues };
 
 export interface EntityTranslationManifestEntry {
   kind: EntityTranslationKind;
@@ -231,6 +236,8 @@ function canonicalEntityText(request: EntityTranslationRequest): string {
     }
     case 'gatherNode':
       return gatherNodeById(request.id)?.objectName ?? request.id;
+    case 'mobAbility':
+      return RIFT_MOB_ABILITY_NAMES[request.id] ?? request.id;
   }
 }
 
@@ -265,6 +272,8 @@ export function entityTranslationKey(request: EntityTranslationRequest): string 
       const slug = node ? gatherNodeNameKey(node.type, node.zoneId) : request.id;
       return `entities.gatherNodes.${entityPathSegment(slug)}.name`;
     }
+    case 'mobAbility':
+      return `entities.mobAbilities.${entityPathSegment(request.id)}.name`;
   }
 }
 

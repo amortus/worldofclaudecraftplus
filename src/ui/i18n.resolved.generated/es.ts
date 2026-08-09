@@ -1279,6 +1279,173 @@ export const es: EnTranslations = {
         "state_changed": "Your situation changed.",
         "disconnected": "Your connection dropped."
       }
+    },
+    "rift": {
+      "name": "{noun} {suffix}",
+      "rank": {
+        "label": "Rank {rank}",
+        "aria": "Rank {rank}, {name}",
+        "name": {
+          "C": "Lesser",
+          "B": "Greater",
+          "A": "Dire",
+          "S": "Cataclysmic"
+        }
+      },
+      "time": {
+        "hoursMinutes": "{h}h {m}m",
+        "minutesSeconds": "{m}:{s}",
+        "seconds": "{s}s",
+        "expired": "Sealed"
+      },
+      "tracker": {
+        "title": "Rift",
+        "floor": "Floor {current} of {total}",
+        "floorAria": "Floor {current} of {total}. {theme}. {mechanic}.",
+        "finalFloor": "Final",
+        "progressLabel": "Rift descent",
+        "trial": "Trial: {mechanic}",
+        "entranceOpen": "Entrance closes in {time}",
+        "entranceAria": "The entrance stops admitting new parties in {time}.",
+        "entranceClosed": "The entrance has sealed behind you.",
+        "sealed": "The rift is sealed."
+      },
+      "portal": {
+        "title": "Rift Portals",
+        "enter": "Enter",
+        "enterAria": "Enter the rank {rank} rift in {zone}",
+        "opensIn": "Tears open in {time}",
+        "collapsesIn": "Collapses in {time}",
+        "opened": "A rank {rank} rift, {rankName}, tears open in {zone}.",
+        "stirring": "The air splits in {zone}. A rank {rank} rift, {rankName}, opens in {time}.",
+        "gone": "The rift in {zone} has collapsed.",
+        "bannerOpened": "A Rift Tears Open"
+      },
+      "confirm": {
+        "title": "Enter the Rift?",
+        "body": "A rank {rank} rift, {rankName}, yawns open in {zone}. Nothing that walks back out of one walks out unchanged.",
+        "warning": "The entrance stops admitting new parties in {time}. Anyone not through by then is left behind.",
+        "bodyWithWarning": "{body} {warning}",
+        "ok": "Step Through",
+        "cancel": "Stand Down"
+      },
+      "feedback": {
+        "enterBanner": "The Rift Takes You",
+        "enter": "You step into a rank {rank} rift, {rankName}. {floors} floors of {theme} lie between you and its heart.",
+        "floor": "Floor {current} of {total}: {theme}.",
+        "trial": "{mechanic}. {hint}",
+        "finalFloorBanner": "The Sanctum",
+        "clearBanner": "Rift Sealed",
+        "clear": "The tear closes behind you. Rank {rank}, {rankName}, {floors} floors.",
+        "firstClearBanner": "First Sealing",
+        "firstClear": "No one had ever sealed a rank {rank} rift, {rankName}, before now."
+      },
+      "mechanicName": {
+        "none": "Slaughter",
+        "boss": "The Warden",
+        "rune_pylons": "Rune Pylons",
+        "ice_slide": "The Ice Sheet",
+        "boulder_push": "The Boulders",
+        "sequence": "The Rune Sequence",
+        "switch_gate": "The Portcullis"
+      },
+      "mechanicHint": {
+        "none": "Nothing here opens until every warden is dead.",
+        "boss": "Whatever anchors this rift holds the floor. Put it down and the tear seals.",
+        "rune_pylons": "Walk onto every pylon to light it.",
+        "ice_slide": "The floor holds no grip. Launch yourself and come to rest on the sigil.",
+        "boulder_push": "Shove each boulder onto its socket.",
+        "sequence": "Step the runes south to north. One wrong step puts them all out.",
+        "switch_gate": "Stand on the plate to raise the portcullis."
+      },
+      "deny": {
+        "closed": "The entrance has sealed. No one else gets in.",
+        "expired": "That tear has already collapsed.",
+        "notOpen": "The tear has not widened enough to walk through.",
+        "sealed": "That rift is sealed. Nothing is left inside it.",
+        "level": "You are not seasoned enough for what waits on the other side.",
+        "party": "A rift will not take a group that size.",
+        "partyRange": "Your party is scattered. Gather them at the tear first.",
+        "combat": "Not while something still has its hands on you.",
+        "dead": "The dead do not walk into rifts.",
+        "inRun": "You are already inside a rift.",
+        "inInstance": "Leave where you are standing before you go anywhere else.",
+        "noInstance": "Every rift the world can hold is already occupied. Try again shortly.",
+        "range": "You are too far from the tear.",
+        "unknown": "The rift refuses you."
+      },
+      "floor": {
+        "reaches": "The Reaches",
+        "sanctum": "The Sanctum"
+      },
+      "theme": {
+        "frost": "Frostbound",
+        "ember": "Emberforge",
+        "venom": "Venomweald",
+        "bone": "Boneyard",
+        "brute": "Warcamp",
+        "void": "Voidscar",
+        "storm": "Stormspire",
+        "tide": "Sunken Reach"
+      },
+      "noun": {
+        "rime": "Rime",
+        "hoarfrost": "Hoarfrost",
+        "glacier": "Glacier",
+        "frost": "Frost",
+        "ember": "Ember",
+        "cinder": "Cinder",
+        "magma": "Magma",
+        "ash": "Ash",
+        "venom": "Venom",
+        "thorn": "Thorn",
+        "bramble": "Bramble",
+        "spider": "Spider",
+        "bone": "Bone",
+        "marrow": "Marrow",
+        "ossuary": "Ossuary",
+        "grave": "Grave",
+        "war": "War",
+        "skull": "Skull",
+        "iron": "Iron",
+        "blood": "Blood",
+        "void": "Void",
+        "shadow": "Shadow",
+        "umbral": "Umbral",
+        "dusk": "Dusk",
+        "storm": "Storm",
+        "tempest": "Tempest",
+        "thunder": "Thunder",
+        "gale": "Gale",
+        "sunken": "Sunken",
+        "abyssal": "Abyssal",
+        "drowned": "Drowned",
+        "tide": "Tide"
+      },
+      "suffix": {
+        "abyss": "Abyss",
+        "depths": "Depths",
+        "descent": "Descent",
+        "hollow": "Hollow",
+        "labyrinth": "Labyrinth",
+        "warren": "Warren",
+        "sanctum": "Sanctum",
+        "rift": "Rift"
+      },
+      "object": {
+        "beacon": "Wayward Beacon",
+        "descent": "The Descent",
+        "exit": "Rift Exit",
+        "chest": "Warden's Cache",
+        "treasure": "Forgotten Cache",
+        "rune_pylon": "Rune Pylon",
+        "ice_goal": "Frozen Sigil",
+        "boulder": "Riven Boulder",
+        "boulder_pad": "Socket Stone",
+        "seq_rune": "Ordered Rune",
+        "gate": "Portcullis",
+        "switch": "Pressure Plate"
+      }
     }
   },
   "guide": {
@@ -6553,6 +6720,84 @@ export const es: EnTranslations = {
       "cx_vorothne": {
         "name": "Archilich Vorothne"
       },
+      "rift_frost_revenant": {
+        "name": "Frostbound Revenant"
+      },
+      "rift_rime_elemental": {
+        "name": "Rime Elemental"
+      },
+      "rift_ember_fiend": {
+        "name": "Ember Fiend"
+      },
+      "rift_magma_brute": {
+        "name": "Magma Brute"
+      },
+      "rift_venom_weaver": {
+        "name": "Venomweald Weaver"
+      },
+      "rift_thornback": {
+        "name": "Thornback Stalker"
+      },
+      "rift_boneclad": {
+        "name": "Boneclad Sentinel"
+      },
+      "rift_marrow_troll": {
+        "name": "Marrow Troll"
+      },
+      "rift_stone_ogre": {
+        "name": "Warcamp Ogre"
+      },
+      "rift_iron_reaver": {
+        "name": "Iron Reaver"
+      },
+      "rift_void_acolyte": {
+        "name": "Voidscar Acolyte"
+      },
+      "rift_dread_stalker": {
+        "name": "Dread Stalker"
+      },
+      "rift_storm_caller": {
+        "name": "Stormspire Caller"
+      },
+      "rift_stormscale": {
+        "name": "Stormscale Drake"
+      },
+      "rift_tide_thrall": {
+        "name": "Tidebound Thrall"
+      },
+      "rift_deep_lurker": {
+        "name": "Deep Lurker"
+      },
+      "rift_boss_frost": {
+        "name": "Hoarfrost, the Rime Sovereign"
+      },
+      "rift_boss_ember": {
+        "name": "Vulkarax, the Forgewrath"
+      },
+      "rift_boss_venom": {
+        "name": "Sythrenne, the Bramble Matron"
+      },
+      "rift_boss_necro": {
+        "name": "Ossuar, the Marrow King"
+      },
+      "rift_boss_brute": {
+        "name": "Grokmar Skullbinder"
+      },
+      "rift_boss_arcane": {
+        "name": "Nul-Vareth, the Umbral Maw"
+      },
+      "rift_boss_storm": {
+        "name": "Tempestrix, the Gale Herald"
+      },
+      "rift_boss_tide": {
+        "name": "Abyssara, the Drowned Chorus"
+      },
+      "rift_riftspawn": {
+        "name": "Riftspawn"
+      },
+      "rift_shardling": {
+        "name": "Rift Shardling"
+      },
       "ironvein_foreman": {
         "name": "Capataz Vena de Hierro"
       },
@@ -8325,6 +8570,29 @@ export const es: EnTranslations = {
       },
       "herb_ashen_wastes": {
         "name": "Gravebloom Patch"
+      }
+    },
+    "mobAbilities": {
+      "rift_boss_frost_pulse": {
+        "name": "Glacial Burst"
+      },
+      "rift_boss_ember_pulse": {
+        "name": "Cinder Nova"
+      },
+      "rift_boss_venom_pulse": {
+        "name": "Venom Spray"
+      },
+      "rift_boss_brute_pulse": {
+        "name": "Skullquake"
+      },
+      "rift_boss_arcane_pulse": {
+        "name": "Umbral Collapse"
+      },
+      "rift_boss_storm_pulse": {
+        "name": "Thunder Crash"
+      },
+      "rift_boss_tide_pulse": {
+        "name": "Drowning Hymn"
       }
     }
   },

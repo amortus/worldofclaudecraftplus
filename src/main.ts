@@ -2429,6 +2429,11 @@ async function startOffline(playerClass: PlayerClass, name: string, skin = 0): P
     playerClass,
     playerName: name,
     devCommands: import.meta.env.DEV,
+    // Wall clock for anything the HUD counts down against in real seconds (rift
+    // portal windows, raid lockouts). The server injects the same hook; without it
+    // an offline world falls back to sim-clock milliseconds and every countdown
+    // reads as already expired.
+    lockoutNowMs: () => Date.now(),
   });
   sim.setPlayerSkin(sim.playerId, skin);
   // Offline characters are not persisted (a fresh name is typed each session),

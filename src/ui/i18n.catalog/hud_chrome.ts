@@ -1394,4 +1394,198 @@ export const hudChromeStrings = {
       disconnected: 'Your connection dropped.',
     },
   },
+  // Procedural Rifts (src/sim/rift/): the in-rift floor tracker, the overworld
+  // portal card and confirmation, the run feedback, and the English behind every
+  // stable id the generator emits (`rift.floor.*`, `rift.theme.*`, `rift.noun.*`,
+  // `rift.suffix.*`, `rift.object.*`). The sim stays language-agnostic, so every
+  // word a player reads about a rift is authored here.
+  //
+  // The rank letters C / B / A / S are GLYPHS spliced into these templates, never
+  // translated: the ladder is a fixed four-symbol alphabet. `rank.name` is the
+  // readable channel that rides alongside them.
+  rift: {
+    // The rift's proper noun, assembled from the generator's noun + suffix id
+    // pair ("Hoarfrost Labyrinth"). Its own key so a locale can reorder it.
+    name: '{noun} {suffix}',
+    rank: {
+      label: 'Rank {rank}',
+      aria: 'Rank {rank}, {name}',
+      name: {
+        C: 'Lesser',
+        B: 'Greater',
+        A: 'Dire',
+        S: 'Cataclysmic',
+      },
+    },
+    // Countdown shapes. The digits arrive already formatted through
+    // `formatNumber`; these carry the units, which reorder per locale.
+    time: {
+      hoursMinutes: '{h}h {m}m',
+      minutesSeconds: '{m}:{s}',
+      seconds: '{s}s',
+      expired: 'Sealed',
+    },
+    tracker: {
+      title: 'Rift',
+      floor: 'Floor {current} of {total}',
+      floorAria: 'Floor {current} of {total}. {theme}. {mechanic}.',
+      finalFloor: 'Final',
+      progressLabel: 'Rift descent',
+      trial: 'Trial: {mechanic}',
+      entranceOpen: 'Entrance closes in {time}',
+      entranceAria: 'The entrance stops admitting new parties in {time}.',
+      entranceClosed: 'The entrance has sealed behind you.',
+      sealed: 'The rift is sealed.',
+    },
+    portal: {
+      title: 'Rift Portals',
+      enter: 'Enter',
+      enterAria: 'Enter the rank {rank} rift in {zone}',
+      opensIn: 'Tears open in {time}',
+      collapsesIn: 'Collapses in {time}',
+      opened: 'A rank {rank} rift, {rankName}, tears open in {zone}.',
+      stirring: 'The air splits in {zone}. A rank {rank} rift, {rankName}, opens in {time}.',
+      gone: 'The rift in {zone} has collapsed.',
+      bannerOpened: 'A Rift Tears Open',
+    },
+    confirm: {
+      title: 'Enter the Rift?',
+      body: 'A rank {rank} rift, {rankName}, yawns open in {zone}. Nothing that walks back out of one walks out unchanged.',
+      warning: 'The entrance stops admitting new parties in {time}. Anyone not through by then is left behind.',
+      // The confirm dialog escapes its body into a single block, so the two sentences
+      // are joined through a key rather than concatenated in code: a locale controls
+      // the order and the separator (CJK does not divide clauses with an ASCII space).
+      bodyWithWarning: '{body} {warning}',
+      ok: 'Step Through',
+      cancel: 'Stand Down',
+    },
+    feedback: {
+      enterBanner: 'The Rift Takes You',
+      enter: 'You step into a rank {rank} rift, {rankName}. {floors} floors of {theme} lie between you and its heart.',
+      floor: 'Floor {current} of {total}: {theme}.',
+      trial: '{mechanic}. {hint}',
+      finalFloorBanner: 'The Sanctum',
+      clearBanner: 'Rift Sealed',
+      clear: 'The tear closes behind you. Rank {rank}, {rankName}, {floors} floors.',
+      firstClearBanner: 'First Sealing',
+      firstClear: 'No one had ever sealed a rank {rank} rift, {rankName}, before now.',
+    },
+    // The floor's one headline mechanic (sim/rift/mechanics.ts). A boss floor is
+    // always tagged `none` because the warden IS that floor's mechanic, so the
+    // `boss` rung stands in for `none` there.
+    mechanicName: {
+      none: 'Slaughter',
+      boss: 'The Warden',
+      rune_pylons: 'Rune Pylons',
+      ice_slide: 'The Ice Sheet',
+      boulder_push: 'The Boulders',
+      sequence: 'The Rune Sequence',
+      switch_gate: 'The Portcullis',
+    },
+    mechanicHint: {
+      none: 'Nothing here opens until every warden is dead.',
+      boss: 'Whatever anchors this rift holds the floor. Put it down and the tear seals.',
+      rune_pylons: 'Walk onto every pylon to light it.',
+      ice_slide: 'The floor holds no grip. Launch yourself and come to rest on the sigil.',
+      boulder_push: 'Shove each boulder onto its socket.',
+      sequence: 'Step the runes south to north. One wrong step puts them all out.',
+      switch_gate: 'Stand on the plate to raise the portcullis.',
+    },
+    // Every reason an entry attempt is refused. `unknown` is the catch-all a
+    // newer server's reason folds onto, so a refusal is never a silent one.
+    deny: {
+      closed: 'The entrance has sealed. No one else gets in.',
+      expired: 'That tear has already collapsed.',
+      notOpen: 'The tear has not widened enough to walk through.',
+      sealed: 'That rift is sealed. Nothing is left inside it.',
+      level: 'You are not seasoned enough for what waits on the other side.',
+      party: 'A rift will not take a group that size.',
+      partyRange: 'Your party is scattered. Gather them at the tear first.',
+      combat: 'Not while something still has its hands on you.',
+      dead: 'The dead do not walk into rifts.',
+      inRun: 'You are already inside a rift.',
+      inInstance: 'Leave where you are standing before you go anywhere else.',
+      noInstance: 'Every rift the world can hold is already occupied. Try again shortly.',
+      range: 'You are too far from the tear.',
+      unknown: 'The rift refuses you.',
+    },
+    // Floor labels (`rift.floor.*`).
+    floor: {
+      reaches: 'The Reaches',
+      sanctum: 'The Sanctum',
+    },
+    // The eight environment themes (`rift.theme.*`).
+    theme: {
+      frost: 'Frostbound',
+      ember: 'Emberforge',
+      venom: 'Venomweald',
+      bone: 'Boneyard',
+      brute: 'Warcamp',
+      void: 'Voidscar',
+      storm: 'Stormspire',
+      tide: 'Sunken Reach',
+    },
+    // Proper-noun fragments (`rift.noun.*`), four per theme. Paired with a
+    // suffix below through `rift.name`.
+    noun: {
+      rime: 'Rime',
+      hoarfrost: 'Hoarfrost',
+      glacier: 'Glacier',
+      frost: 'Frost',
+      ember: 'Ember',
+      cinder: 'Cinder',
+      magma: 'Magma',
+      ash: 'Ash',
+      venom: 'Venom',
+      thorn: 'Thorn',
+      bramble: 'Bramble',
+      spider: 'Spider',
+      bone: 'Bone',
+      marrow: 'Marrow',
+      ossuary: 'Ossuary',
+      grave: 'Grave',
+      war: 'War',
+      skull: 'Skull',
+      iron: 'Iron',
+      blood: 'Blood',
+      void: 'Void',
+      shadow: 'Shadow',
+      umbral: 'Umbral',
+      dusk: 'Dusk',
+      storm: 'Storm',
+      tempest: 'Tempest',
+      thunder: 'Thunder',
+      gale: 'Gale',
+      sunken: 'Sunken',
+      abyssal: 'Abyssal',
+      drowned: 'Drowned',
+      tide: 'Tide',
+    },
+    // The place half of a rift's proper noun (`rift.suffix.*`).
+    suffix: {
+      abyss: 'Abyss',
+      depths: 'Depths',
+      descent: 'Descent',
+      hollow: 'Hollow',
+      labyrinth: 'Labyrinth',
+      warren: 'Warren',
+      sanctum: 'Sanctum',
+      rift: 'Rift',
+    },
+    // Placed interactables (`rift.object.*`).
+    object: {
+      beacon: 'Wayward Beacon',
+      descent: 'The Descent',
+      exit: 'Rift Exit',
+      chest: "Warden's Cache",
+      treasure: 'Forgotten Cache',
+      rune_pylon: 'Rune Pylon',
+      ice_goal: 'Frozen Sigil',
+      boulder: 'Riven Boulder',
+      boulder_pad: 'Socket Stone',
+      seq_rune: 'Ordered Rune',
+      gate: 'Portcullis',
+      switch: 'Pressure Plate',
+    },
+  },
 };

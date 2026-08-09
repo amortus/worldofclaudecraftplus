@@ -1,4 +1,5 @@
 import { GATHER_NODES } from '../sim/content/professions';
+import { RIFT_MOBS } from '../sim/content/rift';
 import { DELVES, DUNGEONS, MOBS, NPCS, QUESTS, ZONES } from '../sim/data';
 
 // English world-entity names + narratives (mobs, NPCs, quests, zones, dungeons).
@@ -286,6 +287,66 @@ export function gatherNodeNameKey(type: string, zoneId: string): string {
 }
 
 type GatherNodeTranslations = Record<string, { name: string }>;
+
+/**
+ * The 26 procedural-rift creatures (16 trash elites, 8 theme bosses, 2
+ * boss-summoned adds). Sourced straight from `content/rift`, the way the gather
+ * nodes above are sourced from `GATHER_NODES`, rather than through the merged
+ * `MOBS` table: the run-lifecycle wave is what spreads `RIFT_MOBS` into
+ * `sim/data.ts`, and a rift creature's NAME should not have to wait on that.
+ * Ids stay in the same `entities.mobs.*` namespace as every other creature, so
+ * `tEntity({ kind: 'mob' })` resolves them with no special case.
+ */
+const RIFT_MOB_IDS = [
+  'rift_frost_revenant',
+  'rift_rime_elemental',
+  'rift_ember_fiend',
+  'rift_magma_brute',
+  'rift_venom_weaver',
+  'rift_thornback',
+  'rift_boneclad',
+  'rift_marrow_troll',
+  'rift_stone_ogre',
+  'rift_iron_reaver',
+  'rift_void_acolyte',
+  'rift_dread_stalker',
+  'rift_storm_caller',
+  'rift_stormscale',
+  'rift_tide_thrall',
+  'rift_deep_lurker',
+  'rift_boss_frost',
+  'rift_boss_ember',
+  'rift_boss_venom',
+  'rift_boss_necro',
+  'rift_boss_brute',
+  'rift_boss_arcane',
+  'rift_boss_storm',
+  'rift_boss_tide',
+  'rift_riftspawn',
+  'rift_shardling',
+] as const;
+
+/** The translation id for a rift boss's signature pulse. One per boss that
+ *  carries an `aoePulse`; the two bosses whose kit is summons and healing cast
+ *  nothing named, so they have no row. */
+export function riftMobAbilityId(mobId: string): string {
+  return `${mobId}_pulse`;
+}
+
+/**
+ * Rift boss ability names, keyed by `riftMobAbilityId`. These are ENTITY names,
+ * not HUD chrome: the sim splices the raw English into its combat text, and
+ * `sim_i18n.ts` reverses it back through `tEntity` exactly as it does for a
+ * player ability. Derived from the templates so a renamed pulse can never drift
+ * from the one the player is actually being hit by.
+ */
+export const RIFT_MOB_ABILITY_NAMES: Record<string, string> = Object.fromEntries(
+  Object.values(RIFT_MOBS)
+    .filter((mob) => !!mob.aoePulse)
+    .map((mob) => [riftMobAbilityId(mob.id), mob.aoePulse!.name]),
+);
+
+type MobAbilityTranslations = Record<string, { name: string }>;
 const DUNGEON_IDS = [
   'hollow_crypt',
   'sunken_bastion',
@@ -297,7 +358,7 @@ const DUNGEON_IDS = [
 ] as const;
 const DELVE_IDS = ['collapsed_reliquary'] as const;
 
-type MobId = (typeof MOB_IDS)[number];
+type MobId = (typeof MOB_IDS)[number] | (typeof RIFT_MOB_IDS)[number];
 type NpcId = (typeof NPC_IDS)[number];
 type QuestId = (typeof QUEST_IDS)[number];
 type ZoneId = (typeof ZONE_IDS)[number];
@@ -341,6 +402,7 @@ type WorldEntityTranslations = {
     dungeons: DungeonTranslations;
     delves: DelveTranslations;
     gatherNodes: GatherNodeTranslations;
+    mobAbilities: MobAbilityTranslations;
   };
 };
 
@@ -364,6 +426,14 @@ function makeEnglishWorldEntities(): WorldEntityTranslations {
   orderedValues(MOB_IDS, MOBS).forEach((mob) => {
     mobs[mob.id as MobId] = { name: mob.name };
   });
+  orderedValues(RIFT_MOB_IDS, RIFT_MOBS).forEach((mob) => {
+    mobs[mob.id as MobId] = { name: mob.name };
+  });
+
+  const mobAbilities = {} as MobAbilityTranslations;
+  for (const [id, name] of Object.entries(RIFT_MOB_ABILITY_NAMES)) {
+    mobAbilities[id] = { name };
+  }
 
   const npcs = {} as NpcTranslations;
   orderedValues(NPC_IDS, NPCS).forEach((npc) => {
@@ -439,7 +509,7 @@ function makeEnglishWorldEntities(): WorldEntityTranslations {
       delveRewardChestInteract: 'Press F to claim spoils',
       delveSurfaceExitInteract: 'Press F to climb',
     },
-    entities: { mobs, npcs, quests, zones, dungeons, delves, gatherNodes },
+    entities: { mobs, npcs, quests, zones, dungeons, delves, gatherNodes, mobAbilities },
   };
 }
 

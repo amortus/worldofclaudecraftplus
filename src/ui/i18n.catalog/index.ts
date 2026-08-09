@@ -982,6 +982,9 @@ export const en = {
     // Gatherable world-node names, keyed by (node type, zone) since every node
     // of a pair shares one name. See world_entity_i18n.ts gatherNodeNameKey.
     gatherNodes: { ...worldNames.en.entities.gatherNodes },
+    // Named creature abilities (the rift bosses' signature pulses). Cast BY the
+    // world at the player, so they are world-entity names, not player abilities.
+    mobAbilities: { ...worldNames.en.entities.mobAbilities },
   },
 };
 
