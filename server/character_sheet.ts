@@ -162,6 +162,7 @@ export function characterSheet(input: CharacterSheetInput): CharacterSheet {
   const skin = Math.max(0, Math.min(7, Math.floor(state.skin ?? 0)));
   const lifetimeXp = state.lifetimeXp ?? xpToReachLevel(level);
   const copper = state.copper ?? 0;
+  const xPos = state.pos?.x ?? 0;
   const zPos = state.pos?.z ?? 0;
 
   const base = origin.replace(/\/+$/, '');
@@ -179,7 +180,7 @@ export function characterSheet(input: CharacterSheetInput): CharacterSheet {
     prestigeRank: state.prestigeRank ?? 0,
     skin,
     avatarUrl,
-    zone: zoneAt(zPos).name,
+    zone: zoneAt(xPos, zPos).name,
     guild: guild ?? null,
     arena: arenaBrackets(state),
     rank: rank ?? null,

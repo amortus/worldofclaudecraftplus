@@ -132,7 +132,8 @@ describe('unstuck wiring: the countdown', () => {
     );
 
     // The destination rule is IDENTICAL to releaseSpirit's.
-    const gy = zoneAt(dungeonAt(origin.x) ? dungeonAt(origin.x)!.doorPos.z : origin.z).graveyard;
+    const door = dungeonAt(origin.x)?.doorPos;
+    const gy = (door ? zoneAt(door.x, door.z) : zoneAt(origin.x, origin.z)).graveyard;
     expect(sim.player.pos.x).toBeCloseTo(gy.x, 6);
     expect(sim.player.pos.z).toBeCloseTo(gy.z, 6);
     expect(sim.meta(sim.playerId)!.pendingUnstuck).toBe(null);

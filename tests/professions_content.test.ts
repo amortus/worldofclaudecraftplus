@@ -77,7 +77,7 @@ describe('gather nodes', () => {
 
   it('places every node inside its own zone’s z band', () => {
     for (const n of GATHER_NODES) {
-      expect(zoneAt(n.pos.z).id, `${n.id} at z=${n.pos.z}`).toBe(n.zoneId);
+      expect(zoneAt(n.pos.x, n.pos.z).id, `${n.id} at z=${n.pos.z}`).toBe(n.zoneId);
     }
   });
 

@@ -1158,6 +1158,23 @@ export interface ZoneDef {
   id: string;
   name: string;
   zMin: number;
+  /**
+   * Optional east-west extent (a world GRID column). Omitted = the original
+   * full-width strip [STRIP_MIN_X, STRIP_MAX_X] (data.ts). Zones are
+   * rectangles; zoneAt(x, z) picks by rect, so side-by-side columns can share
+   * a z band and meet at a real walkable border, exactly like the north
+   * passes. Every zone shipped today omits both, which is why the 2D lookup
+   * answers identically to the 1D one it replaced.
+   */
+  xMin?: number;
+  xMax?: number;
+  /**
+   * Road passes through a COLUMN border (a shared vertical edge with the
+   * neighbor east or west), the sideways twin of southPassX: the z where the
+   * border ridge opens. Only read when such an edge exists.
+   */
+  eastPassZ?: number;
+  westPassZ?: number;
   zMax: number;
   levelRange: [number, number];
   biome: BiomeId;
@@ -1167,6 +1184,16 @@ export interface ZoneDef {
   pois: { x: number; z: number; label: string }[];
   welcome: string; // chat-log hint shown on first entry
   welcomeQuestId?: string; // only show the hint while this quest is available
+  // The zone's southern border ridge has NO road pass and is raised past the
+  // climbable slope: the zone is reachable only by portal (see world.ts).
+  sealedSouthBorder?: boolean;
+  // Where the road pass through the zone's SOUTHERN border ridge sits (x).
+  // Defaults to 0 (the original zones' central road).
+  southPassX?: number;
+  // Per-zone override of the open-world trash respawn delay (seconds), which
+  // otherwise is the single world delay. An explicit SimConfig respawn value
+  // still wins over it, and a MobTemplate.respawnSeconds wins over both.
+  trashRespawnSeconds?: number;
 }
 
 export interface BuildingDef {

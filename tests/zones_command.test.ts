@@ -50,7 +50,7 @@ describe('/zones command', () => {
     const last = ZONES[ZONES.length - 1];
     teleport(sim, a, 0, last.zMin + 1);
     sim.tick();
-    expect(zoneAt(sim.entities.get(a)!.pos.z).name).toBe(last.name);
+    expect(zoneAt(sim.entities.get(a)!.pos.x, sim.entities.get(a)!.pos.z).name).toBe(last.name);
     sim.chat('/zones', a);
     const text = errorText(sim.tick())!;
     // The current-zone marker sits on the last zone's line, not the first.

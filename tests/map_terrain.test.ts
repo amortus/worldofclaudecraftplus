@@ -54,16 +54,16 @@ describe('map terrain painter', () => {
     expect(a).not.toEqual(b);
   });
 
-  // The painter swapped the inline `zoneAt(z).biome` for `zoneBiomeAt(z)`; pin
-  // them as equivalent across the world's z-range so the swap can't silently
+  // The painter swapped the inline `zoneAt(x, z).biome` for `zoneBiomeAt(x, z)`;
+  // pin them as equivalent across the world's z-range so the swap can't silently
   // drift the map colours.
-  it('zoneBiomeAt(z) matches zoneAt(z).biome across the world', () => {
+  it('zoneBiomeAt(x, z) matches zoneAt(x, z).biome across the world', () => {
     const minZ = ZONES[0].zMin;
     const maxZ = ZONES[ZONES.length - 1].zMax;
     for (let z = minZ; z < maxZ; z += 0.5) {
-      expect(zoneBiomeAt(z)).toBe(zoneAt(z).biome);
+      expect(zoneBiomeAt(0, z)).toBe(zoneAt(0, z).biome);
     }
     // and just past the far edge, where both clamp to the last zone
-    expect(zoneBiomeAt(maxZ + 50)).toBe(zoneAt(maxZ + 50).biome);
+    expect(zoneBiomeAt(0, maxZ + 50)).toBe(zoneAt(0, maxZ + 50).biome);
   });
 });

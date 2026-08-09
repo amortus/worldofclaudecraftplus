@@ -698,7 +698,7 @@ export class GameServer {
     if (e.dead) status = 'dead';
     else if (instanceZone != null) status = 'dungeon';
     else if (e.inCombat) status = 'combat';
-    return { zone: instanceZone ?? zoneAt(pos.z).name, status, x: pos.x, z: pos.z };
+    return { zone: instanceZone ?? zoneAt(pos.x, pos.z).name, status, x: pos.x, z: pos.z };
   }
 
   private socialTransport(): SocialTransport {
@@ -1335,7 +1335,9 @@ export class GameServer {
     const dungeonId = e.dungeonId ?? dungeonAt(e.pos.x)?.id ?? null;
     if (dungeonId) {
       const dungeon = DUNGEONS[dungeonId];
-      const zone = dungeon ? zoneAt(dungeon.doorPos.z) : zoneAt(e.pos.z);
+      const zone = dungeon
+        ? zoneAt(dungeon.doorPos.x, dungeon.doorPos.z)
+        : zoneAt(e.pos.x, e.pos.z);
       // Dungeon instances of the same dungeon stack 500u apart in z (instanceOrigin);
       // find the slot whose origin z is within half that spacing of the player.
       let instanceSlot: number | null = null;
@@ -1364,7 +1366,9 @@ export class GameServer {
     const delveRun = this.sim.delveRunForPlayer(e.id);
     if (delveRun) {
       const delve = DELVES[delveRun.delveId];
-      const zone = delve ? zoneAt(delve.doorPos.z) : zoneAt(e.pos.z);
+      const zone = delve
+        ? zoneAt(delve.doorPos.x, delve.doorPos.z)
+        : zoneAt(e.pos.x, e.pos.z);
       return {
         kind: 'delve',
         zoneId: zone.id,
@@ -1384,7 +1388,7 @@ export class GameServer {
     // run's portal id carries.
     const riftRun = this.sim.riftRunForPlayer(e.id);
     if (riftRun) {
-      const zone = this.riftZoneOf(e) ?? zoneAt(e.pos.z);
+      const zone = this.riftZoneOf(e) ?? zoneAt(e.pos.x, e.pos.z);
       return {
         kind: 'rift',
         zoneId: zone.id,
@@ -1400,7 +1404,7 @@ export class GameServer {
       };
     }
 
-    const zone = zoneAt(e.pos.z);
+    const zone = zoneAt(e.pos.x, e.pos.z);
     let bestIndex: number | null = null;
     let bestDistance = ADMIN_LOCATION_POI_RADIUS;
     for (let i = 0; i < zone.pois.length; i++) {

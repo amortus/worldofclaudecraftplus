@@ -66,7 +66,7 @@ export function paintTerrainRows(
       const zAbove = region.maxZ - ((iy - 1) / H) * spanZ;
       const hAbove = iy > 0 ? terrainHeight(x, zAbove, seed) : h;
 
-      const biome = zoneBiomeAt(z);
+      const biome = zoneBiomeAt(x, z);
 
       // Base biome colour (flat / low terrain)
       let r: number, g: number, b: number;

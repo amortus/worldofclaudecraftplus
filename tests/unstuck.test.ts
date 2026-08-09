@@ -212,7 +212,7 @@ describe('unstuck: the outcome', () => {
   it('lands on the same graveyard the death loop would use', () => {
     const { result } = run(start(), 20 * 30);
     if (result.phase !== 'completed') throw new Error('expected completion');
-    expect(result.resolution.destination).toEqual(zoneAt(20).graveyard);
+    expect(result.resolution.destination).toEqual(zoneAt(10, 20).graveyard);
   });
 
   it('surfaces a dungeon unstuck at the graveyard of the DOOR zone', () => {
@@ -222,7 +222,7 @@ describe('unstuck: the outcome', () => {
     const dungeon = dungeonAt(inside.x);
     expect(dungeon).not.toBeNull();
     if (!dungeon) return;
-    expect(unstuckGraveyardFor(inside)).toEqual(zoneAt(dungeon.doorPos.z).graveyard);
+    expect(unstuckGraveyardFor(inside)).toEqual(zoneAt(dungeon.doorPos.x, dungeon.doorPos.z).graveyard);
   });
 
   it('stamps the long success cooldown, not the short retry one', () => {

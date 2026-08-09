@@ -253,7 +253,8 @@ export function unstuckSicknessAura(level: number, base: Stats, sourceId: number
  */
 export function unstuckGraveyardFor(pos: { x: number; z: number }): { x: number; z: number } {
   const dungeon = dungeonAt(pos.x);
-  return zoneAt(dungeon ? dungeon.doorPos.z : pos.z).graveyard;
+  return (dungeon ? zoneAt(dungeon.doorPos.x, dungeon.doorPos.z) : zoneAt(pos.x, pos.z))
+    .graveyard;
 }
 
 // ---------------------------------------------------------------------------

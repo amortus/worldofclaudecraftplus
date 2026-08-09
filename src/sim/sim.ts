@@ -11720,7 +11720,7 @@ export class Sim {
     // TABLE, row for row, so a brand-new angler catches exactly what they caught
     // before the ladder existed. Falls back to the Vale tables for any spot
     // without its own (e.g. fishable water inside a dungeon zone). ONE draw.
-    const zone = zoneAt(p.pos.z);
+    const zone = zoneAt(p.pos.x, p.pos.z);
     const catchResult = resolveFishingCatch(
       {
         tables: fishingTablesFor(zone.id),
@@ -13389,7 +13389,8 @@ export class Sim {
     // in; dying outdoors, to your current zone's graveyard
     const dungeon = dungeonAt(p.pos.x);
     const graveyard = (
-      this.riftZoneFor(riftRun) ?? zoneAt(dungeon ? dungeon.doorPos.z : p.pos.z)
+      this.riftZoneFor(riftRun) ??
+      (dungeon ? zoneAt(dungeon.doorPos.x, dungeon.doorPos.z) : zoneAt(p.pos.x, p.pos.z))
     ).graveyard;
     p.pos = this.groundPos(graveyard.x, graveyard.z);
     p.prevPos = { ...p.pos };
@@ -13442,7 +13443,7 @@ export class Sim {
     if (isArenaPos(p.pos.x)) return 'arena';
     const dungeon = dungeonAt(p.pos.x);
     if (dungeon) return `dungeon:${dungeon.id}`;
-    return zoneAt(p.pos.z).id;
+    return zoneAt(p.pos.x, p.pos.z).id;
   }
 
   /** Compose the flat snapshot the pure state machine takes, from the Entity +
@@ -13733,10 +13734,10 @@ export class Sim {
 
   /** The overworld zone a player stands in, diffed against the last one seen, so
    *  the chronicle gets a `zoneEnter` fact. Skipped inside every instanced band
-   *  (dungeon / arena / delve), where `zoneAt(z)` is meaningless. */
+   *  (dungeon / arena / delve), where `zoneAt(x, z)` is meaningless. */
   private trackZoneEntry(p: Entity, meta: PlayerMeta): void {
     if (p.pos.x > DUNGEON_X_THRESHOLD) return;
-    const zoneId = zoneAt(p.pos.z).id;
+    const zoneId = zoneAt(p.pos.x, p.pos.z).id;
     if (zoneId === meta.lastZoneId) return;
     meta.lastZoneId = zoneId;
     this.queueDeed(meta, { kind: 'zoneEnter', zoneId });
@@ -14174,7 +14175,7 @@ export class Sim {
 
     // Self-only readouts: emit a private system line and never become chat.
     if (/^\/(?:where|loc|zone)(?:\s|$)/i.test(raw)) {
-      const zone = zoneAt(r.e.pos.z);
+      const zone = zoneAt(r.e.pos.x, r.e.pos.z);
       const [lo, hi] = zone.levelRange;
       this.error(
         r.meta.entityId,
@@ -14238,7 +14239,7 @@ export class Sim {
       return null;
     }
     if (/^\/(?:zones|zonelist|worldmap)(?:\s|$)/i.test(raw)) {
-      this.error(r.meta.entityId, this.zonesReadout(r.e.pos.z));
+      this.error(r.meta.entityId, this.zonesReadout(r.e.pos.x, r.e.pos.z));
       return null;
     }
     if (/^\/(?:nearby|near|around)(?:\s|$)/i.test(raw)) {
@@ -18021,12 +18022,12 @@ export class Sim {
   }
   // Self-only readout for "/zones": lists every overworld zone in travel order
   // (south -> north) with its level range, tagging the zone the player is in.
-  // `currentZ` is the player's world Z (use zoneAt(currentZ) to find their zone).
-  // ZONES is the ordered ZoneDef[] from ./data; each has .name and
-  // .levelRange = [min, max].
-  private zonesReadout(currentZ: number): string {
+  // `currentX`/`currentZ` is the player's world position (use zoneAt(x, z) to
+  // find their zone). ZONES is the ordered ZoneDef[] from ./data; each has
+  // .name and .levelRange = [min, max].
+  private zonesReadout(currentX: number, currentZ: number): string {
     if (ZONES.length === 0) return 'No zones are defined.';
-    const here = zoneAt(currentZ);
+    const here = zoneAt(currentX, currentZ);
     const parts = ZONES.map((z) => {
       const line = `${z.name} (Lvl ${z.levelRange[0]}-${z.levelRange[1]})`;
       return z.id === here.id ? `${line} [you are here]` : line;
@@ -18083,7 +18084,9 @@ export class Sim {
   // sits in, dying outdoors at your current zone's graveyard.
   private graveyardReadout(p: Entity): string {
     const dungeon = dungeonAt(p.pos.x);
-    const zone = zoneAt(dungeon ? dungeon.doorPos.z : p.pos.z);
+    const zone = dungeon
+      ? zoneAt(dungeon.doorPos.x, dungeon.doorPos.z)
+      : zoneAt(p.pos.x, p.pos.z);
     const gy = zone.graveyard;
     return `If you fall here, your spirit returns to the ${zone.name} graveyard at (${Math.floor(gy.x)}, ${Math.floor(gy.z)}).`;
   }
@@ -18093,7 +18096,7 @@ export class Sim {
   // door zone via zoneAt — no new fields.
   private dungeonsReadout(): string {
     const parts = DUNGEON_LIST.map(
-      (d) => `${d.name} (${zoneAt(d.doorPos.z).name}, ${d.suggestedPlayers} players)`,
+      (d) => `${d.name} (${zoneAt(d.doorPos.x, d.doorPos.z).name}, ${d.suggestedPlayers} players)`,
     );
     return `Dungeons (${parts.length}): ${parts.join(', ')}.`;
   }
@@ -18121,7 +18124,7 @@ export class Sim {
   // (the same labels the HUD pins on the map) and your live position — no new
   // fields.
   private poisReadout(self: Entity): string {
-    const zone = zoneAt(self.pos.z);
+    const zone = zoneAt(self.pos.x, self.pos.z);
     if (zone.pois.length === 0) return `${zone.name} has no notable landmarks.`;
     const parts = zone.pois
       .map((p) => ({ label: p.label, d: dist2d(self.pos, { x: p.x, y: 0, z: p.z }) }))

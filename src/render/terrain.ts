@@ -263,7 +263,7 @@ function sampleVertex(x: number, z: number, seed: number, out: Float64Array, o: 
   out[o + S_NORMAL + 2] = -(hz / (2 * SLOPE_EPS)) * invLen;
 
   paletteAt(z);
-  const biome = zoneBiomeAt(z);
+  const biome = zoneBiomeAt(x, z);
   const w = splatScratch;
   w[0] = 1;
   w[1] = 0;

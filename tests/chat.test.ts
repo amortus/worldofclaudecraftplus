@@ -261,7 +261,7 @@ describe('chat channels', () => {
     const a = sim.addPlayer('warrior', 'Aleph');
     teleport(sim, a, 12, -340);
     sim.tick();
-    const zone = zoneAt(-340);
+    const zone = zoneAt(12, -340);
     const [lo, hi] = zone.levelRange;
     sim.chat('/where', a);
     const events = sim.tick();
@@ -295,7 +295,7 @@ describe('chat channels', () => {
     const a = sim.addPlayer('warrior', 'Aleph');
     teleport(sim, a, 0, -40);
     sim.tick();
-    const expected = `You are in ${zoneAt(-40).name}`;
+    const expected = `You are in ${zoneAt(0, -40).name}`;
     for (const cmd of ['/loc', '/zone']) {
       sim.chat(cmd, a);
       const events = sim.tick();

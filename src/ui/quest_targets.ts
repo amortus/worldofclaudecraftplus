@@ -37,7 +37,7 @@ export interface QuestMarker extends TargetLocation {
 }
 
 function loc(x: number, z: number, radius: number, kind: TargetKind): TargetLocation {
-  const zone = zoneAt(z);
+  const zone = zoneAt(x, z);
   return { x, z, radius, kind, zoneId: zone.id, zoneName: zone.name, poiLabel: nearestSubzone(x, z, zone.pois, null) };
 }
 

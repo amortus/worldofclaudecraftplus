@@ -1,7 +1,7 @@
 import { fbm2, hash2 } from './rng';
 import {
   CAMPS, DUNGEON_FLOOR_Y, DUNGEON_X_THRESHOLD, ROADS, WORLD_MAX_X, WORLD_MAX_Z,
-  WORLD_MIN_X, WORLD_MIN_Z, ZONES,
+  WORLD_MIN_X, WORLD_MIN_Z, ZONES, zoneAt,
 } from './data';
 import type { BiomeId } from './types';
 
@@ -200,11 +200,11 @@ function isExcludedDecoration(x: number, z: number): boolean {
   return DECORATION_EXCLUSIONS.some((p) => Math.hypot(x - p.x, z - p.z) < DECORATION_EXCLUSION_RADIUS);
 }
 
-export function zoneBiomeAt(z: number): BiomeId {
-  for (const zone of ZONES) {
-    if (z < zone.zMax) return zone.biome;
-  }
-  return ZONES[ZONES.length - 1].biome;
+// Delegates to zoneAt rather than repeating its rect walk over ZONES: a
+// private copy here was the one place the biome could disagree with every
+// other zone read once zones stop spanning the full-width strip.
+export function zoneBiomeAt(x: number, z: number): BiomeId {
+  return zoneAt(x, z).biome;
 }
 
 export function generateDecorations(seed: number): Decoration[] {
@@ -214,7 +214,7 @@ export function generateDecorations(seed: number): Decoration[] {
   for (let gx = -xHalf; gx < xHalf; gx += step) {
     for (let gz = WORLD_MIN_Z + 14; gz < WORLD_MAX_Z - 14; gz += step) {
       const r = hash2(Math.round(gx), Math.round(gz), seed + 31);
-      const biome = zoneBiomeAt(gz);
+      const biome = zoneBiomeAt(gx, gz);
       // density gate + kind mix per biome
       let kind: Decoration['kind'] | null = null;
       if (biome === 'vale') {

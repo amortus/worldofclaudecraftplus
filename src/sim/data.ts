@@ -337,9 +337,15 @@ export const GROUP_XP_BONUS = [1, 1, 1.166, 1.3, 1.43];
 
 export const ZONES: ZoneDef[] = [ZONE1_ZONE, ZONE2_ZONE, ZONE3_ZONE, ZONE4_ZONE];
 
-export const WORLD_SIZE = 360; // world width: x spans [-180, 180]
-export const WORLD_MIN_X = -WORLD_SIZE / 2;
-export const WORLD_MAX_X = WORLD_SIZE / 2;
+export const WORLD_SIZE = 360; // the original strip's width (one grid column)
+// The strip column: the x extent a zone spans when it declares no xMin/xMax.
+export const STRIP_MIN_X = -WORLD_SIZE / 2;
+export const STRIP_MAX_X = WORLD_SIZE / 2;
+// The grid's real bounds, derived from the zones themselves. With every zone
+// on the strip (today) these are exactly the strip's edges, so nothing that
+// reads them moves; a later column zone widens them by declaring x bounds.
+export const WORLD_MIN_X = Math.min(...ZONES.map((zn) => zn.xMin ?? STRIP_MIN_X));
+export const WORLD_MAX_X = Math.max(...ZONES.map((zn) => zn.xMax ?? STRIP_MAX_X));
 export const WORLD_MIN_Z = ZONES[0].zMin;
 export const WORLD_MAX_Z = ZONES[ZONES.length - 1].zMax;
 
@@ -354,12 +360,23 @@ export function riftEligibleZones(): ZoneDef[] {
   return ZONES.filter((zone) => zone.levelRange[1] >= MAX_LEVEL);
 }
 
-// Zone containing a world position (overworld only; clamps to the strip ends).
-export function zoneAt(z: number): ZoneDef {
+// Zone containing a world position (overworld only; clamps to the world edges).
+// Zones are rectangles: z picks the band (stacked south to north, as always)
+// and x picks the column within it. Every zone without an explicit x range
+// spans the original full-width strip, so a one-column world (ours today)
+// resolves exactly as the z-only lookup this replaced: the southmost band
+// still containing z is the fallback for a point south of every zMin, and a
+// point north of every zMax clamps to the northmost band.
+export function zoneAt(x: number, z: number): ZoneDef {
+  let fallback: ZoneDef | null = null;
   for (const zone of ZONES) {
-    if (z < zone.zMax) return zone;
+    if (z >= zone.zMax) continue;
+    if (fallback === null || zone.zMax < fallback.zMax) fallback = zone; // southmost band containing z
+    const x0 = zone.xMin ?? STRIP_MIN_X;
+    const x1 = zone.xMax ?? STRIP_MAX_X;
+    if (z >= zone.zMin && x >= x0 && x < x1) return zone;
   }
-  return ZONES[ZONES.length - 1];
+  return fallback ?? ZONES.reduce((a, b) => (b.zMax > a.zMax ? b : a));
 }
 
 export function zoneWelcomeText(

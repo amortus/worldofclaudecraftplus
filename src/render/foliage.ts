@@ -887,7 +887,7 @@ function generateDressing(seed: number): DressingSpot[] {
   for (let gx = -xHalf; gx < xHalf; gx += step) {
     for (let gz = WORLD_MIN_Z + 16; gz < WORLD_MAX_Z - 16; gz += step) {
       const r = hashAt(gx, gz, 41);
-      const biome = zoneBiomeAt(gz);
+      const biome = zoneBiomeAt(gx, gz);
       const density = DRESS_DENSITY[biome] * (GFX.leanFoliage ? DRESS_DENSITY_LOW_SCALE : 1);
       if (r > density) continue;
       const x = gx + (hashAt(gx, gz, 42) - 0.5) * step;
@@ -966,7 +966,7 @@ function buildDressing(parent: THREE.Group, seed: number, registry: BucketMesh[]
             im.setColorAt(i, softTint(
               s.x,
               s.z,
-              DRESS_TINT[zoneBiomeAt(s.z)],
+              DRESS_TINT[zoneBiomeAt(s.x, s.z)],
               c,
               GFX.leanFoliage ? DRESS_TINT_SOFTEN_LOW : DRESS_TINT_SOFTEN,
             ));
@@ -1192,7 +1192,7 @@ function buildGrassRing(parent: THREE.Group, seed: number): GrassRing {
         if (x < minX || x >= maxX || z < minZ || z >= maxZ) continue;
         if (Math.abs(x) > WORLD_MAX_X - 16 || z < WORLD_MIN_Z + 16 || z > WORLD_MAX_Z - 16) continue;
         // The blight is a dead wasteland: no living grass blades, just bare ash.
-        if (zoneBiomeAt(z) === 'blight') continue;
+        if (zoneBiomeAt(x, z) === 'blight') continue;
         const h = terrainHeight(x, z, seed);
         if (h < WATER_LEVEL + 1.6) continue;
         // no blades pasted onto cliff faces
@@ -1207,7 +1207,7 @@ function buildGrassRing(parent: THREE.Group, seed: number): GrassRing {
         q.setFromAxisAngle(up, r * 12.4);
         m.compose(v.set(x, h, z), q, sv.set(s, s, s));
         im.setMatrixAt(n, m);
-        c.setHex(GRASS_TINT[zoneBiomeAt(z)]);
+        c.setHex(GRASS_TINT[zoneBiomeAt(x, z)]);
         c.offsetHSL(
           (hashAt(i, j, 3) - 0.5) * 0.05,
           (hashAt(i, j, 4) - 0.5) * 0.12,

@@ -1513,7 +1513,7 @@ export class Renderer {
     if (x > DUNGEON_X_THRESHOLD) return 'stone'; // dungeon interiors are stone halls
     if (groundHeight(x, z, this.sim.cfg.seed) < WATER_LEVEL && y <= WATER_LEVEL + 0.3)
       return 'water';
-    const biome = zoneBiomeAt(z);
+    const biome = zoneBiomeAt(x, z);
     if (biome === 'vale') return 'grass';
     if (biome === 'marsh') return 'dirt';
     return this.weatherOn ? 'snow' : 'stone'; // peaks: snowy when weather is on
@@ -3564,11 +3564,11 @@ export class Renderer {
 
   private outdoorFogPreset(): { color: number; near: number; far: number } {
     if (this.lowGfx) {
-      return zoneBiomeAt(this.sim.player.pos.z) === 'blight'
+      return zoneBiomeAt(this.sim.player.pos.x, this.sim.player.pos.z) === 'blight'
         ? Renderer.LOW_FOG_BLIGHT
         : Renderer.LOW_FOG;
     }
-    return Renderer.BIOME_FOG[zoneBiomeAt(this.sim.player.pos.z)];
+    return Renderer.BIOME_FOG[zoneBiomeAt(this.sim.player.pos.x, this.sim.player.pos.z)];
   }
 
   private scheduleDelveModuleBuild(
@@ -4532,7 +4532,7 @@ export class Renderer {
     this.naxx?.update(
       this.camera,
       dt,
-      this.fogState === 'outdoor' && zoneAt(p.pos.z).id === 'ashen_wastes',
+      this.fogState === 'outdoor' && zoneAt(p.pos.x, p.pos.z).id === 'ashen_wastes',
       this.sim.cfg.seed,
     );
     if (this.sky.visible) {
@@ -4543,7 +4543,7 @@ export class Renderer {
     this.weather.update(
       this.camera.position,
       dt,
-      this.fogState === 'outdoor' ? zoneBiomeAt(p.pos.z) : null,
+      this.fogState === 'outdoor' ? zoneBiomeAt(p.pos.x, p.pos.z) : null,
     );
     worldStart = markWorldPhase('sky', worldStart);
     for (const sp of this.sunSprites) {
@@ -4633,7 +4633,7 @@ export class Renderer {
         y: roundMs(p.pos.y),
         z: roundMs(p.pos.z),
       },
-      biome: zoneBiomeAt(p.pos.z),
+      biome: zoneBiomeAt(p.pos.x, p.pos.z),
       lastQualityChange: qualityChange,
       createdViews,
       createdViewTypes,
@@ -4903,7 +4903,7 @@ export class Renderer {
       const fl = Math.hypot(fx, fy, fz) || 1;
       sink.setListener(cpx, cpy, cpz, fx / fl, fy / fl, fz / fl);
       const inDungeon = px > DUNGEON_X_THRESHOLD;
-      const biome = zoneBiomeAt(pz);
+      const biome = zoneBiomeAt(px, pz);
       const precip =
         !this.weatherOn || inDungeon
           ? null

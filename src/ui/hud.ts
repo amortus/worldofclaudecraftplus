@@ -1623,7 +1623,7 @@ export class Hud {
       music.setEnabled(!music.enabled);
       styleMusicBtn();
     });
-    const startZone = zoneAt(sim.player.pos.z);
+    const startZone = zoneAt(sim.player.pos.x, sim.player.pos.z);
     const startZoneName = zoneDisplayName(startZone.id);
     this.lastZoneId = startZone.id;
     this.prewarmMapBg(startZone.id); // render the spawn-zone map bg during idle, not on first open
@@ -4502,7 +4502,7 @@ export class Hud {
       this.showAdBoostOffer();
     }
     this.lastInDungeon = inDungeon;
-    const currentZone = zoneAt(p.pos.z);
+    const currentZone = zoneAt(p.pos.x, p.pos.z);
     if (mediumHud) {
       // zone transitions: banner + welcome hint when crossing into a new band.
       // A ~5yd dead-band past the boundary stops a player straddling the border
@@ -5966,7 +5966,7 @@ export class Hud {
       const modName = modId ? t(`delveUi.moduleName.${modId}` as TranslationKey) : '';
       $('#zone-label').textContent = delveAreaLabel(delveName, modName);
     } else {
-      $('#zone-label').textContent = zoneDisplayName(zoneAt(p.pos.z).id);
+      $('#zone-label').textContent = zoneDisplayName(zoneAt(p.pos.x, p.pos.z).id);
     }
 
     ctx.clearRect(0, 0, S, S);
@@ -6648,8 +6648,8 @@ export class Hud {
     // so border-straddling can't thrash the 280px canvas regen below
     const dungeon = dungeonAt(p.pos.x);
     const zone: ZoneDef = dungeon
-      ? zoneAt(dungeon.doorPos.z)
-      : (ZONES.find((z) => z.id === this.lastZoneId) ?? zoneAt(p.pos.z));
+      ? zoneAt(dungeon.doorPos.x, dungeon.doorPos.z)
+      : (ZONES.find((z) => z.id === this.lastZoneId) ?? zoneAt(p.pos.x, p.pos.z));
     const full = this.mapZoneRegion(zone);
     const mapBg = this.mapZoneBg(zone); // cached per zone; prewarmed during idle
     // zoomed view: a sub-rectangle of the zone, centred on the player and
@@ -10249,7 +10249,7 @@ export class Hud {
     mountRiftHud({
       run: () => this.sim.riftRun,
       portals: () => this.sim.riftPortals(),
-      zoneId: () => zoneAt(this.sim.player.pos.z).id,
+      zoneId: () => zoneAt(this.sim.player.pos.x, this.sim.player.pos.z).id,
       onEnter: (portalId) => this.confirmRiftEntry(portalId),
     });
   }
@@ -10279,7 +10279,9 @@ export class Hud {
    * router: the copy decisions live in rift_feedback.ts.
    */
   private handleRiftEvent(ev: Parameters<typeof riftEventFeedback>[0]): void {
-    const fb = riftEventFeedback(ev, { zoneId: zoneAt(this.sim.player.pos.z).id });
+    const fb = riftEventFeedback(ev, {
+      zoneId: zoneAt(this.sim.player.pos.x, this.sim.player.pos.z).id,
+    });
     if (fb.banner) this.showBanner(fb.banner);
     for (const l of fb.lines) this.combatLog(l.text, l.color);
     if (fb.error) this.showError(fb.error);

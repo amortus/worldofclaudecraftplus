@@ -29,7 +29,7 @@ describe('/graveyard command', () => {
     const a = sim.addPlayer('warrior', 'Aleph');
     sim.tick();
     teleport(sim, a, 0, 0); // overworld, first zone
-    const zone = zoneAt(0);
+    const zone = zoneAt(0, 0);
     const gy = zone.graveyard;
     const expected = `If you fall here, your spirit returns to the ${zone.name} graveyard at (${Math.floor(gy.x)}, ${Math.floor(gy.z)}).`;
 
@@ -42,7 +42,7 @@ describe('/graveyard command', () => {
     const a = sim.addPlayer('warrior', 'Aleph');
     sim.tick();
     teleport(sim, a, 0, 600); // deeper zone (Thornpeak range, zMin 540)
-    const zone = zoneAt(600);
+    const zone = zoneAt(0, 600);
     const gy = zone.graveyard;
     const expected = `If you fall here, your spirit returns to the ${zone.name} graveyard at (${Math.floor(gy.x)}, ${Math.floor(gy.z)}).`;
 
