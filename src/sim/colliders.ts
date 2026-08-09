@@ -26,6 +26,14 @@ import {
   TEMPLE_LAYOUT,
 } from './dungeon_layout';
 import { riftFloorColliders } from './rift';
+import {
+  type ColliderFilter,
+  type ColliderTopFn,
+  floorHeightAt,
+  MAX_STEP_HEIGHT,
+  moveBody,
+  type TraversalMoveResult,
+} from './traversal';
 import { generateDecorations, groundHeight } from './world';
 
 // Static world collision. Prop placement comes from the per-zone content
@@ -40,6 +48,8 @@ export interface CircleCollider {
   r: number;
   /** Absolute world-space top used by camera occlusion; movement ignores it. */
   cameraTopY?: number;
+  /** See {@link MOVEMENT_TOP_POLICY}. */
+  moveTopY?: number;
   /**
    * When true the chase cam ray passes straight through this collider (no
    * pull-in). Movement still collides. Used for props that the renderer hides
@@ -57,6 +67,8 @@ export interface ObbCollider {
   rot: number; // yaw, three.js rotation.y convention
   /** Absolute world-space top used by camera occlusion; movement ignores it. */
   cameraTopY?: number;
+  /** See {@link MOVEMENT_TOP_POLICY}. */
+  moveTopY?: number;
   /** See {@link CircleCollider.camGhost}. */
   camGhost?: boolean;
   /**
@@ -68,6 +80,64 @@ export interface ObbCollider {
 }
 
 export type Collider = CircleCollider | ObbCollider;
+
+// ---------------------------------------------------------------------------
+// The movement top policy (DECIDED ONCE, HERE)
+// ---------------------------------------------------------------------------
+// `src/sim/traversal/` takes a caller-supplied `ColliderTopFn` precisely so it
+// would not guess what a collider means vertically. This is that decision, and
+// every later contributor reads it here.
+//
+// A collider has TWO tops and they are not the same number:
+//
+//   `cameraTopY` is the VISUAL SILHOUETTE. It is the height at which the chase
+//   cam stops caring about an obstacle: a tree's canopy (7.5 * scale), a
+//   building's roofline (8.0 to 10.8), a mud hut's spire (12.5). It is measured
+//   for occlusion, not for standing, and several of these shapes have no flat
+//   surface at that height at all: the collider is a CIRCLE around a trunk, and
+//   its `cameraTopY` is the top of a canopy that overhangs the trunk by metres.
+//
+//   `moveTopY` is a STANDABLE SURFACE. Declaring it says three things at once:
+//   a body may stride, vault, grab or land ON this collider at exactly that
+//   height; the body is supported anywhere its CENTRE is inside the collider's
+//   footprint at that height; and nothing above that height blocks it.
+//
+// Promoting `cameraTopY` into `moveTopY` wholesale would assert all three of
+// those about canopies and rooflines, and would silently make every prop top in
+// the world a destination the mob router (`isBlocked` / `findPlayerPath`, which
+// are 2D and have no feet height) still calls solid ground-to-ground wall. So:
+//
+//   **`moveTopY` is OPT-IN PER COLLIDER, and no shipped collider opts in.**
+//
+// Every collider this file builds is FULL HEIGHT for movement, which is exactly
+// what `resolvePosition` has always meant ("movement ignores it" on
+// `cameraTopY`). Wiring the traversal solver therefore changes how a body moves
+// HORIZONTALLY (swept collision, real sliding, MTV depenetration) and changes
+// nothing about what it can get on top of. The step / vault / climb rungs are
+// wired end to end and inert until content declares a top, which is the only
+// state in which the ladder and the router cannot disagree.
+//
+// When you do declare one:
+//  - `moveTopY` is ABSOLUTE world Y, even on interior collider sets (instance
+//    origins offset X and Z only, never Y).
+//  - Keep it within `MAX_STEP_HEIGHT` of the surrounding ground unless you have
+//    also taught the router about it: above that, the body can reach ground the
+//    router will never path to, and mobs will walk around a crate a player is
+//    standing on. `tests/traversal_wiring.test.ts` bounds this.
+//  - Only declare it on a collider whose footprint really is the flat surface.
+//    A trunk circle under a canopy is not.
+export const MOVEMENT_TOP_POLICY =
+  'opt-in per collider; every shipped collider is full height for movement';
+
+/**
+ * The ONE {@link ColliderTopFn} the sim moves bodies with. `undefined` means
+ * full height. See {@link MOVEMENT_TOP_POLICY}.
+ */
+export const movementTopOf: ColliderTopFn = (c) => c.moveTopY;
+
+/** Colliders a mid-jump body passes through (see `CircleCollider.camGhost`'s
+ * neighbour `isFence`). Mirrors the `ignoreFences` skip in `resolveAgainst`. */
+const IGNORE_FENCES: ColliderFilter = (c) => c.type === 'obb' && c.isFence === true;
 
 function topY(seed: number, x: number, z: number, height: number): number {
   return groundHeight(x, z, seed) + height;
@@ -498,6 +568,289 @@ export function resolveMovement(
     }
   }
   return { x, z };
+}
+
+// ---------------------------------------------------------------------------
+// Swept movement: the traversal solver, wired
+// ---------------------------------------------------------------------------
+// `resolveMovement` above walks a straight line in 0.2 yd sub-steps and pushes
+// the body out of whatever it lands inside. That is discrete: it cannot report
+// a contact normal, so it never really slides, and it only avoids tunnelling
+// because the sub-step is smaller than the bodies. `resolveBodyMove` hands the
+// same geometry to `src/sim/traversal/`, which sweeps continuously, slides on
+// the real contact tangent, depenetrates along the minimum-translation axis and
+// (once content declares a `moveTopY`) strides up onto tops.
+//
+// DETERMINISM: the collider list handed to a solve is the caller's order, and
+// ties in time of impact go to the earlier entry, so the order IS part of the
+// result. Everything below builds that order the same way on every host: the
+// static grid is filled in `staticWorldColliders` order, cells are visited in
+// ascending (gx, gz), and duplicates are dropped first-seen. Nothing sorts.
+// `resolveMovement` and `resolvePosition` are LEFT ALONE on purpose: the mob
+// router (`isBlocked`, `findPlayerPath`, `resolvePlayerDestination`) and mob
+// wander are point queries, and re-deriving them through a swept solver would
+// have moved every mob in the world in the same change.
+
+interface ColliderRegion {
+  list: readonly Collider[];
+  ox: number;
+  oz: number;
+}
+
+// Module scratch. Every field is written before it is read within one call and
+// none of it escapes a call (callers copy out immediately), so it carries no
+// state between calls; it exists because this runs per body per tick.
+const region: ColliderRegion = { list: NO_COLLIDERS, ox: 0, oz: 0 };
+const gathered: Collider[] = [];
+const gatheredSeen = new Set<Collider>();
+const moveOut: TraversalMoveResult = {
+  x: 0,
+  z: 0,
+  feetY: 0,
+  hitWall: false,
+  steppedUp: false,
+  depenetrated: false,
+  passes: 0,
+  sweeps: 0,
+  overlaps: 0,
+};
+
+/**
+ * Open-world colliders over the swept AABB, in a stable order: cells ascending
+ * by gx then gz, each cell in `staticWorldColliders` insertion order, duplicates
+ * (a collider spans every cell its padded bounds touch) dropped on first sight.
+ * The single-cell case returns the cell list itself, which is byte-for-byte the
+ * list `resolvePosition` has always resolved against.
+ */
+function openWorldColliders(
+  seed: number,
+  x0: number,
+  z0: number,
+  x1: number,
+  z1: number,
+): readonly Collider[] {
+  const grid = gridFor(seed);
+  const gx0 = Math.floor(Math.min(x0, x1) / GRID_CELL);
+  const gx1 = Math.floor(Math.max(x0, x1) / GRID_CELL);
+  const gz0 = Math.floor(Math.min(z0, z1) / GRID_CELL);
+  const gz1 = Math.floor(Math.max(z0, z1) / GRID_CELL);
+  if (gx0 === gx1 && gz0 === gz1) return grid.cells.get(`${gx0},${gz0}`) ?? NO_COLLIDERS;
+  gathered.length = 0;
+  gatheredSeen.clear();
+  for (let gx = gx0; gx <= gx1; gx++) {
+    for (let gz = gz0; gz <= gz1; gz++) {
+      const list = grid.cells.get(`${gx},${gz}`);
+      if (!list) continue;
+      for (let i = 0; i < list.length; i++) {
+        const c = list[i];
+        if (gatheredSeen.has(c)) continue;
+        gatheredSeen.add(c);
+        gathered.push(c);
+      }
+    }
+  }
+  return gathered;
+}
+
+/**
+ * Which collider set governs a body at (x, z), and the instance-local origin
+ * its coordinates must be expressed in. Mirrors `resolvePosition`'s region
+ * split exactly, including which point decides the region: the DESTINATION,
+ * because that is the point the last sub-step of `resolveMovement` resolved at.
+ */
+function regionAt(
+  seed: number,
+  x: number,
+  z: number,
+  fromX: number,
+  fromZ: number,
+  delveModules?: readonly string[],
+  riftFloor?: RiftFloorRef,
+): ColliderRegion {
+  if (isRiftPos(x)) {
+    const o = riftOrigin(riftSlotAt(z));
+    region.list = riftInteriorColliders(riftFloor);
+    region.ox = o.x;
+    region.oz = o.z;
+    return region;
+  }
+  if (isDelvePos(x)) {
+    const delve = delveAt(x);
+    const mods = delveModules?.length ? delveModules : delve ? defaultDelveModules(delve.id) : [];
+    const loc = delveModuleLocal(x, z, mods);
+    region.list = delveModuleColliders(loc.moduleId as DelveModuleId);
+    region.ox = loc.ox;
+    region.oz = loc.oz;
+    return region;
+  }
+  if (isArenaPos(x)) {
+    const o = arenaOriginAt(z);
+    region.list = ARENA_COLLIDERS;
+    region.ox = o.x;
+    region.oz = o.z;
+    return region;
+  }
+  if (x > DUNGEON_X_THRESHOLD) {
+    const { ox, oz, interior } = instanceLocal(x, z);
+    region.list = interiorColliders(interior);
+    region.ox = ox;
+    region.oz = oz;
+    return region;
+  }
+  region.list = openWorldColliders(seed, fromX, fromZ, x, z);
+  region.ox = 0;
+  region.oz = 0;
+  return region;
+}
+
+/**
+ * Does any collider in play declare a movement top? While the answer is no (see
+ * {@link MOVEMENT_TOP_POLICY}) the swept solver and the 2D point resolver mean
+ * exactly the same thing by "blocked", and the two can be reconciled.
+ */
+function regionHasMovementTops(list: readonly Collider[]): boolean {
+  for (let i = 0; i < list.length; i++) if (list[i].moveTopY !== undefined) return true;
+  return false;
+}
+
+export interface BodyMoveParams {
+  seed: number;
+  /** Body centre at the start of the tick (world XZ, yards). */
+  x: number;
+  z: number;
+  /** Intended motion for this tick (yards). */
+  dx: number;
+  dz: number;
+  /** Feet height at the start of the tick (world Y, yards). */
+  feetY: number;
+  /** Body radius (yards). */
+  radius?: number;
+  /** Airborne bodies mantle over tops instead of striding onto them. */
+  airborne?: boolean;
+  /** A body airborne from a jump passes through fence rails. */
+  ignoreFences?: boolean;
+  delveModules?: readonly string[];
+  riftFloor?: RiftFloorRef;
+}
+
+export interface BodyMoveResult {
+  x: number;
+  z: number;
+  /** Feet height, raised when the body strode up onto a collider top. */
+  feetY: number;
+  /** The motion was cut short by something the body could not step onto. */
+  hitWall: boolean;
+  steppedUp: boolean;
+}
+
+// Reused so the per-tick hot path allocates only the returned result.
+const moveParams = {
+  x: 0,
+  z: 0,
+  feetY: 0,
+  dx: 0,
+  dz: 0,
+  radius: 0.5,
+  colliders: NO_COLLIDERS as readonly Collider[],
+  topOf: movementTopOf,
+  airborne: false,
+  ignore: undefined as ColliderFilter | undefined,
+};
+
+/**
+ * Resolve ONE tick of horizontal motion for one body through the traversal
+ * solver. Pure over its arguments plus the (pure, seed-keyed) collider sets, so
+ * the offline world, the authoritative server and the headless env all get the
+ * same answer for the same tick.
+ */
+export function resolveBodyMove(p: BodyMoveParams): BodyMoveResult {
+  const r = p.radius ?? 0.5;
+  const endX = p.x + p.dx;
+  const endZ = p.z + p.dz;
+  const reg = regionAt(p.seed, endX, endZ, p.x, p.z, p.delveModules, p.riftFloor);
+  moveParams.x = p.x - reg.ox;
+  moveParams.z = p.z - reg.oz;
+  moveParams.feetY = p.feetY;
+  moveParams.dx = p.dx;
+  moveParams.dz = p.dz;
+  moveParams.radius = r;
+  moveParams.colliders = reg.list;
+  moveParams.airborne = p.airborne ?? false;
+  moveParams.ignore = p.ignoreFences ? IGNORE_FENCES : undefined;
+  const res = moveBody(moveParams, moveOut);
+  let x = res.x + reg.ox;
+  let z = res.z + reg.oz;
+  // Reconcile the swept result with the POINT resolver the rest of the sim
+  // reads through (`resolvePosition`, and therefore `isBlocked`,
+  // `findPlayerPath`, `resolvePlayerDestination`, `lineOfSightClear`).
+  //
+  // The two do not describe the same box. `sweepCollider` inflates an OBB into
+  // its exact Minkowski sum, a rectangle with ROUNDED corners of the body
+  // radius; `pushOut` (and the traversal core's own `overlapCollider`, which
+  // mirrors it) inflates it into a SQUARE box. Inside a corner wedge of up to
+  // `r * (sqrt(2) - 1)`, about 0.21 yd, the sweep is happy and the push-out is
+  // not. Measured against the shipped inn at (12, -6), which is a 6 x 7 box
+  // rotated 2.4 rad: a body walked straight at its corner settles 0.06 yd
+  // inside what `isBlocked` calls solid. Left alone that is not a static
+  // disagreement but a 20 Hz buzz, because the next tick's depenetration pushes
+  // the body straight back out along the square axis and the next sweep walks
+  // it straight back in.
+  //
+  // So the swept solve owns the PATH (continuous, no tunnelling, real tangent
+  // sliding) and the point resolver owns the final RESTING position, exactly as
+  // it did when `resolveMovement` called it once per sub-step. That keeps the
+  // player's position a place the mob router agrees is standable, which is the
+  // property everything downstream already assumes.
+  //
+  // It is skipped when any collider in play declares a movement top, because
+  // the point resolver is 2D: it would shove a body straight off a surface it
+  // is legitimately standing on. That is the same 2D/3D boundary decision 2
+  // bounds, surfacing in the one place it can be handled honestly.
+  if (!regionHasMovementTops(reg.list)) {
+    const settled = resolvePosition(p.seed, x, z, r, p.ignoreFences, p.delveModules, p.riftFloor);
+    x = settled.x;
+    z = settled.z;
+  }
+  // Anti-tunnel guard, kept from the sub-stepped resolver: a body that starts
+  // INSIDE a fence rail volume could otherwise be depenetrated out the far
+  // side, which is the one way a fence is crossable on foot. Evaluated against
+  // the RESOLVED segment, not the raw intent: the solver already holds the body
+  // a full radius off the rail, so approaching a fence now slides along it
+  // instead of stopping dead the way the raw-intent test would.
+  if (!p.ignoreFences && crossesFence(p.x, p.z, x, z, r)) {
+    return { x: p.x, z: p.z, feetY: p.feetY, hitWall: true, steppedUp: false };
+  }
+  return { x, z, feetY: res.feetY, hitWall: res.hitWall, steppedUp: res.steppedUp };
+}
+
+/**
+ * The surface a body's vertical pass should land and snap against at (x, z):
+ * the heightfield, raised by any collider top the body's CENTRE is standing
+ * over and could have reached this tick.
+ *
+ * Tops above `feetY + MAX_STEP_HEIGHT` are ignored, because a surface further
+ * up than the body can stride is a surface it is standing BESIDE, not on.
+ * With no shipped collider declaring a `moveTopY` this returns `groundY`
+ * unchanged, bit for bit (see {@link MOVEMENT_TOP_POLICY}).
+ */
+export function movementFloorAt(
+  seed: number,
+  x: number,
+  z: number,
+  groundY: number,
+  feetY: number,
+  delveModules?: readonly string[],
+  riftFloor?: RiftFloorRef,
+): number {
+  const reg = regionAt(seed, x, z, x, z, delveModules, riftFloor);
+  return floorHeightAt(
+    x - reg.ox,
+    z - reg.oz,
+    groundY,
+    reg.list,
+    movementTopOf,
+    feetY + MAX_STEP_HEIGHT,
+  );
 }
 
 export function isBlocked(

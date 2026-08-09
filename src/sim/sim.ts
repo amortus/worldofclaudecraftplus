@@ -14,8 +14,10 @@ import type {
 } from '../world_api';
 import { type AssistCandidate, resolveAssist } from './assist';
 import {
+  type BodyMoveResult,
   lineOfSightClear,
-  resolveMovement,
+  movementFloorAt,
+  resolveBodyMove,
   resolvePosition,
   type RiftFloorRef,
 } from './colliders';
@@ -128,6 +130,7 @@ import {
   bestOwnedGatherToolTier,
   bestOwnedGatherToolTierOrNone,
   biteScheduleTicks,
+  earlyReelGraceEndTick,
   emptyGatheringProficiency,
   type GatherNodeDef,
   GATHERING_PROFESSION_IDS,
@@ -258,10 +261,17 @@ import {
 import { canEquipItem } from './equipment_rules';
 import {
   addToSlots,
+  canStack,
   cloneInstanceMap,
+  cloneInvSlot,
   cloneInvSlots,
+  cloneItemInstance,
+  copiesToSlots,
   parseInstanceMap,
+  parseInvSlot,
   parseInvSlots,
+  parseItemInstances,
+  type RemovedCopies,
   removeFromSlots,
 } from './item_instance';
 import { meetsLevelRequirement, requiredLevelFor } from './item_level_req';
@@ -338,6 +348,7 @@ import {
   threatModifier,
   topThreatValue,
 } from './threat';
+import { GROUND_SNAP_BASE } from './traversal';
 import {
   type AbilityDef,
   type AbilityEffect,
@@ -833,6 +844,12 @@ const PET_PATH_RECALC = 0.5; // seconds between heel-path A* recomputes per pet 
 const PET_PATH_SPAN = 96; // A* search half-window in cells; covers the teleport distance + slack
 const PET_PATH_STALE_DISTANCE = 4; // path end this far from the (now-moved) owner: recompute the heel route
 const PET_WAYPOINT_REACHED = 1; // pet within this of the next waypoint: pop it and home on the next leg
+// Catch-up margin while heeling: the pet moves this much faster than its OWNER's
+// effective speed, so it closes the gap instead of merely matching it. It must
+// scale off the owner rather than a constant, because a mount multiplies the
+// owner by MOUNT_SPEED_MULT (1.6, mounts.ts) and a flat floor left the pet
+// permanently behind until the 60 yd last-resort warp snapped it forward.
+const PET_HEEL_SPEED_MARGIN = 1.1;
 const PET_ASSIST_RANGE = 50; // how far the pet scans for enemies engaging the pair
 const PET_AGGRESSIVE_RANGE = 18; // aggressive pets look for idle enemies this close
 // Anti-AFK: an aggressive pet only proactively pulls fresh targets while its
@@ -1234,6 +1251,12 @@ export interface MarketListing {
   price: number; // total copper buyout for the whole stack
   expiresAt: number; // sim.time seconds; Infinity for the Merchant's own stock
   house: boolean; // the Merchant's standing stock: never expires, never depletes, pays no one
+  // Per-copy identity held in escrow: one entry per instanced copy in this
+  // listing (at most `count`; the rest are plain). Absent for an all-plain
+  // listing, so an old save and a plain listing serialize exactly as before.
+  // Without this a player could strip an enchant or a maker's signature just by
+  // listing an item and cancelling it.
+  instances?: ItemInstance[];
 }
 
 // Gold + items awaiting pickup at the Merchant (sale proceeds, expired
@@ -1255,6 +1278,9 @@ export interface MarketSave {
     count: number;
     price: number;
     secondsLeft: number;
+    // Optional and additive: a row written before per-item identity existed has
+    // no `instances` key and loads as an all-plain listing.
+    instances?: ItemInstance[];
   }[];
   collections: { key: string; copper: number; items: InvSlot[] }[];
   nextListingId: number;
@@ -3801,6 +3827,13 @@ export class Sim {
       const resolved = this.resolveMove(p.pos.x, p.pos.z, nx, nz, BODY_RADIUS, p, clearFences);
       p.pos.x = resolved.x;
       p.pos.z = resolved.z;
+      // A step-up is a positional correction the solver already committed to:
+      // it only reports a raised feet height once it has found a spot where the
+      // body is BOTH supported by the top and clear at the raised height, so
+      // taking it here cannot leave the body inside geometry. No shipped
+      // collider declares a movement top, so today this never fires; see
+      // MOVEMENT_TOP_POLICY in colliders.ts.
+      if (resolved.steppedUp && resolved.feetY > p.pos.y) p.pos.y = resolved.feetY;
       if (!p.onGround && (resolved.x !== nx || resolved.z !== nz)) {
         p.vx = (resolved.x - p.prevPos.x) / DT;
         p.vz = (resolved.z - p.prevPos.z) / DT;
@@ -3808,8 +3841,12 @@ export class Sim {
     }
 
     // Vertical: jumping, gravity, swimming, fall damage
-    const ground = groundHeight(p.pos.x, p.pos.z, this.cfg.seed);
-    const deepWater = ground < WATER_LEVEL - SWIM_DEPTH;
+    const terrain = groundHeight(p.pos.x, p.pos.z, this.cfg.seed);
+    // The surface the body actually rides: the heightfield, raised by a collider
+    // top the body is standing over. Water depth still reads the TERRAIN, never
+    // the raised floor, so standing on a prop over water is not "shallow".
+    const ground = this.movementFloor(p, terrain);
+    const deepWater = terrain < WATER_LEVEL - SWIM_DEPTH;
     if (deepWater && p.pos.y <= SWIM_SURFACE_Y + 0.05) {
       // treading water at the surface
       p.pos.y = SWIM_SURFACE_Y;
@@ -3874,7 +3911,11 @@ export class Sim {
       // Only a steeper-than-walkable drop counts as walking off a ledge. The
       // 0.4 base keeps a near-stationary player snapped over tiny terrain noise.
       const run = Math.hypot(p.pos.x - p.prevPos.x, p.pos.z - p.prevPos.z);
-      const maxStepDown = 0.4 + run * MAX_CLIMB_SLOPE;
+      // GROUND_SNAP_BASE is the traversal ladder's own constant, imported rather
+      // than re-typed: MAX_STEP_HEIGHT is DERIVED from this expression (step up
+      // equals step down, so any lip you can walk off you can walk back up), and
+      // the two used to be able to drift because one of them was a bare literal.
+      const maxStepDown = GROUND_SNAP_BASE + run * MAX_CLIMB_SLOPE;
       if (ground < p.pos.y - maxStepDown) {
         // walked off a ledge — not a jump, so fences still block
         p.onGround = false;
@@ -3918,7 +3959,13 @@ export class Sim {
     } else if (p.resourceType === 'rage' && !p.inCombat) {
       p.resource = Math.max(0, p.resource - 2);
     }
-    if (!p.inCombat && p.hp < p.maxHp && !p.eating) {
+    // Food STACKS with natural regen, it does not replace it. Our food tick is
+    // foodHp / CONSUME_TICKS (hardtack: 5 HP per 2s) while natural regen is
+    // sta * 0.3 + 2 (about 20 HP per 2s at 60 Stamina), so suppressing regen
+    // while eating made sitting down to a meal roughly three times SLOWER than
+    // standing still. Only a food with no HP rate of its own suppresses it, which
+    // matches the mana arm above: it has never had a `!p.drinking` guard.
+    if (!p.inCombat && p.hp < p.maxHp && !(p.eating && p.eating.hpPer2s === 0)) {
       const regen = p.stats.sta * 0.3 + 2;
       p.hp = Math.min(p.maxHp, p.hp + Math.round(regen));
     }
@@ -9810,7 +9857,11 @@ export class Sim {
 
     const routed = pet.petPath.length > 1;
     const aim = routed ? pet.petPath[0] : owner.pos;
-    const speed = Math.max(pet.moveSpeed, RUN_SPEED * 1.1) * this.moveSpeedMult(pet);
+    // Heel against the owner's EFFECTIVE speed, not a fixed multiple of RUN_SPEED:
+    // a mounted owner runs at RUN_SPEED * MOUNT_SPEED_MULT and would otherwise
+    // outpace the pet outright (see PET_HEEL_SPEED_MARGIN).
+    const heelSpeed = RUN_SPEED * this.moveSpeedMult(owner) * PET_HEEL_SPEED_MARGIN;
+    const speed = Math.max(pet.moveSpeed, heelSpeed) * this.moveSpeedMult(pet);
     this.moveToward(pet, aim, speed);
   }
 
@@ -11401,12 +11452,35 @@ export class Sim {
     }
   }
 
-  removeItem(itemId: string, count: number, pid?: number): void {
+  // Returns what was ACTUALLY taken: how many copies, and the `ItemInstance` of
+  // every instanced copy among them (`removeFromSlots` takes plain copies first,
+  // so an instanced one only leaves when no plain copy is left). A hand-off
+  // boundary (market escrow, a trade, a vendor sale) MUST re-grant that identity
+  // on the other side, via `copiesToSlots`/`grantCopies`; discarding this value is
+  // what silently turned an enchanted or maker-signed copy back into a plain one.
+  // Callers that merely consume an item can keep ignoring it.
+  removeItem(itemId: string, count: number, pid?: number): RemovedCopies {
     const r = this.resolve(pid);
-    if (!r) return;
+    if (!r) return { removed: 0, instances: [] };
     const { meta } = r;
-    removeFromSlots(meta.inventory, itemId, count);
+    const taken = removeFromSlots(meta.inventory, itemId, count);
     this.onInventoryChangedForQuests(meta);
+    return taken;
+  }
+
+  // The other half of `removeItem`: hand a batch of copies to a player with each
+  // copy's identity intact. Plain copies ride one ordinary stacking add; every
+  // instanced copy opens its own slot. With no instances this is exactly the
+  // single `addItem` call it replaced.
+  private grantCopies(
+    itemId: string,
+    count: number,
+    pid: number,
+    instances?: readonly ItemInstance[],
+  ): void {
+    for (const row of copiesToSlots(itemId, count, instances)) {
+      this.addItem(row.itemId, row.count, pid, row.instance);
+    }
   }
 
   discardItem(itemId: string, count = 1, pid?: number): void {
@@ -11527,6 +11601,19 @@ export class Sim {
     // a groupmate's pull flags you. Only the dead-check above outranks it, and a
     // death clears the cast anyway.
     if (p.castingAbility === FISHING_CAST_ID) {
+      // ...but the very first moment of a cast is the one place a re-press is
+      // almost never a reel: a bag double-click, a held key's auto-repeat, or a
+      // touch double-tap all land here, and since ANY non-landed reel ends the
+      // session, resolving them would silently burn the cast the instant the
+      // line hit the water. Inside the grace the press falls through to the
+      // ordinary busy denial instead. The grace is strictly shorter than
+      // FISH_BITE_DELAY_MIN_SEC (see that constant), so it can only ever swallow
+      // a press that was guaranteed 'too_early' anyway, and never covers a
+      // moment a fish could already be on the line.
+      if (p.fishGraceUntilTick !== undefined && this.tickCount <= p.fishGraceUntilTick) {
+        this.error(meta.entityId, 'You are busy.');
+        return;
+      }
       this.reelFishing(p, meta);
       return;
     }
@@ -11563,6 +11650,7 @@ export class Sim {
     p.fishBiteTick = ticks.biteAtTick;
     p.fishReelDeadlineTick = ticks.reelDeadlineTick;
     p.fishBiteCued = false;
+    p.fishGraceUntilTick = earlyReelGraceEndTick(this.tickCount, DT);
     p.castingAbility = FISHING_CAST_ID;
     p.castTotal = FISHING_SESSION_CAP;
     p.castRemaining = FISHING_SESSION_CAP;
@@ -11603,6 +11691,7 @@ export class Sim {
     p.fishBiteTick = undefined;
     p.fishReelDeadlineTick = undefined;
     p.fishBiteCued = undefined;
+    p.fishGraceUntilTick = undefined;
     this.emit({ type: 'castStop', entityId: p.id, success: landed });
   }
 
@@ -12278,16 +12367,28 @@ export class Sim {
     );
   }
 
-  private recordVendorBuyback(meta: PlayerMeta, itemId: string, count: number): void {
-    const existingIndex = meta.vendorBuyback.findIndex((s) => s.itemId === itemId);
-    if (existingIndex >= 0) {
-      const [existing] = meta.vendorBuyback.splice(existingIndex, 1);
-      existing.count += count;
-      meta.vendorBuyback.unshift(existing);
-    } else {
-      meta.vendorBuyback.unshift({ itemId, count });
+  // Record a sale for buyback, keeping each sold copy's identity. The plain
+  // copies fold into one row; an instanced copy gets its own row, never merging
+  // into an existing one, exactly as `canStack` refuses in the bags.
+  private recordVendorBuyback(
+    meta: PlayerMeta,
+    itemId: string,
+    count: number,
+    instances?: readonly ItemInstance[],
+  ): void {
+    for (const row of copiesToSlots(itemId, count, instances)) {
+      const existingIndex = meta.vendorBuyback.findIndex((s) =>
+        canStack(s, row.itemId, row.instance),
+      );
+      if (existingIndex >= 0) {
+        const [existing] = meta.vendorBuyback.splice(existingIndex, 1);
+        existing.count += row.count;
+        meta.vendorBuyback.unshift(existing);
+      } else {
+        meta.vendorBuyback.unshift(row);
+      }
+      while (meta.vendorBuyback.length > VENDOR_BUYBACK_LIMIT) meta.vendorBuyback.pop();
     }
-    while (meta.vendorBuyback.length > VENDOR_BUYBACK_LIMIT) meta.vendorBuyback.pop();
   }
 
   sellItem(itemId: string, count = 1, pid?: number): void {
@@ -12318,8 +12419,8 @@ export class Sim {
       this.error(meta.entityId, 'You cannot sell quest items.');
       return;
     }
-    this.removeItem(itemId, sellCount, meta.entityId);
-    this.recordVendorBuyback(meta, itemId, sellCount);
+    const taken = this.removeItem(itemId, sellCount, meta.entityId);
+    this.recordVendorBuyback(meta, itemId, taken.removed, taken.instances);
     const payout = def.sellValue * sellCount;
     meta.copper += payout;
     this.emit({ type: 'vendor', action: 'sell', itemId, pid: meta.entityId });
@@ -12364,8 +12465,8 @@ export class Sim {
     let soldCount = 0;
     for (const { itemId, count } of junk) {
       const def = ITEMS[itemId]!;
-      this.removeItem(itemId, count, meta.entityId);
-      this.recordVendorBuyback(meta, itemId, count);
+      const taken = this.removeItem(itemId, count, meta.entityId);
+      this.recordVendorBuyback(meta, itemId, taken.removed, taken.instances);
       total += def.sellValue * count;
       soldCount += count;
     }
@@ -12403,7 +12504,9 @@ export class Sim {
     meta.copper -= def.sellValue;
     slot.count -= 1;
     if (slot.count <= 0) meta.vendorBuyback = meta.vendorBuyback.filter((s) => s !== slot);
-    this.addItemSilent(itemId, 1, meta);
+    // Clone: a row that still has copies left keeps its own payload, so the
+    // repurchased copy can never share a mutable instance with the buyback list.
+    this.addItemSilent(itemId, 1, meta, slot.instance ? cloneItemInstance(slot.instance) : undefined);
     this.onInventoryChangedForQuests(meta);
     this.emit({ type: 'vendor', action: 'buyback', itemId, pid: meta.entityId });
     this.emit({
@@ -16919,16 +17022,27 @@ export class Sim {
       this.closeTrade(session);
       return;
     }
-    // swap
+    // Swap. Both sides are removed BEFORE either is granted, and each side is
+    // re-granted with the identity that actually left the other's bags: an offer
+    // names only an item id and a count, so which copies move is decided here by
+    // removeFromSlots (plain copies first), and the removal's instances must ride
+    // along or a signed/enchanted copy would arrive plain. Removing first also
+    // means a copy one side just received can never be the copy it hands back.
     metaA.copper = metaA.copper - session.offerA.copper + session.offerB.copper;
     metaB.copper = metaB.copper - session.offerB.copper + session.offerA.copper;
-    for (const s of session.offerA.items) {
-      this.removeItem(s.itemId, s.count, session.a);
-      this.addItem(s.itemId, s.count, session.b);
+    const fromA = session.offerA.items.map((s) => ({
+      itemId: s.itemId,
+      taken: this.removeItem(s.itemId, s.count, session.a),
+    }));
+    const fromB = session.offerB.items.map((s) => ({
+      itemId: s.itemId,
+      taken: this.removeItem(s.itemId, s.count, session.b),
+    }));
+    for (const { itemId, taken } of fromA) {
+      this.grantCopies(itemId, taken.removed, session.b, taken.instances);
     }
-    for (const s of session.offerB.items) {
-      this.removeItem(s.itemId, s.count, session.b);
-      this.addItem(s.itemId, s.count, session.a);
+    for (const { itemId, taken } of fromB) {
+      this.grantCopies(itemId, taken.removed, session.a, taken.instances);
     }
     for (const tPid of [session.a, session.b]) {
       this.emit({ type: 'log', text: 'Trade complete.', color: '#8df', pid: tPid });
@@ -17164,7 +17278,9 @@ export class Sim {
       );
       return;
     }
-    this.removeItem(itemId, want, meta.entityId); // escrow
+    // Escrow keeps the identity of every copy it took: cancel, sale, expiry and
+    // collection all hand these same instances back out.
+    const taken = this.removeItem(itemId, want, meta.entityId);
     this.marketListings.push({
       id: this.nextListingId++,
       sellerKey,
@@ -17174,6 +17290,9 @@ export class Sim {
       price: ask,
       expiresAt: this.time + MARKET_LISTING_DURATION,
       house: false,
+      ...(taken.instances.length > 0
+        ? { instances: taken.instances.map((i) => cloneItemInstance(i)) }
+        : {}),
     });
     this.emit({
       type: 'loot',
@@ -17217,7 +17336,7 @@ export class Sim {
       return;
     }
     meta.copper -= listing.price;
-    this.addItem(listing.itemId, listing.count, meta.entityId);
+    this.grantCopies(listing.itemId, listing.count, meta.entityId, listing.instances);
     if (!listing.house) {
       const proceeds = Math.max(0, Math.floor(listing.price * (1 - MARKET_CUT)));
       this.collectionFor(listing.sellerKey).copper += proceeds;
@@ -17256,7 +17375,7 @@ export class Sim {
       return;
     }
     this.marketListings.splice(idx, 1);
-    this.addItem(listing.itemId, listing.count, meta.entityId);
+    this.grantCopies(listing.itemId, listing.count, meta.entityId, listing.instances);
     const def = ITEMS[listing.itemId];
     this.emit({
       type: 'loot',
@@ -17289,7 +17408,16 @@ export class Sim {
         pid: meta.entityId,
       });
     }
-    for (const s of col.items) this.addItem(s.itemId, s.count, meta.entityId);
+    // Collection rows already carry their identity (an instanced row is a single
+    // copy); clone on the way out so nothing hands over a shared payload.
+    for (const s of col.items) {
+      this.addItem(
+        s.itemId,
+        s.count,
+        meta.entityId,
+        s.instance ? cloneItemInstance(s.instance) : undefined,
+      );
+    }
     this.marketCollections.delete(this.marketSellerKey(meta));
   }
 
@@ -17300,7 +17428,11 @@ export class Sim {
       const l = this.marketListings[i];
       if (l.house || this.time < l.expiresAt) continue;
       this.marketListings.splice(i, 1);
-      this.collectionFor(l.sellerKey).items.push({ itemId: l.itemId, count: l.count });
+      // One row for the plain copies plus one per instanced copy, so an expired
+      // listing waits at the Merchant with its identity intact.
+      this.collectionFor(l.sellerKey).items.push(
+        ...copiesToSlots(l.itemId, l.count, l.instances),
+      );
       const sellerMeta = this.metaByMarketSellerKey(l.sellerKey);
       if (sellerMeta) {
         const def = ITEMS[l.itemId];
@@ -17392,11 +17524,16 @@ export class Sim {
           secondsLeft: Number.isFinite(l.expiresAt)
             ? Math.max(0, Math.round(l.expiresAt - this.time))
             : MARKET_LISTING_DURATION,
+          // Omitted entirely for an all-plain listing: the persisted row then
+          // stays byte-identical to what a pre-identity build wrote.
+          ...(l.instances && l.instances.length > 0
+            ? { instances: l.instances.map((i) => cloneItemInstance(i)) }
+            : {}),
         })),
       collections: [...this.marketCollections.entries()].map(([key, c]) => ({
         key,
         copper: c.copper,
-        items: c.items.map((s) => ({ ...s })),
+        items: c.items.map(cloneInvSlot),
       })),
       nextListingId: this.nextListingId,
     };
@@ -17414,6 +17551,7 @@ export class Sim {
       if (!l || typeof l.itemId !== 'string') continue;
       if (!ITEMS[l.itemId])
         console.warn(`market: keeping listing with unknown item id ${l.itemId}`);
+      const escrow = parseItemInstances(l.instances);
       this.marketListings.push({
         id: l.id,
         sellerKey: String(l.sellerKey ?? ''),
@@ -17428,6 +17566,10 @@ export class Sim {
           this.time +
           (Number.isFinite(l.secondsLeft) ? Math.max(0, l.secondsLeft) : MARKET_LISTING_DURATION),
         house: false,
+        // A save written before per-item identity existed has no `instances`
+        // key, and a malformed payload degrades to a plain copy rather than
+        // failing the load (parseItemInstance).
+        ...(escrow.length > 0 ? { instances: escrow } : {}),
       });
     }
     for (const c of save.collections ?? []) {
@@ -17437,9 +17579,13 @@ export class Sim {
         // Keep returned/expired-listing items even when their id is unknown, for
         // the same reason as listings above: a content edit must not silently
         // empty a player's pending pickups. The id stays dormant until corrected.
-        items: (c.items ?? [])
-          .filter((s) => s && typeof s.itemId === 'string')
-          .map((s) => ({ itemId: s.itemId, count: Math.max(1, s.count | 0) })),
+        // parseInvSlot carries any `instance` payload through the round trip.
+        items: (c.items ?? []).flatMap((s) => {
+          const slot = parseInvSlot(s);
+          if (!slot) return [];
+          slot.count = Math.max(1, slot.count | 0);
+          return [slot];
+        }),
       });
     }
     const maxId = this.marketListings.reduce((m, l) => Math.max(m, l.id + 1), 1);
@@ -18530,9 +18676,17 @@ export class Sim {
     return this.delveRunForMob(e.id);
   }
 
-  // Swept move resolution for players, keeps v0.10.0's segment-based
-  // resolveMovement (no tunnelling through thin walls) and layers the delve
-  // module colliders + portcullis doors on top when inside a delve.
+  // Swept move resolution for players. Goes through the traversal solver
+  // (`src/sim/traversal/`): continuous time of impact, real sliding on the
+  // contact tangent, minimum-translation depenetration, and step-up onto any
+  // collider that declares a movement top. Replaces v0.10.0's sub-stepped
+  // `resolveMovement`, which could only push a body out of what it had already
+  // entered. Delve module colliders + portcullis doors are layered on after,
+  // exactly as before.
+  //
+  // Only PLAYERS come through here (charge, follow, and the movement pass).
+  // Mob wander and the router stay on the point resolver `resolveMovePoint`, so
+  // wiring the solver did not move a single mob.
   private resolveMove(
     fromX: number,
     fromZ: number,
@@ -18541,23 +18695,47 @@ export class Sim {
     r: number,
     e: Entity,
     ignoreFences = false,
-  ): { x: number; z: number } {
+  ): BodyMoveResult {
     const rift = isRiftPos(nx) || isRiftPos(e.pos.x) ? this.riftFloorRefFor(e) : undefined;
     const run = isDelvePos(nx) || isDelvePos(e.pos.x) ? this.delveRunForEntity(e) : undefined;
-    const res = resolveMovement(
-      this.cfg.seed,
-      fromX,
-      fromZ,
-      nx,
-      nz,
-      r,
+    const res = resolveBodyMove({
+      seed: this.cfg.seed,
+      x: fromX,
+      z: fromZ,
+      dx: nx - fromX,
+      dz: nz - fromZ,
+      feetY: e.pos.y,
+      radius: r,
+      airborne: !e.onGround,
       ignoreFences,
+      delveModules: run?.modules,
+      riftFloor: rift,
+    });
+    if (!run) return res;
+    const clamped = this.clampDelveModuleBounds(run, res.x, res.z, r);
+    const doored = this.clampDelveDoors(run, clamped.x, clamped.z, r);
+    res.x = doored.x;
+    res.z = doored.z;
+    return res;
+  }
+
+  // The surface a body's vertical pass lands and snaps against: the heightfield
+  // raised by any collider top it is standing over, with the same region
+  // layering resolveMove uses. Returns `terrain` unchanged while no collider
+  // declares a movement top (see MOVEMENT_TOP_POLICY in colliders.ts), so this
+  // is currently a no-op by construction rather than by luck.
+  private movementFloor(e: Entity, terrain: number): number {
+    const rift = isRiftPos(e.pos.x) ? this.riftFloorRefFor(e) : undefined;
+    const run = isDelvePos(e.pos.x) ? this.delveRunForEntity(e) : undefined;
+    return movementFloorAt(
+      this.cfg.seed,
+      e.pos.x,
+      e.pos.z,
+      terrain,
+      e.pos.y,
       run?.modules,
       rift,
     );
-    if (!run) return res;
-    const clamped = this.clampDelveModuleBounds(run, res.x, res.z, r);
-    return this.clampDelveDoors(run, clamped.x, clamped.z, r);
   }
 
   // Point resolution for mob wander / blocked checks, with the same delve layering.
