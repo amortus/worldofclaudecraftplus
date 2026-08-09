@@ -10,6 +10,8 @@ import {
   dungeonAt,
   instanceOrigin,
   isDelvePos,
+  isRiftPos,
+  ZONES,
   zoneAt,
 } from '../src/sim/data';
 import { sanitizeMarketQuery } from '../src/sim/market_query';
@@ -27,6 +29,7 @@ import {
   emptyMoveInput,
   RUN_SPEED,
   type SimEvent,
+  type ZoneDef,
 } from '../src/sim/types';
 import { isOverheadEmoteId } from '../src/world_api';
 import { recordOnlineSample } from './admin_db';
@@ -234,7 +237,7 @@ export interface AdminLiveAura {
 }
 
 export interface AdminLiveLocation {
-  kind: 'overworld' | 'dungeon' | 'delve';
+  kind: 'overworld' | 'dungeon' | 'delve' | 'rift';
   zoneId: string | null;
   zone: string;
   instanceId: string | null;
@@ -581,9 +584,25 @@ export class GameServer {
   // rather than ever surfacing a raw id.
   private instanceZoneName(e: Entity, pos: { x: number; z: number } = e.pos): string | null {
     if (e.dungeonId) return DUNGEONS[e.dungeonId]?.name ?? e.dungeonId;
+    // Rifts first: their band sits past every other instance plane, and their
+    // instance z falls inside the real overworld strip, so without this arm a
+    // player inside one is advertised as standing in whatever zone their slot's
+    // z happens to land in. A rift has no authored name (it is procedural), so
+    // it is named by the ZONE ITS TEAR OPENED IN, which is a real zone name and
+    // needs no new string.
+    if (isRiftPos(pos.x)) return this.riftZoneOf(e)?.name ?? null;
     if (isDelvePos(pos.x)) return delveAt(pos.x)?.name ?? null;
     if (pos.x > DUNGEON_X_THRESHOLD) return dungeonAt(pos.x)?.name ?? null;
     return null;
+  }
+
+  /** The zone a player's rift opened in. The run's portal id carries it
+   *  (`${zoneId}:${n}`), so no extra state has to ride along. */
+  private riftZoneOf(e: Entity): ZoneDef | null {
+    const run = this.sim.riftRunForPlayer(e.id);
+    if (!run) return null;
+    const zoneId = run.portalId?.split(':')[0] ?? '';
+    return ZONES.find((z) => z.id === zoneId) ?? null;
   }
 
   // Live effects for the in-game moderation commands. Every action here is already
@@ -1353,6 +1372,28 @@ export class GameServer {
         instanceId: delveRun.delveId,
         instance: delve?.name ?? delveRun.delveId,
         instanceSlot: delveRun.slot,
+        poiIndex: null,
+        poi: null,
+        poiDistance: null,
+      };
+    }
+
+    // Rifts sit in their own x band far past every other instance plane, so a
+    // player inside one has an overworld z that `zoneAt` would answer for. The
+    // zone that MATTERS is the one whose tear they stepped through, which the
+    // run's portal id carries.
+    const riftRun = this.sim.riftRunForPlayer(e.id);
+    if (riftRun) {
+      const zone = this.riftZoneOf(e) ?? zoneAt(e.pos.z);
+      return {
+        kind: 'rift',
+        zoneId: zone.id,
+        zone: zone.name,
+        instanceId: riftRun.portalId,
+        // Rifts are procedural: they have no authored name, so the descriptor IS
+        // the identity an operator can reproduce the run from.
+        instance: `Rift ${riftRun.seed}:${riftRun.baseLevel} floor ${riftRun.floorIndex + 1}/${riftRun.floorCount}`,
+        instanceSlot: riftRun.slot,
         poiIndex: null,
         poi: null,
         poiDistance: null,
@@ -2371,6 +2412,20 @@ export class GameServer {
         sim.delveInteract(msg.objectId, pid);
         break;
       }
+      // Rifts. Every gate (portal window, level, party, proximity, the seal)
+      // lives in `Sim.enterRift` and answers with a text-free `riftDeny`, so the
+      // server only validates the shape and forwards.
+      case 'enter_rift': {
+        if (typeof msg.portalId !== 'string') break;
+        sim.enterRift(msg.portalId, pid);
+        this.resyncRifts(session);
+        break;
+      }
+      case 'leave_rift': {
+        sim.leaveRift(pid);
+        this.resyncRifts(session);
+        break;
+      }
       case 'companion_upgrade': {
         if (typeof msg.companionId !== 'string') break;
         const e = sim.entities.get(pid);
@@ -2686,6 +2741,12 @@ export class GameServer {
     maybe('dcomp', this.sim.companionUpgradesFor(anchorSession.pid));
     maybe('dclears', this.sim.delveClearsFor(anchorSession.pid));
     maybe('delveDaily', this.sim.delveDailyWire(anchorSession.pid));
+    // Rifts: the viewer's active run and every live overworld tear. Both are
+    // small, ids and numbers only, and `maybe` already suppresses an unchanged
+    // one, so the portal list costs a payload only on the tick a tear opens or
+    // collapses.
+    maybe('rrun', this.sim.riftRunWire(anchorSession.pid));
+    maybe('rportals', this.sim.riftPortalsWire());
     // Gathering proficiency, as the raw per-profession counters. The client
     // derives its own rows from them via the same `gatheringSkillsView` helper
     // the sim uses, so the derivation is never duplicated.
@@ -3233,6 +3294,11 @@ export class GameServer {
     delete session.lastSent.dcomp;
     delete session.lastSent.dclears;
     delete session.lastSent.delveDaily;
+  }
+
+  private resyncRifts(session: ClientSession): void {
+    delete session.lastSent.rrun;
+    delete session.lastSent.rportals;
   }
 
   private send(session: ClientSession, obj: unknown): void {

@@ -20,6 +20,7 @@ import type {
   ZoneDef,
   ZonePropsDef,
 } from './types';
+import { MAX_LEVEL } from './types';
 
 export type { FishingEntry } from './content/items';
 export { FISHING_RARE_ID, FISHING_TABLES };
@@ -45,6 +46,7 @@ import {
   TEMPLE_QUESTS,
 } from './content/temple';
 import { PROFESSION_ITEMS } from './content/professions';
+import { RIFT_ITEMS, RIFT_MOBS } from './content/rift';
 import { WARLOCK_PET_MOBS } from './content/warlock_pets';
 import {
   GRAVEYARD_POS,
@@ -157,6 +159,9 @@ export const ITEMS: Record<string, ItemDef> = mergeItems(
   // is deliberately NOT in this set — it already ships in BASE_ITEMS and is only
   // assigned a tier by GATHER_TOOLS, so it is never redefined here.
   PROFESSION_ITEMS,
+  // Rift legendaries. Prestige colour, not a power jump: each is budgeted at the
+  // raid's off-set weapon level and sits strictly under its counterpart on dps.
+  RIFT_ITEMS,
 );
 
 export const MOBS: Record<string, MobTemplate> = {
@@ -169,6 +174,9 @@ export const MOBS: Record<string, MobTemplate> = {
   ...TEMPLE_DUNGEON_MOBS,
   ...DELVE_MOBS,
   ...ZONE4_MOBS,
+  // Procedural rift elites and bosses. The generator picks from these by theme;
+  // they never spawn in the overworld.
+  ...RIFT_MOBS,
 };
 
 export const NPCS: Record<string, NpcDef> = {
@@ -291,6 +299,15 @@ export const WORLD_MIN_Z = ZONES[0].zMin;
 export const WORLD_MAX_Z = ZONES[ZONES.length - 1].zMax;
 
 export const PLAYER_START = { x: 2, z: -2 };
+
+// Zones a rift portal may open in. Rifts are level-cap content (rank C encodes
+// baseLevel 20), so a portal only belongs where a capped player actually plays:
+// Thornpeak Heights [13,20] and the Ashen Wastes [20,20]. Deriving this from each
+// zone's own levelRange rather than listing ids means a future zone joins the
+// rotation by being endgame, not by being remembered here.
+export function riftEligibleZones(): ZoneDef[] {
+  return ZONES.filter((zone) => zone.levelRange[1] >= MAX_LEVEL);
+}
 
 // Zone containing a world position (overworld only; clamps to the strip ends).
 export function zoneAt(z: number): ZoneDef {
@@ -416,8 +433,12 @@ export function delveOrigin(delveIndex: number, slot: number): { x: number; z: n
   return { x: DELVE_X_MIN + delveIndex * 600, z: DELVE_Z0 + slot * DELVE_SLOT_SPACING };
 }
 
+// Bounded ABOVE by the rift band (mirrors how isArenaPos is bounded by
+// DELVE_BAND_X_MIN). Every instance plane owns a half-open x range, so exactly
+// one resolver ever claims a far-off position. Nothing has ever been placed at
+// x >= RIFT_BAND_X_MIN, so adding the upper bound changes no existing behavior.
 export function isDelvePos(x: number): boolean {
-  return x >= DELVE_BAND_X_MIN;
+  return x >= DELVE_BAND_X_MIN && x < RIFT_BAND_X_MIN;
 }
 
 export function delveAt(x: number): DelveDef | null {
@@ -551,4 +572,81 @@ export function delveModuleLocal(
     localX: x - ox,
     localZ: relZ - zCursor,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Rifts: procedurally generated instances (src/sim/rift), in their OWN x band
+// above every other instance plane.
+//
+// Why a new band rather than another dungeon index: `instanceOrigin` puts
+// dungeon index i at x = 900 + i*600, and `dungeonAt` returns null at
+// x >= ARENA_X_MIN (5400). Indices 0..7 fill 900..5100, so index 8 would land at
+// 5700, PAST the arena, and be unreachable through `dungeonAt`. Rifts therefore
+// get their own origin function and their own `riftAt` resolver, exactly as the
+// arena and the delves each did.
+//
+// Why ABOVE the delve band: the delve band was the only open-ended predicate in
+// the file (`isDelvePos` was `x >= DELVE_BAND_X_MIN` with no ceiling), so every
+// x past it was already classified as delve. Bounding it and opening the range
+// above is the one placement that leaves all four existing predicates
+// (`dungeonAt`, `isArenaPos`, `isDelvePos`, `zoneAt`) answering exactly as they
+// do today for every position the world can actually produce.
+//
+// RIFT_X = 12000 leaves the delve band ten future indices (6000..11400, each
+// 600 wide) before it is reached.
+// ---------------------------------------------------------------------------
+
+/** Every rift instance shares this x; slots stack along z (mirrors the arena). */
+export const RIFT_X = 12000;
+/** Widest side-wall centreline `src/sim/rift/layout_gen.ts` can roll (its
+ * WIDTH_MAX_BOSS ceiling). The generated end wall reaches `wallX + 1` and the
+ * side wall's outer face `wallX + DUNGEON_WALL_HW`, so the band edge below
+ * covers the whole room footprint plus a yard, the same reasoning as
+ * DELVE_BAND_X_MIN. `tests/rift_wiring.test.ts` pins that no generated floor
+ * ever exceeds it. */
+const RIFT_WALL_X_MAX = 32;
+/** x at/after this is a rift instance, and nothing else. */
+export const RIFT_BAND_X_MIN = RIFT_X - (RIFT_WALL_X_MAX + DUNGEON_WALL_HW + 1);
+/** Concurrent rift runs the world can host. */
+export const RIFT_SLOT_COUNT = 6;
+const RIFT_Z0 = -1250;
+/** > the deepest generated floor (zMin -19 to zMax 133) plus a wide margin, so
+ * two slots can never see or collide with each other. */
+const RIFT_SLOT_SPACING = 500;
+
+/** Instance origin of one rift slot. A rift run holds ONE slot for its whole
+ * descent: each floor replaces the previous one in place. */
+export function riftOrigin(slot: number): { x: number; z: number } {
+  return { x: RIFT_X, z: RIFT_Z0 + slot * RIFT_SLOT_SPACING };
+}
+
+export function isRiftPos(x: number): boolean {
+  return x >= RIFT_BAND_X_MIN;
+}
+
+const RIFT_BAND: { x: number; slotCount: number } = Object.freeze({
+  x: RIFT_X,
+  slotCount: RIFT_SLOT_COUNT,
+});
+
+/** The rift band a far-off position belongs to, or null when x is not in it.
+ * The band is a single x column (unlike dungeons, whose index picks the column),
+ * so this is the rift twin of `dungeonAt` / `delveAt`. */
+export function riftAt(x: number): { x: number; slotCount: number } | null {
+  return isRiftPos(x) ? RIFT_BAND : null;
+}
+
+/** Nearest rift slot to a world z. Mirrors `arenaOriginAt`: the x is shared
+ * across slots, so the z band is what identifies the instance. */
+export function riftSlotAt(z: number): number {
+  let best = 0,
+    bestD = Infinity;
+  for (let i = 0; i < RIFT_SLOT_COUNT; i++) {
+    const d = Math.abs(z - riftOrigin(i).z);
+    if (d < bestD) {
+      bestD = d;
+      best = i;
+    }
+  }
+  return best;
 }

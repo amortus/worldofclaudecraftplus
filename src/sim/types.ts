@@ -1673,6 +1673,48 @@ export type SimEvent = { pid?: number } & (
   | { type: 'delveComplete'; delveId: string; tierId: string }
   | { type: 'delveFailed'; delveId: string; tierId: string }
   | { type: 'delveLoreUnlock'; loreId: string }
+  // ---------------------------------------------------------------------
+  // Rifts. All five are TEXT-FREE: stable ids and numbers only, never English
+  // prose, so the client composes and localizes every line and none of them
+  // needs a `sim_i18n.ts` matcher rule (same contract as `skinEvent` /
+  // `lockpick*` / `gatherDeny`). The NAMES below are a fixed contract shared
+  // with the HUD: the sim emitting one name while the UI listens for another
+  // cannot be caught by tsc, because the comparison is by string.
+  // `riftPortal` is world-visible (no pid); the other four are personal.
+  // ---------------------------------------------------------------------
+  // A zone's overworld entrance opened (`open: true`) or stopped admitting
+  // (`open: false`).
+  //
+  // `opensAt`/`expiresAt` are absolute MILLISECONDS on the HOST clock, the same
+  // clock `SimConfig.lockoutNowMs` feeds (the authoritative server injects
+  // `Date.now()`; offline/headless fall back to sim-clock ms). The ROTATION is
+  // scheduled internally in sim-clock seconds so it replays identically from a
+  // seed; these two fields are the projection of that schedule onto the clock
+  // the client actually holds, because the client derives its countdown by
+  // subtracting its own now from them and never asks the server for a tick.
+  | {
+      type: 'riftPortal';
+      portalId: string;
+      zoneId: string;
+      rank: string;
+      opensAt: number;
+      expiresAt: number;
+      open: boolean;
+    }
+  // The party arrived on floor 0 of a rift.
+  | { type: 'riftEnter'; rank: string; floorIndex: number; floorCount: number; themeId: string }
+  // A floor was populated (entry and every descent after it).
+  | {
+      type: 'riftFloor';
+      floorIndex: number;
+      floorCount: number;
+      themeId: string;
+      mechanicId: string;
+    }
+  // The final boss fell: the rift is sealed and cannot be re-entered.
+  | { type: 'riftClear'; rank: string; floors: number; firstClear: boolean }
+  // A rift action the gates refused. `reason` is a stable id, never prose.
+  | { type: 'riftDeny'; reason: string }
   | { type: 'companionBark'; barkId: string; pid?: number }
   // Lockpicking minigame ("Tumbler's Path"). All personal (pid-scoped). The sim
   // emits structured data only, the client builds every visible string. Cells
@@ -2329,6 +2371,89 @@ export interface DelveDailyState {
   date: string;
   firstClearXp: string[];
   markClears: number;
+}
+
+// ---------------------------------------------------------------------------
+// Rifts: one procedurally generated run and the overworld portals that open it.
+// The generator (src/sim/rift) is pure and seed-addressed, so a run holds only
+// the DESCRIPTOR (seed + baseLevel + floorIndex) plus its live entity ids: every
+// host regenerates identical geometry, spawns and mechanics from those numbers.
+// ---------------------------------------------------------------------------
+
+/** One rift slot. A run holds a single slot for its whole descent: each floor
+ * replaces the previous one in place, so a six-floor rift costs one slot, not
+ * six. `partyKey === null` means the slot is free. */
+export interface RiftRun {
+  slot: number;
+  partyKey: string | null;
+  /** Descriptor seed. 0 while the slot is free. */
+  seed: number;
+  /** Descriptor baseLevel; encodes the rank (see `riftRankForBaseLevel`). */
+  baseLevel: number;
+  floorIndex: number;
+  floorCount: number;
+  origin: { x: number; z: number };
+  mobIds: number[];
+  objectIds: number[];
+  /** The descent (or, on the last floor, the exit) object, spawned only once the
+   * floor boss falls. Null while the floor is still contested. */
+  wayForwardId: number | null;
+  /** True once this floor's boss is dead and the way forward is open. */
+  floorCleared: boolean;
+  /** True once the LAST floor's boss died. A sealed rift admits nobody: it is
+   * the whole reason a cleared rift cannot be re-farmed. */
+  sealed: boolean;
+  /** The overworld portal this run was entered through. The zone rotation stays
+   * blocked until this run closes, so a sealed rift is never instantly refarmed
+   * and an ignored one never blocks the rotation. */
+  portalId: string | null;
+  /** Sim-clock seconds this run has been empty (see INSTANCE_EMPTY_TIMEOUT). */
+  emptyFor: number;
+}
+
+/** One overworld rift entrance. Exactly one per eligible zone may be open at a
+ * time; all of its timing is sim-clock seconds (`Sim.time`), never wall clock. */
+export interface RiftPortal {
+  /** Stable id: `${zoneId}:${openTick}`. Text-free, it crosses the wire. */
+  id: string;
+  zoneId: string;
+  /** Descriptor seed of the rift behind this portal. */
+  seed: number;
+  baseLevel: number;
+  x: number;
+  z: number;
+  /** Ground-object entity id while the portal stands, else null. */
+  entityId: number | null;
+  /** Sim-clock seconds, which is what the ROTATION schedules on. `expiresAt` is
+   * when the entrance STOPS ADMITTING. */
+  opensAt: number;
+  expiresAt: number;
+  /**
+   * The same instant on the HOST clock (`SimConfig.lockoutNowMs`, i.e.
+   * `Date.now()` on the authoritative server), stamped ONCE when the tear opened
+   * and never recomputed.
+   *
+   * Stamping it once is what makes the projection BYTE-STABLE for the portal's
+   * whole life. Re-projecting the sim clock onto the host clock every tick would
+   * drift by a millisecond or two per tick, and the server's snapshot differ
+   * compares JSON, so the portal list would ride every single snapshot at 20 Hz
+   * instead of only on the tick a tear opens or collapses.
+   */
+  openedAtMs: number;
+  /** False once the portal has expired or its rift sealed. */
+  open: boolean;
+}
+
+/** Per-zone rotation state. A zone's next portal opens only after its previous
+ * rift actually CLOSED (sealed by a clear, or collapsed on expiry). */
+export interface RiftZoneRotation {
+  zoneId: string;
+  /** The live portal for this zone, or null when the zone is between rifts. */
+  portal: RiftPortal | null;
+  /** Sim-clock second the zone may next open a portal. */
+  nextOpenAt: number;
+  /** How many portals this zone has opened; feeds the portal id + seed stream. */
+  opened: number;
 }
 
 export interface DelveCompanionDef {

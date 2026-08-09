@@ -9,7 +9,10 @@ import {
   instanceOrigin,
   isArenaPos,
   isDelvePos,
+  isRiftPos,
   PROPS,
+  riftOrigin,
+  riftSlotAt,
 } from './data';
 import { type DelveModuleId, delveModuleColliders } from './delve_layout';
 import {
@@ -22,6 +25,7 @@ import {
   SANCTUM_LAYOUT,
   TEMPLE_LAYOUT,
 } from './dungeon_layout';
+import { riftFloorColliders } from './rift';
 import { generateDecorations, groundHeight } from './world';
 
 // Static world collision. Prop placement comes from the per-zone content
@@ -235,6 +239,43 @@ const INTERIOR_COLLIDERS: Record<string, Collider[]> = {
 };
 
 // ---------------------------------------------------------------------------
+// Interior resolution: static key OR generated descriptor
+// ---------------------------------------------------------------------------
+// `DungeonDef.interior` is a closed union and the table above is a static
+// record, so a procedurally generated rift floor has no key to be looked up by.
+// Rather than widening the union (which would make every authored consumer
+// handle a case that has no authored layout), interiors are resolved through
+// the two functions below: the six authored interiors keep the EXACT lookup they
+// had, and a rift floor names its colliders by descriptor instead, deriving them
+// through the same `layoutColliders` every authored interior goes through.
+
+/** A generated rift floor, named the only way it can be: by its descriptor. */
+export interface RiftFloorRef {
+  seed: number;
+  baseLevel: number;
+  floorIndex: number;
+}
+
+/** Colliders for one authored interior key. Unknown keys fall back to the crypt
+ * set, byte-for-byte the behavior of the inline `?? CRYPT_COLLIDERS` lookup this
+ * replaced. */
+export function interiorColliders(interior: string): Collider[] {
+  return INTERIOR_COLLIDERS[interior] ?? CRYPT_COLLIDERS;
+}
+
+/** No descriptor means no generated room is known for this position, so nothing
+ * is claimed to block. Returning a WRONG authored room here would put invisible
+ * walls in a generated one, which is worse than no collision. */
+const NO_COLLIDERS: Collider[] = [];
+
+/** Colliders for a generated rift floor. Pure over the descriptor and memoised
+ * by the generator, so calling it per movement step is cheap. */
+export function riftInteriorColliders(ref: RiftFloorRef | undefined): Collider[] {
+  if (!ref) return NO_COLLIDERS;
+  return riftFloorColliders(ref.seed, ref.baseLevel, ref.floorIndex);
+}
+
+// ---------------------------------------------------------------------------
 // Spatial grid + movement resolution
 // ---------------------------------------------------------------------------
 
@@ -361,7 +402,13 @@ export function resolvePosition(
   r = 0.5,
   ignoreFences = false,
   delveModules?: readonly string[],
+  riftFloor?: RiftFloorRef,
 ): { x: number; z: number } {
+  if (isRiftPos(x)) {
+    const o = riftOrigin(riftSlotAt(z));
+    const local = resolveAgainst(riftInteriorColliders(riftFloor), x - o.x, z - o.z, r);
+    return { x: local.x + o.x, z: local.z + o.z };
+  }
   if (isDelvePos(x)) {
     const delve = delveAt(x);
     const mods = delveModules?.length ? delveModules : delve ? defaultDelveModules(delve.id) : [];
@@ -377,8 +424,7 @@ export function resolvePosition(
   }
   if (x > DUNGEON_X_THRESHOLD) {
     const { ox, oz, interior } = instanceLocal(x, z);
-    const colliders = INTERIOR_COLLIDERS[interior] ?? CRYPT_COLLIDERS;
-    const local = resolveAgainst(colliders, x - ox, z - oz, r, ignoreFences);
+    const local = resolveAgainst(interiorColliders(interior), x - ox, z - oz, r, ignoreFences);
     return { x: local.x + ox, z: local.z + oz };
   }
   const grid = gridFor(seed);
@@ -426,11 +472,12 @@ export function resolveMovement(
   r = 0.5,
   ignoreFences = false,
   delveModules?: readonly string[],
+  riftFloor?: RiftFloorRef,
 ): { x: number; z: number } {
   const dx = toX - fromX;
   const dz = toZ - fromZ;
   const d = Math.hypot(dx, dz);
-  if (d < 1e-6) return resolvePosition(seed, toX, toZ, r, ignoreFences, delveModules);
+  if (d < 1e-6) return resolvePosition(seed, toX, toZ, r, ignoreFences, delveModules, riftFloor);
   const steps = Math.max(1, Math.ceil(d / 0.2));
   let x = fromX,
     z = fromZ;
@@ -439,7 +486,7 @@ export function resolveMovement(
     const nextX = fromX + dx * t;
     const nextZ = fromZ + dz * t;
     if (!ignoreFences && crossesFence(x, z, nextX, nextZ, r)) break;
-    const resolved = resolvePosition(seed, nextX, nextZ, r, ignoreFences, delveModules);
+    const resolved = resolvePosition(seed, nextX, nextZ, r, ignoreFences, delveModules, riftFloor);
     x = resolved.x;
     z = resolved.z;
     if (Math.hypot(x - nextX, z - nextZ) > r * 0.25) {
@@ -459,8 +506,9 @@ export function isBlocked(
   z: number,
   r = 0.5,
   ignoreFences = false,
+  riftFloor?: RiftFloorRef,
 ): boolean {
-  const res = resolvePosition(seed, x, z, r, ignoreFences);
+  const res = resolvePosition(seed, x, z, r, ignoreFences, undefined, riftFloor);
   return Math.abs(res.x - x) > 1e-4 || Math.abs(res.z - z) > 1e-4;
 }
 
@@ -604,7 +652,22 @@ export function cameraOcclusion(
   bz: number,
   pad = 0.35,
   delveModules?: readonly string[],
+  riftFloor?: RiftFloorRef,
 ): number {
+  if (isRiftPos(ax)) {
+    const o = riftOrigin(riftSlotAt(az));
+    return sweepColliders(
+      riftInteriorColliders(riftFloor),
+      ax - o.x,
+      ay,
+      az - o.z,
+      bx - o.x,
+      by,
+      bz - o.z,
+      pad,
+      true,
+    );
+  }
   if (isDelvePos(ax)) {
     const delve = delveAt(ax);
     const mods = delveModules?.length ? delveModules : delve ? defaultDelveModules(delve.id) : [];
@@ -638,7 +701,7 @@ export function cameraOcclusion(
   }
   if (ax > DUNGEON_X_THRESHOLD) {
     const { ox, oz, interior } = instanceLocal(ax, az);
-    const colliders = INTERIOR_COLLIDERS[interior] ?? CRYPT_COLLIDERS;
+    const colliders = interiorColliders(interior);
     return sweepColliders(colliders, ax - ox, ay, az - oz, bx - ox, by, bz - oz, pad, true);
   }
   const grid = gridFor(seed);
@@ -661,6 +724,7 @@ export function lineOfSightClear(
   from: { x: number; z: number },
   to: { x: number; z: number },
   r = 0.05,
+  riftFloor?: RiftFloorRef,
 ): boolean {
   const dx = to.x - from.x;
   const dz = to.z - from.z;
@@ -671,7 +735,7 @@ export function lineOfSightClear(
     const t = i / steps;
     const x = from.x + dx * t;
     const z = from.z + dz * t;
-    if (isBlocked(seed, x, z, r)) return false;
+    if (isBlocked(seed, x, z, r, false, riftFloor)) return false;
   }
   return true;
 }

@@ -82,6 +82,8 @@ import {
   type PartyInfo,
   type PresenceStatus,
   type RaidLockout,
+  type RiftPortalInfo,
+  type RiftRunInfo,
   type SocialInfo,
   type TradeInfo,
 } from '../world_api';
@@ -840,6 +842,11 @@ export class ClientWorld implements IWorld {
   arenaInfo: ArenaInfo | null = null;
   marketInfo: MarketInfo | null = null;
   delveRun: DelveRunInfo | null = null;
+  // Rifts. Both mirror the self-wire; the sim already projects the portal
+  // timestamps onto the server's own clock, so the HUD's `Date.now()` countdown
+  // needs no conversion here.
+  riftRun: RiftRunInfo | null = null;
+  private riftPortalList: RiftPortalInfo[] = [];
   companionState: DelveCompanionInfo | null = null;
   // Lockpicking: rebuilt from the lockpick* events (there is no snapshot field).
   // Holds only the fog-windowed cells the server discloses.
@@ -1696,6 +1703,8 @@ export class ClientWorld implements IWorld {
       if (s.market !== undefined) this.marketInfo = s.market;
       if (s.lroll !== undefined) this.lootRollPrompts = s.lroll ?? [];
       if (s.drun !== undefined) this.delveRun = s.drun;
+      if (s.rrun !== undefined) this.riftRun = s.rrun;
+      if (s.rportals !== undefined) this.riftPortalList = s.rportals ?? [];
       if (s.dcompanion !== undefined) this.companionState = s.dcompanion;
       if (s.dmarks !== undefined) this.delveMarks = s.dmarks ?? 0;
       if (s.dcomp !== undefined) this.companionUpgrades = s.dcomp ?? {};
@@ -2177,6 +2186,19 @@ export class ClientWorld implements IWorld {
   }
   delveInteract(objectId: number): void {
     this.cmd({ cmd: 'delve_interact', objectId });
+  }
+  enterRift(portalId: string): void {
+    this.cmd({ cmd: 'enter_rift', portalId });
+  }
+  leaveRift(): void {
+    this.cmd({ cmd: 'leave_rift' });
+  }
+  riftPortals(): RiftPortalInfo[] {
+    // A COPY, matching what `Sim.riftPortals()` hands back. The panel sorts the
+    // list it is given, and sorting the mirror in place would corrupt this
+    // client's snapshot state (an online-only bug the offline world could not
+    // reproduce).
+    return [...this.riftPortalList];
   }
   companionUpgrade(companionId: string): void {
     this.cmd({ cmd: 'companion_upgrade', companionId });

@@ -6,9 +6,16 @@ import type {
   DelveRunInfo,
   EnchantOptionView,
   LockpickView,
+  RiftPortalInfo,
+  RiftRunInfo,
 } from '../world_api';
 import { type AssistCandidate, resolveAssist } from './assist';
-import { lineOfSightClear, resolveMovement, resolvePosition } from './colliders';
+import {
+  lineOfSightClear,
+  resolveMovement,
+  resolvePosition,
+  type RiftFloorRef,
+} from './colliders';
 import {
   AUGMENTS_BY_ID,
   type AugmentDef,
@@ -173,8 +180,10 @@ import {
   INSTANCE_SLOT_COUNT,
   ITEMS,
   instanceOrigin,
+  riftEligibleZones,
   isArenaPos,
   isDelvePos,
+  isRiftPos,
   MOBS,
   NPCS,
   PLAYER_START,
@@ -182,6 +191,9 @@ import {
   QUESTS,
   questRewardItemId,
   resolveDelveShopOffers,
+  RIFT_SLOT_COUNT,
+  riftOrigin,
+  riftSlotAt,
   ZONES,
   zoneAt,
 } from './data';
@@ -252,6 +264,19 @@ import {
 import { effectiveMasterLooter, meetsMasterThreshold } from './loot_master';
 import { questFallbackGrants } from './quest_fallback';
 import { sanitizeRemovedZone1Content } from './removed_zone1_content';
+import {
+  generateRiftFloor,
+  generateRiftPlan,
+  mixSeed,
+  RIFT_RANK_BASE_LEVEL,
+  type RiftFloorPlan,
+  type RiftObjectPlan,
+  type RiftRank,
+  riftRankForBaseLevel,
+  riftRankTemplate,
+  riftRankTuningFor,
+  rollRiftLoot,
+} from './rift';
 import { Rng } from './rng';
 import { SpatialGrid } from './spatial';
 import {
@@ -341,6 +366,9 @@ import {
   type QuestProgress,
   type QuestState,
   questTurnInNpcIds,
+  type RiftPortal,
+  type RiftRun,
+  type RiftZoneRotation,
   RUN_SPEED,
   rageFromDealing,
   rageFromTaking,
@@ -355,6 +383,7 @@ import {
   virtualLevel,
   xpForLevel,
   xpToReachLevel,
+  type ZoneDef,
 } from './types';
 import { vendorStackSize } from './vendor_stack';
 import {
@@ -647,6 +676,67 @@ const DELVE_COMPANION_HEAL_PCT = [0, 0.06, 0.08, 0.1];
 const DELVE_COMPANION_LEVEL_PCT = [0, 0.5, 0.75, 1.0]; // index = rank
 const DELVE_COMPANION_MAX_RANK = 3;
 const DELVE_EXIT_PORTAL_RADIUS = 3.5;
+// ---- Rifts ---------------------------------------------------------------
+// Every one of these is SIM-CLOCK seconds (`this.time`), never wall clock: the
+// portal rotation has to replay identically from a seed on the server, in the
+// offline browser world and in the headless env.
+/** Rifts are cap content: the entrance refuses anyone below this level. */
+const RIFT_MIN_PLAYER_LEVEL = MAX_LEVEL;
+/** The rotation period. A zone that has just closed a rift may open its next
+ * portal at the next multiple of this on the sim clock, so the world's portals
+ * stay on one shared hourly cadence rather than drifting per zone. */
+const RIFT_PORTAL_INTERVAL = 3600;
+/** How long an open portal keeps ADMITTING before it collapses. A rift nobody
+ * enters closes here, which is what stops an ignored rift blocking the
+ * rotation forever. */
+const RIFT_PORTAL_WINDOW = 1800;
+/** Interact range for a rift portal / beacon / descent / exit. */
+const RIFT_INTERACT_RANGE = 6;
+/** Walking this close to an open descent or exit uses it (no keypress), the
+ * same affordance the delve module exit has. */
+const RIFT_PORTAL_TRIGGER_RADIUS = 3.5;
+/**
+ * Object kinds the run lifecycle spawns as real entities.
+ *
+ * The mechanic interactables (pylons, runes, boulders, gates) are deliberately
+ * NOT spawned: their runtime is not part of this wiring, and a prop that cannot
+ * be used is worse than one that is not there. The reward caches (`chest`,
+ * `treasure`) are left out for exactly the same reason, and the rift's rewards
+ * come off the corpses instead (`rollRiftLoot`) rather than out of a container
+ * nothing can open.
+ *
+ * `beacon` stays because it claims nothing: it is the arrival landmark, and it
+ * sits ON the entry point, so it could not be a walk-in trigger even if the way
+ * out were wired to it. Leaving a rift is `leaveRift` (the IWorld action every
+ * other instance also exits by) plus the exit the final warden opens.
+ */
+const RIFT_LIVE_OBJECT_KINDS = new Set<string>(['beacon', 'descent', 'exit']);
+// Independent salts for the two LOCAL Rng streams this file derives from a
+// portal seed (the rank and the tear's overworld position). Distinct from every
+// salt sim/rift/rift_gen.ts uses, so a portal draw can never collide with a
+// generation draw, and distinct from the delve generator's (0x5a11c0de,
+// 0x600dc0ff, 7919).
+const RIFT_RANK_SALT = 0x21f7;
+const RIFT_PORTAL_POS_SALT = 0x3c8d;
+/** How far from its zone's hub a tear can open. Wide enough that two rifts in
+ * the same zone never look like the same landmark, close enough that a capped
+ * player finds it without a hunt. */
+const RIFT_PORTAL_SPREAD = 90;
+/** Keep a tear off the zone seam, so it always reads as belonging to one zone. */
+const RIFT_PORTAL_ZONE_MARGIN = 40;
+/** Minimum ground height a tear may open on (the same dry-land floor NPC
+ * placement uses), so a portal never lands in a lake. */
+const RIFT_PORTAL_MIN_GROUND = 0.6;
+// Ground-object names for the rift's placed interactables. English here, the
+// same convention every authored world object follows (the delve's 'Sealed
+// Passage' / 'Ascend to the Surface'); the client's own copy for these ids lives
+// under `hudChrome.rift.object.*`.
+const RIFT_PORTAL_NAME = 'Rift Tear';
+const RIFT_OBJECT_NAMES: Record<string, string> = {
+  beacon: 'Wayward Beacon',
+  descent: 'The Descent',
+  exit: 'Rift Exit',
+};
 export const DELVE_MODULE_NAMES: Record<string, string> = {
   reliquary_sunken_ossuary: 'The Sunken Ossuary',
   reliquary_bell_niche: 'The Bell Niche',
@@ -1039,6 +1129,10 @@ export interface PlayerMeta {
   companionUpgrades: Record<string, number>;
   delveLoreUnlocked: Set<string>;
   delveDaily: { date: string; firstClearXp: Set<string>; markClears: number };
+  // Rift clears per RANK ('C' | 'B' | 'A' | 'S' -> count). The ONLY thing it
+  // decides is `riftClear.firstClear`, so a rank the player has never sealed is
+  // simply absent (persisted in CharacterState, and omitted there while empty).
+  riftClears: Record<string, number>;
   // Gathering proficiency per profession (mining/logging/herbalism/fishing).
   // Persisted, and omitted from CharacterState entirely while every counter is
   // still zero.
@@ -1183,6 +1277,10 @@ export interface CharacterState {
   companionUpgrades?: Record<string, number>;
   delveLoreUnlocked?: string[];
   delveDaily?: { date: string; firstClearXp: string[]; markClears: number };
+  // Rift clears per rank. Optional and OMITTED while the character has sealed
+  // no rift, so a pre-rift save loads unchanged and re-saves byte-identical
+  // (the `gatheringProficiency` / `equipmentInstances` rule).
+  riftClears?: Record<string, number>;
   // Gathering proficiency (professionId -> points). Optional and OMITTED while
   // the character has never gathered, so a pre-professions save loads AND
   // re-saves byte-for-byte the way it did before (same contract as
@@ -1606,6 +1704,10 @@ export class Sim {
   // delve instances (separate slot pool from dungeons)
   delveRuns: DelveRun[] = [];
   private delvePetStash = new Map<number, PetState>();
+  // Rift instances (their own slot pool and their own x band, see data.ts
+  // riftOrigin) plus the per-zone overworld portal rotation.
+  riftRuns: RiftRun[] = [];
+  riftRotation: RiftZoneRotation[] = [];
   // Real-world UTC day ('YYYY-MM-DD') for the delve daily reset (FR-5.1). The sim
   // core must stay deterministic, so it never reads the wall clock itself: the host
   // (server/offline client) sets this each tick from `new Date()`. Empty string =
@@ -1801,6 +1903,29 @@ export class Sim {
           lockpick: null,
         });
       }
+    }
+
+    for (let i = 0; i < RIFT_SLOT_COUNT; i++) {
+      const origin = riftOrigin(i);
+      this.riftRuns.push({
+        slot: i,
+        partyKey: null,
+        seed: 0,
+        baseLevel: RIFT_RANK_BASE_LEVEL.C,
+        floorIndex: 0,
+        floorCount: 0,
+        origin: { x: origin.x, z: origin.z },
+        mobIds: [],
+        objectIds: [],
+        wayForwardId: null,
+        floorCleared: false,
+        sealed: false,
+        portalId: null,
+        emptyFor: 0,
+      });
+    }
+    for (const zone of riftEligibleZones()) {
+      this.riftRotation.push({ zoneId: zone.id, portal: null, nextOpenAt: 0, opened: 0 });
     }
 
     if (!cfg.noPlayer) {
@@ -2049,6 +2174,7 @@ export class Sim {
       companionUpgrades: {},
       delveLoreUnlocked: new Set(),
       delveDaily: { date: '', firstClearXp: new Set(), markClears: 0 },
+      riftClears: {},
       gathering: emptyGatheringProficiency(),
       gatherReadyAt: {},
       gatherNodeId: null,
@@ -2138,6 +2264,8 @@ export class Sim {
       meta.delveMarks = s.delveMarks ?? 0;
       meta.delveClears = { ...(s.delveClears ?? {}) };
       meta.companionUpgrades = { ...(s.companionUpgrades ?? {}) };
+      // Tolerates `undefined` (every pre-rift save) as "no rank sealed yet".
+      meta.riftClears = { ...(s.riftClears ?? {}) };
       meta.reputation = { ...(s.reputation ?? {}) };
       if (s.delveLoreUnlocked) for (const id of s.delveLoreUnlocked) meta.delveLoreUnlocked.add(id);
       if (s.delveDaily) {
@@ -2263,6 +2391,9 @@ export class Sim {
     const craftingProficiency = serializeCraftingProficiency(meta.crafting);
     const savedDeeds = serializeDeedProgress(meta.deeds);
     const deeds = Object.keys(savedDeeds).length > 0 ? savedDeeds : undefined;
+    // Omitted entirely until the character seals its first rift, so a save made
+    // before rifts existed round-trips byte-identical.
+    const riftClears = Object.keys(meta.riftClears).length > 0 ? { ...meta.riftClears } : undefined;
     const state: CharacterState = {
       level: restore ? restore.level : e.level,
       xp: restore ? restore.xp : meta.xp,
@@ -2323,6 +2454,7 @@ export class Sim {
       ...(gatheringProficiency && { gatheringProficiency }),
       ...(craftingProficiency && { craftingProficiency }),
       ...(deeds && { deeds }),
+      ...(riftClears && { riftClears }),
     };
     return sanitizeRemovedZone1Content(state).state;
   }
@@ -3111,6 +3243,8 @@ export class Sim {
     this.updateLootRolls();
     this.updateInstances();
     this.updateDelveRuns();
+    this.updateRiftPortals();
+    this.updateRiftRuns();
     this.updateMarket();
     this.emitDueDelayedEvents();
 
@@ -3971,7 +4105,11 @@ export class Sim {
   }
 
   private hasLineOfSight(source: Entity, target: Entity): boolean {
-    return lineOfSightClear(this.cfg.seed, source.pos, target.pos);
+    // Inside a rift the interior is named by descriptor, not by a static key, so
+    // the ref has to be threaded through or the whole generated room would read
+    // as open space and every wall would be see-through to spells.
+    const rift = isRiftPos(source.pos.x) ? this.riftFloorRefFor(source) : undefined;
+    return lineOfSightClear(this.cfg.seed, source.pos, target.pos, undefined, rift);
   }
 
   private lineOfSightBlocked(source: Entity, target: Entity, ability: AbilityDef): boolean {
@@ -6755,6 +6893,16 @@ export class Sim {
           mobId: 'reliquary_bonewalker',
         });
       }
+      // Rift progression. The final floor's warden falling opens the exit and
+      // seals the rift immediately; an earlier floor opens when its room is
+      // empty, which `tryClearRiftFloor` picks up on the next tick. Draw-free:
+      // the plan is regenerated from the descriptor, never rolled from the
+      // shared stream.
+      const riftRun = this.riftRunForMob(e.id);
+      const riftPlan = riftRun
+        ? generateRiftFloor(riftRun.seed, riftRun.baseLevel, riftRun.floorIndex)
+        : null;
+      if (riftRun && riftPlan && this.isRiftBossMob(e)) this.openRiftWayForward(riftRun, riftPlan);
       if (e.templateId === NYTHRAXIS_BOSS_ID) this.grantNythraxisLockout(e);
       e.aiState = 'dead';
       e.corpseTimer = CORPSE_DURATION;
@@ -6840,6 +6988,10 @@ export class Sim {
         // World bosses use PERSONAL loot for every contributor (rolled below from the
         // damager-roster snapshot), not the tapper/party shared-corpse roll.
         if (!template?.worldBoss) this.rollLoot(e, meta, eligible);
+        // Rift rewards ride on top of the (empty) authored table every rift
+        // template carries. Fixed draw count per call, so this cannot fork the
+        // shared stream for anyone.
+        if (riftRun && riftPlan) this.rollRiftMobLoot(riftRun, e, riftPlan);
       }
       // Personal loot is independent of tap/party kill credit: it goes to everyone who
       // damaged the boss, so it rolls outside the credited-player block above.
@@ -13017,11 +13169,20 @@ export class Sim {
       this.releaseSpiritInDelve(meta.entityId);
       return;
     }
+    // Dying in a rift releases you all the way out to the overworld, and the
+    // rift's own z is an instance-plane coordinate rather than a place, so the
+    // graveyard is the one belonging to the zone its TEAR opened in. Leaving
+    // also drops the corpse off the inside hate tables, exactly as walking out
+    // through the exit does.
+    const riftRun = isRiftPos(p.pos.x) ? this.riftRunAt(p.pos.z) : null;
+    if (riftRun) this.scrubRiftThreat(riftRun, p.id);
     p.dead = false;
     // dying in a dungeon sends you to the graveyard of the zone its door is
     // in; dying outdoors, to your current zone's graveyard
     const dungeon = dungeonAt(p.pos.x);
-    const graveyard = zoneAt(dungeon ? dungeon.doorPos.z : p.pos.z).graveyard;
+    const graveyard = (
+      this.riftZoneFor(riftRun) ?? zoneAt(dungeon ? dungeon.doorPos.z : p.pos.z)
+    ).graveyard;
     p.pos = this.groundPos(graveyard.x, graveyard.z);
     p.prevPos = { ...p.pos };
     this.rebucket(p);
@@ -18276,8 +18437,19 @@ export class Sim {
     e: Entity,
     ignoreFences = false,
   ): { x: number; z: number } {
+    const rift = isRiftPos(nx) || isRiftPos(e.pos.x) ? this.riftFloorRefFor(e) : undefined;
     const run = isDelvePos(nx) || isDelvePos(e.pos.x) ? this.delveRunForEntity(e) : undefined;
-    const res = resolveMovement(this.cfg.seed, fromX, fromZ, nx, nz, r, ignoreFences, run?.modules);
+    const res = resolveMovement(
+      this.cfg.seed,
+      fromX,
+      fromZ,
+      nx,
+      nz,
+      r,
+      ignoreFences,
+      run?.modules,
+      rift,
+    );
     if (!run) return res;
     const clamped = this.clampDelveModuleBounds(run, res.x, res.z, r);
     return this.clampDelveDoors(run, clamped.x, clamped.z, r);
@@ -18285,8 +18457,9 @@ export class Sim {
 
   // Point resolution for mob wander / blocked checks, with the same delve layering.
   private resolveMovePoint(nx: number, nz: number, r: number, e: Entity): { x: number; z: number } {
+    const rift = isRiftPos(nx) || isRiftPos(e.pos.x) ? this.riftFloorRefFor(e) : undefined;
     const run = isDelvePos(nx) || isDelvePos(e.pos.x) ? this.delveRunForEntity(e) : undefined;
-    const res = resolvePosition(this.cfg.seed, nx, nz, r, false, run?.modules);
+    const res = resolvePosition(this.cfg.seed, nx, nz, r, false, run?.modules, rift);
     if (!run) return res;
     const clamped = this.clampDelveModuleBounds(run, res.x, res.z, r);
     return this.clampDelveDoors(run, clamped.x, clamped.z, r);
@@ -19586,6 +19759,678 @@ export class Sim {
       return;
     }
     this.error(r.meta.entityId, 'Nothing happens.');
+  }
+
+  // -------------------------------------------------------------------------
+  // Rifts: the overworld portal rotation and the run lifecycle.
+  //
+  // The GENERATOR (src/sim/rift) is pure and seed-addressed and builds its own
+  // Rng from the descriptor; nothing here ever hands it `this.rng`, because a
+  // draw taken from the shared stream to generate a rift would shift every later
+  // roll in the world and desync a player who generated one from a player who
+  // did not. The shared `this.rng` is used for EXACTLY ONE thing in this region:
+  // `rollRiftLoot`, which consumes a fixed `RIFT_LOOT_DRAWS` values per call
+  // whatever it returns.
+  //
+  // The rotation is scheduled off `this.time`/`this.tickCount` (the sim clock),
+  // never a wall clock, so it replays identically on the server, in the offline
+  // browser world and in the headless env.
+  // -------------------------------------------------------------------------
+
+  /** Stable per-zone salt for the portal seed stream (FNV-1a over the zone id).
+   * Keyed on the ID rather than the zone's position in `ZONES`, so adding or
+   * reordering a zone never reshuffles an existing zone's rifts. */
+  private riftZoneSalt(zoneId: string): number {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < zoneId.length; i++) h = Math.imul(h ^ zoneId.charCodeAt(i), 0x01000193);
+    return h >>> 0;
+  }
+
+  /** Descriptor seed of a zone's NEXT rift. Pure over (world seed, zone, how
+   * many portals this zone has opened), so the whole rotation is replayable and
+   * costs the shared stream nothing. */
+  private riftPortalSeed(rot: RiftZoneRotation): number {
+    return mixSeed(mixSeed(this.cfg.seed >>> 0, this.riftZoneSalt(rot.zoneId)), rot.opened);
+  }
+
+  /** The rank behind a portal, as its descriptor `baseLevel`. Drawn from a LOCAL
+   * Rng over the portal seed (never `this.rng`). Weighted down the ladder so C
+   * is the common rung and an S tear is an event. */
+  private riftBaseLevelFor(seed: number): number {
+    const roll = new Rng(mixSeed(seed, RIFT_RANK_SALT)).next();
+    if (roll < 0.1) return RIFT_RANK_BASE_LEVEL.S;
+    if (roll < 0.3) return RIFT_RANK_BASE_LEVEL.A;
+    if (roll < 0.6) return RIFT_RANK_BASE_LEVEL.B;
+    return RIFT_RANK_BASE_LEVEL.C;
+  }
+
+  /** Where a zone's tear opens. Local Rng over the portal seed, then the same
+   * `findSafePos` spiral every NPC placement uses, so a portal never lands in a
+   * lake or inside a building. */
+  private riftPortalPos(zone: ZoneDef, seed: number): { x: number; z: number } {
+    const rng = new Rng(mixSeed(seed, RIFT_PORTAL_POS_SALT));
+    const x = zone.hub.x + rng.range(-RIFT_PORTAL_SPREAD, RIFT_PORTAL_SPREAD);
+    const zLo = Math.min(zone.zMin + RIFT_PORTAL_ZONE_MARGIN, zone.zMax);
+    const zHi = Math.max(zone.zMax - RIFT_PORTAL_ZONE_MARGIN, zLo);
+    return this.findSafePos(x, rng.range(zLo, zHi), RIFT_PORTAL_MIN_GROUND);
+  }
+
+  /**
+   * A tear's admitting window on the clock the CLIENT holds.
+   *
+   * The rotation schedules in sim-clock seconds (deterministic), but the HUD
+   * derives its countdown by subtracting its own `Date.now()` from the
+   * timestamps it is given, so what crosses the wire has to be on the host's
+   * clock. `lockoutNowMs` is the sim's one existing host-clock seam (the
+   * authoritative server injects `Date.now()`; offline/headless fall back to
+   * sim-clock ms), and it is read exactly ONCE per portal, when the tear opens.
+   *
+   * Reading it once rather than re-projecting every tick is load-bearing: see
+   * `RiftPortal.openedAtMs`. It also keeps `src/sim/` free of any wall-clock
+   * read of its own.
+   */
+  private riftPortalWindowMs(portal: RiftPortal): { opensAt: number; expiresAt: number } {
+    return {
+      opensAt: portal.openedAtMs,
+      expiresAt: portal.openedAtMs + RIFT_PORTAL_WINDOW * 1000,
+    };
+  }
+
+  private riftRankOf(run: RiftRun): RiftRank {
+    return riftRankForBaseLevel(run.baseLevel);
+  }
+
+  private emitRiftPortal(portal: RiftPortal): void {
+    const span = this.riftPortalWindowMs(portal);
+    this.emit({
+      type: 'riftPortal',
+      portalId: portal.id,
+      zoneId: portal.zoneId,
+      rank: riftRankForBaseLevel(portal.baseLevel),
+      opensAt: span.opensAt,
+      expiresAt: span.expiresAt,
+      open: portal.open,
+    });
+  }
+
+  /** Hourly rotation, one open portal per eligible zone. A zone with a live
+   * portal is skipped entirely, so the "one at a time" rule is structural. */
+  private updateRiftPortals(): void {
+    if (this.tickCount % 20 !== 0) return; // once a second, like updateInstances
+    for (const rot of this.riftRotation) {
+      const portal = rot.portal;
+      if (portal) {
+        // An IGNORED rift closes on its own here. That is what stops a tear
+        // nobody entered from blocking its zone's rotation forever.
+        if (this.time >= portal.expiresAt) this.closeRiftPortal(rot, portal);
+        continue;
+      }
+      if (this.time >= rot.nextOpenAt) this.openRiftPortal(rot);
+    }
+  }
+
+  private openRiftPortal(rot: RiftZoneRotation): void {
+    const zone = ZONES.find((z) => z.id === rot.zoneId);
+    if (!zone) return;
+    rot.opened += 1;
+    const seed = this.riftPortalSeed(rot);
+    const baseLevel = this.riftBaseLevelFor(seed);
+    const pos = this.riftPortalPos(zone, seed);
+    const portal: RiftPortal = {
+      id: `${rot.zoneId}:${rot.opened}`,
+      zoneId: rot.zoneId,
+      seed,
+      baseLevel,
+      x: pos.x,
+      z: pos.z,
+      entityId: null,
+      opensAt: this.time,
+      expiresAt: this.time + RIFT_PORTAL_WINDOW,
+      openedAtMs: this.lockoutNowMs(),
+      open: true,
+    };
+    const obj = createGroundObject(this.nextId++, '', RIFT_PORTAL_NAME, this.groundPos(pos.x, pos.z));
+    obj.templateId = 'rift_portal';
+    obj.objectItemId = null;
+    obj.lootable = true;
+    this.addEntity(obj);
+    portal.entityId = obj.id;
+    rot.portal = portal;
+    this.emitRiftPortal(portal);
+  }
+
+  /** Close a zone's entrance and schedule its next one. Called BOTH when a
+   * portal's window expires and when the rift behind it seals, which is the
+   * whole rotation rule: a zone opens its next tear only once the previous rift
+   * has actually closed, so a sealed rift is never instantly refarmed. */
+  private closeRiftPortal(rot: RiftZoneRotation, portal: RiftPortal): void {
+    if (portal.open) {
+      portal.open = false;
+      this.emitRiftPortal(portal);
+    }
+    if (portal.entityId !== null && this.entities.has(portal.entityId))
+      this.dropEntity(portal.entityId);
+    portal.entityId = null;
+    rot.portal = null;
+    // The next multiple of the interval strictly after now, so every zone stays
+    // on ONE shared cadence instead of drifting by however long its rift ran.
+    rot.nextOpenAt =
+      Math.floor((this.time + 1) / RIFT_PORTAL_INTERVAL) * RIFT_PORTAL_INTERVAL +
+      RIFT_PORTAL_INTERVAL;
+  }
+
+  private riftRotationFor(portalId: string | null): RiftZoneRotation | null {
+    if (!portalId) return null;
+    return this.riftRotation.find((rot) => rot.portal?.id === portalId) ?? null;
+  }
+
+  /** The claimed run occupying the slot a world position falls in, or null. */
+  private riftRunAt(z: number): RiftRun | null {
+    const run = this.riftRuns[riftSlotAt(z)];
+    return run && run.partyKey !== null ? run : null;
+  }
+
+  riftRunForPlayer(pid: number): RiftRun | null {
+    const e = this.entities.get(pid);
+    if (!e || !isRiftPos(e.pos.x)) return null;
+    const run = this.riftRunAt(e.pos.z);
+    return run && run.partyKey === this.instanceKeyFor(pid) ? run : null;
+  }
+
+  private riftRunForMob(mobId: number): RiftRun | null {
+    return this.riftRuns.find((r) => r.partyKey !== null && r.mobIds.includes(mobId)) ?? null;
+  }
+
+  /** The descriptor `colliders.ts` resolves a generated interior by. Undefined
+   * outside a claimed rift slot: naming the WRONG floor there would put
+   * invisible walls in a room the player can see through. */
+  private riftFloorRefFor(e: Entity): RiftFloorRef | undefined {
+    const run = this.riftRunAt(e.pos.z);
+    if (!run) return undefined;
+    return { seed: run.seed, baseLevel: run.baseLevel, floorIndex: run.floorIndex };
+  }
+
+  private riftEntryPos(run: RiftRun): Vec3 {
+    const plan = generateRiftFloor(run.seed, run.baseLevel, run.floorIndex);
+    return this.groundPos(run.origin.x + plan.entry.x, run.origin.z + plan.entry.z);
+  }
+
+  /**
+   * The zone a run's tear opened in.
+   *
+   * A rift's own coordinates say nothing about where it is: its instance z lands
+   * inside the real overworld z strip, so `zoneAt` would confidently name a zone
+   * the player has never been to. The portal id (`${zoneId}:${n}`) is the only
+   * thing that knows, which is why it is worth reading rather than storing a
+   * second copy that could drift.
+   */
+  private riftZoneFor(run: RiftRun | null): ZoneDef | null {
+    const zoneId = run?.portalId?.split(':')[0] ?? '';
+    if (!zoneId) return null;
+    return ZONES.find((z) => z.id === zoneId) ?? null;
+  }
+
+  /** Where leaving a rift puts you: the tear you came through while it stands,
+   * else the hub of the zone it opened in. */
+  private riftExitPos(run: RiftRun | null): { x: number; z: number } {
+    const rot = this.riftRotationFor(run?.portalId ?? null);
+    if (rot?.portal) return { x: rot.portal.x, z: rot.portal.z - 4 };
+    const zone = this.riftZoneFor(run);
+    return zone ? { x: zone.hub.x, z: zone.hub.z } : { x: PLAYER_START.x, z: PLAYER_START.z };
+  }
+
+  private denyRift(pid: number, reason: string): void {
+    this.emit({ type: 'riftDeny', reason, pid });
+  }
+
+  /** Every gate on stepping through a tear, in the order the player meets them.
+   * Returns a stable `riftDeny` reason id (never prose) or null to admit. */
+  private riftEntryDenial(e: Entity, portal: RiftPortal): string | null {
+    if (e.dead) return 'dead';
+    if (!portal.open) return 'closed';
+    if (this.time >= portal.expiresAt) return 'expired';
+    if (this.time < portal.opensAt) return 'notOpen';
+    if (e.level < RIFT_MIN_PLAYER_LEVEL) return 'level';
+    if (e.inCombat) return 'combat';
+    if (isRiftPos(e.pos.x)) return 'inRun';
+    if (dungeonAt(e.pos.x) || isArenaPos(e.pos.x) || isDelvePos(e.pos.x)) return 'inInstance';
+    if (dist2d(e.pos, { x: portal.x, y: e.pos.y, z: portal.z }) > RIFT_INTERACT_RANGE)
+      return 'range';
+    return null;
+  }
+
+  enterRift(portalId: string, pid?: number): void {
+    const r = this.resolve(pid);
+    if (!r) return;
+    const me = r.meta.entityId;
+    // THE ANTI-REFARM RULE: the rift behind a tear is cleared once and never
+    // re-entered. Scoped to the PORTAL, not to the party: a party that just
+    // sealed a rift must still be free to walk into a different tear in another
+    // zone, and telling them "sealed" there would be a lie.
+    const key = this.instanceKeyFor(me);
+    if (this.riftRuns.some((run) => run.sealed && run.portalId === portalId)) {
+      this.denyRift(me, 'sealed');
+      return;
+    }
+    const rot = this.riftRotationFor(portalId);
+    const portal = rot?.portal ?? null;
+    if (!portal) {
+      this.denyRift(me, 'closed');
+      return;
+    }
+    const denial = this.riftEntryDenial(r.e, portal);
+    if (denial) {
+      this.denyRift(me, denial);
+      return;
+    }
+    let run = this.riftRuns.find((x) => x.partyKey === key) ?? null;
+    // The party's previous run is finished; its slot is only still held because
+    // the empty-slot sweep has not got to it yet. Release it now rather than
+    // dropping the party back into a rift they already sealed.
+    if (run?.sealed) {
+      this.freeRiftRun(run);
+      run = null;
+    }
+    if (!run) {
+      run = this.riftRuns.find((x) => x.partyKey === null) ?? null;
+      if (!run) {
+        this.denyRift(me, 'noInstance');
+        return;
+      }
+      this.claimRiftRun(run, key, portal);
+    }
+    run.emptyFor = 0;
+    const p = r.e;
+    const entry = this.riftEntryPos(run);
+    p.pos = entry;
+    p.prevPos = { ...entry };
+    this.rebucket(p);
+    p.facing = 0;
+    p.targetId = null;
+    p.autoAttack = false;
+    const plan = generateRiftFloor(run.seed, run.baseLevel, run.floorIndex);
+    this.emit({
+      type: 'riftEnter',
+      rank: plan.rank,
+      floorIndex: run.floorIndex,
+      floorCount: run.floorCount,
+      themeId: plan.themeId,
+      pid: me,
+    });
+    // Announced AFTER the arrival teleport, so the floor line only ever reaches
+    // a player who is standing on that floor.
+    this.announceRiftFloor(run, [me]);
+  }
+
+  /** Step back out to the overworld. The instance-leave path every other
+   * instance already uses: scrub the leaver off the inside hate tables (so the
+   * exit cannot be used to kite a pull to the door and back), then teleport. */
+  leaveRift(pid?: number): void {
+    const r = this.resolve(pid);
+    if (!r || r.e.dead) return;
+    const p = r.e;
+    if (!isRiftPos(p.pos.x)) return;
+    const run = this.riftRunAt(p.pos.z);
+    if (run) this.scrubRiftThreat(run, p.id);
+    const dest = this.riftExitPos(run);
+    p.pos = this.groundPos(dest.x, dest.z);
+    p.prevPos = { ...p.pos };
+    this.rebucket(p);
+    p.targetId = null;
+    p.autoAttack = false;
+  }
+
+  private scrubRiftThreat(run: RiftRun, pid: number): void {
+    for (const id of run.mobIds) {
+      const mob = this.entities.get(id);
+      if (!mob || mob.dead) continue;
+      dropThreat(mob, pid);
+      for (const srcId of [...mob.threat.keys()]) {
+        if (this.entities.get(srcId)?.ownerId === pid) dropThreat(mob, srcId);
+      }
+      if (mob.aggroTargetId !== null) {
+        const tgt = this.entities.get(mob.aggroTargetId);
+        if (mob.aggroTargetId === pid || tgt?.ownerId === pid) mob.aggroTargetId = null;
+      }
+    }
+  }
+
+  private claimRiftRun(run: RiftRun, key: string, portal: RiftPortal): void {
+    const origin = riftOrigin(run.slot);
+    run.partyKey = key;
+    run.seed = portal.seed;
+    run.baseLevel = portal.baseLevel;
+    run.floorIndex = 0;
+    run.floorCount = generateRiftPlan(portal.seed, portal.baseLevel).floorCount;
+    run.origin = { x: origin.x, z: origin.z };
+    run.portalId = portal.id;
+    run.sealed = false;
+    run.emptyFor = 0;
+    this.spawnRiftFloor(run);
+  }
+
+  /** Populate the CURRENT floor, replacing whatever the slot held. A run keeps
+   * one slot for its whole descent, so a six-floor rift costs one slot. */
+  private spawnRiftFloor(run: RiftRun): void {
+    for (const id of run.mobIds) {
+      if (!this.entities.has(id)) continue;
+      for (const meta of this.players.values()) {
+        const e = this.entities.get(meta.entityId);
+        if (e?.targetId === id) e.targetId = null;
+        if (e?.comboTargetId === id) {
+          e.comboTargetId = null;
+          e.comboPoints = 0;
+        }
+      }
+      this.dropEntity(id);
+    }
+    run.mobIds = [];
+    for (const id of run.objectIds) {
+      if (this.entities.has(id)) this.dropEntity(id);
+    }
+    run.objectIds = [];
+    run.wayForwardId = null;
+    run.floorCleared = false;
+
+    const plan = generateRiftFloor(run.seed, run.baseLevel, run.floorIndex);
+    const tuning = riftRankTuningFor(run.baseLevel);
+    for (const spawn of plan.spawns) {
+      const template = MOBS[spawn.templateId];
+      if (!template) continue;
+      // The rank transform returns a NEW template, so a rift can never leak its
+      // scaling into the shared MOBS row.
+      const mob = createMob(
+        this.nextId++,
+        riftRankTemplate(template, tuning, spawn.role),
+        spawn.level,
+        this.groundPos(run.origin.x + spawn.x, run.origin.z + spawn.z),
+      );
+      mob.facing = Math.PI; // face the entrance
+      mob.prevFacing = mob.facing;
+      this.addEntity(mob);
+      run.mobIds.push(mob.id);
+    }
+    for (const obj of plan.objects) {
+      if (!RIFT_LIVE_OBJECT_KINDS.has(obj.kind)) continue;
+      // The way forward is CONTENT (its position is in the plan) but it is not
+      // usable until the floor's warden falls, so it is spawned then, not now.
+      if (obj.kind === 'descent' || obj.kind === 'exit') continue;
+      this.spawnRiftObject(run, obj);
+    }
+  }
+
+  /**
+   * The party members actually STANDING IN this run.
+   *
+   * Deliberately not `partyMembersForKey`, which answers with everyone sharing
+   * the instance key wherever they are. A rift can be entered by one member of a
+   * party while the rest quest outside, so keying floor teleports and floor
+   * announcements off the raw party would yank a questing guildmate into a
+   * dungeon they never entered, and would put a rift tracker on their screen.
+   */
+  private riftOccupants(run: RiftRun): number[] {
+    if (!run.partyKey) return [];
+    const out: number[] = [];
+    for (const pid of this.partyMembersForKey(run.partyKey)) {
+      const p = this.entities.get(pid);
+      if (!p || !isRiftPos(p.pos.x)) continue;
+      if (Math.abs(p.pos.z - run.origin.z) >= 250) continue;
+      out.push(pid);
+    }
+    return out;
+  }
+
+  private announceRiftFloor(run: RiftRun, pids: readonly number[]): void {
+    if (pids.length === 0) return;
+    const plan = generateRiftFloor(run.seed, run.baseLevel, run.floorIndex);
+    for (const pid of pids) {
+      this.emit({
+        type: 'riftFloor',
+        floorIndex: plan.floorIndex,
+        floorCount: plan.floorCount,
+        themeId: plan.themeId,
+        mechanicId: plan.mechanic.kind,
+        pid,
+      });
+    }
+  }
+
+  private spawnRiftObject(run: RiftRun, plan: RiftObjectPlan): Entity {
+    const obj = createGroundObject(
+      this.nextId++,
+      '',
+      RIFT_OBJECT_NAMES[plan.kind] ?? plan.kind,
+      this.groundPos(run.origin.x + plan.x, run.origin.z + plan.z),
+    );
+    obj.templateId = `rift_${plan.kind}`;
+    obj.objectItemId = null;
+    obj.lootable = true;
+    this.addEntity(obj);
+    run.objectIds.push(obj.id);
+    return obj;
+  }
+
+  private isRiftBossMob(mob: Entity): boolean {
+    return MOBS[mob.templateId]?.boss === true;
+  }
+
+  /**
+   * The floor is beaten: open the way forward.
+   *
+   * On the LAST floor that way forward is the EXIT, and opening it SEALS the
+   * rift, which is the whole anti-refarm rule. On every earlier floor it is the
+   * descent to the next one.
+   *
+   * The way forward's POSITION is content (it comes out of the plan), but it is
+   * only spawned here, so a floor can never be walked past unfought.
+   */
+  private openRiftWayForward(run: RiftRun, plan: RiftFloorPlan): void {
+    if (run.floorCleared || run.sealed) return;
+    run.floorCleared = true;
+    const isFinal = run.floorIndex >= run.floorCount - 1;
+    const way = plan.objects.find((o) => o.kind === (isFinal ? 'exit' : 'descent'));
+    if (way) run.wayForwardId = this.spawnRiftObject(run, way).id;
+    if (isFinal) this.sealRift(run, plan);
+  }
+
+  /**
+   * The clear condition, checked once a tick for the floors that have no warden.
+   *
+   * The generator puts a boss on the FINAL floor only, and tags every earlier
+   * floor's headline mechanic `none`, which is its word for clear-to-open. So a
+   * trash floor opens when its room is empty (the delve module-exit rule), and
+   * the boss floor opens the instant its warden falls (handled on the death
+   * itself), deliberately NOT when the dais guards flanking it are also dead:
+   * the warden is the wall, its escort is not a second one.
+   */
+  private tryClearRiftFloor(run: RiftRun): void {
+    if (run.floorCleared || run.sealed || !run.partyKey) return;
+    if (run.floorIndex >= run.floorCount - 1) return;
+    for (const id of run.mobIds) {
+      const mob = this.entities.get(id);
+      if (mob && !mob.dead) return;
+    }
+    this.openRiftWayForward(run, generateRiftFloor(run.seed, run.baseLevel, run.floorIndex));
+  }
+
+  private sealRift(run: RiftRun, plan: RiftFloorPlan): void {
+    run.sealed = true;
+    // The overworld entrance closes WITH the rift, which is also what schedules
+    // the zone's next tear (see closeRiftPortal).
+    const rot = this.riftRotationFor(run.portalId);
+    if (rot?.portal) this.closeRiftPortal(rot, rot.portal);
+    if (!run.partyKey) return;
+    for (const pid of this.partyMembersForKey(run.partyKey)) {
+      const meta = this.players.get(pid);
+      if (!meta) continue;
+      const prior = meta.riftClears[plan.rank] ?? 0;
+      meta.riftClears[plan.rank] = prior + 1;
+      this.emit({
+        type: 'riftClear',
+        rank: plan.rank,
+        floors: run.floorCount,
+        firstClear: prior === 0,
+        pid,
+      });
+    }
+  }
+
+  /** Rift kill rewards. `rollRiftLoot` consumes EXACTLY `RIFT_LOOT_DRAWS` values
+   * from the shared stream on every call, whatever it returns, so calling it here
+   * cannot make one client's stream run ahead of another's. */
+  private rollRiftMobLoot(run: RiftRun, mob: Entity, plan: RiftFloorPlan): void {
+    const drops = rollRiftLoot(plan.rank, run.floorIndex, this.isRiftBossMob(mob), this.rng);
+    if (drops.length === 0) return;
+    if (!mob.loot) mob.loot = { copper: 0, items: [] };
+    for (const drop of drops) {
+      if (!ITEMS[drop.itemId]) continue;
+      mob.loot.items.push({ itemId: drop.itemId, count: drop.count });
+    }
+    if (mob.loot.copper > 0 || mob.loot.items.length > 0) mob.lootable = true;
+  }
+
+  private advanceRiftFloor(run: RiftRun): void {
+    if (run.sealed || run.floorIndex >= run.floorCount - 1) return;
+    // Snapshot who is inside BEFORE the floor changes: only they descend.
+    const descending = this.riftOccupants(run);
+    run.floorIndex += 1;
+    this.spawnRiftFloor(run);
+    const entry = this.riftEntryPos(run);
+    const arrived: number[] = [];
+    for (const pid of descending) {
+      const p = this.entities.get(pid);
+      if (!p || p.dead) continue;
+      p.pos = { ...entry };
+      p.prevPos = { ...entry };
+      this.rebucket(p);
+      p.facing = 0;
+      p.targetId = null;
+      p.autoAttack = false;
+      arrived.push(pid);
+    }
+    this.announceRiftFloor(run, arrived);
+  }
+
+  /** Walking into the open way forward uses it: descend, or (on the sealed final
+   * floor) climb back out. Same no-keypress affordance the delve module exit and
+   * the dungeon door already have. */
+  private tickRiftWayForward(run: RiftRun): void {
+    this.tryClearRiftFloor(run);
+    if (!run.floorCleared || run.wayForwardId === null || !run.partyKey) return;
+    const way = this.entities.get(run.wayForwardId);
+    if (!way) return;
+    for (const pid of this.partyMembersForKey(run.partyKey)) {
+      const p = this.entities.get(pid);
+      if (!p || p.dead) continue;
+      if (dist2d(p.pos, way.pos) > RIFT_PORTAL_TRIGGER_RADIUS) continue;
+      if (run.sealed) this.leaveRift(pid);
+      else this.advanceRiftFloor(run);
+      return;
+    }
+  }
+
+  private freeRiftRun(run: RiftRun): void {
+    for (const id of run.mobIds) {
+      if (!this.entities.has(id)) continue;
+      for (const meta of this.players.values()) {
+        const e = this.entities.get(meta.entityId);
+        if (e?.targetId === id) e.targetId = null;
+        if (e?.comboTargetId === id) {
+          e.comboTargetId = null;
+          e.comboPoints = 0;
+        }
+      }
+      this.dropEntity(id);
+    }
+    for (const id of run.objectIds) {
+      if (this.entities.has(id)) this.dropEntity(id);
+    }
+    run.partyKey = null;
+    run.seed = 0;
+    run.baseLevel = RIFT_RANK_BASE_LEVEL.C;
+    run.floorIndex = 0;
+    run.floorCount = 0;
+    run.mobIds = [];
+    run.objectIds = [];
+    run.wayForwardId = null;
+    run.floorCleared = false;
+    run.sealed = false;
+    run.portalId = null;
+    run.emptyFor = 0;
+  }
+
+  private updateRiftRuns(): void {
+    for (const run of this.riftRuns) {
+      if (run.partyKey !== null) this.tickRiftWayForward(run);
+    }
+    if (this.tickCount % 20 !== 0) return;
+    for (const run of this.riftRuns) {
+      if (run.partyKey === null) continue;
+      let occupied = false;
+      for (const meta of this.players.values()) {
+        const e = this.entities.get(meta.entityId);
+        if (
+          e &&
+          Math.abs(e.pos.x - run.origin.x) < 120 &&
+          Math.abs(e.pos.z - run.origin.z) < 250
+        ) {
+          occupied = true;
+          break;
+        }
+      }
+      if (occupied) run.emptyFor = 0;
+      else {
+        run.emptyFor += 1;
+        // A run whose party is gone frees its slot, sealed or not: the seal lives
+        // on the portal's schedule, not on a slot held forever.
+        if (run.emptyFor >= INSTANCE_EMPTY_TIMEOUT) this.freeRiftRun(run);
+      }
+    }
+  }
+
+  // Wire projections (the same shapes the server sends and ClientWorld mirrors).
+
+  riftRunWire(pid: number): RiftRunInfo | null {
+    const run = this.riftRunForPlayer(pid);
+    if (!run?.partyKey) return null;
+    const plan = generateRiftFloor(run.seed, run.baseLevel, run.floorIndex);
+    const rot = this.riftRotationFor(run.portalId);
+    return {
+      rank: this.riftRankOf(run),
+      floorIndex: run.floorIndex,
+      floorCount: run.floorCount,
+      themeId: plan.themeId,
+      mechanicId: plan.mechanic.kind,
+      // 0 once the entrance is gone: the tracker reads that as "no deadline".
+      entranceClosesAt: rot?.portal ? this.riftPortalWindowMs(rot.portal).expiresAt : 0,
+      sealed: run.sealed,
+    };
+  }
+
+  riftPortalsWire(): RiftPortalInfo[] {
+    const out: RiftPortalInfo[] = [];
+    for (const rot of this.riftRotation) {
+      const portal = rot.portal;
+      if (!portal) continue;
+      const span = this.riftPortalWindowMs(portal);
+      out.push({
+        portalId: portal.id,
+        zoneId: portal.zoneId,
+        rank: riftRankForBaseLevel(portal.baseLevel),
+        opensAt: span.opensAt,
+        expiresAt: span.expiresAt,
+        open: portal.open,
+      });
+    }
+    return out;
+  }
+
+  get riftRun(): RiftRunInfo | null {
+    return this.riftRunWire(this.primaryId);
+  }
+
+  riftPortals(): RiftPortalInfo[] {
+    return this.riftPortalsWire();
   }
 
   // -------------------------------------------------------------------------

@@ -100,6 +100,46 @@ export interface DelveRunInfo {
   bountiful: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Rifts (src/sim/rift): the active run and the overworld entrances.
+//
+// Both are STRING-FREE, ids and numbers only: the sim stays language-agnostic
+// and every word about a rift is authored client-side, so these shapes carry
+// stable generator ids (`rank`, `themeId`, `mechanicId`, `zoneId`) that the HUD
+// resolves through `t()`. They are field-for-field the payloads of the
+// `riftEnter` / `riftFloor` / `riftPortal` events, so a live panel and an
+// announcement can never describe the same rift differently.
+// ---------------------------------------------------------------------------
+
+export interface RiftRunInfo {
+  /** Rank letter: 'C' | 'B' | 'A' | 'S'. */
+  rank: string;
+  /** Zero-based floor the party is standing on. */
+  floorIndex: number;
+  floorCount: number;
+  themeId: string;
+  mechanicId: string;
+  /**
+   * Absolute milliseconds (the `Date.now()` epoch on the authoritative server)
+   * at which the overworld entrance stops admitting new parties. The tracker
+   * subtracts its own now from this every frame, so a live countdown costs no
+   * extra traffic. 0 means the run carries no deadline any more.
+   */
+  entranceClosesAt: number;
+  /** True once the last warden has fallen and the rift is sealed. */
+  sealed?: boolean;
+}
+
+export interface RiftPortalInfo {
+  portalId: string;
+  zoneId: string;
+  rank: string;
+  /** Absolute ms on the same clock as `RiftRunInfo.entranceClosesAt`. */
+  opensAt: number;
+  expiresAt: number;
+  open: boolean;
+}
+
 // Render-safe projection of an active lockpicking attempt. Only ever holds cells
 // inside the fog window, the full lock layout never reaches the client.
 export interface LockpickView {
@@ -591,6 +631,14 @@ export interface IWorld {
   lockpickAction(action: PickAction): void;
   lockpickAbort(): void;
   collectDelveChestLoot(chestId: number): void;
+  // Rifts. Entering is server-authoritative: the client asks by portal id and
+  // renders the answer (a `riftEnter` or a `riftDeny`), it never predicts one.
+  enterRift(portalId: string): void;
+  leaveRift(): void;
+  /** The rift the local player is standing in, or null when they are not in one. */
+  riftRun: RiftRunInfo | null;
+  /** Every overworld tear the client knows about (the panel narrows by zone). */
+  riftPortals(): RiftPortalInfo[];
   delveRun: DelveRunInfo | null;
   companionState: DelveCompanionInfo | null;
   delveMarks: number;
