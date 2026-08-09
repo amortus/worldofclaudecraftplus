@@ -1,5 +1,6 @@
 // Public surface of the rift content tables. `sim/data.ts` and `sim/rift/`
 // import from HERE, never from the modules directly.
+export { RIFT_ITEMS, RIFT_LEGENDARY_IDS } from './items';
 export {
   RIFT_ADD_IDS,
   RIFT_BOSS_IDS,

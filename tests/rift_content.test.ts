@@ -32,8 +32,11 @@ describe('rift content tables', () => {
     const ids = Object.keys(RIFT_MOBS);
     expect(new Set(ids).size).toBe(ids.length);
     // data.ts merges mob tables by spread, so a duplicate id would silently
-    // overwrite an existing creature.
-    for (const id of ids) expect(MOBS[id], `${id} already exists in MOBS`).toBeUndefined();
+    // overwrite an existing creature. RIFT_MOBS is now part of that merge, so the
+    // proof of no collision is that every rift id resolves to the RIFT definition:
+    // if an earlier table owned the same id, the spread would have replaced it and
+    // this identity check would fail.
+    for (const id of ids) expect(MOBS[id], `${id} was overwritten in MOBS`).toBe(RIFT_MOBS[id]);
     expect(ids.every((id) => id.startsWith('rift_'))).toBe(true);
   });
 

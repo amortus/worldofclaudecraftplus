@@ -14,6 +14,17 @@ export {
   ROOM_ARCHETYPES,
 } from './layout_gen';
 export {
+  RIFT_FLOOR_RATE_STEP,
+  RIFT_LOOT_DRAWS,
+  RIFT_LOOT_POOLS,
+  RIFT_LOOT_RATES,
+  riftFloorRateMultiplier,
+  rollRiftLoot,
+  type RiftLootDrop,
+  type RiftRankPools,
+  type RiftRankRates,
+} from './loot_pools';
+export {
   RIFT_MAX_MOB_LEVEL,
   RIFT_MIN_MOVE_SPEED,
   RIFT_RANK_BASE_LEVEL,
