@@ -31,7 +31,7 @@ export const EXPANSION_NPCS: Record<string, NpcDef> = {
     id: 'houndmaster_teel',
     name: 'Houndmaster Teel',
     title: 'Eastbrook Kennels',
-    pos: { x: 17, z: 8 }, // east of the town green, clear of the house at (10,12) and the smithy stall
+    pos: { x: 17, z: 8 }, // west of the town green, clear of the house at (10,12) and the smithy stall
     facing: -2.0,
     color: 0x6b5a3c,
     questIds: ['q_ev_kennels', 'q_ev_houndsbane', 'q_ev_boars', 'q_ev_last_hound'],
@@ -42,7 +42,7 @@ export const EXPANSION_NPCS: Record<string, NpcDef> = {
     id: 'ferrywoman_odalie',
     name: 'Ferrywoman Odalie',
     title: 'Fenbridge Crossing',
-    pos: { x: -12, z: 306 }, // the west landing, clear of the four shipped Fenbridge posts
+    pos: { x: -12, z: 306 }, // the east landing, clear of the four shipped Fenbridge posts
     facing: 2.0,
     color: 0x2e6f7a,
     questIds: ['q_mf_polings', 'q_mf_lanterns', 'q_mf_drowned_toll', 'q_mf_trollbridge'],
@@ -53,7 +53,7 @@ export const EXPANSION_NPCS: Record<string, NpcDef> = {
     id: 'stonewright_hulda',
     name: 'Stonewright Hulda',
     title: 'Highwatch Masons',
-    pos: { x: -14, z: 664 }, // the mason's yard on the west curtain, clear of the shipped Highwatch posts
+    pos: { x: -14, z: 664 }, // the mason's yard on the east curtain, clear of the shipped Highwatch posts
     facing: 1.85,
     color: 0x8a8071,
     questIds: ['q_tp_quarry', 'q_tp_keystones', 'q_tp_ogre_wall', 'q_tp_stormcut'],
@@ -124,7 +124,7 @@ export const EXPANSION_QUESTS: Record<string, QuestDef> = {
     name: 'Meat for the Kennels',
     giverNpcId: 'houndmaster_teel',
     turnInNpcId: 'houndmaster_teel',
-    text: 'A working hound eats better than a militiaman, and Eastbrook is not about to vote me the difference. The boars in the east meadow are fat and stupid and there are far too many of them. Ten, $N. Bring the carcasses to the edge of the meadow and I will send a cart.',
+    text: 'A working hound eats better than a militiaman, and Eastbrook is not about to vote me the difference. The boars in the west meadow are fat and stupid and there are far too many of them. Ten, $N. Bring the carcasses to the edge of the meadow and I will send a cart.',
     completionText:
       'Ten head. That is the kennels fed into the frost, and the meadow will thank you for it come planting. Not every job worth doing has a song in it.',
     objectives: [{ type: 'kill', targetMobId: 'wild_boar', count: 10, label: 'Wild Boar slain' }],
@@ -219,7 +219,7 @@ export const EXPANSION_QUESTS: Record<string, QuestDef> = {
     text: 'The barrow trolls have started coming west out of the mounds and sitting under the causeway pilings at low water, waiting for the boards to creak. That is my crossing they are under, $N. Twelve of them, and go in daylight - they hear a boat coming a quarter mile off in the dark. Take your pick of the ferry lockers when it is done.',
     completionText:
       'Quiet under the boards again. I walked the whole causeway this morning and stamped every plank of it like a fool, just to hear nothing answer.',
-    objectives: [{ type: 'kill', targetMobId: 'fen_troll', count: 12, label: 'Fen Troll slain' }],
+    objectives: [{ type: 'kill', targetMobId: 'fen_troll', count: 12, label: 'Mirefen Troll slain' }],
     xpReward: 1650,
     copperReward: 600,
     // Anchor: the zone2 uncommon mainhand triplet (zone2.ts, sellValue 300).
@@ -244,7 +244,9 @@ export const EXPANSION_QUESTS: Record<string, QuestDef> = {
     text: 'Highwatch has one good quarry face and the kobolds have been under it for two seasons, hollowing out galleries I cannot see and did not survey. The west curtain is already sitting on air, $N. Kill twelve of them in the Deeprock burrows. I need the digging stopped before I can start measuring what they have ruined.',
     completionText:
       'Twelve fewer picks in the dark. I have my apprentices down there now with a plumb line and a lot of swearing. If the curtain stands through the thaw it will be because you went first.',
-    objectives: [{ type: 'kill', targetMobId: 'deeprock_kobold', count: 12, label: 'Deeprock Kobold slain' }],
+    objectives: [
+      { type: 'kill', targetMobId: 'deeprock_kobold', count: 12, label: 'Deeprock Tunneler slain' },
+    ],
     xpReward: 2500,
     copperReward: 1200,
     itemRewards: {},
@@ -511,7 +513,7 @@ export const EXPANSION_OBJECTS: GroundObjectDef[] = [
     ],
   },
   {
-    // The spoil fall below the Cinderforge mouth at (122,1058). East of every
+    // The spoil fall below the Cinderforge mouth at (122,1058). West of every
     // shipped zone4 camp (the nearest is bone_reaver at (95,1110), radius 20).
     itemId: 'cooled_slag',
     name: 'Cooled Slag',

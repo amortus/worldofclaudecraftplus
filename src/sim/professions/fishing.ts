@@ -46,6 +46,21 @@ export const FISH_BITE_DELAY_ROD_REDUCTION_SEC = 1.5;
 export const FISH_REEL_WINDOW_SEC = 3;
 export const FISH_REEL_WINDOW_ROD_BONUS_SEC = 0.75;
 
+// Opening grace on the reel arm. Any non-landed reel ends the session, so a
+// SECOND press that the player never meant (a bag double-click, a held key's
+// auto-repeat, a touch double-tap on a phone) would silently burn the whole cast
+// the instant the line hit the water. Inside this window the re-press falls
+// through to the ordinary busy denial instead of resolving as a reel.
+//
+// INVARIANT, and the reason this is a constant and not a bigger number: it MUST
+// stay STRICTLY BELOW FISH_BITE_DELAY_MIN_SEC. The earliest a fish can ever be
+// on the line is FISH_BITE_DELAY_MIN_SEC, so while the grace is shorter than
+// that it can only ever swallow a press that was guaranteed 'too_early' anyway.
+// At or past that bound the grace would start covering moments a fish could
+// already be hooked, which is exactly the reel-with-impunity exploit the
+// end-on-any-miss rule exists to prevent. Asserted in tests/fishing_grace.test.ts.
+export const FISH_EARLY_REEL_GRACE_SEC = 1;
+
 /** The upper end of the bite-delay range for a rod of this tier, floored at the
  *  minimum so a very good rod can never invert the range. */
 export function biteDelayMaxSec(rodTier: number): number {
@@ -95,6 +110,13 @@ export function biteScheduleTicks(
     biteAtTick: startTick + Math.ceil(s.biteAtSec / dt),
     reelDeadlineTick: startTick + Math.ceil(s.reelDeadlineSec / dt),
   };
+}
+
+/** The LAST tick on which a rod re-press is still swallowed as an accidental
+ *  double-press instead of being resolved as a reel. Floored, so the grace never
+ *  rounds out past its nominal length. Pure, draw-free. */
+export function earlyReelGraceEndTick(startTick: number, dt: number): number {
+  return startTick + Math.floor(FISH_EARLY_REEL_GRACE_SEC / dt);
 }
 
 /** What one reel press did. Stable ids, never player text. */

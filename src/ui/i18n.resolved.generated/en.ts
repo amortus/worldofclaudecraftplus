@@ -7414,7 +7414,7 @@ export const en: EnTranslations = {
       },
       "q_supplies": {
         "title": "Stolen Supplies",
-        "text": "Those bandits hit my last wagon and made off with four crates of goods - tools, salt, good Eastbrook linen. The crates are stacked around their camp in the southeast hills. Steal them back for me, would you?",
+        "text": "Those bandits hit my last wagon and made off with four crates of goods - tools, salt, good Eastbrook linen. The crates are stacked around their camp in the southwest hills. Steal them back for me, would you?",
         "completion": "My crates! Barely a scratch on them. You are a wonder.",
         "objectives": {
           "0": {
@@ -7857,7 +7857,7 @@ export const en: EnTranslations = {
       "q_shard_cores": {
         "title": "Cores of the Storm",
         "text": "At each elemental's heart sits a storm core - a knot of lightning bound in stone. Six of them, set side by side, will tell me where the disturbance is centered. I suspect I already know, {playerName}, and I dearly hope that I am wrong.",
-        "completion": "Each core leans the same way, like iron filings to a lodestone. They point south, {playerName}. To the Sanctum.",
+        "completion": "Each core leans the same way, like iron filings to a lodestone. They point north, {playerName}. To the Sanctum.",
         "objectives": {
           "0": {
             "label": "Storm Core"
@@ -7876,7 +7876,7 @@ export const en: EnTranslations = {
       },
       "q_zealots": {
         "title": "Chants on the Wind",
-        "text": "When the wind comes off the southern peaks, {playerName}, it carries chanting. The Wyrmcult no longer hides - they have raised tents below the Sanctum and they sing to what sleeps beneath it. Silence twelve zealots. Every voice stilled buys the mountain another night of sleep.",
+        "text": "When the wind comes off the northern peaks, {playerName}, it carries chanting. The Wyrmcult no longer hides - they have raised tents below the Sanctum and they sing to what sleeps beneath it. Silence twelve zealots. Every voice stilled buys the mountain another night of sleep.",
         "completion": "The wind is quieter. But what troubles me is not the chanting, {playerName} - it is that something may be chanting back.",
         "objectives": {
           "0": {
@@ -8025,7 +8025,7 @@ export const en: EnTranslations = {
       },
       "q_nythraxis_graves": {
         "title": "Graves of the Forgotten",
-        "text": "I have seen these marks before, on three old graves around the northern battlefield. Captain Aldren lies on the eastern rise, High Priest Malric near the central broken road, and Royal Assassin Voss by the western cliff. Touch each grave and listen, {playerName}. The dead may remember what the living forgot.",
+        "text": "I have seen these marks before, on three old graves around the northern battlefield. Captain Aldren lies on the western rise, High Priest Malric near the central broken road, and Royal Assassin Voss by the eastern cliff. Touch each grave and listen, {playerName}. The dead may remember what the living forgot.",
         "completion": "Aldren remained loyal, Malric refused to accept death, and Voss saw the danger before anyone else. All three served the same forgotten king.",
         "objectives": {
           "0": {
@@ -8041,7 +8041,7 @@ export const en: EnTranslations = {
       },
       "q_nythraxis_sealed_crypt": {
         "title": "The Abandoned Crypt",
-        "text": "The visions point to the abandoned crypt in the western cliff. There is an old legend that the crypt housed a king. Perhaps Thornpeak sealed him below after Malric's ritual twisted him into something deathless. Enter the crypt and see what remains inside.",
+        "text": "The visions point to the abandoned crypt in the eastern cliff. There is an old legend that the crypt housed a king. Perhaps Thornpeak sealed him below after Malric's ritual twisted him into something deathless. Enter the crypt and see what remains inside.",
         "completion": "The keystone halves fit together, and Voss's diary names what they sealed: the signet of King Nythraxis. If the diary is true, that signet is the key to his tomb.",
         "objectives": {
           "0": {
@@ -8083,7 +8083,7 @@ export const en: EnTranslations = {
       },
       "q_mogger": {
         "title": "Mogger Must Fall",
-        "text": "Mogger has split carts, flattened fences, and killed enough livestock to empty half the Vale. Do not face him alone. Take two strong companions into the eastern meadow and put the brute down for good.",
+        "text": "Mogger has split carts, flattened fences, and killed enough livestock to empty half the Vale. Do not face him alone. Take two strong companions into the western meadow and put the brute down for good.",
         "completion": "Mogger is dead at last. Eastbrook's fields are safer, and you leave the Vale with one more tale worth retelling.",
         "objectives": {
           "0": {
@@ -8579,7 +8579,7 @@ export const en: EnTranslations = {
       },
       "q_ev_boars": {
         "title": "Meat for the Kennels",
-        "text": "A working hound eats better than a militiaman, and Eastbrook is not about to vote me the difference. The boars in the east meadow are fat and stupid and there are far too many of them. Ten, {playerName}. Bring the carcasses to the edge of the meadow and I will send a cart.",
+        "text": "A working hound eats better than a militiaman, and Eastbrook is not about to vote me the difference. The boars in the west meadow are fat and stupid and there are far too many of them. Ten, {playerName}. Bring the carcasses to the edge of the meadow and I will send a cart.",
         "completion": "Ten head. That is the kennels fed into the frost, and the meadow will thank you for it come planting. Not every job worth doing has a song in it.",
         "objectives": {
           "0": {
@@ -8639,7 +8639,7 @@ export const en: EnTranslations = {
         "completion": "Quiet under the boards again. I walked the whole causeway this morning and stamped every plank of it like a fool, just to hear nothing answer.",
         "objectives": {
           "0": {
-            "label": "Fen Troll slain"
+            "label": "Mirefen Troll slain"
           }
         }
       },
@@ -8649,7 +8649,7 @@ export const en: EnTranslations = {
         "completion": "Twelve fewer picks in the dark. I have my apprentices down there now with a plumb line and a lot of swearing. If the curtain stands through the thaw it will be because you went first.",
         "objectives": {
           "0": {
-            "label": "Deeprock Kobold slain"
+            "label": "Deeprock Tunneler slain"
           }
         }
       },

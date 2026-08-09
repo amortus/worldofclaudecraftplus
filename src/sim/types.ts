@@ -1353,6 +1353,9 @@ export interface Entity {
   fishBiteTick?: number;
   fishReelDeadlineTick?: number;
   fishBiteCued?: boolean;
+  // The last tick on which a rod re-press is swallowed as a double-press rather
+  // than resolved as a reel (see FISH_EARLY_REEL_GRACE_SEC). Also sim-local.
+  fishGraceUntilTick?: number;
   channelTickTimer: number;
   channelTickEvery: number;
   gcdRemaining: number;

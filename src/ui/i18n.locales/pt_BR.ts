@@ -2466,7 +2466,7 @@ export const pt_BR: Partial<Record<TranslationKey, string>> = {
   'entities.quests.q_bones.objectives.0.label': 'Ossos inquietos devolvido ao descanso',
   'entities.quests.q_supplies.title': 'Suprimentos roubados',
   'entities.quests.q_supplies.text':
-    'Os bandidos levaram minha última carroça: ferramentas, sal e bom linho de Eastbrook. Recupere 4 caixas no acampamento sudeste.',
+    'Os bandidos levaram minha última carroça: ferramentas, sal e bom linho de Eastbrook. Recupere 4 caixas no acampamento sudoeste.',
   'entities.quests.q_supplies.completion':
     'Minhas caixas! Quase sem arranhões. Você é uma maravilha.',
   'entities.quests.q_supplies.objectives.0.label': 'Caixa de suprimentos roubada',
@@ -2729,7 +2729,7 @@ export const pt_BR: Partial<Record<TranslationKey, string>> = {
   'entities.quests.q_shard_cores.text':
     'No coração de cada elemental há um núcleo da tempestade. Seis juntos mostrarão o centro do distúrbio. Desconfio que já sei, {playerName}, e torço muito para estar errado.',
   'entities.quests.q_shard_cores.completion':
-    'Todos apontam ao sul como limalha para um ímã. Ao Santuário, {playerName}.',
+    'Todos apontam ao norte como limalha para um ímã. Ao Santuário, {playerName}.',
   'entities.quests.q_shard_cores.objectives.0.label': 'Núcleo da tempestade',
   'entities.quests.q_kazzix.title': 'O senhor dos fragmentos',
   'entities.quests.q_kazzix.text':
@@ -2739,7 +2739,7 @@ export const pt_BR: Partial<Record<TranslationKey, string>> = {
   'entities.quests.q_kazzix.objectives.0.label': 'Fragmento do coração de Kazzix',
   'entities.quests.q_zealots.title': 'Cânticos no vento',
   'entities.quests.q_zealots.text':
-    'O vento traz cânticos dos picos do sul. Silencie 12 zelotes, {playerName}; cada voz calada compra outra noite de sono.',
+    'O vento traz cânticos dos picos do norte. Silencie 12 zelotes, {playerName}; cada voz calada compra outra noite de sono.',
   'entities.quests.q_zealots.completion':
     'O vento está mais quieto. O que me preocupa não é o cântico, {playerName}, é que algo talvez responda.',
   'entities.quests.q_zealots.objectives.0.label': 'Zelote do Culto do Wyrm abatido',
@@ -2815,7 +2815,7 @@ export const pt_BR: Partial<Record<TranslationKey, string>> = {
   'entities.quests.q_gravewyrm.objectives.0.label': 'Korzul o Gravewyrm abatido',
   'entities.quests.q_mogger.title': 'Mogger deve cair',
   'entities.quests.q_mogger.text':
-    'Mogger partiu carroças, achatou cercas e matou gado suficiente para esvaziar metade do Vale. Não o enfrente só. Leve dois companheiros fortes ao prado leste e derrube a fera de vez.',
+    'Mogger partiu carroças, achatou cercas e matou gado suficiente para esvaziar metade do Vale. Não o enfrente só. Leve dois companheiros fortes ao prado oeste e derrube a fera de vez.',
   'entities.quests.q_mogger.completion':
     'Mogger está morto enfim. Os campos de Eastbrook estão mais seguros, e você deixa o Vale com mais uma história digna de ser contada.',
   'entities.quests.q_mogger.objectives.0.label': 'Mogger abatido',
@@ -2962,7 +2962,7 @@ export const pt_BR: Partial<Record<TranslationKey, string>> = {
   'entities.quests.q_nythraxis_restless_dead.objectives.0.label': 'Estilhaço de osso rúnico',
   'entities.quests.q_nythraxis_graves.title': 'Túmulos dos esquecidos',
   'entities.quests.q_nythraxis_graves.text':
-    'Já vi estas marcas antes, em três túmulos antigos ao redor do campo de batalha ao norte. O capitão Aldren jaz na elevação leste, o sumo sacerdote Malric perto da estrada central quebrada, e o assassino real Voss junto ao penhasco oeste. Toque cada túmulo e escute, {playerName}. Os mortos podem lembrar o que os vivos esqueceram.',
+    'Já vi estas marcas antes, em três túmulos antigos ao redor do campo de batalha ao norte. O capitão Aldren jaz na elevação oeste, o sumo sacerdote Malric perto da estrada central quebrada, e o assassino real Voss junto ao penhasco leste. Toque cada túmulo e escute, {playerName}. Os mortos podem lembrar o que os vivos esqueceram.',
   'entities.quests.q_nythraxis_graves.completion':
     'Aldren permaneceu leal, Malric se recusou a aceitar a morte e Voss viu o perigo antes de todos. Os três serviram ao mesmo rei esquecido.',
   'entities.quests.q_nythraxis_graves.objectives.0.label': 'Visão no túmulo do capitão Aldren',
@@ -2971,7 +2971,7 @@ export const pt_BR: Partial<Record<TranslationKey, string>> = {
   'entities.quests.q_nythraxis_graves.objectives.2.label': 'Visão no túmulo do assassino real Voss',
   'entities.quests.q_nythraxis_sealed_crypt.title': 'A cripta abandonada',
   'entities.quests.q_nythraxis_sealed_crypt.text':
-    'As visões apontam para a cripta abandonada no penhasco oeste. Há uma velha lenda de que a cripta abrigava um rei. Talvez Thornpeak o tenha selado lá embaixo depois que o ritual de Malric o transformou em algo imortal. Entre na cripta e veja o que restou lá dentro.',
+    'As visões apontam para a cripta abandonada no penhasco leste. Há uma velha lenda de que a cripta abrigava um rei. Talvez Thornpeak o tenha selado lá embaixo depois que o ritual de Malric o transformou em algo imortal. Entre na cripta e veja o que restou lá dentro.',
   'entities.quests.q_nythraxis_sealed_crypt.completion':
     'As metades da pedra-chave se encaixam, e o diário de Voss nomeia o que elas selaram: o anel-sinete do rei Nythraxis. Se o diário for verdadeiro, esse anel é a chave para sua tumba.',
   'entities.quests.q_nythraxis_sealed_crypt.objectives.0.label': 'Parte superior da pedra-chave',

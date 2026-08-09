@@ -2352,7 +2352,7 @@ const mergeEntitiesEn = {
   quests: {
     q_mogger: {
       title: 'Mogger Must Fall',
-      text: 'Mogger has split carts, flattened fences, and killed enough livestock to empty half the Vale. Do not face him alone. Take two strong companions into the eastern meadow and put the brute down for good.',
+      text: 'Mogger has split carts, flattened fences, and killed enough livestock to empty half the Vale. Do not face him alone. Take two strong companions into the western meadow and put the brute down for good.',
       completion:
         "Mogger is dead at last. Eastbrook's fields are safer, and you leave the Vale with one more tale worth retelling.",
       objectives: { 0: { label: 'Mogger slain' } },
@@ -3499,7 +3499,7 @@ export const mergeEntities = {
     quests: {
       q_mogger: {
         title: 'Mogger deve cair',
-        text: 'Mogger partiu carroças, achatou cercas e matou gado suficiente para esvaziar metade do Vale. Não o enfrente só. Leve dois companheiros fortes ao prado leste e derrube a fera de vez.',
+        text: 'Mogger partiu carroças, achatou cercas e matou gado suficiente para esvaziar metade do Vale. Não o enfrente só. Leve dois companheiros fortes ao prado oeste e derrube a fera de vez.',
         completion:
           'Mogger está morto enfim. Os campos de Eastbrook estão mais seguros, e você deixa o Vale com mais uma história digna de ser contada.',
         objectives: { 0: { label: 'Mogger abatido' } },

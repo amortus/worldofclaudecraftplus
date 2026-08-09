@@ -1,8 +1,8 @@
 // THE CINDERFORGE - a five-player dungeon for the level cap, entered from the
-// eastern Ashen Wastes.
+// western Ashen Wastes.
 //
 // LORE. Long before the Claudexxaramas anchored over the north, the old empire
-// sank a war-forge into the bedrock east of the Bonefields and fed it for a
+// sank a war-forge into the bedrock west of the Bonefields and fed it for a
 // hundred years. Eleven winters ago a chapter of the Dawn of Claude went down
 // there with a simple plan: relight the forge, pour weapons that could burn the
 // blight out of the ground, and hand them to the garrison at Gravewatch. They
@@ -340,7 +340,7 @@ export const CINDERFORGE_DUNGEON_DEFS: Record<string, DungeonDef> = {
     id: 'cinderforge',
     name: 'The Cinderforge',
     index: 8,
-    doorPos: { x: 122, z: 1058 }, // the forge mouth in the east waste, clear of every zone4 camp and prop
+    doorPos: { x: 122, z: 1058 }, // the forge mouth in the west waste, clear of every zone4 camp and prop
     entry: { x: 0, z: 4 },
     exitOffset: { x: 0, z: -6 },
     spawns: CINDERFORGE_SPAWN_LIST,

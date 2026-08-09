@@ -747,7 +747,7 @@ export const ZONE1_QUESTS: Record<string, QuestDef> = {
     name: 'Stolen Supplies',
     giverNpcId: 'trader_wilkes',
     turnInNpcId: 'trader_wilkes',
-    text: 'Those bandits hit my last wagon and made off with four crates of goods — tools, salt, good Eastbrook linen. The crates are stacked around their camp in the southeast hills. Steal them back for me, would you?',
+    text: 'Those bandits hit my last wagon and made off with four crates of goods — tools, salt, good Eastbrook linen. The crates are stacked around their camp in the southwest hills. Steal them back for me, would you?',
     completionText: 'My crates! Barely a scratch on them. You are a wonder.',
     objectives: [
       { type: 'collect', itemId: 'supply_crate', count: 4, label: 'Stolen Supply Crate' },
@@ -921,7 +921,7 @@ export const ZONE1_QUESTS: Record<string, QuestDef> = {
     name: 'Mogger Must Fall',
     giverNpcId: 'marshal_redbrook',
     turnInNpcId: 'marshal_redbrook',
-    text: 'Mogger has split carts, flattened fences, and killed enough livestock to empty half the Vale. Do not face him alone. Take two strong companions into the eastern meadow and put the brute down for good.',
+    text: 'Mogger has split carts, flattened fences, and killed enough livestock to empty half the Vale. Do not face him alone. Take two strong companions into the western meadow and put the brute down for good.',
     completionText:
       "Mogger dead at last. Eastbrook's fields are safer, and you leave the Vale with one more tale worth retelling.",
     objectives: [{ type: 'kill', targetMobId: 'mogger', count: 1, label: 'Mogger slain' }],
@@ -970,21 +970,21 @@ export const ZONE1_CAMPS: CampDef[] = [
   { mobId: 'forest_wolf', center: { x: -15, z: 55 }, radius: 22, count: 7 },
   { mobId: 'forest_wolf', center: { x: 20, z: 70 }, radius: 20, count: 6 },
   { mobId: 'old_greyjaw', center: { x: 0, z: 95 }, radius: 8, count: 1 },
-  // Boars: east meadow
+  // Boars: west meadow
   { mobId: 'wild_boar', center: { x: 55, z: 12 }, radius: 22, count: 6 },
   { mobId: 'wild_boar', center: { x: 80, z: -15 }, radius: 18, count: 5 },
   { mobId: 'mogger', center: { x: 118, z: -26 }, radius: 5, count: 1 },
-  // Spiders: western woods
+  // Spiders: eastern woods
   { mobId: 'webwood_spider', center: { x: -60, z: 5 }, radius: 22, count: 7 },
-  // Murlocs: lake shore northwest — camp straddles the waterline
+  // Murlocs: lake shore northeast — camp straddles the waterline
   { mobId: 'mudfin_murloc', center: { x: -75, z: 57 }, radius: 14, count: 8 },
-  // Kobolds: mine southwest
+  // Kobolds: mine southeast
   { mobId: 'tunnel_rat', center: { x: -82, z: -62 }, radius: 20, count: 9 },
-  // Bandits: southeast camp
+  // Bandits: southwest camp
   { mobId: 'vale_bandit', center: { x: 65, z: -65 }, radius: 24, count: 7 },
   { mobId: 'vale_bandit', center: { x: 90, z: -90 }, radius: 16, count: 5 },
   { mobId: 'gorrak', center: { x: 92, z: -92 }, radius: 2, count: 1 },
-  // Undead: ruins northeast
+  // Undead: ruins northwest
   { mobId: 'restless_bones', center: { x: 80, z: 78 }, radius: 18, count: 8 },
   { mobId: 'captain_verlan', center: { x: 92, z: 90 }, radius: 4, count: 1 },
 ];
@@ -1050,31 +1050,31 @@ export const ZONE1_ROADS: { x: number; z: number }[][] = [
     { x: 8, z: 2 },
     { x: 30, z: 8 },
     { x: 55, z: 12 },
-  ], // east to boars
+  ], // west to boars
   [
     { x: 6, z: -6 },
     { x: 30, z: -30 },
     { x: 50, z: -50 },
     { x: 65, z: -65 },
-  ], // southeast to bandits
+  ], // southwest to bandits
   [
     { x: -8, z: 6 },
     { x: -35, z: 25 },
     { x: -58, z: 48 },
     { x: -66, z: 58 },
-  ], // northwest to lake
+  ], // northeast to lake
   [
     { x: -6, z: -6 },
     { x: -30, z: -28 },
     { x: -55, z: -45 },
     { x: -70, z: -55 },
-  ], // southwest to mine
+  ], // southeast to mine
   [
     { x: 6, z: 8 },
     { x: 35, z: 35 },
     { x: 60, z: 60 },
     { x: 78, z: 74 },
-  ], // northeast to ruins
+  ], // northwest to ruins
 ];
 
 // ---------------------------------------------------------------------------

@@ -81,10 +81,18 @@ export const GATHER_NODES: readonly GatherNodeDef[] = [
   node('wood_eastbrook_1', 'eastbrook_vale', 'wood', -62, 8, 1),
   node('wood_eastbrook_2', 'eastbrook_vale', 'wood', -57, -6, 1),
   node('wood_eastbrook_3', 'eastbrook_vale', 'wood', -68, 18, 1),
-  // herbs near Mirror Lake
-  node('herb_eastbrook_1', 'eastbrook_vale', 'herb', -86, 90, 1),
-  node('herb_eastbrook_2', 'eastbrook_vale', 'herb', -92, 80, 1),
-  node('herb_eastbrook_3', 'eastbrook_vale', 'herb', -80, 95, 1),
+  // herbs on the Mirror Lake SHORE. These three are the only herbalism nodes in
+  // the starting zone, and all three used to sit inside the lake basin: the
+  // heightfield carves a lake floor to WATER_LEVEL - 4 (world.ts), so each one
+  // was 4 yd under the surface. Nothing blocked harvesting them (our interact
+  // check is 2D and gathering has no swim gate), but a new herbalist had to swim
+  // out and dive to find any herb at all, and the vein rendered on a lake bottom.
+  // Moved onto the near shore, verified against terrainHeight at the fixed
+  // WORLD_SEED both at the node and around the full INTERACT_RANGE reach ring
+  // (tests/gather_nodes_dry.test.ts re-derives this).
+  node('herb_eastbrook_1', 'eastbrook_vale', 'herb', -57, 91, 1),
+  node('herb_eastbrook_2', 'eastbrook_vale', 'herb', -57, 82, 1),
+  node('herb_eastbrook_3', 'eastbrook_vale', 'herb', -58, 99, 1),
 
   // --- Mirefen Marsh (tier 1 approach nodes, plus one tier-2 each) ---
   node('ore_mirefen_1', 'mirefen_marsh', 'ore', 40, 340, 1),
@@ -93,17 +101,21 @@ export const GATHER_NODES: readonly GatherNodeDef[] = [
   node('wood_mirefen_1', 'mirefen_marsh', 'wood', 10, 330, 1),
   node('wood_mirefen_2', 'mirefen_marsh', 'wood', -15, 355, 1),
   node('wood_mirefen_3', 'mirefen_marsh', 'wood', -20, 315, 1),
-  node('herb_mirefen_1', 'mirefen_marsh', 'herb', 60, 385, 1),
-  node('herb_mirefen_2', 'mirefen_marsh', 'herb', -45, 452, 1),
+  // herb_mirefen_1/_2/_t2 sat in the widow and far lakes (4 yd under); ore_t2's
+  // reach ring clipped the waterline. All four pulled onto dry marsh, same rule
+  // as the Eastbrook herbs above.
+  node('herb_mirefen_1', 'mirefen_marsh', 'herb', 26, 395, 1),
+  node('herb_mirefen_2', 'mirefen_marsh', 'herb', -68, 459, 1),
   node('herb_mirefen_3', 'mirefen_marsh', 'herb', 30, 355, 1),
-  node('ore_mirefen_t2', 'mirefen_marsh', 'ore', 48, 352, 2),
+  node('ore_mirefen_t2', 'mirefen_marsh', 'ore', 36, 350, 2),
   node('wood_mirefen_t2', 'mirefen_marsh', 'wood', 2, 342, 2),
-  node('herb_mirefen_t2', 'mirefen_marsh', 'herb', 52, 396, 2),
+  node('herb_mirefen_t2', 'mirefen_marsh', 'herb', 23, 416, 2),
 
   // --- Thornpeak Heights (tiers 1 to 3) ---
   node('ore_thornpeak_1', 'thornpeak_heights', 'ore', 90, 608, 1),
   node('ore_thornpeak_2', 'thornpeak_heights', 'ore', 78, 630, 1),
-  node('wood_thornpeak_1', 'thornpeak_heights', 'wood', -55, 765, 1),
+  // shifted 8 yd off the tarn edge: its reach ring reached 2.4 yd under water
+  node('wood_thornpeak_1', 'thornpeak_heights', 'wood', -63, 771, 1),
   node('wood_thornpeak_2', 'thornpeak_heights', 'wood', -82, 782, 1),
   node('herb_thornpeak_1', 'thornpeak_heights', 'herb', 18, 648, 1),
   node('herb_thornpeak_2', 'thornpeak_heights', 'herb', -18, 678, 1),

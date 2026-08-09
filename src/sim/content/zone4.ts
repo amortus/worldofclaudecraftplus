@@ -1267,13 +1267,13 @@ export const ZONE4_CAMPS: CampDef[] = [
   // Ashen ghoul packs: the Bonefields
   { mobId: 'ashen_ghoul', center: { x: 80, z: 1075 }, radius: 20, count: 8 },
   { mobId: 'ashen_ghoul', center: { x: 60, z: 1095 }, radius: 16, count: 5 },
-  // Plague crawlers: the Stillmere mud, west
+  // Plague crawlers: the Stillmere mud, east
   { mobId: 'plague_crawler', center: { x: -70, z: 1100 }, radius: 20, count: 8 },
   { mobId: 'plague_crawler', center: { x: -90, z: 1085 }, radius: 16, count: 5 },
   // Corrupted acolytes: a chanting circle between hub and barrows
   { mobId: 'corrupted_acolyte', center: { x: 10, z: 1120 }, radius: 18, count: 7 },
   { mobId: 'corrupted_acolyte', center: { x: -15, z: 1135 }, radius: 14, count: 5 },
-  // Bone reavers: the deep Bonefields, east
+  // Bone reavers: the deep Bonefields, west
   { mobId: 'bone_reaver', center: { x: 95, z: 1110 }, radius: 20, count: 8 },
   { mobId: 'bone_reaver', center: { x: 70, z: 1130 }, radius: 16, count: 6 },
   // Barrow wraithlings + Morthax: the Hollow Barrows

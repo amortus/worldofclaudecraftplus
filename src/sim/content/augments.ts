@@ -118,7 +118,7 @@ export const AUGMENTS: AugmentDef[] = [
     special: { moveSpeedPct: 0.2 } },
   { id: 'aug_avatar', name: 'Avatar of War', tier: 'prismatic', classes: PHYSICAL,
     description: '+25% all damage, +25% maximum health, +300 armor. Walk it down.',
-    effect: { global: { meleeDmgPct: 0.25 }, stats: { maxHpPct: 0.25, armor: 300 } } },
+    effect: { global: { meleeDmgPct: 0.25, spellDmgPct: 0.25 }, stats: { maxHpPct: 0.25, armor: 300 } } },
   { id: 'aug_ascendant', name: 'Ascendant', tier: 'prismatic', roles: ['healer'],
     description: '+45% healing, +25% spell damage, +20% maximum health.',
     effect: { global: { healPct: 0.45, spellDmgPct: 0.25 }, stats: { maxHpPct: 0.2 } } },

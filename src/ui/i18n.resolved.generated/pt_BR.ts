@@ -7414,7 +7414,7 @@ export const pt_BR: EnTranslations = {
       },
       "q_supplies": {
         "title": "Suprimentos roubados",
-        "text": "Os bandidos levaram minha última carroça: ferramentas, sal e bom linho de Eastbrook. Recupere 4 caixas no acampamento sudeste.",
+        "text": "Os bandidos levaram minha última carroça: ferramentas, sal e bom linho de Eastbrook. Recupere 4 caixas no acampamento sudoeste.",
         "completion": "Minhas caixas! Quase sem arranhões. Você é uma maravilha.",
         "objectives": {
           "0": {
@@ -7857,7 +7857,7 @@ export const pt_BR: EnTranslations = {
       "q_shard_cores": {
         "title": "Núcleos da tempestade",
         "text": "No coração de cada elemental há um núcleo da tempestade. Seis juntos mostrarão o centro do distúrbio. Desconfio que já sei, {playerName}, e torço muito para estar errado.",
-        "completion": "Todos apontam ao sul como limalha para um ímã. Ao Santuário, {playerName}.",
+        "completion": "Todos apontam ao norte como limalha para um ímã. Ao Santuário, {playerName}.",
         "objectives": {
           "0": {
             "label": "Núcleo da tempestade"
@@ -7876,7 +7876,7 @@ export const pt_BR: EnTranslations = {
       },
       "q_zealots": {
         "title": "Cânticos no vento",
-        "text": "O vento traz cânticos dos picos do sul. Silencie 12 zelotes, {playerName}; cada voz calada compra outra noite de sono.",
+        "text": "O vento traz cânticos dos picos do norte. Silencie 12 zelotes, {playerName}; cada voz calada compra outra noite de sono.",
         "completion": "O vento está mais quieto. O que me preocupa não é o cântico, {playerName}, é que algo talvez responda.",
         "objectives": {
           "0": {
@@ -8025,7 +8025,7 @@ export const pt_BR: EnTranslations = {
       },
       "q_nythraxis_graves": {
         "title": "Túmulos dos esquecidos",
-        "text": "Já vi estas marcas antes, em três túmulos antigos ao redor do campo de batalha ao norte. O capitão Aldren jaz na elevação leste, o sumo sacerdote Malric perto da estrada central quebrada, e o assassino real Voss junto ao penhasco oeste. Toque cada túmulo e escute, {playerName}. Os mortos podem lembrar o que os vivos esqueceram.",
+        "text": "Já vi estas marcas antes, em três túmulos antigos ao redor do campo de batalha ao norte. O capitão Aldren jaz na elevação oeste, o sumo sacerdote Malric perto da estrada central quebrada, e o assassino real Voss junto ao penhasco leste. Toque cada túmulo e escute, {playerName}. Os mortos podem lembrar o que os vivos esqueceram.",
         "completion": "Aldren permaneceu leal, Malric se recusou a aceitar a morte e Voss viu o perigo antes de todos. Os três serviram ao mesmo rei esquecido.",
         "objectives": {
           "0": {
@@ -8041,7 +8041,7 @@ export const pt_BR: EnTranslations = {
       },
       "q_nythraxis_sealed_crypt": {
         "title": "A cripta abandonada",
-        "text": "As visões apontam para a cripta abandonada no penhasco oeste. Há uma velha lenda de que a cripta abrigava um rei. Talvez Thornpeak o tenha selado lá embaixo depois que o ritual de Malric o transformou em algo imortal. Entre na cripta e veja o que restou lá dentro.",
+        "text": "As visões apontam para a cripta abandonada no penhasco leste. Há uma velha lenda de que a cripta abrigava um rei. Talvez Thornpeak o tenha selado lá embaixo depois que o ritual de Malric o transformou em algo imortal. Entre na cripta e veja o que restou lá dentro.",
         "completion": "As metades da pedra-chave se encaixam, e o diário de Voss nomeia o que elas selaram: o anel-sinete do rei Nythraxis. Se o diário for verdadeiro, esse anel é a chave para sua tumba.",
         "objectives": {
           "0": {
@@ -8083,7 +8083,7 @@ export const pt_BR: EnTranslations = {
       },
       "q_mogger": {
         "title": "Mogger deve cair",
-        "text": "Mogger partiu carroças, achatou cercas e matou gado suficiente para esvaziar metade do Vale. Não o enfrente só. Leve dois companheiros fortes ao prado leste e derrube a fera de vez.",
+        "text": "Mogger partiu carroças, achatou cercas e matou gado suficiente para esvaziar metade do Vale. Não o enfrente só. Leve dois companheiros fortes ao prado oeste e derrube a fera de vez.",
         "completion": "Mogger está morto enfim. Os campos de Eastbrook estão mais seguros, e você deixa o Vale com mais uma história digna de ser contada.",
         "objectives": {
           "0": {
@@ -8579,7 +8579,7 @@ export const pt_BR: EnTranslations = {
       },
       "q_ev_boars": {
         "title": "Meat for the Kennels",
-        "text": "A working hound eats better than a militiaman, and Eastbrook is not about to vote me the difference. The boars in the east meadow are fat and stupid and there are far too many of them. Ten, {playerName}. Bring the carcasses to the edge of the meadow and I will send a cart.",
+        "text": "A working hound eats better than a militiaman, and Eastbrook is not about to vote me the difference. The boars in the west meadow are fat and stupid and there are far too many of them. Ten, {playerName}. Bring the carcasses to the edge of the meadow and I will send a cart.",
         "completion": "Ten head. That is the kennels fed into the frost, and the meadow will thank you for it come planting. Not every job worth doing has a song in it.",
         "objectives": {
           "0": {
@@ -8639,7 +8639,7 @@ export const pt_BR: EnTranslations = {
         "completion": "Quiet under the boards again. I walked the whole causeway this morning and stamped every plank of it like a fool, just to hear nothing answer.",
         "objectives": {
           "0": {
-            "label": "Fen Troll slain"
+            "label": "Mirefen Troll slain"
           }
         }
       },
@@ -8649,7 +8649,7 @@ export const pt_BR: EnTranslations = {
         "completion": "Twelve fewer picks in the dark. I have my apprentices down there now with a plumb line and a lot of swearing. If the curtain stands through the thaw it will be because you went first.",
         "objectives": {
           "0": {
-            "label": "Deeprock Kobold slain"
+            "label": "Deeprock Tunneler slain"
           }
         }
       },

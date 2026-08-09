@@ -623,7 +623,7 @@ export const ZONE2_CAMPS: CampDef[] = [
   { mobId: 'drowned_dead', center: { x: 90, z: 420 }, radius: 20, count: 8 },
   { mobId: 'drowned_dead', center: { x: 115, z: 450 }, radius: 16, count: 6 },
   { mobId: 'sloomtooth_the_drowned', center: { x: 118, z: 455 }, radius: 5, count: 1 },
-  // Trolls: barrow-mounds in the southeast
+  // Trolls: barrow-mounds in the northeast
   { mobId: 'fen_troll', center: { x: -80, z: 420 }, radius: 22, count: 7 },
   { mobId: 'fen_troll', center: { x: -105, z: 455 }, radius: 18, count: 6 },
   { mobId: 'grubjaw', center: { x: -120, z: 480 }, radius: 8, count: 1 },
@@ -634,7 +634,7 @@ export const ZONE2_CAMPS: CampDef[] = [
   { mobId: 'gravecaller_mender', center: { x: 18, z: 472 }, radius: 8, count: 2 },
   { mobId: 'sister_nhalia', center: { x: 24, z: 492 }, radius: 5, count: 1 },
   { mobId: 'deacon_voss', center: { x: 0, z: 510 }, radius: 2, count: 1 },
-  // Bog Bloats: volatile gas-bags drifting the dry eastern shelf of the marsh.
+  // Bog Bloats: volatile gas-bags drifting the dry western shelf of the marsh.
   // Listed last so their spawn draws never perturb the other camps' placement.
   { mobId: 'bog_bloat', center: { x: 72, z: 428 }, radius: 11, count: 5 },
   { mobId: 'bog_bloat', center: { x: 110, z: 440 }, radius: 11, count: 4 },
@@ -973,7 +973,7 @@ export const ZONE2_PROPS: ZonePropsDef = {
   wells: [{ x: 0, z: 302, r: 1.5 }],
   stalls: [{ x: -5, z: 310.5, rot: Math.PI / 2, r: 1.7 }],
   mines: [],
-  // fishing dock on the east shore of the big west lake
+  // fishing dock on the west shore of the big east lake
   docks: [{ x: -66, z: 305, rot: 1.68, hutLocal: { x: 2.8, z: 2.4, hw: 1.7, hd: 1.5 } }],
   tents: [
     // Gravecaller encampment

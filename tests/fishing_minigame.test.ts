@@ -151,7 +151,9 @@ describe('fishing minigame: the reel', () => {
   it('costs nothing but the schedule draw when the reel misses', () => {
     const { sim, rodId } = angler();
     sim.useItem(rodId);
-    sim.tick();
+    // Past the opening double-press grace (FISH_EARLY_REEL_GRACE_SEC) but still
+    // well short of the 3s minimum bite delay, so this is a genuine early reel.
+    while (sim.tickCount <= ((sim.player as any).fishGraceUntilTick as number)) sim.tick();
     const before = (sim as any).rng.s;
     sim.events = [];
     sim.useItem(rodId); // far too early
@@ -199,6 +201,10 @@ describe('fishing minigame: the reel', () => {
   it('re-pressing the rod reels instead of eating the busy guard', () => {
     const { sim, rodId } = angler();
     sim.useItem(rodId);
+    // Only the opening grace window denies a re-press as busy; once it closes,
+    // the reel arm outranks the busy guard again, which is the property this
+    // case exists for. See tests/fishing_grace.test.ts for the grace itself.
+    while (sim.tickCount <= ((sim.player as any).fishGraceUntilTick as number)) sim.tick();
     sim.events = [];
     sim.useItem(rodId);
     expect(sim.events.some((e) => e.type === 'error' && e.text === 'You are busy.')).toBe(false);

@@ -265,7 +265,11 @@ export const ZONE3_MOBS: Record<string, MobTemplate> = {
     // a tank holding the pack. The inverse of the Summoner's Silencing Shriek.
     disarm: { chance: 0.25, duration: 6, name: 'Disarming Smash', school: 'physical' },
     loot: [
-      { copper: 200, chance: 1 },
+      // Guaranteed coin sits in this zone's trash band (Thornpeak Ogre 75 at L15-16,
+      // Stormcrag Elemental 80 at L17-18, Wyrmcult Zealot 90 at L17-19), not four
+      // times it: eight of these share a camp with Drogmar, so an inflated per-kill
+      // guarantee turns the whole war-camp into a coin farm.
+      { copper: 85, chance: 1 },
       { itemId: 'ogre_toe_ring', chance: 0.5 },
     ],
     scale: 1.35,
@@ -279,6 +283,12 @@ export const ZONE3_MOBS: Record<string, MobTemplate> = {
     family: 'ogre',
     elite: true,
     boss: true,
+    // `boss`/`elite` do NOT slow respawn (sim.ts uses respawnMult, falling back to
+    // 4 only for `rare`), so without this Drogmar returned on the 25s base timer.
+    // 7.2 is the shipped cadence for a named quest kill target (Old Cragmaw in
+    // this file, Captain Verlan in zone1.ts), and q_drogmar has a hard kill
+    // objective on him.
+    respawnMult: 7.2,
     hpBase: 200,
     hpPerLevel: 30,
     dmgBase: 12,
@@ -294,7 +304,8 @@ export const ZONE3_MOBS: Record<string, MobTemplate> = {
     // the stacks back off.
     rampage: { ap: 20, maxStacks: 5, duration: 10, name: 'Battle Fury', school: 'physical' },
     loot: [
-      { copper: 2000, chance: 1 },
+      // Matches Marrowlord Varkas, the other zone3 named elite (zone3.ts, 650).
+      { copper: 650, chance: 1 },
       { itemId: 'drogmar_warboots', chance: 0.3 },
       { itemId: 'drogmars_skullcleaver', chance: 0.25 },
     ],
@@ -1287,7 +1298,7 @@ export const ZONE3_QUESTS: Record<string, QuestDef> = {
     turnInNpcId: 'loremaster_caddis',
     text: "At each elemental's heart sits a storm core — a knot of lightning bound in stone. Six of them, set side by side, will tell me where the disturbance is centered. I suspect I already know, $N, and I dearly hope that I am wrong.",
     completionText:
-      'Each core leans the same way, like iron filings to a lodestone. They point south, $N. To the Sanctum.',
+      'Each core leans the same way, like iron filings to a lodestone. They point north, $N. To the Sanctum.',
     objectives: [{ type: 'collect', itemId: 'storm_core', count: 6, label: 'Storm Core' }],
     xpReward: 3700,
     copperReward: 1800,
@@ -1319,7 +1330,7 @@ export const ZONE3_QUESTS: Record<string, QuestDef> = {
     name: 'Chants on the Wind',
     giverNpcId: 'brother_aldric_highwatch',
     turnInNpcId: 'brother_aldric_highwatch',
-    text: 'When the wind comes off the southern peaks, $N, it carries chanting. The Wyrmcult no longer hides — they have raised tents below the Sanctum and they sing to what sleeps beneath it. Silence twelve zealots. Every voice stilled buys the mountain another night of sleep.',
+    text: 'When the wind comes off the northern peaks, $N, it carries chanting. The Wyrmcult no longer hides — they have raised tents below the Sanctum and they sing to what sleeps beneath it. Silence twelve zealots. Every voice stilled buys the mountain another night of sleep.',
     completionText:
       'The wind is quieter. But what troubles me is not the chanting, $N — it is that something may be chanting back.',
     objectives: [
@@ -1587,7 +1598,7 @@ export const ZONE3_QUESTS: Record<string, QuestDef> = {
     name: 'Graves of the Forgotten',
     giverNpcId: 'brother_aldric_highwatch',
     turnInNpcId: 'brother_aldric_highwatch',
-    text: 'I have seen these marks before, on three old graves around the northern battlefield. Captain Aldren lies on the eastern rise, High Priest Malric near the central broken road, and Royal Assassin Voss by the western cliff. Touch each grave and listen, $N. The dead may remember what the living forgot.',
+    text: 'I have seen these marks before, on three old graves around the northern battlefield. Captain Aldren lies on the western rise, High Priest Malric near the central broken road, and Royal Assassin Voss by the eastern cliff. Touch each grave and listen, $N. The dead may remember what the living forgot.',
     completionText:
       'Aldren remained loyal, Malric refused to accept death, and Voss saw the danger before anyone else. All three served the same forgotten king.',
     objectives: [
@@ -1621,7 +1632,7 @@ export const ZONE3_QUESTS: Record<string, QuestDef> = {
     name: 'The Abandoned Crypt',
     giverNpcId: 'brother_aldric_highwatch',
     turnInNpcId: 'brother_aldric_highwatch',
-    text: "The visions point to the abandoned crypt in the western cliff. There is an old legend that the crypt housed a king. Perhaps Thornpeak sealed him below after Malric's ritual twisted him into something deathless. Enter the crypt and see what remains inside.",
+    text: "The visions point to the abandoned crypt in the eastern cliff. There is an old legend that the crypt housed a king. Perhaps Thornpeak sealed him below after Malric's ritual twisted him into something deathless. Enter the crypt and see what remains inside.",
     completionText:
       "The keystone halves fit together, and Voss's diary names what they sealed: the signet of King Nythraxis. If the diary is true, that signet is the key to his tomb.",
     objectives: [
@@ -1750,7 +1761,7 @@ export const ZONE3_CAMPS: CampDef[] = [
   { mobId: 'stormcrag_elemental', center: { x: 135, z: 795 }, radius: 16, count: 6 },
   { mobId: 'shardlord_kazzix', center: { x: 145, z: 815 }, radius: 8, count: 1 },
   // Wyrmcult: tents below the Sanctum. The (25, 845) pack's radius clipped the
-  // x=0 approach road, so it is nudged east to keep the central path clear; the
+  // x=0 approach road, so it is nudged west to keep the central path clear; the
   // tents still flank the gate.
   { mobId: 'wyrmcult_zealot', center: { x: 55, z: 820 }, radius: 20, count: 8 },
   { mobId: 'wyrmcult_zealot', center: { x: 34, z: 845 }, radius: 16, count: 6 },
@@ -1763,7 +1774,7 @@ export const ZONE3_CAMPS: CampDef[] = [
   { mobId: 'boneclad_revenant', center: { x: -40, z: 830 }, radius: 20, count: 8 },
   { mobId: 'boneclad_revenant', center: { x: -40, z: 838 }, radius: 16, count: 6 },
   { mobId: 'marrowlord_varkas', center: { x: -34, z: 842 }, radius: 5, count: 1 },
-  // Voskar the Emberwing: perched on a scorched crag east of the Sanctum tents,
+  // Voskar the Emberwing: perched on a scorched crag west of the Sanctum tents,
   // with two zealot drakebinders posted to keep their captive on its chain.
   { mobId: 'voskar_emberwing', center: { x: 80, z: 845 }, radius: 4, count: 1 },
   { mobId: 'wyrmcult_zealot', center: { x: 80, z: 845 }, radius: 7, count: 2 },

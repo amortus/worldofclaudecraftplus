@@ -1160,8 +1160,13 @@ describe('food, drink, vendor', () => {
     sim.player.facing = spot.facing;
     sim.addItem('simple_fishing_pole', 1);
     sim.useItem('simple_fishing_pole');
-    // The minimum bite delay is 3s, so a reel on the very next tick is early.
-    sim.tick();
+    // The minimum bite delay is 3s, so a reel well before it is early. Tick past
+    // the opening double-press grace first (see FISH_EARLY_REEL_GRACE_SEC): a
+    // press inside that window is treated as an accidental second press and is
+    // denied as busy rather than resolved as a reel.
+    const graceEnd = (sim.player as any).fishGraceUntilTick as number;
+    while (sim.tickCount <= graceEnd) sim.tick();
+    expect(sim.tickCount).toBeLessThan((sim.player as any).fishBiteTick as number);
     sim.events = [];
     sim.useItem('simple_fishing_pole');
     expect(sim.player.castingAbility).toBe(null);

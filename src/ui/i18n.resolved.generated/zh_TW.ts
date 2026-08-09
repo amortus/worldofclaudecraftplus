@@ -8579,7 +8579,7 @@ export const zh_TW: EnTranslations = {
       },
       "q_ev_boars": {
         "title": "Meat for the Kennels",
-        "text": "A working hound eats better than a militiaman, and Eastbrook is not about to vote me the difference. The boars in the east meadow are fat and stupid and there are far too many of them. Ten, {playerName}. Bring the carcasses to the edge of the meadow and I will send a cart.",
+        "text": "A working hound eats better than a militiaman, and Eastbrook is not about to vote me the difference. The boars in the west meadow are fat and stupid and there are far too many of them. Ten, {playerName}. Bring the carcasses to the edge of the meadow and I will send a cart.",
         "completion": "Ten head. That is the kennels fed into the frost, and the meadow will thank you for it come planting. Not every job worth doing has a song in it.",
         "objectives": {
           "0": {
@@ -8639,7 +8639,7 @@ export const zh_TW: EnTranslations = {
         "completion": "Quiet under the boards again. I walked the whole causeway this morning and stamped every plank of it like a fool, just to hear nothing answer.",
         "objectives": {
           "0": {
-            "label": "Fen Troll slain"
+            "label": "Mirefen Troll slain"
           }
         }
       },
@@ -8649,7 +8649,7 @@ export const zh_TW: EnTranslations = {
         "completion": "Twelve fewer picks in the dark. I have my apprentices down there now with a plumb line and a lot of swearing. If the curtain stands through the thaw it will be because you went first.",
         "objectives": {
           "0": {
-            "label": "Deeprock Kobold slain"
+            "label": "Deeprock Tunneler slain"
           }
         }
       },
