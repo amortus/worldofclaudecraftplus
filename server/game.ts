@@ -349,6 +349,10 @@ function dynamicFields(e: Entity): Record<string, unknown> {
     mhp: e.maxHp,
   };
   if (e.dead) out.dead = 1;
+  // A released spirit: everyone sees it (the renderer draws a ghost, not a body),
+  // so it rides the shared dynamic fields. The corpse POINT does not: it is
+  // per-player and goes out with the self record only (see selfWireJson).
+  if (e.ghost) out.gh = 1;
   if (e.lootable) out.loot = 1;
   if (e.hostile) out.h = 1;
   if (e.castingAbility) {
@@ -1755,7 +1759,11 @@ export class GameServer {
       if (typeof msg.seq === 'number' && Number.isFinite(msg.seq) && msg.seq > 0) {
         session.lastInputSeq = Math.max(session.lastInputSeq, Math.floor(msg.seq));
       }
-      if (frame.facing !== null && !e.dead) {
+      // A corpse does not turn, but a released SPIRIT does: the corpse run is a
+      // walk, and dropping its facing here would let a ghost move only along the
+      // heading it died on (offline it steers fine, so this would have been an
+      // online-only break).
+      if (frame.facing !== null && (!e.dead || e.ghost)) {
         e.facing = frame.facing;
       }
       this.botDetector.observeInput(session.botTrackingContext, frame, receivedAtMs);
@@ -1924,6 +1932,15 @@ export class GameServer {
         break;
       case 'release':
         sim.releaseSpirit(pid);
+        break;
+      // The two roads back from a corpse run. Both take no arguments and the Sim
+      // re-checks every gate (still a ghost? corpse in range? angel in reach?),
+      // so a forged or out-of-range command resolves to a `ghostDeny` event.
+      case 'rez_corpse':
+        sim.resurrectAtCorpse(pid);
+        break;
+      case 'rez_healer':
+        sim.resurrectAtSpiritHealer(pid);
         break;
       case 'challengeResponse':
         if (typeof msg.n === 'string' && typeof msg.r === 'string' && typeof msg.sig === 'string') {
@@ -2743,6 +2760,12 @@ export class GameServer {
         extra += `,"${key}":${s}`;
       }
     };
+    // Where this player's body lies, as [x,y,z], for the corpse-run UI (the arrow,
+    // the distance readout, and whether the Resurrect button lights up). Per-player
+    // and near-static while a corpse run is on, so it rides the delta guard rather
+    // than the per-tick dynamic fields: it ships once on release and once on
+    // resurrection, and never for the overwhelming majority of players who are alive.
+    maybe('cor', p.ghost && p.corpsePos ? [p.corpsePos.x, p.corpsePos.y, p.corpsePos.z] : null);
     maybe('inv', meta.inventory);
     maybe('buyback', meta.vendorBuyback);
     maybe('equip', meta.equipment);
