@@ -5,6 +5,8 @@
 // Each theme is a composed multi-track loop scheduled with a lookahead
 // timer; zone changes crossfade.
 
+import type { BiomeId } from '../sim/types';
+
 export type MusicZone =
   | 'town_eastbrook' | 'town_fenbridge' | 'town_highwatch'
   | 'vale' | 'vale_legacy' | 'marsh' | 'peaks'
@@ -34,17 +36,38 @@ export function shouldResetMusicForDungeonEntry(previousDungeonId: string | null
   return nextDungeonId !== null && previousDungeonId !== nextDungeonId;
 }
 
+// Every biome maps onto one of the three composed wilderness themes; only the
+// three original bands have a theme of their own. A biome with no bespoke
+// score leans on the closest one by MOOD: bright open country to the vale,
+// wet lowland to the marsh, cold or grim upland to the somber peaks. Keep this
+// total: an unmapped biome would fall silent in the field.
+const BIOME_MUSIC: Record<BiomeId, MusicZone> = {
+  vale: 'vale',
+  marsh: 'marsh',
+  peaks: 'peaks',
+  blight: 'peaks',
+  dusk: 'peaks',
+  ember: 'peaks',
+  frost: 'peaks',
+  amber: 'vale',
+  fen: 'marsh',
+  night: 'marsh',
+  haunt: 'peaks',
+  jungle: 'marsh',
+  garden: 'vale',
+  gale: 'vale',
+};
+
 /** Pick the soundtrack layer from world position context. */
 export function musicZoneForLocation(
   zoneId: string,
-  biome: 'vale' | 'marsh' | 'peaks' | 'blight',
+  biome: BiomeId,
   inHub: boolean,
   inDungeon: boolean,
   dungeonId: string | null = null,
 ): MusicZone {
   if (inDungeon) return dungeonId ? dungeonMusicZoneForDungeon(dungeonId) : 'dungeon_hollow_crypt';
-  // blight has no bespoke theme yet; lean on the somber peaks layer
-  const biomeMusic: MusicZone = biome === 'blight' ? 'peaks' : biome;
+  const biomeMusic: MusicZone = BIOME_MUSIC[biome];
   if (inHub) return TOWN_MUSIC[zoneId] ?? biomeMusic;
   return ZONE_MUSIC[zoneId] ?? biomeMusic;
 }

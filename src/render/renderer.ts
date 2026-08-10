@@ -123,7 +123,7 @@ import { TravelSpeedFxPainter } from './travel_speed_fx_painter';
 import { Vfx } from './vfx';
 import { ViewCreateRetryGate } from './view_create_retry';
 import { buildWater, type WaterView } from './water';
-import { Weather } from './weather';
+import { biomePrecip, Weather } from './weather';
 
 const NAMEPLATE_RANGE = 55;
 const NAMEPLATE_RANGE_SQ = NAMEPLATE_RANGE * NAMEPLATE_RANGE;
@@ -1514,9 +1514,13 @@ export class Renderer {
     if (groundHeight(x, z, this.sim.cfg.seed) < WATER_LEVEL && y <= WATER_LEVEL + 0.3)
       return 'water';
     const biome = zoneBiomeAt(x, z);
-    if (biome === 'vale') return 'grass';
-    if (biome === 'marsh') return 'dirt';
-    return this.weatherOn ? 'snow' : 'stone'; // peaks: snowy when weather is on
+    if (biome === 'vale' || biome === 'fen' || biome === 'jungle' || biome === 'garden'
+      || biome === 'night' || biome === 'gale') return 'grass';
+    if (biome === 'marsh' || biome === 'haunt' || biome === 'amber'
+      || biome === 'dusk' || biome === 'ember') return 'dirt';
+    if (biome === 'frost') return 'snow'; // snowbound whatever the weather setting
+    // peaks and blight keep the surface they shipped with
+    return this.weatherOn ? 'snow' : 'stone';
   }
 
   /** Vertical camera field of view in degrees (55..100, default 60). */
@@ -2101,7 +2105,7 @@ export class Renderer {
     this.sky.position.set(this.camera.position.x, 0, this.camera.position.z);
     this.sky.visible = this.fogState === 'outdoor';
     if (this.sky.visible) {
-      this.skyView.setCameraZ(this.camera.position.z, dt);
+      this.skyView.setCameraPos(this.camera.position.x, this.camera.position.z, dt);
       this.updateEnvBiome(dt);
     }
     for (const sp of this.sunSprites) {
@@ -2764,7 +2768,7 @@ export class Renderer {
             .slice(0, this.lowGfx ? 3 : 8);
           for (const z of zs) {
             if (performance.now() >= deadline) break;
-            this.skyView.setCameraZ(z, 1 / 20);
+            this.skyView.setCameraPos(p.pos.x, z, 1 / 20);
             this.renderPrewarmPass(1 / 60);
             renderPasses++;
           }
@@ -3558,6 +3562,21 @@ export class Renderer {
     // blight: heavy, close, sickly-GREEN fog - the corruption hanging in the dead
     // air of the Ashen Wastes (toxic green over the whole zone)
     blight: { color: 0x4a6e3a, near: 45, far: 200 },
+    // Upstream's own presets for the ten new biomes, with ONE change: `far` is
+    // capped at 560, the widest we ship (the peaks). Fog far drives terrain,
+    // prop and foliage culling, so upstream's open realms (jungle 600, garden
+    // 630, gale 645) would quietly widen the drawn area past anything the A14
+    // has ever been measured on. Colour and `near` are theirs untouched.
+    dusk: { color: 0xc9a3bd, near: 115, far: 400 }, // permanent rose-mauve murk
+    ember: { color: 0x9a5844, near: 115, far: 385 }, // scorched volcanic haze
+    frost: { color: 0xa9bed2, near: 95, far: 325 }, // icy mist, the coldest sightlines
+    amber: { color: 0xdec18e, near: 130, far: 430 }, // warm gold under an endless afternoon
+    fen: { color: 0xb7d0c6, near: 140, far: 510 }, // clear airy morning
+    night: { color: 0x8d7fc0, near: 110, far: 460 }, // lavender dream-haze
+    haunt: { color: 0x454c46, near: 85, far: 265 }, // dead-grey murk, tightest outdoors
+    jungle: { color: 0xc2e0d0, near: 165, far: 560 }, // bright humid haze
+    garden: { color: 0xc6ddc6, near: 175, far: 560 }, // crystal parkland air
+    gale: { color: 0xccc9d8, near: 170, far: 560 }, // scrubbed salt air off the sea
   };
   private static LOW_FOG = { color: 0xa6c6e0, near: 70, far: 260 };
   // low-gfx fog is a single global preset; in the blight zone swap it for the same
@@ -3752,7 +3771,7 @@ export class Renderer {
   // brief intensity dip masks the hard texture swap, then eases back like fog.
   private updateEnvBiome(dt: number): void {
     if (this.lowGfx || this.envRTs.size < 2) return;
-    const blend = this.skyView.biomeAt(this.camera.position.z);
+    const blend = this.skyView.biomeAt(this.camera.position.x, this.camera.position.z);
     const dominant = blend.t < 0.5 ? blend.from : blend.to;
     if (dominant !== this.envBiome && this.envRTs.has(dominant)) {
       this.envBiome = dominant;
@@ -4538,7 +4557,7 @@ export class Renderer {
       this.sim.cfg.seed,
     );
     if (this.sky.visible) {
-      this.skyView.setCameraZ(this.camera.position.z, dt);
+      this.skyView.setCameraPos(this.camera.position.x, this.camera.position.z, dt);
       this.updateEnvBiome(dt);
     }
     // precipitation only falls outdoors; indoors/underwater pass null to clear
@@ -4906,14 +4925,7 @@ export class Renderer {
       sink.setListener(cpx, cpy, cpz, fx / fl, fy / fl, fz / fl);
       const inDungeon = px > DUNGEON_X_THRESHOLD;
       const biome = zoneBiomeAt(px, pz);
-      const precip =
-        !this.weatherOn || inDungeon
-          ? null
-          : biome === 'peaks'
-            ? 'snow'
-            : biome === 'marsh'
-              ? 'rain'
-              : null;
+      const precip = !this.weatherOn || inDungeon ? null : biomePrecip(biome);
       // Only at the water's edge / in it — sampled at the player, so a loose
       // threshold made the loop bleed across the low marsh from far off.
       const nearWater = !inDungeon && groundHeight(px, pz, seed) < WATER_LEVEL + 0.4;

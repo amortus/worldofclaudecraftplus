@@ -1152,7 +1152,35 @@ export interface DungeonDef {
   leaveText: string;
 }
 
-export type BiomeId = 'vale' | 'marsh' | 'peaks' | 'blight';
+// The overworld biome palette. `vale`/`marsh`/`peaks` are the original strip
+// bands and `blight` is ours (the Ashen Wastes); the ten below are ported from
+// upstream's overworld realms, palette and terrain shaping together, so a new
+// zone can read as its own place instead of a recoloured vale. Upstream's four
+// instance-only members (beach/desert/volcano/cave) are deliberately NOT here:
+// they exist to back a map-editor paint brush we do not have.
+//
+// Every member must carry a full row in all of the exhaustive
+// `Record<BiomeId, ...>` tables (sim/world.ts BIOME_SHAPE; render/terrain.ts
+// BIOME_PALETTE + ROCK_SLOPE_START; render/foliage.ts's five tint tables;
+// render/foliage_scatter.ts DRESS_DENSITY; render/motes.ts MOTE_TINT;
+// render/renderer.ts BIOME_FOG; render/sky.ts's six sky tables) or it will not
+// compile. `tests/biomes_tables.test.ts` also checks the non-exhaustive
+// branch sites (dressing kind, precipitation, ambience, music).
+export type BiomeId =
+  | 'vale'
+  | 'marsh'
+  | 'peaks'
+  | 'blight'
+  | 'dusk'
+  | 'ember'
+  | 'frost'
+  | 'amber'
+  | 'fen'
+  | 'night'
+  | 'haunt'
+  | 'jungle'
+  | 'garden'
+  | 'gale';
 
 export interface ZoneDef {
   id: string;

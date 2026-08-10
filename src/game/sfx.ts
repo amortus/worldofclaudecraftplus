@@ -9,6 +9,7 @@
 // per-key cooldown, and a tiny pool of persistent looping sources for ambience
 // and sustained spell casts (cross-faded by gain, never restarted).
 
+import type { BiomeId } from '../sim/types';
 import { SFX_CLIPS } from './sfx_manifest.generated';
 
 const SAMPLE_GAIN = 0.85; // base level for sampled clips; sfxVolume multiplies this
@@ -289,13 +290,20 @@ class Sfx {
   /** Cross-fade the global ambience loops to match the player's surroundings.
    *  These are continuous background beds, kept well under the foreground
    *  footstep/jump/combat one-shots so movement always reads clearly over them. */
-  ambience(biome: 'vale' | 'marsh' | 'peaks' | 'blight', inDungeon: boolean, precip: 'snow' | 'rain' | null, nearWater: boolean): void {
+  ambience(biome: BiomeId, inDungeon: boolean, precip: 'snow' | 'rain' | null, nearWater: boolean): void {
+    // Three wind beds cover fourteen biomes: each new biome leans on the one
+    // closest in mood, exactly as the blight already leant on the marsh's.
+    // No new audio assets, and the sim is untouched (this is presentation).
+    const vale = biome === 'vale' || biome === 'garden' || biome === 'amber' || biome === 'jungle';
+    const marsh = biome === 'marsh' || biome === 'blight' || biome === 'fen'
+      || biome === 'haunt' || biome === 'night';
+    const peaks = biome === 'peaks' || biome === 'frost' || biome === 'gale'
+      || biome === 'dusk' || biome === 'ember';
     this.ambient('amb_dungeon', inDungeon ? 0.3 : 0);
-    this.ambient('amb_wind_vale', !inDungeon && biome === 'vale' ? 0.12 : 0);
-    this.ambient('amb_birds', !inDungeon && biome === 'vale' ? 0.1 : 0);
-    // blight leans on the marsh's dead wind bed (no new asset)
-    this.ambient('amb_wind_marsh', !inDungeon && (biome === 'marsh' || biome === 'blight') ? 0.13 : 0);
-    this.ambient('amb_wind_peaks', !inDungeon && biome === 'peaks' ? 0.18 : 0);
+    this.ambient('amb_wind_vale', !inDungeon && vale ? 0.12 : 0);
+    this.ambient('amb_birds', !inDungeon && (biome === 'vale' || biome === 'jungle') ? 0.1 : 0);
+    this.ambient('amb_wind_marsh', !inDungeon && marsh ? 0.13 : 0);
+    this.ambient('amb_wind_peaks', !inDungeon && peaks ? 0.18 : 0);
     this.ambient('amb_rain', precip === 'rain' ? 0.11 : 0); // sharp clip — kept very low
     this.ambient('amb_snow', precip === 'snow' ? 0.13 : 0);
     this.ambient('amb_water', nearWater ? 0.18 : 0);

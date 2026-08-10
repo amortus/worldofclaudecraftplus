@@ -21,7 +21,33 @@ export interface MotesView {
 
 // per-biome speck colour — warm gold pollen, sickly green marsh spores, pale
 // blue snow dust; kept lighter than GRASS_TINT so they read as glints in air
-const MOTE_TINT: Record<BiomeId, number> = { vale: 0xf4e6a0, marsh: 0xb8d28a, peaks: 0xdce8f2, blight: 0x8a857a };
+const MOTE_TINT: Record<BiomeId, number> = {
+  vale: 0xf4e6a0, marsh: 0xb8d28a, peaks: 0xdce8f2, blight: 0x8a857a,
+  dusk: 0xf2b8e0,
+  ember: 0xffa868,
+  frost: 0xcfe8ff,
+  amber: 0xffd98a, // drifting golden leaves
+  fen: 0xeaffd0, // drifting pollen and midge-glow
+  night: 0xf2dcff, // dream sparkles: pale rose-white drift
+  haunt: 0xc2d4b4, // drifting grave-pale spores
+  jungle: 0xfff2b0, // sun-caught pollen and midges
+  garden: 0xffccd8, // drifting rose petals
+  gale: 0xeef6ff, // wind-torn sea spray
+};
+
+// Biomes that drift NO motes: upstream's headland and parkland realms read
+// cleaner without airborne glints. A mote whose candidate spot lands on one of
+// these simply fails placement and is retried elsewhere, exactly like a spot
+// over open water.
+const MOTELESS_BIOMES: ReadonlySet<BiomeId> = new Set<BiomeId>([
+  'jungle',
+  'fen',
+  'gale',
+  'garden',
+  'ember',
+  'night',
+  'haunt',
+]);
 
 const RADIUS = 26; // motes live within this ring of the player
 const EDGE = 8; // keep clear of the world rim
@@ -93,6 +119,8 @@ export function buildMotes(seed: number): MotesView {
     // per-row rim + strict zone containment: no motes drifting over the void
     // the grid's holes leave beside a column zone
     if (!insideWorldRim(x, z, EDGE) || !zoneContaining(x, z)) return false;
+    const biome = zoneBiomeAt(x, z);
+    if (MOTELESS_BIOMES.has(biome)) return false;
     const h = terrainHeight(x, z, seed);
     if (h < WATER_LEVEL + 0.5) return false; // no motes hovering over open water
     homeX[i] = x;
@@ -103,7 +131,7 @@ export function buildMotes(seed: number): MotesView {
     positions[i * 3] = x;
     positions[i * 3 + 1] = h + bobAmp[i];
     positions[i * 3 + 2] = z;
-    tmpColor.setHex(MOTE_TINT[zoneBiomeAt(x, z)]);
+    tmpColor.setHex(MOTE_TINT[biome]);
     colors[i * 3] = tmpColor.r;
     colors[i * 3 + 1] = tmpColor.g;
     colors[i * 3 + 2] = tmpColor.b;

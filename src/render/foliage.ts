@@ -104,13 +104,85 @@ for (const urls of Object.values(MODEL_URLS)) {
 // Desaturated biome tints riding instanceColor. The textured models carry
 // their own hue, so tints are lerped most of the way to white before use
 // (raw tints multiply into the albedo and read as grime).
-const PINE_TINT: Record<BiomeId, number> = { vale: 0x9bb48d, marsh: 0x87966b, peaks: 0x6f8a7a, blight: 0x6a6658 };
-const OAK_TINT: Record<BiomeId, number> = { vale: 0xa7b886, marsh: 0x8d9865, peaks: 0x92a37f, blight: 0x6b6452 };
-const ROCK_TINT: Record<BiomeId, number> = { vale: 0x8d8d85, marsh: 0x565c4e, peaks: 0x878e99, blight: 0x5a5852 };
-const TRUNK_TINT: Record<BiomeId, number> = { vale: 0xffffff, marsh: 0xd2d8bc, peaks: 0xd9dde4, blight: 0x8a8276 };
-const GRASS_TINT: Record<BiomeId, number> = { vale: 0xdde4c0, marsh: 0xbfc492, peaks: 0xc2cec8, blight: 0x8a8470 };
+const PINE_TINT: Record<BiomeId, number> = {
+  vale: 0x9bb48d, marsh: 0x87966b, peaks: 0x6f8a7a, blight: 0x6a6658,
+  dusk: 0x7f93ab,
+  ember: 0x93a06b,
+  frost: 0x7e99a2, // frosted but dark: pines hold their shape at distance
+  amber: 0xb89a52, // autumn-burnished pines
+  fen: 0x8fae7e,
+  night: 0x8040e0, // dream-violet boughs (soften plus green albedo wash it out)
+  haunt: 0x36443a, // dead dark needles
+  jungle: 0x3f9450, // deep tropical green
+  garden: 0x4a8a4e, // clipped evergreen
+  gale: 0x5a8a58, // wind-hardened scrub
+};
+const OAK_TINT: Record<BiomeId, number> = {
+  vale: 0xa7b886, marsh: 0x8d9865, peaks: 0x92a37f, blight: 0x6b6452,
+  dusk: 0x9c92b4,
+  ember: 0xa8a060,
+  frost: 0x84989e,
+  amber: 0xd8852f, // fire-orange canopy
+  fen: 0x9dc47e, // lush wetland green
+  night: 0xb03cf0, // vivid orchid canopy
+  haunt: 0x424c38, // gnarled grey-green canopy
+  jungle: 0x46b04e, // lush broadleaf canopy
+  garden: 0x55a655, // specimen-tree green
+  gale: 0x669660, // stunted wind-bent crowns
+};
+const ROCK_TINT: Record<BiomeId, number> = {
+  vale: 0x8d8d85, marsh: 0x565c4e, peaks: 0x878e99, blight: 0x5a5852,
+  dusk: 0x8f88a6,
+  ember: 0x9a7a62,
+  frost: 0x9aa8b8,
+  amber: 0x9a8a70,
+  fen: 0x7e8a76,
+  night: 0xa094c8,
+  haunt: 0x565a50,
+  jungle: 0x7e8a6a,
+  garden: 0x9a9a92, // marble and pale stone
+  gale: 0x8a8e90, // salt-grey sea rock
+};
+const TRUNK_TINT: Record<BiomeId, number> = {
+  vale: 0xffffff, marsh: 0xd2d8bc, peaks: 0xd9dde4, blight: 0x8a8276,
+  dusk: 0xd0c8e0,
+  ember: 0xe0cfa8,
+  frost: 0xe4e9f0,
+  amber: 0xd8c0a0,
+  fen: 0xc8cfae,
+  night: 0xe0d4ec,
+  haunt: 0x9a948a, // grey weathered bark
+  jungle: 0xd8c4a0,
+  garden: 0xcfc4b0,
+  gale: 0x9a8a74,
+};
+const GRASS_TINT: Record<BiomeId, number> = {
+  vale: 0xdde4c0, marsh: 0xbfc492, peaks: 0xc2cec8, blight: 0x8a8470,
+  dusk: 0xccc3da,
+  ember: 0xd8c890,
+  frost: 0xdde8f2,
+  amber: 0xe8cf8a,
+  fen: 0xcfe4b0,
+  night: 0xe598ff, // orchid dream grass (the green blade albedo mutes it)
+  haunt: 0x99a382, // sickly pale grass
+  jungle: 0xc4ec96, // bright wet tropical grass
+  garden: 0xd0eeb0, // mown lawn
+  gale: 0xb8d09a, // wind-silvered grass
+};
 const SWAMP_CANOPY_TINT = 0x7e8b58;
-const DRESS_TINT: Record<BiomeId, number> = { vale: 0xaebf8e, marsh: 0x8d9865, peaks: 0x93a78f, blight: 0x6b6658 };
+const DRESS_TINT: Record<BiomeId, number> = {
+  vale: 0xaebf8e, marsh: 0x8d9865, peaks: 0x93a78f, blight: 0x6b6658,
+  dusk: 0x9e94ba,
+  ember: 0xb8a878,
+  frost: 0xc8d8e0,
+  amber: 0xd8a860,
+  fen: 0xa8c48e,
+  night: 0xc078f2,
+  haunt: 0x707a5e,
+  jungle: 0x6cc064,
+  garden: 0x8cc27a,
+  gale: 0x84a878,
+};
 // how far tints collapse toward white (1 = no tint at all)
 const LEAF_TINT_SOFTEN = 0.6;
 const BARK_TINT_SOFTEN = 0.85;

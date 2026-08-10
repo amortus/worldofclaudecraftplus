@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {
-  DUNGEON_X_THRESHOLD, STRIP_ZONES, WORLD_MAX_X, WORLD_MAX_Z, WORLD_MIN_Z,
+  columnBlendAt, COLUMN_ZONES, DUNGEON_X_THRESHOLD, STRIP_ZONES, WORLD_MAX_X, WORLD_MAX_Z, WORLD_MIN_Z,
   worldHalfWidthAt, WORLD_SIZE, ZONES,
 } from '../sim/data';
 import type { BiomeId } from '../sim/types';
@@ -139,10 +139,35 @@ const BIOME_PALETTE: Record<BiomeId, { grass: number; grassDark: number; grassYe
   peaks: { grass: 0x687a55, grassDark: 0x4d5c45, grassYellow: 0x8d9168, dirt: 0x7d6a50, sand: 0xb0a486 },
   // blight: dead, desaturated dark grey-brown ground (no living green at all)
   blight: { grass: 0x3c3a33, grassDark: 0x2b2a24, grassYellow: 0x46433a, dirt: 0x322d27, sand: 0x423c33 },
+  // dusk: violet-cast glade greens over dusty rose soil
+  dusk: { grass: 0x6d7566, grassDark: 0x4c4e58, grassYellow: 0x8c8078, dirt: 0x6e5a68, sand: 0xa593a2 },
+  // ember: scorched ochre waste
+  ember: { grass: 0xc9a86a, grassDark: 0xa8854f, grassYellow: 0xd8bc80, dirt: 0x9a6a44, sand: 0xe0c088 },
+  // frost: snowfields over blue-grey rock
+  frost: { grass: 0xeef4fa, grassDark: 0xd8e4f0, grassYellow: 0xcfdce8, dirt: 0x9fb0c0, sand: 0xdfe8f2 },
+  // amber: fire-gold autumn weald (runs hot: the splat albedo is green-authored)
+  amber: { grass: 0xc9a44e, grassDark: 0xa88438, grassYellow: 0xe0c060, dirt: 0x8a6a42, sand: 0xd8bc84 },
+  // fen: lush wet green over peat
+  fen: { grass: 0x7cab68, grassDark: 0x5c8a52, grassYellow: 0xa2c47a, dirt: 0x6e6448, sand: 0xb8bc8e },
+  // night: the dream meadows run violet, and hot, for the same reason amber does
+  night: { grass: 0xc06cf2, grassDark: 0x8f4ecc, grassYellow: 0xe08cf8, dirt: 0x8a5cb8, sand: 0xd8a8f0 },
+  // haunt: dead mossy floor, cold wet earth, everything a shade too dark
+  haunt: { grass: 0x46543e, grassDark: 0x2e382c, grassYellow: 0x5a6644, dirt: 0x453c34, sand: 0x6b6754 },
+  // jungle: saturated tropical green over bright coral sand
+  jungle: { grass: 0x3f9448, grassDark: 0x2c7038, grassYellow: 0x74b04e, dirt: 0x8a6e4a, sand: 0xf2e2b4 },
+  // garden: mown lawn over warm gravel, tidy even where it has run wild
+  garden: { grass: 0x58a04e, grassDark: 0x3f7e3c, grassYellow: 0x86b85c, dirt: 0x8a7a5a, sand: 0xd8cca8 },
+  // gale: wind-dried sage downs over grey shingle
+  gale: { grass: 0x6a9a62, grassDark: 0x4c7a4e, grassYellow: 0x9ab070, dirt: 0x7a6e58, sand: 0xd8d0b8 },
 };
 
 // rock starts creeping in at lower slopes in the peaks, later in the marsh
-const ROCK_SLOPE_START: Record<BiomeId, number> = { vale: 0.55, marsh: 0.62, peaks: 0.45, blight: 0.5 };
+const ROCK_SLOPE_START: Record<BiomeId, number> = {
+  vale: 0.55, marsh: 0.62, peaks: 0.45, blight: 0.5,
+  dusk: 0.52, ember: 0.5, frost: 0.5, amber: 0.52, fen: 0.6,
+  night: 0.55, haunt: 0.58, jungle: 0.6, garden: 0.6,
+  gale: 0.5, // the sea cliffs crag early
+};
 
 const clamp01 = (v: number): number => Math.max(0, Math.min(1, v));
 
@@ -196,15 +221,24 @@ const lowShadeC = new THREE.Color(0x60745b);
 // full-width bands) and not ZONES: the grid's column zones are appended to
 // ZONES after the bands, share the vale's z band, and would otherwise blend
 // their palette into the northmost band's rim (see STRIP_ZONES in sim/data).
-const zonePalettes = STRIP_ZONES.map((zn) => {
+const toPalette = (zn: { biome: BiomeId }) => {
   const p = BIOME_PALETTE[zn.biome];
   return {
     grass: new THREE.Color(p.grass), grassDark: new THREE.Color(p.grassDark),
     grassYellow: new THREE.Color(p.grassYellow), dirt: new THREE.Color(p.dirt), sand: new THREE.Color(p.sand),
   };
-});
+};
+const zonePalettes = STRIP_ZONES.map(toPalette);
+// ...and the column zones, blended in SIDEWAYS by the same window the
+// heightfield's shape blend uses (sim/world.ts shapeAt). Without this a column
+// zone paints the ground of whatever band it shares a z with, so both shipped
+// columns rendered as vale despite being marsh and peaks, and any new column
+// biome would be invisible no matter what its palette said. `columnBlendAt`
+// returns exactly +0 outside its window, so every full-width band keeps the
+// exact colour it had.
+const columnPalettes = COLUMN_ZONES.map(toPalette);
 
-function paletteAt(z: number): void {
+function paletteAt(x: number, z: number): void {
   grassC.copy(zonePalettes[0].grass);
   grassDarkC.copy(zonePalettes[0].grassDark);
   grassYellowC.copy(zonePalettes[0].grassYellow);
@@ -221,11 +255,21 @@ function paletteAt(z: number): void {
     dirtC.lerp(zonePalettes[i + 1].dirt, tt);
     sandC.lerp(zonePalettes[i + 1].sand, tt);
   }
+  for (let i = 0; i < COLUMN_ZONES.length; i++) {
+    const tt = columnBlendAt(COLUMN_ZONES[i], x, z);
+    if (tt <= 0) continue;
+    grassC.lerp(columnPalettes[i].grass, tt);
+    grassDarkC.lerp(columnPalettes[i].grassDark, tt);
+    grassYellowC.lerp(columnPalettes[i].grassYellow, tt);
+    dirtC.lerp(columnPalettes[i].dirt, tt);
+    sandC.lerp(columnPalettes[i].sand, tt);
+  }
 }
 
-// How "marsh" a given z is — mirrors the palette/heightfield blend windows so
-// the mud texture fades in exactly where the marsh palette does.
-function marshWeightAt(z: number): number {
+// How "marsh" a given position is — mirrors the palette/heightfield blend
+// windows (bands northward, columns sideways) so the mud texture fades in
+// exactly where the marsh palette does.
+function marshWeightAt(x: number, z: number): number {
   let w = STRIP_ZONES[0].biome === 'marsh' ? 1 : 0;
   for (let i = 0; i + 1 < STRIP_ZONES.length; i++) {
     const b = STRIP_ZONES[i].zMax;
@@ -233,6 +277,11 @@ function marshWeightAt(z: number): number {
     const tt = t * t * (3 - 2 * t);
     if (tt <= 0) break;
     w += ((STRIP_ZONES[i + 1].biome === 'marsh' ? 1 : 0) - w) * tt;
+  }
+  for (let i = 0; i < COLUMN_ZONES.length; i++) {
+    const tt = columnBlendAt(COLUMN_ZONES[i], x, z);
+    if (tt <= 0) continue;
+    w += ((COLUMN_ZONES[i].biome === 'marsh' ? 1 : 0) - w) * tt;
   }
   return w;
 }
@@ -286,7 +335,7 @@ function sampleVertex(x: number, z: number, seed: number, out: Float64Array, o: 
   out[o + S_NORMAL + 1] = invLen;
   out[o + S_NORMAL + 2] = -(hz / (2 * SLOPE_EPS)) * invLen;
 
-  paletteAt(z);
+  paletteAt(x, z);
   const biome = zoneBiomeAt(x, z);
   const w = splatScratch;
   w[0] = 1;
@@ -372,7 +421,7 @@ function sampleVertex(x: number, z: number, seed: number, out: Float64Array, o: 
     lerpSplat(w, 2, rim * 0.85);
   }
   // mud rides the dirt layer wherever the marsh palette is active
-  const mud = marshWeightAt(z);
+  const mud = marshWeightAt(x, z);
   if (GFX.lowPlus && !GFX.terrainSplat) {
     const ridge = clamp01((slope - 0.22) * 1.6);
     const lowland = clamp01((WATER_LEVEL + 7 - h) / 12);

@@ -46,7 +46,19 @@ export interface DressingSpot {
 export const DRESS_STEP_HIGH = 12;
 export const DRESS_STEP_LOW = 10;
 // per-biome spawn chance per grid cell (blight is bare ash: none)
-export const DRESS_DENSITY: Record<BiomeId, number> = { vale: 0.26, marsh: 0.26, peaks: 0.15, blight: 0 };
+export const DRESS_DENSITY: Record<BiomeId, number> = {
+  vale: 0.26, marsh: 0.26, peaks: 0.15, blight: 0,
+  dusk: 0.24,
+  ember: 0.18,
+  frost: 0.08,
+  amber: 0.34,
+  fen: 0.8,
+  night: 0.32,
+  haunt: 0.3,
+  jungle: 0.5,
+  garden: 0.4,
+  gale: 0.32,
+};
 export const DRESS_DENSITY_LOW_SCALE = 1.24;
 export const DRESS_LOW_SCALE_BOOST = 1.08;
 // yards of clearance kept between the dressing field and the rim wall
@@ -69,6 +81,62 @@ export function dressKindFor(biome: BiomeId, r: number): DressKind {
     return 'mushroom';
   }
   if (biome === 'blight') return r < 0.55 ? 'mushroom' : 'fern';
+  if (biome === 'dusk') {
+    // glade floor: ferns and flowering bushes carry the ground cover
+    if (r < 0.16) return 'bush';
+    if (r < 0.4) return 'bushFlowers';
+    return 'fern';
+  }
+  if (biome === 'fen') {
+    // the fen floor blooms: flowering hedges everywhere, mushrooms thick in
+    // the damp, plain bushes almost absent
+    if (r < 0.08) return 'bush';
+    if (r < 0.48) return 'bushFlowers';
+    if (r < 0.72) return 'fern';
+    return 'mushroom';
+  }
+  if (biome === 'amber') {
+    // the gold meadows flower white: bloom hedges lead, ferns fill
+    if (r < 0.1) return 'bush';
+    if (r < 0.52) return 'bushFlowers';
+    if (r < 0.86) return 'fern';
+    return 'mushroom';
+  }
+  if (biome === 'night') {
+    // the realm's namesake: luminous bloom hedges dominate the moon meadows
+    if (r < 0.08) return 'bush';
+    if (r < 0.56) return 'bushFlowers';
+    if (r < 0.76) return 'fern';
+    return 'mushroom';
+  }
+  if (biome === 'haunt') {
+    // nothing flowers here: brambles, ferns and mushrooms in the leaf rot
+    if (r < 0.24) return 'bush';
+    if (r < 0.6) return 'fern';
+    return 'mushroom';
+  }
+  if (biome === 'jungle') {
+    // the understory is the realm: ferns wall the paths, blooms burst through
+    if (r < 0.16) return 'bush';
+    if (r < 0.38) return 'bushFlowers';
+    if (r < 0.88) return 'fern';
+    return 'mushroom';
+  }
+  if (biome === 'garden') {
+    // rose beds everywhere the gardener's hand once reached
+    if (r < 0.12) return 'bush';
+    if (r < 0.52) return 'bushFlowers';
+    if (r < 0.82) return 'fern';
+    return 'mushroom';
+  }
+  if (biome === 'gale') {
+    // wind-flattened scrub and thrift clinging to the downs
+    if (r < 0.3) return 'bush';
+    if (r < 0.62) return 'bushFlowers';
+    if (r < 0.9) return 'fern';
+    return 'mushroom';
+  }
+  // ember and frost keep the sparse default: scorched waste and snow bench
   return r < 0.62 ? 'bush' : 'fern';
 }
 

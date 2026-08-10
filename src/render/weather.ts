@@ -20,6 +20,21 @@ const HZ = 70;
 
 type Precip = 'snow' | 'rain';
 
+/**
+ * What falls over a biome, or null for clear skies. The one rule: the weather
+ * system asks it for the cloud it should draw, and `renderer.ts` asks it for
+ * the ambience loop it should play, so the sound can never disagree with what
+ * the player is standing in.
+ */
+export function biomePrecip(biome: BiomeId | null): Precip | null {
+  if (biome === null) return null;
+  // snowbound uplands
+  if (biome === 'peaks' || biome === 'frost') return 'snow';
+  // wetlands and rainforest
+  if (biome === 'marsh' || biome === 'fen' || biome === 'haunt' || biome === 'jungle') return 'rain';
+  return null;
+}
+
 interface PrecipStyle {
   color: number;
   size: number; // world-unit point size (sizeAttenuation)
@@ -171,9 +186,7 @@ export class Weather {
    *              (indoors / underwater / suppressed)
    */
   update(cam: THREE.Vector3, dt: number, biome: BiomeId | null): void {
-    // peaks -> snow, marsh -> rain, everything else clears
-    const want: Precip | null =
-      !this.enabled || biome === null ? null : biome === 'peaks' ? 'snow' : biome === 'marsh' ? 'rain' : null;
+    const want: Precip | null = this.enabled ? biomePrecip(biome) : null;
 
     // While the visible type still differs from what we want, drive opacity to
     // zero first; once faded out, swap the material and let it climb again.

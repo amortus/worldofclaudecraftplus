@@ -76,7 +76,7 @@ export function buildEditorScene(webgl: THREE.WebGLRenderer, seed: number): Edit
     water.update(time);
     foliage.update(target.x, target.z, target.x, target.y, target.z, eye.x, eye.y, eye.z, FOG_FAR);
     props.update(target.x, target.y, target.z, eye.x, eye.y, eye.z, FOG_FAR);
-    sky.setCameraZ(target.z, dt);
+    sky.setCameraPos(target.x, target.z, dt);
   };
 
   const dispose = (): void => {

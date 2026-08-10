@@ -1,9 +1,10 @@
-import { fbm2, hash2 } from './rng';
+import { fbm2, hash2, noise2 } from './rng';
 import {
-  CAMPS, columnBlendAt, COLUMN_ZONES, DUNGEON_FLOOR_Y, DUNGEON_X_THRESHOLD, ROADS,
+  CAMPS, COLUMN_ZONES, DUNGEON_FLOOR_Y, DUNGEON_X_THRESHOLD, ROADS,
   STRIP_MAX_X, STRIP_MIN_X, STRIP_ZONES, WORLD_MAX_X, WORLD_MAX_Z, WORLD_MIN_Z,
   worldHalfWidthAt, ZONES, zoneAt, zoneContaining,
 } from './data';
+import { cragLayer, highlandMask, reliefBase, warpedCoords } from './terrain_relief';
 import type { BiomeId, ZoneDef } from './types';
 
 // Terrain is a pure function of (x, z, seed): both the sim (ground clamping)
@@ -19,12 +20,61 @@ const DETAIL_SCALE = 0.05;
 
 export const WATER_LEVEL = -4.5;
 
-// Hill amplitude / base elevation / hub plateau height per biome.
-const BIOME_SHAPE: Record<BiomeId, { hill: number; base: number; hubHeight: number }> = {
-  vale: { hill: 26, base: 0, hubHeight: 1.5 },
-  marsh: { hill: 11, base: -1.0, hubHeight: 1.2 },
-  peaks: { hill: 34, base: 7, hubHeight: 9 },
-  blight: { hill: 14, base: -1.5, hubHeight: 1.4 },
+// Hill amplitude / base elevation / hub plateau height per biome, plus the
+// four shaping weights the natural-relief layer reads (terrain_relief.ts).
+//
+//   relief  0..1 weight of the domain-warped, gradient-damped hill layer:
+//           meandering contours, smooth valley floors, rough uplands.
+//   crag    yards of ridged-multifractal crest at full highland mask: how far
+//           sharp ridgelines may crown this biome's uplands. 0 keeps a biome
+//           exactly as calm as its hills (wetlands, lawns).
+//   braid   0..1 the Willowfen's braided water-meadow channels.
+//   terrace 0..1 the Frostveil's benched multi-level mountain ground.
+//
+// THE FOUR SHIPPED BIOMES CARRY ZERO ON ALL FOUR, deliberately. Upstream gives
+// vale crag 5 and peaks crag 26, but our vale, marsh, peaks and Ashen Wastes
+// are ground players already walk, quest on and path across; taking those rows
+// would move every hilltop in the shipped world. The zero rows make the whole
+// relief layer weigh exactly nothing there, which is what keeps `terrainHeight`
+// bit-identical (tests/biomes_heightfield.test.ts) and costs nothing per
+// sample (SHAPE_EXTRA below is false while no live zone asks for relief).
+//
+// hill/base/hubHeight/crag for the ten new biomes are upstream's own values.
+export interface BiomeShape {
+  hill: number;
+  base: number;
+  hubHeight: number;
+  relief: number;
+  crag: number;
+  braid: number;
+  terrace: number;
+}
+
+export const BIOME_SHAPE: Record<BiomeId, BiomeShape> = {
+  vale: { hill: 26, base: 0, hubHeight: 1.5, relief: 0, crag: 0, braid: 0, terrace: 0 },
+  marsh: { hill: 11, base: -1.0, hubHeight: 1.2, relief: 0, crag: 0, braid: 0, terrace: 0 },
+  peaks: { hill: 34, base: 7, hubHeight: 9, relief: 0, crag: 0, braid: 0, terrace: 0 },
+  blight: { hill: 14, base: -1.5, hubHeight: 1.4, relief: 0, crag: 0, braid: 0, terrace: 0 },
+  // The Veiled Hollow: a sheltered valley, gentler than the peaks that hide it.
+  dusk: { hill: 14, base: 2, hubHeight: 2.5, relief: 1, crag: 4, braid: 0, terrace: 0 },
+  // The Drakelands: scorched uplands, ridged where the old flows cooled hard.
+  ember: { hill: 16, base: 2.5, hubHeight: 2.5, relief: 1, crag: 8, braid: 0, terrace: 0 },
+  // The Frostveil Reach: a snowbound massif that steps into benched paths.
+  frost: { hill: 26, base: 6, hubHeight: 3, relief: 1, crag: 10, braid: 0, terrace: 1 },
+  // The Amberfall: rolling autumn weald around the Great Mere.
+  amber: { hill: 15, base: 2, hubHeight: 2.5, relief: 1, crag: 4, braid: 0, terrace: 0 },
+  // The Willowfen: low, wet and gentle, dissolving into braided channels.
+  fen: { hill: 8, base: -0.3, hubHeight: 2, relief: 1, crag: 0, braid: 1, terrace: 0 },
+  // The Nightbloom: soft moonlit downs, a touch more rolling than the fen.
+  night: { hill: 12, base: 1, hubHeight: 2.5, relief: 1, crag: 4, braid: 0, terrace: 0 },
+  // The Wraithwood: low haunted forest floor under the giant canopies.
+  haunt: { hill: 13, base: 1.5, hubHeight: 2.5, relief: 1, crag: 5, braid: 0, terrace: 0 },
+  // The Palmreach: low tropical relief.
+  jungle: { hill: 11, base: 1.2, hubHeight: 2, relief: 1, crag: 4, braid: 0, terrace: 0 },
+  // The Evergarden: groomed parkland, gentle as a lawn.
+  garden: { hill: 9, base: 1.8, hubHeight: 2, relief: 1, crag: 0, braid: 0, terrace: 0 },
+  // The Galecrest: wind-scoured headland downs over sea cliffs.
+  gale: { hill: 14, base: 2.4, hubHeight: 2.5, relief: 1, crag: 8, braid: 0, terrace: 0 },
 };
 
 // ---------------------------------------------------------------------------
@@ -215,28 +265,138 @@ export function borderRidgeContribution(
 // (measured: terrainHeight 5x slower once a large heap makes GC expensive).
 // `baseHeight` is the only caller and hoists both fields into locals at once, so
 // the shared object is never retained across a second call.
-const shapeScratch = { hill: 0, base: 0 };
+const shapeScratch = { hill: 0, base: 0, relief: 0, crag: 0, braid: 0, terrace: 0 };
 
-function shapeAt(x: number, z: number): { hill: number; base: number } {
-  let hill = BIOME_SHAPE[STRIP_ZONES[0].biome].hill;
-  let base = BIOME_SHAPE[STRIP_ZONES[0].biome].base;
-  for (let i = 0; i + 1 < STRIP_ZONES.length; i++) {
-    const boundary = STRIP_ZONES[i].zMax;
-    const t = smoothstep(boundary - 30, boundary + 35, z);
-    const next = BIOME_SHAPE[STRIP_ZONES[i + 1].biome];
-    hill = lerp(hill, next.hill, t);
-    base = lerp(base, next.base, t);
+// ---------------------------------------------------------------------------
+// Flattened band/column geometry for the shape blend.
+//
+// `shapeAt` used to read `STRIP_ZONES[i].zMax`, `STRIP_ZONES[i + 1].biome` and
+// `col.xMin/.xMax/.zMin/.zMax` (through `columnBlendAt`) off ZoneDef records on
+// EVERY terrain sample. ZoneDef has optional fields, so each zone declaring a
+// different subset of them is a different hidden class, and that is exactly how
+// `baseHeight` went megamorphic once the world grew from four zones to six (see
+// the HUB_FLAT banner below). More zones and more biomes make that worse, so
+// the blend now reads plain indexed floats built once at module load and never
+// touches a ZoneDef again. The arithmetic below is the same arithmetic in the
+// same order, including `columnBlendAt`'s exact window form, so the field is
+// bit-for-bit what it was; `tests/biomes_heightfield.test.ts` pins that against
+// a whole-world snapshot and `tests/biomes_shape_blend.test.ts` re-checks the
+// inlined column blend against `columnBlendAt` itself.
+// ---------------------------------------------------------------------------
+
+const SHAPE_STRIDE = 6; // hill, base, relief, crag, braid, terrace
+
+function packShape(zones: readonly ZoneDef[]): Float64Array {
+  const out = new Float64Array(zones.length * SHAPE_STRIDE);
+  for (let i = 0; i < zones.length; i++) {
+    const s = BIOME_SHAPE[zones[i].biome];
+    out[i * SHAPE_STRIDE] = s.hill;
+    out[i * SHAPE_STRIDE + 1] = s.base;
+    out[i * SHAPE_STRIDE + 2] = s.relief;
+    out[i * SHAPE_STRIDE + 3] = s.crag;
+    out[i * SHAPE_STRIDE + 4] = s.braid;
+    out[i * SHAPE_STRIDE + 5] = s.terrace;
   }
-  for (let i = 0; i < COLUMN_ZONES.length; i++) {
-    const col = COLUMN_ZONES[i];
-    const t = columnBlendAt(col, x, z);
+  return out;
+}
+
+const STRIP_SHAPE = packShape(STRIP_ZONES);
+const COLUMN_SHAPE = packShape(COLUMN_ZONES);
+const STRIP_COUNT = STRIP_ZONES.length;
+const COLUMN_COUNT = COLUMN_ZONES.length;
+
+// zMax of each strip band boundary (one per gap between stacked bands).
+const STRIP_BOUND = new Float64Array(Math.max(0, STRIP_COUNT - 1));
+for (let i = 0; i + 1 < STRIP_COUNT; i++) STRIP_BOUND[i] = STRIP_ZONES[i].zMax;
+
+// x0, x1, zMin, zMax, east per column zone, in COLUMN_ZONES order.
+const COLUMN_RECT = new Float64Array(COLUMN_COUNT * 5);
+for (let i = 0; i < COLUMN_COUNT; i++) {
+  const col = COLUMN_ZONES[i];
+  const x0 = col.xMin ?? STRIP_MIN_X;
+  const x1 = col.xMax ?? STRIP_MAX_X;
+  COLUMN_RECT[i * 5] = x0;
+  COLUMN_RECT[i * 5 + 1] = x1;
+  COLUMN_RECT[i * 5 + 2] = col.zMin;
+  COLUMN_RECT[i * 5 + 3] = col.zMax;
+  COLUMN_RECT[i * 5 + 4] = x0 >= STRIP_MAX_X ? 1 : 0;
+}
+
+// True only when some LIVE zone asks for relief, crag, braids or terracing.
+// While every live zone is one of the four shipped biomes it is false, the
+// blend runs exactly the two lerps it always ran, and no relief code executes
+// anywhere in the world.
+const SHAPE_EXTRA = ZONES.some((zn) => {
+  const s = BIOME_SHAPE[zn.biome];
+  return s.relief > 0 || s.crag > 0 || s.braid > 0 || s.terrace > 0;
+});
+// The two heightfield appliers that need `h`, hoisted to module consts so
+// `terrainHeight` pays one compare rather than a second shape blend.
+const HAS_BRAID = ZONES.some((zn) => BIOME_SHAPE[zn.biome].braid > 0);
+const HAS_TERRACE = ZONES.some((zn) => BIOME_SHAPE[zn.biome].terrace > 0);
+
+function smoothstep01(raw: number): number {
+  const t = raw < 0 ? 0 : raw > 1 ? 1 : raw;
+  return t * t * (3 - 2 * t);
+}
+
+/** `columnBlendAt` (data.ts) over the flat rect table; identical arithmetic. */
+function columnBlendFlat(i: number, x: number, z: number): number {
+  const o = i * 5;
+  const x0 = COLUMN_RECT[o], x1 = COLUMN_RECT[o + 1];
+  const zMin = COLUMN_RECT[o + 2], zMax = COLUMN_RECT[o + 3];
+  if (z <= zMin - 30 || z >= zMax + 35) return 0;
+  const east = COLUMN_RECT[o + 4] === 1;
+  if (east ? x <= x0 - 30 : x >= x1 + 30) return 0;
+  const xT = east
+    ? smoothstep01((x - (x0 - 30)) / 65)
+    : 1 - smoothstep01((x - (x1 - 35)) / 65);
+  const zT = smoothstep01((z - (zMin - 30)) / 65) * (1 - smoothstep01((z - (zMax - 30)) / 65));
+  return xT * zT;
+}
+
+function shapeAt(x: number, z: number): typeof shapeScratch {
+  let hill = STRIP_SHAPE[0];
+  let base = STRIP_SHAPE[1];
+  let relief = 0, crag = 0, braid = 0, terrace = 0;
+  if (SHAPE_EXTRA) {
+    relief = STRIP_SHAPE[2];
+    crag = STRIP_SHAPE[3];
+    braid = STRIP_SHAPE[4];
+    terrace = STRIP_SHAPE[5];
+  }
+  for (let i = 0; i + 1 < STRIP_COUNT; i++) {
+    const boundary = STRIP_BOUND[i];
+    const t = smoothstep(boundary - 30, boundary + 35, z);
+    const o = (i + 1) * SHAPE_STRIDE;
+    hill = lerp(hill, STRIP_SHAPE[o], t);
+    base = lerp(base, STRIP_SHAPE[o + 1], t);
+    if (SHAPE_EXTRA) {
+      relief = lerp(relief, STRIP_SHAPE[o + 2], t);
+      crag = lerp(crag, STRIP_SHAPE[o + 3], t);
+      braid = lerp(braid, STRIP_SHAPE[o + 4], t);
+      terrace = lerp(terrace, STRIP_SHAPE[o + 5], t);
+    }
+  }
+  for (let i = 0; i < COLUMN_COUNT; i++) {
+    const t = columnBlendFlat(i, x, z);
     if (t <= 0) continue; // exactly +0 outside the window: the strip never moves
-    const shape = BIOME_SHAPE[col.biome];
-    hill = lerp(hill, shape.hill, t);
-    base = lerp(base, shape.base, t);
+    const o = i * SHAPE_STRIDE;
+    hill = lerp(hill, COLUMN_SHAPE[o], t);
+    base = lerp(base, COLUMN_SHAPE[o + 1], t);
+    if (SHAPE_EXTRA) {
+      relief = lerp(relief, COLUMN_SHAPE[o + 2], t);
+      crag = lerp(crag, COLUMN_SHAPE[o + 3], t);
+      braid = lerp(braid, COLUMN_SHAPE[o + 4], t);
+      terrace = lerp(terrace, COLUMN_SHAPE[o + 5], t);
+    }
   }
   shapeScratch.hill = hill;
   shapeScratch.base = base;
+  shapeScratch.relief = relief;
+  shapeScratch.crag = crag;
+  shapeScratch.braid = braid;
+  shapeScratch.terrace = terrace;
   return shapeScratch;
 }
 
@@ -288,7 +448,27 @@ function baseHeight(x: number, z: number, seed: number): number {
   const shape = shapeAt(x, z);
   const shapeHill = shape.hill;
   const shapeBase = shape.base;
-  let h = (fbm2(x * HILL_SCALE + 100, z * HILL_SCALE + 100, seed, 4) - 0.5) * shapeHill + shapeBase;
+  const shapeRelief = shape.relief;
+  const shapeCrag = shape.crag;
+  // The classic hill layer. Where a biome asks for relief, the same value is
+  // cross-faded toward the warped, gradient-damped field (terrain_relief.ts)
+  // by the blended relief weight, so a new biome's meandering, eroded ground
+  // arrives across its border at exactly the rate its palette does. At weight
+  // 0 (every shipped biome) nothing below the `if` runs and the expression is
+  // the one that shipped, term for term.
+  const hillV = fbm2(x * HILL_SCALE + 100, z * HILL_SCALE + 100, seed, 4);
+  let h: number;
+  if (shapeRelief > 0) {
+    const warp = warpedCoords(x, z, seed, shapeRelief);
+    const wx = warp.x, wz = warp.z;
+    const blended = hillV + (reliefBase(wx, wz, seed, HILL_SCALE) - hillV) * shapeRelief;
+    h = (blended - 0.5) * shapeHill + shapeBase;
+    // Crags crown ground that already stands high, so ranges grow out of the
+    // hills instead of being sprinkled over the flats.
+    if (shapeCrag > 0) h += shapeCrag * highlandMask(blended) * cragLayer(wx, wz, seed);
+  } else {
+    h = (hillV - 0.5) * shapeHill + shapeBase;
+  }
   h += (fbm2(x * DETAIL_SCALE, z * DETAIL_SCALE, seed + 7, 2) - 0.5) * 2.2;
   // Flatten each zone's hub settlement into a plateau
   for (let i = 0; i < HUB_FLAT.length; i += 4) {
@@ -315,6 +495,56 @@ function baseHeight(x: number, z: number, seed: number): number {
   return h;
 }
 
+// ---------------------------------------------------------------------------
+// Two per-biome heightfield appliers, ported from upstream's `applyFenBraids`
+// and `applyFrostTerraces` (src/sim/world.ts). Upstream gates each one on the
+// hardcoded rect of the single zone that uses it; ours are gated on the blended
+// biome weight instead, so any zone declaring the biome gets the landform and
+// it fades in across the same window every other biome property does. Both are
+// pure in (x, z, h, seed) and both leave roads and mob camps alone, because a
+// marked route has to stay walkable and a camp has to stay flat.
+// ---------------------------------------------------------------------------
+
+// The Braids: a fen's water-meadows dissolve into winding channels and grassy
+// islets. Channels follow the valleys of a ridged noise field and only ever cut
+// DOWN, so nothing here can raise ground into a wall.
+export function fenBraidHeight(x: number, z: number, h: number, seed: number, w: number): number {
+  if (h < WATER_LEVEL + 0.5 || h > 5.5) return h;
+  const ridge = Math.abs(fbm2(x * 0.021, z * 0.021, seed + 9301, 3) - 0.5) * 2;
+  let channel = (1 - smoothstep(0.05, 0.17, ridge)) * w;
+  if (channel <= 0) return h;
+  channel *= smoothstep(8, 15, roadDistance(x, z));
+  if (channel <= 0) return h;
+  for (let i = 0; i < CAMP_FLAT.length; i += 3) {
+    const dx = x - CAMP_FLAT[i], dz = z - CAMP_FLAT[i + 1], radius = CAMP_FLAT[i + 2];
+    const gate = smoothstep(radius * 1.6, radius * 2.4, Math.sqrt(dx * dx + dz * dz));
+    if (gate < channel) channel = gate;
+  }
+  const depth = (WATER_LEVEL - 1.4 - h) * channel;
+  return depth < 0 ? h + depth : h;
+}
+
+// Benched mountain ground: the massif steps into flats, ramps and short steep
+// risers. Suppressed near roads so every marked route stays climbable, and
+// below the shore line so beaches ease into the water.
+export function terraceHeight(x: number, z: number, h: number, seed: number, w: number): number {
+  if (h < WATER_LEVEL + 2) return h;
+  const road = roadDistance(x, z);
+  if (road < 5) return h;
+  const step = 6.5;
+  const jit = (noise2(x * 0.045, z * 0.045, seed + 88) - 0.5) * 3.4;
+  const hh = h + jit;
+  const floor = Math.floor(hh / step) * step;
+  const frac = (hh - floor) / step;
+  const ledge = floor + step * Math.min(1, Math.max(0, (frac - 0.26) / 0.42));
+  const amount =
+    0.55 *
+    smoothstep(WATER_LEVEL + 2, WATER_LEVEL + 5.5, h) *
+    smoothstep(5, 12, road) *
+    w;
+  return h + (ledge - h) * amount;
+}
+
 // Ground height including instanced dungeon floors (flat, far off-world).
 export function groundHeight(x: number, z: number, seed: number): number {
   if (x > DUNGEON_X_THRESHOLD) return DUNGEON_FLOOR_Y;
@@ -335,6 +565,19 @@ export function terrainHeight(x: number, z: number, seed: number): number {
       const blend = smoothstep(radius * 0.8, radius * 1.8, d);
       h = h * blend + ch * (1 - blend);
     }
+  }
+
+  // Signature ground for the two biomes whose landform IS a shaping rule
+  // rather than a hand-placed landmark. Both run BEFORE the border ridges and
+  // the world rim, so no wall, sealed crest or rim can be terraced into a
+  // climbable notch (upstream applies them after its walls; ours are the only
+  // thing holding players inside the world, so they stay untouched). Both
+  // guards are module consts derived from the live zone list, so a world of
+  // shipped biomes pays one compare and nothing else.
+  if (HAS_BRAID || HAS_TERRACE) {
+    const shape = shapeAt(x, z);
+    if (HAS_BRAID && shape.braid > 0) h = fenBraidHeight(x, z, h, seed, shape.braid);
+    if (HAS_TERRACE && shape.terrace > 0) h = terraceHeight(x, z, h, seed, shape.terrace);
   }
 
   // Mountain ridge walls along every shared zone edge, pierced by the road pass.
@@ -419,6 +662,10 @@ export function generateDecorations(seed: number): Decoration[] {
       const biome = zoneBiomeAt(gx, gz);
       // density gate + kind mix per biome
       let kind: Decoration['kind'] | null = null;
+      // Density gate + kind mix per biome. The vale/marsh/blight rows and the
+      // fallback (which is what `peaks` takes) are unchanged, so every shipped
+      // zone scatters exactly the decorations it always did; the rest are
+      // upstream's own mixes for those biomes.
       if (biome === 'vale') {
         if (r > 0.48) continue;
         kind = r < 0.30 ? 'tree' : r < 0.40 ? 'tree2' : 'rock';
@@ -429,6 +676,47 @@ export function generateDecorations(seed: number): Decoration[] {
         // dead and sparse: mostly bare trees and grey rocks
         if (r > 0.26) continue;
         kind = r < 0.13 ? 'tree2' : r < 0.17 ? 'tree' : 'rock';
+      } else if (biome === 'dusk') {
+        // a glade: sparse pines, more twisted elders and stone
+        if (r > 0.38) continue;
+        kind = r < 0.14 ? 'tree' : r < 0.28 ? 'tree2' : 'rock';
+      } else if (biome === 'ember') {
+        // scorched waste: trees thin out, boulders strew the volcanic plain
+        if (r > 0.32) continue;
+        kind = r < 0.10 ? 'tree' : r < 0.18 ? 'tree2' : 'rock';
+      } else if (biome === 'frost') {
+        // hardy pines and broken stone on the snow benches
+        if (r > 0.36) continue;
+        kind = r < 0.18 ? 'tree' : r < 0.23 ? 'tree2' : 'rock';
+      } else if (biome === 'amber') {
+        // a dense fire-coloured weald, broadleaf-heavy
+        if (r > 0.50) continue;
+        kind = r < 0.12 ? 'tree' : r < 0.42 ? 'tree2' : 'rock';
+      } else if (biome === 'fen') {
+        // open and soft: scattered broadleafs, very little stone
+        if (r > 0.30) continue;
+        kind = r < 0.06 ? 'tree' : r < 0.26 ? 'tree2' : 'rock';
+      } else if (biome === 'night') {
+        // open moon meadows: sparse silvered groves, standing stones between
+        if (r > 0.28) continue;
+        kind = r < 0.08 ? 'tree' : r < 0.20 ? 'tree2' : 'rock';
+      } else if (biome === 'haunt') {
+        // the densest forest in the world: the canopy is the realm
+        if (r > 0.62) continue;
+        kind = r < 0.30 ? 'tree' : r < 0.54 ? 'tree2' : 'rock';
+      } else if (biome === 'jungle') {
+        // wall-to-wall broadleaf inland, nothing on the low sand shelf
+        if (terrainHeight(gx, gz, seed) < 3) continue;
+        if (r > 0.58) continue;
+        kind = r < 0.10 ? 'tree' : r < 0.50 ? 'tree2' : 'rock';
+      } else if (biome === 'garden') {
+        // open parkland: sparse specimen trees on the lawns
+        if (r > 0.30) continue;
+        kind = r < 0.16 ? 'tree' : r < 0.20 ? 'tree2' : 'rock';
+      } else if (biome === 'gale') {
+        // wind-scoured downs: rock outcrops everywhere, hardy windbreaks between
+        if (r > 0.22) continue;
+        kind = r < 0.09 ? 'tree' : r < 0.14 ? 'tree2' : 'rock';
       } else {
         if (r > 0.44) continue;
         kind = r < 0.20 ? 'tree' : r < 0.24 ? 'tree2' : 'rock';

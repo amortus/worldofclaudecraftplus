@@ -3,6 +3,8 @@
 // only on this interface; main.ts injects the real `sfx` singleton. This keeps
 // src/render/ free of any src/game/ import (see src/CLAUDE.md dependency rules).
 
+import type { BiomeId } from '../sim/types';
+
 export type Surface = 'grass' | 'dirt' | 'stone' | 'wood' | 'snow' | 'water';
 
 export interface SpatialAudioSink {
@@ -13,5 +15,5 @@ export interface SpatialAudioSink {
   /** A discrete movement event (jump / land / water entry / swim stroke). */
   movement(kind: 'jump' | 'land' | 'splash' | 'swim', x: number, y: number, z: number, self: boolean): void;
   /** Per-frame ambience state around the player; the engine cross-fades loops. */
-  ambience(biome: 'vale' | 'marsh' | 'peaks' | 'blight', inDungeon: boolean, precip: 'snow' | 'rain' | null, nearWater: boolean): void;
+  ambience(biome: BiomeId, inDungeon: boolean, precip: 'snow' | 'rain' | null, nearWater: boolean): void;
 }
