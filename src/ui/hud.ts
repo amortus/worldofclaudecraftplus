@@ -335,6 +335,7 @@ import {
   type PublishedCard,
   publishCard,
 } from './player_card_share';
+import { bindPinchZoom } from './pinch_zoom';
 import { chatPlayerContextActions } from './player_context_menu';
 import { hydratePortraits, portraitChipHtml } from './portrait_chip';
 import { maskProfanity } from './profanity';
@@ -401,12 +402,16 @@ import {
   type ThemeState,
 } from './theme';
 import { TOOLTIP_PEEK_MS, TouchPeekGuard } from './touch_peek';
+import { bindTouchDrag, TOUCH_DRAGGING_CLASS } from './touch_drag';
+import { edgeAutoScrollStep } from './touch_drag_core';
 import { bindTouchDoubleTap } from './touch_tap';
 import { TutorialOverlay } from './tutorial';
 import { svgIcon } from './ui_icons';
 import { getUiScale } from './ui_scale';
 import { crestIdForEntity } from './unit_portrait';
 import { localizeUnstuckAuraName, unstuckEventLines } from './unstuck_feedback';
+import { ghostEventLines, localizeResurrectionAuraName } from './ghost_feedback';
+import { mountGhostPanel, type MountedGhostPanel } from './ghost_panel';
 import { UnitPortraitPainter } from './unit_portrait_painter';
 import { buildVendorView } from './vendor_view';
 import { renderVendorWindow } from './vendor_window';
@@ -743,14 +748,11 @@ const DELVE_AFFIX_COLORS: Record<string, string> = {
   cult_remnants: '#7a4a8a',
   chapel_candle: '#ffd100',
 };
-type MobileHotbarDrag = {
-  pointerId: number;
-  sourceIndex: number;
-  startX: number;
-  startY: number;
-  active: boolean;
-  timer: number;
-  targetIndex: number | null;
+/** A hotbar action in flight, from a bar slot (`sourceIndex` set, so the drop
+ *  swaps) or from the spellbook / bags (`sourceIndex` null, so the drop places). */
+type HotbarDragPayload = {
+  action: Exclude<HotbarAction, null>;
+  sourceIndex: number | null;
 };
 
 // world map: terrain is pre-rendered for the whole zone at this resolution
@@ -895,12 +897,9 @@ export class Hud {
   private loadedSlotMapFromStorage = false;
   private knownAbilityIdsAtLastSlotSync: Set<string> | null = null;
   private activeHotbarForm: HotbarForm = 'normal';
-  private dragAction: { action: Exclude<HotbarAction, null>; sourceIndex: number | null } | null =
-    null;
+  private dragAction: HotbarDragPayload | null = null;
   // Set while dragging an equipped piece out of the paperdoll onto the bags window.
   private dragUnequipSlot: EquipSlot | null = null;
-  private mobileHotbarDrag: MobileHotbarDrag | null = null;
-  private suppressNextActionClick = false;
   private optionsHooks: OptionsHooks | null = null;
   private reportHooks: ReportHooks | null = null;
   private bugReportHooks: BugReportHooks | null = null;
@@ -1011,6 +1010,9 @@ export class Hud {
   private lastXpBarSig = '';
   private deathOverlayEl = $('#death-overlay');
   private releaseSpiritBtnEl = $('#release-btn');
+  // Built into the death overlay at init (its own module, so index.html carries
+  // no ghost markup); null until then.
+  private ghostPanel: MountedGhostPanel | null = null;
   private adReviveBtnEl = $('#ad-revive-btn') as HTMLButtonElement;
   private adReviveReadyEl = $('#ad-revive-ready-btn') as HTMLButtonElement;
   private adBoostOfferEl = $('#ad-boost-offer') as HTMLElement;
@@ -1373,6 +1375,12 @@ export class Hud {
       if (this.sim.arenaInfo?.match) return;
       this.sim.releaseSpirit();
     });
+    // The corpse run. Both buttons are re-checked server-side, so a click that
+    // races out of range comes back as a `ghostDeny` line rather than a rez.
+    this.ghostPanel = mountGhostPanel(this.deathOverlayEl, {
+      onResurrectAtCorpse: () => this.sim.resurrectAtCorpse(),
+      onResurrectAtSpiritHealer: () => this.sim.resurrectAtSpiritHealer(),
+    });
     this.adReviveReadyEl.addEventListener('click', () => {
       if (!this.adReviveReady) return;
       this.adReviveReady = false;
@@ -1578,6 +1586,37 @@ export class Hud {
     };
     mapCanvas.addEventListener('pointerup', endDrag);
     mapCanvas.addEventListener('pointercancel', endDrag);
+    // Touch: pinch to zoom and two-finger drag to pan, driving the SAME mapZoom /
+    // mapCenter state the wheel and the mouse drag use. Bound AFTER the one-finger
+    // pan above so the second finger's `pointerdown` reaches onStart and cancels
+    // the one-finger drag that press just began (otherwise the map would pan and
+    // zoom at once, from two different anchors).
+    bindPinchZoom(mapCanvas, {
+      onStart: () => {
+        this.mapDrag = null;
+        mapCanvas.style.cursor = '';
+      },
+      onGesture: (scale, panX, panY) => {
+        if (scale !== 1) this.zoomMap(scale);
+        if (panX === 0 && panY === 0) return;
+        // At zoom 1 the whole zone already fits, so there is nothing to pan
+        // (mapCenter stays null and the view keeps following the player).
+        if (!this.mapView || this.mapZoom <= 1) return;
+        const rect = mapCanvas.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return;
+        const base = this.mapCenter ?? { x: this.sim.player.pos.x, z: this.sim.player.pos.z };
+        // Same "grab the paper" mapping as the mouse pan: toMap draws +X left and
+        // +Z up, so a pointer delta of (dx, dy) px shifts the centre by (+dx, +dy).
+        this.mapCenter = {
+          x: base.x + panX * (this.mapView.spanX / rect.width),
+          z: base.z + panY * (this.mapView.spanZ / rect.height),
+        };
+        this.updateMapWindow();
+      },
+      onEnd: () => {
+        this.mapDrag = null;
+      },
+    });
     $('#mm-bag').addEventListener('click', () => this.toggleBags());
     // Drop an equipped piece dragged out of the paperdoll onto the bags window.
     const bagsEl = $('#bags');
@@ -2796,7 +2835,8 @@ export class Hud {
       touchTimer = undefined;
     };
     const showAt = (x: number, y: number, trigger: 'touch' | 'mouse' | 'focus') => {
-      if (this.mobileHotbarDrag?.active) return;
+      // Never pop a tooltip under a finger that is mid-drag.
+      if (document.body.classList.contains(TOUCH_DRAGGING_CLASS)) return;
       // Touch-only path: showing the tooltip means the held control is being
       // inspected, so the release click should peek, not fire its action.
       this.peekGuard.tooltipShown(trigger);
@@ -3061,6 +3101,10 @@ export class Hud {
     // them stale until the state happens to move. Drop the gates explicitly.
     refreshRiftHud();
     refreshDungeonFinder();
+    // Same trap: the corpse-run panel repaints on a distance/range signature that
+    // carries no text, so without this a language switch while dead leaves the
+    // whole death UI in the old locale until the ghost happens to move a yard.
+    this.ghostPanel?.invalidate();
     this.refreshMintedButtonLabels();
     const log = $('#quest-log-window');
     if (log.style.display === 'block') this.renderQuestLog();
@@ -3562,12 +3606,9 @@ export class Hud {
       btn.dataset.hotbarSlot = String(slot);
       // slot 0 is Attack for every class (auto-attack toggle — players
       // without right-click need a way in); the kit fills slots 1+
+      // The synthetic click that follows a completed touch DRAG is swallowed by
+      // bindTouchDrag itself (capture phase), so it never reaches this listener.
       btn.addEventListener('click', () => {
-        if (this.suppressNextActionClick) {
-          this.suppressNextActionClick = false;
-          btn.blur();
-          return;
-        }
         // On touch, the click that ends a long-press peek inspects the slot
         // (tooltip already shown) instead of casting — release dismisses it.
         if (this.peekGuard.consume()) {
@@ -3659,25 +3700,19 @@ export class Hud {
             sourceIndex: null,
           };
           this.dragAction = null;
-          const action = dragged.action;
-          if (!action) return;
-          if (dragged.sourceIndex !== null)
-            this.hotbarActions = swapHotbarSlots(this.hotbarActions, dragged.sourceIndex, slot - 1);
-          else if (
-            action.type === 'ability' &&
-            this.sim.known.some((k) => k.def.id === action.id)
-          ) {
-            this.hotbarActions = placeAbilityOnSlot(this.hotbarActions, action.id, slot - 1);
-          } else if (action.type === 'item' && this.isHotbarItemId(action.id)) {
-            this.hotbarActions = placeItemOnSlot(this.hotbarActions, action.id, slot - 1);
-          }
-          this.saveSlotMap();
+          if (!dragged.action) return;
+          this.applyHotbarDrop({ action: dragged.action, sourceIndex: dragged.sourceIndex }, slot - 1);
         });
         btn.addEventListener('dragend', () => {
           this.dragAction = null;
           this.clearActionDropTargets();
         });
-        this.bindMobileActionDrag(btn, slot);
+        // The finger equivalent of the HTML5 drag above: hold a slot, then drag it
+        // onto another slot to swap. Items as well as abilities, matching the mouse.
+        this.bindHotbarTouchDrag(btn, () => {
+          const action = this.actionForSlot(slot);
+          return action ? { action, sourceIndex: slot - 1 } : null;
+        });
         // right-click clears the slot so a full bar can make room for new spells
         btn.addEventListener('contextmenu', (e) => {
           e.preventDefault();
@@ -3716,86 +3751,85 @@ export class Hud {
     return Number.isInteger(slot) && slot >= 1 ? slot : null;
   }
 
-  private clearMobileHotbarDrag(): void {
-    const drag = this.mobileHotbarDrag;
-    if (drag) window.clearTimeout(drag.timer);
-    this.mobileHotbarDrag = null;
-    document.body.classList.remove('mobile-hotbar-dragging');
-    document.querySelectorAll('#actionbar .mobile-drag-source').forEach((el) => {
-      el.classList.remove('mobile-drag-source');
-    });
-    this.clearActionDropTargets();
+  /**
+   * Land a dragged action on hotbar slot index `targetIndex` (0-based). The one
+   * place the drop rules live, so the desktop HTML5 drop and the touch drag can
+   * never diverge: a bar-to-bar drag swaps, an ability from the spellbook is
+   * placed if it is actually known, and a bag stack is placed if it is a usable
+   * hotbar item.
+   */
+  private applyHotbarDrop(dragged: HotbarDragPayload, targetIndex: number): void {
+    const action = dragged.action;
+    if (dragged.sourceIndex !== null) {
+      if (dragged.sourceIndex === targetIndex) return;
+      this.hotbarActions = swapHotbarSlots(this.hotbarActions, dragged.sourceIndex, targetIndex);
+    } else if (action.type === 'ability' && this.sim.known.some((k) => k.def.id === action.id)) {
+      this.hotbarActions = placeAbilityOnSlot(this.hotbarActions, action.id, targetIndex);
+    } else if (action.type === 'item' && this.isHotbarItemId(action.id)) {
+      this.hotbarActions = placeItemOnSlot(this.hotbarActions, action.id, targetIndex);
+    } else {
+      return;
+    }
+    this.saveSlotMap();
   }
 
-  private bindMobileActionDrag(btn: HTMLButtonElement, slot: number): void {
-    btn.addEventListener('pointerdown', (e) => {
-      if (!document.body.classList.contains('mobile-touch') || e.pointerType !== 'touch') return;
-      if (this.actionForSlot(slot)?.type !== 'ability') return;
-      this.clearMobileHotbarDrag();
-      const sourceIndex = slot - 1;
-      const drag: MobileHotbarDrag = {
-        pointerId: e.pointerId,
-        sourceIndex,
-        startX: e.clientX,
-        startY: e.clientY,
-        active: false,
-        targetIndex: null,
-        timer: window.setTimeout(() => {
-          const current = this.mobileHotbarDrag;
-          if (!current || current.pointerId !== e.pointerId) return;
-          current.active = true;
-          current.targetIndex = sourceIndex;
-          this.suppressNextActionClick = true;
-          document.body.classList.add('mobile-hotbar-dragging');
-          btn.classList.add('mobile-drag-source');
-          btn.classList.add('drop-target');
-          this.hideTooltip();
-          try {
-            btn.setPointerCapture?.(e.pointerId);
-          } catch {
-            /* pointer already released */
-          }
-        }, 320),
-      };
-      this.mobileHotbarDrag = drag;
-    });
+  /** The icon that rides under the finger while a hotbar action is being dragged. */
+  private hotbarDragGhostHtml(action: Exclude<HotbarAction, null>): string {
+    if (action.type === 'item') {
+      const item = ITEMS[action.id];
+      return item
+        ? this.itemIcon(item)
+        : `<img class="item-icon" src="${ICON_PLACEHOLDER}" alt="" draggable="false">`;
+    }
+    return `<img class="item-icon" src="${iconDataUrl('ability', action.id)}" alt="" draggable="false">`;
+  }
 
-    btn.addEventListener('pointermove', (e) => {
-      const drag = this.mobileHotbarDrag;
-      if (!drag || drag.pointerId !== e.pointerId) return;
-      const moved = Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY);
-      if (!drag.active && moved > 9) {
-        this.clearMobileHotbarDrag();
-        return;
-      }
-      if (!drag.active) return;
-      e.preventDefault();
-      const targetSlot = this.actionButtonSlotFromPoint(e.clientX, e.clientY);
-      const targetIndex = targetSlot !== null ? targetSlot - 1 : null;
-      drag.targetIndex = targetIndex;
-      this.clearActionDropTargets();
-      const targetBtn = targetSlot !== null ? this.abilityButtons[targetSlot]?.btn : null;
-      if (targetBtn) targetBtn.classList.add('drop-target');
-      this.abilityButtons[drag.sourceIndex + 1]?.btn.classList.add('mobile-drag-source');
-    });
-
-    const finish = (e: PointerEvent) => {
-      const drag = this.mobileHotbarDrag;
-      if (!drag || drag.pointerId !== e.pointerId) return;
-      const wasActive = drag.active;
-      const targetIndex = drag.targetIndex;
-      if (wasActive) {
-        e.preventDefault();
-        this.suppressNextActionClick = true;
-        if (targetIndex !== null && targetIndex !== drag.sourceIndex) {
-          this.hotbarActions = swapHotbarSlots(this.hotbarActions, drag.sourceIndex, targetIndex);
-          this.saveSlotMap();
+  /**
+   * Touch drag from any hotbar-action SOURCE (an action-bar slot, a spellbook
+   * row, a bag stack) onto an action-bar slot. HTML5 drag-and-drop never fires
+   * from touch, so this is the only way a finger can fill the bar. The gesture
+   * itself is the pure `touch_drag_core` recognizer; only the drop hit test and
+   * the highlight repaint are DOM.
+   */
+  private bindHotbarTouchDrag(el: HTMLElement, source: () => HotbarDragPayload | null): void {
+    bindTouchDrag<HotbarDragPayload>(el, {
+      isTouchHud: () => document.body.classList.contains('mobile-touch'),
+      payload: source,
+      ghostHtml: (dragged) => this.hotbarDragGhostHtml(dragged.action),
+      onStart: (dragged) => {
+        this.dragAction = dragged;
+        this.hideTooltip();
+        // Keep the classic action-bar drag chrome (the gold "lifted" slot and the
+        // bar's touch-action lock) exactly as it was before the gesture moved into
+        // the shared touch_drag module.
+        document.body.classList.add('mobile-hotbar-dragging');
+        if (el.classList.contains('action-btn')) el.classList.add('mobile-drag-source');
+      },
+      onMove: (x, y) => {
+        // The phone action bar is a narrow horizontal scroller wedged between the
+        // joysticks, so in portrait most slots start scrolled out of view. Nudge
+        // it while the finger rides an edge, or those slots are undroppable.
+        const bar = document.getElementById('actionbar');
+        if (bar && bar.scrollWidth > bar.clientWidth + 1) {
+          const rect = bar.getBoundingClientRect();
+          const step = edgeAutoScrollStep(x, rect.left, rect.right);
+          if (step !== 0) bar.scrollLeft += step;
         }
-      }
-      this.clearMobileHotbarDrag();
-    };
-    btn.addEventListener('pointerup', finish);
-    btn.addEventListener('pointercancel', finish);
+        this.clearActionDropTargets();
+        const slot = this.actionButtonSlotFromPoint(x, y);
+        if (slot !== null) this.abilityButtons[slot]?.btn.classList.add('drop-target');
+      },
+      onDrop: (x, y, dragged) => {
+        const slot = this.actionButtonSlotFromPoint(x, y);
+        if (slot !== null) this.applyHotbarDrop(dragged, slot - 1);
+      },
+      onEnd: () => {
+        this.dragAction = null;
+        document.body.classList.remove('mobile-hotbar-dragging');
+        el.classList.remove('mobile-drag-source');
+        this.clearActionDropTargets();
+      },
+    });
   }
 
   // Repaint the keycap on every action button from the current bindings.
@@ -4494,7 +4528,13 @@ export class Hud {
 
     const deadInArena = p.dead && !!this.sim.arenaInfo?.match;
     this.setDisplay(this.deathOverlayEl, p.dead ? 'flex' : 'none');
-    this.setDisplay(this.releaseSpiritBtnEl, deadInArena ? 'none' : '');
+    // Once the spirit is out there is nothing left to release: the overlay swaps
+    // the Release button for the corpse-run panel. The panel repaints only when
+    // its own signature changes (see ghost_panel), so a ghost standing at the
+    // graveyard costs no DOM writes.
+    const ghost = p.dead ? this.sim.ghostInfo() : null;
+    this.setDisplay(this.releaseSpiritBtnEl, deadInArena || ghost ? 'none' : '');
+    this.ghostPanel?.update(ghost);
     // If the player is alive again (released spirit or revived externally), clear the earned-ad state.
     if (!p.dead && this.adReviveReady) this.adReviveReady = false;
     const isNativeAndDead =
@@ -7884,6 +7924,16 @@ export class Hud {
           for (const l of unstuckEventLines(ev, sim.player.level)) this.combatLog(l.text, l.color);
           break;
         }
+        // The death loop. These three names MUST match what src/sim/sim.ts emits:
+        // they are compared as strings, so a rename on either side is invisible to
+        // tsc and just makes the corpse run silent
+        // (tests/ghost_event_contract.test.ts guards it).
+        case 'ghostRelease':
+        case 'ghostResurrect':
+        case 'ghostDeny': {
+          for (const l of ghostEventLines(ev)) this.combatLog(l.text, l.color);
+          break;
+        }
         case 'deedComplete': {
           for (const text of deedEventLines(ev)) this.combatLog(text, '#ffd100');
           break;
@@ -10687,6 +10737,14 @@ export class Hud {
           this.dragAction = null;
           this.clearActionDropTargets();
         });
+        // Touch: HTML5 drag never fires from a finger, so without this a phone
+        // player has NO way to put a usable item on the action bar. A short
+        // flick still scrolls the bag grid; only a hold picks the stack up.
+        this.bindHotbarTouchDrag(row, () =>
+          this.tradeOpen || this.vendorOpen
+            ? null
+            : { action: { type: 'item', id: s.itemId }, sourceIndex: null },
+        );
       }
       this.attachTooltip(row, () => {
         let extra = '';
@@ -11050,6 +11108,39 @@ export class Hud {
         row.addEventListener('dragend', () => {
           this.dragUnequipSlot = null;
           $('#bags').classList.remove('drop-target');
+        });
+        // Touch counterpart. The corner × stays the primary (and keyboard)
+        // unequip; this makes the drag-out affordance reachable with a finger too.
+        const overBags = (x: number, y: number): boolean =>
+          !!document.elementFromPoint(x, y)?.closest?.('#bags');
+        bindTouchDrag<EquipSlot>(row, {
+          isTouchHud: () => document.body.classList.contains('mobile-touch'),
+          payload: () => slot.key,
+          ghostHtml: () => this.itemIcon(item),
+          onStart: () => {
+            this.dragUnequipSlot = slot.key;
+            this.hideTooltip();
+            // Raises the bags window above the character sheet for the hit test.
+            document.body.classList.add('touch-unequip-dragging');
+            const bags = $('#bags');
+            if (bags.style.display !== 'block') {
+              bags.style.display = 'block';
+              this.renderBags();
+            }
+          },
+          onMove: (x, y) => {
+            $('#bags').classList.toggle('drop-target', overBags(x, y));
+          },
+          onDrop: (x, y) => {
+            if (!overBags(x, y)) return;
+            this.dragUnequipSlot = null;
+            doUnequip();
+          },
+          onEnd: () => {
+            this.dragUnequipSlot = null;
+            document.body.classList.remove('touch-unequip-dragging');
+            $('#bags').classList.remove('drop-target');
+          },
         });
       } else {
         // Empty slot: still swallow the native browser menu so right-click feels
@@ -12763,6 +12854,13 @@ export class Hud {
           this.dragAction = null;
           this.clearActionDropTargets();
         });
+        // Touch counterpart of the drag above. The +/- toggle stays the primary
+        // (and keyboard-reachable) way to fill the bar; this adds the direct
+        // "drop it on THAT slot" gesture the mouse already had.
+        this.bindHotbarTouchDrag(row, () => ({
+          action: { type: 'ability', id: known.def.id },
+          sourceIndex: null,
+        }));
         this.attachTooltip(row, () => this.abilityTooltip(known));
       } else {
         this.attachTooltip(
@@ -16313,6 +16411,7 @@ function auraDisplayNameFromSource(name: string): string {
   // the shared sim matcher; without it they render as raw English everywhere.
   return (
     localizeUnstuckAuraName(name) ??
+    localizeResurrectionAuraName(name) ??
     localizeCraftedElixirAuraName(name) ??
     localizeSimAuraName(name) ??
     name

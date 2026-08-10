@@ -86,6 +86,14 @@ import {
   GFX_MIGRATION_VERSION,
   migratedGraphicsPreset,
 } from './render/gfx';
+import {
+  decideSpawnCinematic,
+  platformFromUserAgent,
+  recordSkipTap,
+  type SpawnCinematic,
+  spawnCinematicFor,
+  spawnCinematicPose,
+} from './game/spawn_cinematic';
 import { Renderer } from './render/renderer';
 import { navigatorSaveData } from './render/sky';
 import { pathCrossesFence } from './sim/colliders';
@@ -147,6 +155,7 @@ import { tServer } from './ui/server_i18n';
 import { wireSkinPicker } from './ui/skin_picker';
 import { createSpectateBadge } from './ui/spectate_badge';
 import { type PresetId, type ThemeKnob, ThemeStore } from './ui/theme';
+import { isFreshCharacter } from './ui/tutorial';
 import {
   classifyAuthCode,
   formatRecoveryCodesFile,
@@ -1119,6 +1128,13 @@ async function startGame(
             openChat();
             break;
           case 'escape':
+            // Escape skips the first-spawn cinematic before it can close a panel
+            // or open the menu, so the first key a new player presses does the
+            // one thing they meant by it.
+            if (spawnCinematicPlaying()) {
+              endSpawnCinematic();
+              break;
+            }
             // close the topmost panel; if nothing was open, open the game menu
             if (!hud.closeAll()) hud.toggleOptionsMenu();
             break;
@@ -1693,8 +1709,8 @@ async function startGame(
     // so the marker stamps where a click actually does something: the click-to-move
     // destination (OSRS's yellow "walking here" X) and an entity you target or walk to
     // (OSRS's red interaction X). A plain ground click that only deselects gets nothing.
-    const wantClickFeedback = settings.get('clickFeedback') && !world.player.dead;
-    const clickToMove = settings.get('clickToMove') > 0 && !world.player.dead;
+    const wantClickFeedback = settings.get('clickFeedback') && !corpseOnGround();
+    const clickToMove = settings.get('clickToMove') > 0 && !corpseOnGround();
     const clickToMoveButton = normalizeClickMoveButton(settings.get('clickToMoveButton'));
     const isClickMoveButton = clickToMove && button === clickToMoveButton;
     if (id === null) {
@@ -1819,6 +1835,17 @@ async function startGame(
     }
   }
 
+  /**
+   * A body on the ground, as opposed to a released spirit. Every MOVEMENT gate
+   * below asks this instead of `world.player.dead`, because a ghost walks: the
+   * corpse run steers, click-moves, and mouselooks exactly like a living body.
+   * Combat and interaction gates keep asking `dead` directly, so a ghost still
+   * fights nothing and loots nothing.
+   */
+  function corpseOnGround(): boolean {
+    return world.player.dead && !world.player.ghost;
+  }
+
   // The player can't move toward a click-to-move destination while rooted/stunned
   // — surface that on the marker so the freeze reads as crowd control, not a bug.
   function playerImmobilized(): boolean {
@@ -1867,7 +1894,7 @@ async function startGame(
     const show =
       !!target &&
       (settings.get('clickToMove') > 0 || settings.get('attackMove')) &&
-      !world.player.dead &&
+      !corpseOnGround() &&
       (!!input.clickMoveTarget || nowMs < clickMoveMarkerHideAt);
     if (!show) {
       clickMoveMarker.classList.remove('active', 'entity', 'pulse', 'blocked');
@@ -1919,6 +1946,98 @@ async function startGame(
   let onlineJitterMs = 0;
   let gameInputReady = false;
 
+  // ---------------------------------------------------------------------------
+  // First-spawn camera cinematic (game/spawn_cinematic.ts). All the math is in
+  // that module; this is the three pieces of state the frame loop needs. The
+  // pose is written to the RENDERER's camera mirror only, never to `input.*`, so
+  // the player's own orbit state is untouched and the hand-off cannot snap.
+  // ---------------------------------------------------------------------------
+  let spawnCinematic: SpawnCinematic | null = null;
+  let spawnCinematicStartMs = 0;
+  const spawnCinematicSkipTaps: number[] = [];
+  const spawnCinematicPlaying = (): boolean => spawnCinematic !== null;
+  function endSpawnCinematic(): void {
+    spawnCinematic = null;
+    spawnCinematicSkipTaps.length = 0;
+  }
+  // "Already seen" is its own versioned localStorage key rather than a Settings
+  // bool, because Settings.reset() ("Reset to Defaults") would otherwise replay
+  // the cinematic. Same shape as the tutorial's one-shot flag.
+  const SPAWN_CINEMATIC_KEY = 'woc.spawnCinematic.v1';
+  function spawnCinematicSeen(): boolean {
+    try {
+      return localStorage.getItem(SPAWN_CINEMATIC_KEY) === 'done';
+    } catch {
+      // private mode: treat as seen, so a browser that cannot remember never
+      // replays the opening on every single entry.
+      return true;
+    }
+  }
+  function markSpawnCinematicSeen(): void {
+    try {
+      localStorage.setItem(SPAWN_CINEMATIC_KEY, 'done');
+    } catch {
+      /* private mode */
+    }
+  }
+  /**
+   * Decide and arm. All four gates (asked for, not seen, level 1, reduced
+   * motion) plus the native-iOS-WebKit memory carve-out live in the pure policy
+   * in game/spawn_cinematic.ts; this only gathers the facts. Reduced motion ORs
+   * the OS media query with the in-app Reduce Motion toggle, the same pairing
+   * the landing backdrop uses.
+   */
+  function armSpawnCinematic(): void {
+    const deviceMemory = (navigator as unknown as { deviceMemory?: number }).deviceMemory;
+    const decision = decideSpawnCinematic({
+      requested: isFreshCharacter(world),
+      seen: spawnCinematicSeen(),
+      playerLevel: world.player.level,
+      reducedMotion:
+        (typeof window.matchMedia === 'function' &&
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches) ||
+        settings.get('reduceMotion'),
+      native: NATIVE_APP,
+      platform: platformFromUserAgent(navigator.userAgent),
+      engine: browserEnv.engine,
+      // The same signal isConstrainedBrowser reads: a small-RAM device, or a
+      // phone-class one the graphics tier already recognized as constrained.
+      constrainedMemory: (typeof deviceMemory === 'number' && deviceMemory <= 4) || GFX.mobileProfile,
+      graphicsPreset: Math.round(settings.get('graphicsPreset')),
+    });
+    if (!decision.play) return;
+    // Marked seen the moment it starts, not when it finishes: a player who skips
+    // it, reloads, or crashes mid-approach has still had their one showing.
+    markSpawnCinematicSeen();
+    spawnCinematic = spawnCinematicFor({
+      yaw: input.camYaw,
+      pitch: input.camPitch,
+      dist: input.camDist,
+    });
+    spawnCinematicStartMs = performance.now();
+  }
+  // Touch players have no Escape key, so a rapid burst of taps skips instead (a
+  // lone stray tap must not). Registered once and gated on the cinematic, rather
+  // than added and removed, so it can never leak a listener.
+  window.addEventListener(
+    'pointerdown',
+    () => {
+      if (!spawnCinematicPlaying()) return;
+      if (recordSkipTap(spawnCinematicSkipTaps, performance.now() / 1000)) endSpawnCinematic();
+    },
+    { passive: true },
+  );
+  /** Apply the cinematic pose for this frame, or false when none is running. */
+  function applySpawnCinematic(nowMs: number): boolean {
+    if (!spawnCinematic) return false;
+    const pose = spawnCinematicPose((nowMs - spawnCinematicStartMs) / 1000, spawnCinematic);
+    renderer.camYaw = pose.yaw;
+    renderer.camPitch = pose.pitch;
+    renderer.camDist = pose.dist;
+    if (pose.done) endSpawnCinematic();
+    return true;
+  }
+
   // Camera follow state: keyboard turning advances facing in 20Hz sim steps,
   // so the camera tracks the player's render-interpolated facing per frame
   // (same curve the character model follows) instead of the raw tick deltas -
@@ -1936,7 +2055,7 @@ async function startGame(
   let pendingReleaseFacing: number | null = null;
   function updateCamera(frameDt: number, interpFacing: number): void {
     const mi = input.readMoveInput();
-    const clickMoving = !!input.clickMoveTarget && !input.suspendMovement && !world.player.dead;
+    const clickMoving = !!input.clickMoveTarget && !input.suspendMovement && !corpseOnGround();
     // When click-to-move ends, the player's facing snaps from the (camera-lagging)
     // travel bearing to camYaw in the same frame. lastInterpFacing still holds the
     // old travel bearing, so the rigid follow term would inject that whole stale
@@ -1988,7 +2107,8 @@ async function startGame(
       const action = resolveClickMoveAction(mi, {
         mouselook,
         movementSuspended: input.suspendMovement,
-        playerDead: world.player.dead,
+        // A ghost is not "dead" for movement purposes: it runs its corpse back.
+        playerDead: corpseOnGround(),
         enabled: settings.get('clickToMove') > 0 || settings.get('attackMove'),
       });
       if (action === 'cancel') {
@@ -2100,13 +2220,13 @@ async function startGame(
     if (input.isMouseCameraMode()) {
       return cameraMoveActive() ? input.camYaw : null;
     }
-    return input.isMouselookActive() && !world.player.dead ? input.camYaw : null;
+    return input.isMouselookActive() && !corpseOnGround() ? input.camYaw : null;
   }
 
   function cameraMoveActive(): boolean {
     if (!input.isMouseCameraMode()) return false;
     const mi = input.readMoveInput();
-    return !!(mi.forward || mi.back || mi.strafeLeft || mi.strafeRight) && !world.player.dead;
+    return !!(mi.forward || mi.back || mi.strafeLeft || mi.strafeRight) && !corpseOnGround();
   }
 
   // Feed the frame meter every frame (so stats stay warm even when hidden) and,
@@ -2155,7 +2275,9 @@ async function startGame(
 
     // freeze movement while the game menu is up so WASD doesn't walk the
     // character behind it (other windows stay non-modal, as before)
-    input.suspendMovement = !gameInputReady || hud.isModalOpen();
+    // The cinematic holds the character still for its nine seconds: the camera is
+    // not the player's during the approach, so neither is the movement.
+    input.suspendMovement = !gameInputReady || hud.isModalOpen() || spawnCinematicPlaying();
     perf.trace('input.updateTouchLook', () => input.updateTouchLook(frameDt), {
       frameDtMs: frameDt * 1000,
     });
@@ -2163,7 +2285,7 @@ async function startGame(
     perf.trace('input.hoverCursor', () => updateHoverCursor(), { active: input.hoverActive });
     perf.markInputFrame(performance.now());
 
-    const mouselook = input.isMouselookActive() && !world.player.dead;
+    const mouselook = input.isMouselookActive() && !corpseOnGround();
     const controllerFacing = input.controllerFacingOverride();
     const renderFacing = renderFacingOverride();
     // On the frame mouselook is released, latch the final camera yaw so the player
@@ -2177,7 +2299,7 @@ async function startGame(
     } else if (edgeReleaseFacing !== null) {
       pendingReleaseFacing = edgeReleaseFacing;
     }
-    const movementFacing = !world.player.dead
+    const movementFacing = !corpseOnGround()
       ? (renderFacing ?? controllerFacing ?? pendingReleaseFacing)
       : null;
 
@@ -2226,9 +2348,11 @@ async function startGame(
           frameDtMs: frameDt * 1000,
         },
       );
-      renderer.camYaw = input.camYaw;
-      renderer.camPitch = input.camPitch;
-      renderer.camDist = input.camDist;
+      if (!applySpawnCinematic(now)) {
+        renderer.camYaw = input.camYaw;
+        renderer.camPitch = input.camPitch;
+        renderer.camDist = input.camDist;
+      }
       perf.setNetwork(null);
       perf.time('renderer', () =>
         perf.trace('renderer.sync', () => renderer.sync(acc / DT, frameDt, movementFacing), {
@@ -2319,9 +2443,11 @@ async function startGame(
         lastSnapAge: net.lastSnapAt > 0 ? performance.now() - net.lastSnapAt : -1,
       },
     );
-    renderer.camYaw = input.camYaw;
-    renderer.camPitch = input.camPitch;
-    renderer.camDist = input.camDist;
+    if (!applySpawnCinematic(now)) {
+      renderer.camYaw = input.camYaw;
+      renderer.camPitch = input.camPitch;
+      renderer.camDist = input.camDist;
+    }
     perf.time('renderer', () =>
       perf.trace(
         'renderer.sync',
@@ -2372,6 +2498,11 @@ async function startGame(
   requestAnimationFrame(() =>
     requestAnimationFrame(() => {
       hideLoadingScreen();
+      // Arm the first-spawn cinematic exactly here: the first real frame is on
+      // screen (both entry paths converge on this double-rAF), the camera has
+      // been seeded from the character's facing, and the player has not yet been
+      // handed control (`gameInputReady` flips below, after the loading fade).
+      armSpawnCinematic();
       window.setTimeout(() => {
         gameInputReady = true;
         perf.reset();

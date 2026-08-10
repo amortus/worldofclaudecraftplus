@@ -4211,6 +4211,10 @@ export class Renderer {
                 : v.visual;
       const ghost =
         ghostWolf ||
+        // A released spirit on its corpse run renders translucent, reusing the
+        // existing ghost material (cloned once per rig and cached, so this costs
+        // one boolean per frame and allocates nothing).
+        e.ghost ||
         shouldRenderStealthGhost(this.sim.playerId, e) ||
         e.templateId.startsWith('vision_');
       active.setGhost(ghost);

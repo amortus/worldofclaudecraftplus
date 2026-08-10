@@ -44,6 +44,7 @@ import {
   type ResolvedAbility,
 } from '../sim/sim';
 import { SpatialGrid } from '../sim/spatial';
+import { ghostOptions, graveyardFor } from '../sim/spirit';
 import {
   type Entity,
   type EquipSlot,
@@ -72,6 +73,7 @@ import {
   type DuelInfo,
   type EnchantOptionView,
   type FriendInfo,
+  type GhostView,
   type GuildLeaderboardPage,
   type IWorld,
   isOverheadEmoteId,
@@ -789,6 +791,8 @@ function blankEntity(id: number): Entity {
     objectItemId: null,
     dungeonId: null,
     dead: false,
+    ghost: false,
+    corpsePos: null,
     scale: 1,
     color: 0xffffff,
     skinCatalog: 'class',
@@ -1519,6 +1523,15 @@ export class ClientWorld implements IWorld {
       e.overheadEmoteUntil = e.overheadEmoteId ? Number.POSITIVE_INFINITY : 0;
       if (typeof w.emoSeq === 'number') e.overheadEmoteSeq = w.emoSeq;
       e.dead = nowDead;
+      // The released-spirit flag rides every record (it changes how the renderer
+      // draws the body and which death UI the HUD shows); the corpse point rides
+      // the SELF record only, since nobody else's corpse run is your business.
+      e.ghost = !!w.gh;
+      if (w.cor !== undefined) {
+        e.corpsePos = Array.isArray(w.cor) ? { x: w.cor[0], y: w.cor[1], z: w.cor[2] } : null;
+      } else if (!e.ghost) {
+        e.corpsePos = null;
+      }
       e.lootable = !!w.loot;
       e.hostile = !!w.h;
       e.castingAbility = w.cast ?? null;
@@ -1983,6 +1996,37 @@ export class ClientWorld implements IWorld {
   }
   releaseSpirit(): void {
     this.cmd({ cmd: 'release' });
+  }
+  /**
+   * The mirror of `Sim.ghostInfo`. Both worlds run the SAME pure helpers over the
+   * same two facts (where the spirit stands, where its body lies), so the button
+   * that lights up here is the one the server will accept. The server re-checks
+   * every gate before acting; this only decides what to draw.
+   */
+  ghostInfo(): GhostView | null {
+    const p = this.player;
+    if (!p.dead || !p.ghost) return null;
+    // Plain `graveyardFor`, where `Sim.ghostInfo` goes through `spiritGraveyardFor`
+    // (which additionally resolves a RIFT position from the zone the tear opened
+    // in). The two agree for every reachable ghost because release always ejects
+    // the spirit out of the rift band BEFORE `ghost` is set, so a ghost is never
+    // at a rift x and both sides reduce to this same call. If a ghost ever becomes
+    // possible inside an instance plane, this has to grow the same arm or the
+    // online panel will light the wrong button.
+    const opts = ghostOptions({
+      dead: p.dead,
+      ghost: p.ghost,
+      pos: p.pos,
+      corpsePos: p.corpsePos,
+      graveyard: graveyardFor(p.pos),
+    });
+    return { ...opts, corpse: p.corpsePos };
+  }
+  resurrectAtCorpse(): void {
+    this.cmd({ cmd: 'rez_corpse' });
+  }
+  resurrectAtSpiritHealer(): void {
+    this.cmd({ cmd: 'rez_healer' });
   }
   chat(text: string): void {
     this.cmd({ cmd: 'chat', text });

@@ -69,8 +69,13 @@ export function applyAction(sim: Sim, action: number): void {
       }
     }
   }
-  // If the player is dead, any action releases the spirit.
-  if (sim.player.dead) sim.releaseSpirit();
+  // The death loop, collapsed for the RL env: any action releases the spirit, and
+  // any action taken as a ghost accepts the Spirit Healer at the graveyard the
+  // release just placed the agent on. Without the second half an agent that died
+  // would stay a ghost forever and the episode would never recover. Below level 10
+  // the sickness is waived, which is where training lives.
+  if (sim.player.ghost) sim.resurrectAtSpiritHealer();
+  else if (sim.player.dead) sim.releaseSpirit();
 }
 
 // ---------------------------------------------------------------------------

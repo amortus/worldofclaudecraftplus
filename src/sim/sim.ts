@@ -148,11 +148,29 @@ import {
 } from './professions';
 import { atLeastStanding, FACTIONS, REP_MAX, REP_MIN } from './reputation';
 import {
+  aurasSurvivingDeath,
+  corpseIsRecoverable,
+  corpseRezDenyReason,
+  GHOST_RUN_MULT,
+  type GhostOptions,
+  type GhostSnapshot,
+  ghostOptions,
+  graveyardFor,
+  healerRezDenyReason,
+  RES_HEALER_HP_FRACTION,
+  RES_HP_FRACTION,
+  RESURRECTION_SICKNESS_ID,
+  type ResurrectDenyReason,
+  resurrectionSicknessAura,
+  SICKNESS_AURA_IDS,
+} from './spirit';
+import {
   type PendingUnstuck,
   requestUnstuck,
   tickUnstuck,
   UNSTUCK_COOLDOWN_ID,
   UNSTUCK_RETRY_COOLDOWN_SECONDS,
+  UNSTUCK_SICKNESS_ID,
   type UnstuckSnapshot,
   unstuckSicknessAura,
 } from './unstuck';
@@ -1363,6 +1381,29 @@ export interface CharacterState {
   // and OMITTED while the chronicle is empty. Loaded through
   // `restoreDeedProgress`, which bounds counters, marks and earned ids.
   deeds?: SavedDeedProgress;
+  // The death loop (src/sim/spirit.ts). Optional and OMITTED entirely while the
+  // character is alive and owes no Resurrection Sickness, which is nearly always,
+  // so a save made before the death loop existed loads AND re-saves byte-for-byte
+  // (the same contract as `equipmentInstances` / `gatheringProficiency`). Loaded
+  // through `restoreDeathState`, which tolerates `undefined` and garbage: a
+  // malformed block loads as a living, unsick character rather than throwing.
+  death?: SavedDeathState;
+}
+
+/**
+ * The persisted half of the death loop. Death and its penalty must both survive a
+ * relog, or logging out would be the cheapest resurrection in the game and The
+ * Keeper's Toll could be washed off by reconnecting.
+ */
+export interface SavedDeathState {
+  /** The character logged out dead (body on the ground, spirit not yet released). */
+  dead?: boolean;
+  /** The spirit had been released. Implies `dead`. */
+  ghost?: boolean;
+  /** Where the body lies, when a corpse run was still possible. */
+  corpse?: { x: number; y: number; z: number };
+  /** Seconds of Resurrection Sickness left: the penalty RESUMES, it does not reset. */
+  sickness?: number;
 }
 
 export interface PetState {
@@ -1411,6 +1452,25 @@ export function serializeGatheringProficiency(
 // `undefined`, so the key is absent from CharacterState (and from the JSONB)
 // until the character has actually crafted. Read side is
 // `normalizeCraftingProficiency`, which is symmetric (missing -> 0).
+/**
+ * Sparse persisted form of the death loop, read off the live entity. Returns
+ * `undefined` (so the key is absent from `CharacterState` AND from the JSONB) for
+ * a living character who owes no Resurrection Sickness, which is the normal case:
+ * an untouched character never churns its save. Same contract as
+ * `serializeGatheringProficiency`; the read side is `restoreDeathState`.
+ */
+export function serializeDeathState(e: Entity): SavedDeathState | undefined {
+  const sickness = e.auras.find((a) => a.id === RESURRECTION_SICKNESS_ID)?.remaining ?? 0;
+  const out: SavedDeathState = {};
+  if (e.dead) out.dead = true;
+  if (e.ghost) out.ghost = true;
+  if (e.dead && e.corpsePos) {
+    out.corpse = { x: e.corpsePos.x, y: e.corpsePos.y, z: e.corpsePos.z };
+  }
+  if (sickness > 0) out.sickness = Math.round(sickness * 100) / 100;
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 export function serializeCraftingProficiency(
   proficiency: CraftingProficiency,
 ): Record<string, number> | undefined {
@@ -2386,6 +2446,9 @@ export class Sim {
             : 0;
     }
     player.swingTimer = 0;
+    // After the pools are restored, because the sickness shrinks the maxima and
+    // a restored ghost overwrites hp outright.
+    if (savedState?.death) this.restoreDeathState(player, meta, savedState.death);
     if (savedState?.pet) this.restorePet(player, savedState.pet);
     // Retro chronicle pass, once per join: an existing character gets credit for
     // the state it verifiably holds, and a newly shipped deed is re-checked
@@ -2480,6 +2543,10 @@ export class Sim {
     // Omitted entirely until the character seals its first rift, so a save made
     // before rifts existed round-trips byte-identical.
     const riftClears = Object.keys(meta.riftClears).length > 0 ? { ...meta.riftClears } : undefined;
+    // Same omit-when-empty contract: a living character who owes no Resurrection
+    // Sickness (the overwhelming majority of saves) writes no `death` key at all,
+    // so a pre-death-loop save round-trips byte-identical.
+    const death = serializeDeathState(e);
     const state: CharacterState = {
       level: restore ? restore.level : e.level,
       xp: restore ? restore.xp : meta.xp,
@@ -2541,6 +2608,7 @@ export class Sim {
       ...(craftingProficiency && { craftingProficiency }),
       ...(deeds && { deeds }),
       ...(riftClears && { riftClears }),
+      ...(death && { death }),
     };
     return sanitizeRemovedZone1Content(state).state;
   }
@@ -3244,7 +3312,20 @@ export class Sim {
     for (const meta of this.players.values()) {
       const p = this.entities.get(meta.entityId);
       if (!p) continue;
-      if (!p.dead) {
+      if (p.dead && p.ghost) {
+        // A released spirit is the one dead thing that MOVES: the corpse run is
+        // the whole feature. It gets locomotion and zone tracking (so the map and
+        // the zone banner keep working on the way back) and nothing else, so no
+        // combat, casting, regen, or door trigger can run for a ghost. Costs one
+        // movement update per released spirit per tick and draws no rng.
+        this.updatePlayerMovement(p, meta);
+        // The door trigger too, and ONLY for this reason: a spirit whose body
+        // lies inside a dungeon runs back to the door and re-enters to resurrect
+        // at the entrance (no Spirit Healer stands inside an instance).
+        // `enterDungeon` refuses a ghost at any other door.
+        this.updateDoorTriggers(p);
+        this.trackZoneEntry(p, meta);
+      } else if (!p.dead) {
         this.updatePlayerMovement(p, meta);
         this.updateDoorTriggers(p);
         this.trackZoneEntry(p, meta);
@@ -3505,6 +3586,10 @@ export class Sim {
     return q === 'poor' || q === 'common' ? strategies.commonItems : strategies.premiumItems;
   }
   moveSpeedMult(e: Entity): number {
+    // A ghost cannot be snared and runs faster than the living: the classic
+    // ghost-run feel. It REPLACES the aura math rather than multiplying into it,
+    // so the slow that helped kill you does not follow your spirit home.
+    if (e.ghost) return GHOST_RUN_MULT;
     let slow = 1,
       speed = 1;
     for (const a of e.auras) {
@@ -3897,7 +3982,9 @@ export class Sim {
         p.onGround = true;
         p.jumping = false;
         const drop = p.fallStartY - ground;
-        if (drop > FALL_SAFE_DISTANCE) {
+        // A ghost is already dead: it takes no fall damage, and letting it reach
+        // dealDamage would run a combat resolution (and its rng) for a spirit.
+        if (drop > FALL_SAFE_DISTANCE && !p.ghost) {
           const dmg = Math.round(p.maxHp * (drop - FALL_SAFE_DISTANCE) * 0.07);
           if (dmg > 0) this.dealDamage(null, p, dmg, false, 'physical', 'Falling', 'hit', true);
         }
@@ -13367,68 +13454,291 @@ export class Sim {
   // Player death / respawn
   // -------------------------------------------------------------------------
 
+  /**
+   * The graveyard this player's spirit belongs to. One place, so `releaseSpirit`,
+   * the ghost's Spirit Healer range check, and the `/graveyard` readout can never
+   * disagree about where the angel stands. A rift position is resolved from the
+   * zone the TEAR opened in, since the rift band's own coordinates are an
+   * instance plane rather than a place; everything else follows `graveyardFor`.
+   */
+  private spiritGraveyardFor(p: Entity): { x: number; z: number } {
+    const riftRun = isRiftPos(p.pos.x) ? this.riftRunAt(p.pos.z) : null;
+    const riftZone = this.riftZoneFor(riftRun);
+    return riftZone ? riftZone.graveyard : graveyardFor(p.pos);
+  }
+
+  /** Flat view of one player's ghost state, for the pure decisions in ./spirit. */
+  private ghostSnapshot(p: Entity): GhostSnapshot {
+    return {
+      dead: p.dead,
+      ghost: p.ghost,
+      pos: p.pos,
+      corpsePos: p.corpsePos,
+      graveyard: this.spiritGraveyardFor(p),
+    };
+  }
+
+  /**
+   * What this player's death UI may offer right now, or null when they are not a
+   * released spirit. Read through `IWorld` by the HUD; the server mirrors the same
+   * numbers to `ClientWorld` so both worlds agree on which buttons light up. The
+   * server re-checks every gate before acting, so this is presentation only.
+   */
+  ghostInfo(pid?: number): (GhostOptions & { corpse: Vec3 | null }) | null {
+    const r = this.resolve(pid);
+    if (!r || !r.e.dead || !r.e.ghost) return null;
+    return { ...ghostOptions(this.ghostSnapshot(r.e)), corpse: r.e.corpsePos };
+  }
+
+  /**
+   * Release the spirit. The body STAYS where it fell (that is the whole change:
+   * this used to be an instant full-health teleport) and the spirit rises at its
+   * graveyard as a ghost, where the Spirit Healer waits. `dead` stays true.
+   */
   releaseSpirit(pid?: number): void {
     const r = this.resolve(pid);
     if (!r) return;
     const { meta, e: p } = r;
-    if (!p.dead) return;
+    if (!p.dead || p.ghost) return; // not dead, or the spirit is already out
     if (this.arenaMatches.has(p.id)) return;
     if (isDelvePos(p.pos.x)) {
+      // Delves keep their own bounded respawn rule (back at the module entrance,
+      // still inside the run): no ghost, no corpse run.
       this.releaseSpiritInDelve(meta.entityId);
       return;
     }
-    // Dying in a rift releases you all the way out to the overworld, and the
-    // rift's own z is an instance-plane coordinate rather than a place, so the
-    // graveyard is the one belonging to the zone its TEAR opened in. Leaving
-    // also drops the corpse off the inside hate tables, exactly as walking out
-    // through the exit does.
+    // Dying in a rift releases you all the way out to the overworld. Leaving also
+    // drops the corpse off the inside hate tables, exactly as walking out through
+    // the exit does.
     const riftRun = isRiftPos(p.pos.x) ? this.riftRunAt(p.pos.z) : null;
     if (riftRun) this.scrubRiftThreat(riftRun, p.id);
-    p.dead = false;
-    // dying in a dungeon sends you to the graveyard of the zone its door is
-    // in; dying outdoors, to your current zone's graveyard
-    const dungeon = dungeonAt(p.pos.x);
-    const graveyard = (
-      this.riftZoneFor(riftRun) ??
-      (dungeon ? zoneAt(dungeon.doorPos.x, dungeon.doorPos.z) : zoneAt(p.pos.x, p.pos.z))
-    ).graveyard;
+    const graveyard = this.spiritGraveyardFor(p);
+    // Resolved BEFORE the move, while the body still stands where it fell.
+    const corpse = corpseIsRecoverable(p.pos) ? { x: p.pos.x, y: p.pos.y, z: p.pos.z } : null;
+    p.corpsePos = corpse;
+    p.ghost = true; // p.dead stays true
     p.pos = this.groundPos(graveyard.x, graveyard.z);
     p.prevPos = { ...p.pos };
     this.rebucket(p);
     p.facing = 0;
-    p.auras = [];
+    p.prevFacing = 0;
+    // Whatever movement keys were held at the instant of death must not carry
+    // over, or the new ghost walks straight off the graveyard with no input.
+    Object.assign(meta.moveInput, emptyMoveInput());
+    // The sicknesses persist through death and release: they cannot be shed by
+    // dying. Every other aura clears.
+    p.auras = aurasSurvivingDeath(p.auras);
     p.ccDr.clear();
     recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta), meta.equipmentInstances);
+    // A ghost shows a full (greyed) bar even though it is still `dead`.
     p.hp = p.maxHp;
     p.resource = p.resourceType === 'mana' ? p.maxResource : p.resourceType === 'energy' ? 100 : 0;
     p.targetId = null;
     p.autoAttack = false;
     p.queuedOnSwing = null;
+    p.queuedCastAbility = null;
     p.combatTimer = 99;
     p.inCombat = false;
+    // A ghost never falls: it is teleported onto settled ground, so no carried-over
+    // jump arc or fall origin can deal damage on arrival.
+    p.vx = 0;
+    p.vy = 0;
+    p.vz = 0;
+    p.jumping = false;
+    p.onGround = true;
+    p.fallStartY = p.pos.y;
+    this.emit({ type: 'ghostRelease', corpse, pid: meta.entityId });
+  }
+
+  /**
+   * Resurrect at the corpse: the reward for running the spirit all the way back.
+   * No sickness, `RES_HP_FRACTION` of the pools, and the body stands up where the
+   * ghost is standing rather than snapping onto the exact corpse point.
+   */
+  resurrectAtCorpse(pid?: number): void {
+    const r = this.resolve(pid);
+    if (!r) return;
+    const deny = corpseRezDenyReason(this.ghostSnapshot(r.e));
+    if (deny) {
+      this.denyResurrect(r.meta.entityId, deny);
+      return;
+    }
+    this.reviveFromGhost(r.meta, r.e, r.e.pos, RES_HP_FRACTION, false, 'corpse');
+  }
+
+  /**
+   * Accept the Spirit Healer's resurrection at the graveyard: instant and in
+   * place, but you come back at `RES_HEALER_HP_FRACTION` of your pools with
+   * Resurrection Sickness. The escape hatch for a corpse that cannot be reached.
+   */
+  resurrectAtSpiritHealer(pid?: number): void {
+    const r = this.resolve(pid);
+    if (!r) return;
+    const deny = healerRezDenyReason(this.ghostSnapshot(r.e));
+    if (deny) {
+      this.denyResurrect(r.meta.entityId, deny);
+      return;
+    }
+    this.reviveFromGhost(r.meta, r.e, r.e.pos, RES_HEALER_HP_FRACTION, true, 'healer');
+  }
+
+  private denyResurrect(pid: number, reason: ResurrectDenyReason): void {
+    this.emit({ type: 'ghostDeny', reason, pid });
+  }
+
+  /**
+   * Clear the released-spirit state on any path that raises a player OUTSIDE the
+   * death loop (arena/fiesta reset, delve eject, the delve's own bounded
+   * respawn). None of those can hold a ghost today - `releaseSpirit` refuses in
+   * an arena and routes a delve position to its own path before `ghost` is ever
+   * set - but a live player left with `ghost === true` would be a translucent,
+   * unattackable body that cannot fight, which is the worst failure this feature
+   * can produce. Two assignments is a cheap standing guarantee.
+   */
+  private clearGhostState(p: Entity): void {
+    p.ghost = false;
+    p.corpsePos = null;
+  }
+
+  /**
+   * Read side of `serializeDeathState`. Tolerates `undefined` and garbage: a
+   * malformed block loads as a living, unsick character rather than throwing,
+   * because a character that cannot load is a player who lost an account.
+   */
+  private restoreDeathState(p: Entity, meta: PlayerMeta, saved: SavedDeathState): void {
+    const sickness = saved.sickness;
+    if (typeof sickness === 'number' && Number.isFinite(sickness) && sickness > 0) {
+      this.applyDeathSickness(p, meta, sickness);
+      p.hp = Math.max(1, Math.min(p.hp, p.maxHp));
+      p.resource = Math.min(p.resource, p.maxResource);
+    }
+    if (saved.dead !== true && saved.ghost !== true) return;
+    p.dead = true;
+    p.ghost = saved.ghost === true;
+    const c = saved.corpse;
+    p.corpsePos =
+      p.ghost && c && Number.isFinite(c.x) && Number.isFinite(c.y) && Number.isFinite(c.z)
+        ? { x: c.x, y: c.y, z: c.z }
+        : null;
+    // A ghost shows a full greyed bar; an unreleased body is a body.
+    p.hp = p.ghost ? p.maxHp : 0;
+    p.resource = p.ghost
+      ? p.resourceType === 'mana'
+        ? p.maxResource
+        : p.resourceType === 'energy'
+          ? 100
+          : 0
+      : 0;
+    p.targetId = null;
+    p.autoAttack = false;
+    p.queuedOnSwing = null;
+    p.queuedCastAbility = null;
+    p.inCombat = false;
+    p.combatTimer = 99;
+    p.onGround = true;
+    p.jumping = false;
+    p.fallStartY = p.pos.y;
+  }
+
+  /**
+   * The one place a player comes back to life from the death loop. Clears the
+   * ghost/corpse state, places the body, restores the pools, and (when the road
+   * back charges one) applies Resurrection Sickness LAST, so the aura's stat drain
+   * is already folded into `maxHp` when the fraction is taken.
+   */
+  private reviveFromGhost(
+    meta: PlayerMeta,
+    p: Entity,
+    // Always a position the body or the spirit actually occupied, so its `y` is
+    // already valid: re-deriving it through `groundPos` would drop a dungeon
+    // revive onto the overworld heightfield under the interior floor.
+    pos: Vec3,
+    hpFrac: number,
+    sickened: boolean,
+    via: 'corpse' | 'healer' | 'revive',
+  ): void {
+    p.dead = false;
+    p.ghost = false;
+    p.corpsePos = null;
+    p.pos = { x: pos.x, y: pos.y, z: pos.z };
+    p.prevPos = { ...p.pos };
+    this.rebucket(p);
+    Object.assign(meta.moveInput, emptyMoveInput());
+    p.auras = aurasSurvivingDeath(p.auras);
+    p.ccDr.clear();
+    recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta), meta.equipmentInstances);
+    const sickness = sickened ? this.applyDeathSickness(p, meta) : 0;
+    p.hp = Math.max(1, Math.round(p.maxHp * hpFrac));
+    p.resource =
+      p.resourceType === 'mana'
+        ? Math.round(p.maxResource * hpFrac)
+        : p.resourceType === 'energy'
+          ? 100
+          : 0;
+    p.targetId = null;
+    p.autoAttack = false;
+    p.queuedOnSwing = null;
+    p.queuedCastAbility = null;
+    p.combatTimer = 99;
+    p.inCombat = false;
+    p.vx = 0;
+    p.vy = 0;
+    p.vz = 0;
+    p.jumping = false;
+    p.onGround = true;
+    p.fallStartY = p.pos.y;
+    this.emit({ type: 'ghostResurrect', via, sickness, pid: meta.entityId });
+    // Kept alongside the new event: `respawn` is the signal every pre-ghost
+    // consumer (RL env, HUD refresh, the delve/arena revives) already listens for.
     this.emit({ type: 'respawn', pid: meta.entityId });
   }
 
-  // Revive a dead player at their current position (used for ad-rewarded revival).
-  // Same as releaseSpirit but skips the graveyard teleport.
+  /**
+   * Push Resurrection Sickness, dropping whichever sickness the player already
+   * owed. Both sicknesses are flat `buff_allstats` drains and `recalcPlayerStats`
+   * sums every one of them, so letting the two coexist would compound a -75% into
+   * a -150% and floor the character. A player only ever owes the most recent one.
+   * Returns the seconds charged (0 when the level waives it).
+   */
+  private applyDeathSickness(p: Entity, meta: PlayerMeta, remaining?: number): number {
+    const displaced = p.auras.findIndex(
+      (a) => SICKNESS_AURA_IDS.has(a.id) && a.id !== RESURRECTION_SICKNESS_ID,
+    );
+    if (displaced >= 0) {
+      const old = p.auras[displaced];
+      p.auras.splice(displaced, 1);
+      this.emit({ type: 'aura', targetId: p.id, name: old.name, gained: false });
+    }
+    // Recalc with a clean aura list first so `p.stats` is the BASE the percentage
+    // is taken from, exactly as completeUnstuck does.
+    recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta), meta.equipmentInstances);
+    const aura = resurrectionSicknessAura(p.level, p.stats, p.id, remaining);
+    if (!aura) return 0;
+    const existing = p.auras.findIndex((a) => a.id === RESURRECTION_SICKNESS_ID);
+    if (existing >= 0) p.auras.splice(existing, 1);
+    p.auras.push(aura);
+    this.emit({ type: 'aura', targetId: p.id, name: aura.name, gained: true });
+    recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta), meta.equipmentInstances);
+    return aura.remaining;
+  }
+
+  /**
+   * Ad-rewarded revival: the one road back that skips the whole loop, which is
+   * exactly what the reward buys. A body that has not released yet stands up where
+   * it fell; a spirit that HAS released is carried back to its own corpse and
+   * raised there (the corpse run, bought rather than run), or raised where it
+   * stands when the death left no corpse to return to. It never charges sickness,
+   * so it stays strictly better than the Spirit Healer, and the server's own
+   * six-per-hour cooldown is what bounds it.
+   */
   reviveInPlace(pid: number): void {
     const r = this.resolve(pid);
     if (!r) return;
     const { meta, e: p } = r;
     if (!p.dead) return;
     if (this.arenaMatches.has(p.id)) return;
-    p.dead = false;
-    p.auras = [];
-    p.ccDr.clear();
-    recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta), meta.equipmentInstances);
-    p.hp = p.maxHp;
-    p.resource = p.resourceType === 'mana' ? p.maxResource : p.resourceType === 'energy' ? 100 : 0;
-    p.targetId = null;
-    p.autoAttack = false;
-    p.queuedOnSwing = null;
-    p.combatTimer = 99;
-    p.inCombat = false;
-    this.emit({ type: 'respawn', pid: meta.entityId });
+    const destination = p.ghost && p.corpsePos ? p.corpsePos : p.pos;
+    this.reviveFromGhost(meta, p, destination, 1, false, 'revive');
   }
 
   // -------------------------------------------------------------------------
@@ -13461,6 +13771,7 @@ export class Sim {
       pos: p.pos,
       level: p.level,
       dead: p.dead,
+      ghost: p.ghost,
       inCombat: p.inCombat,
       combatTimer: p.combatTimer,
       onGround: p.onGround,
@@ -13571,7 +13882,14 @@ export class Sim {
     meta: PlayerMeta,
     res: { destination: { x: number; z: number }; revive: boolean; cooldownSeconds: number; outcome: 'moved_to_graveyard' | 'revived_at_graveyard' },
   ): void {
+    const wasGhost = p.ghost;
     p.dead = false;
+    // A released spirit that finishes /unstuck is raised HERE, at the graveyard,
+    // and its body is abandoned: unstuck must never be a free ride to the corpse
+    // (that would beat the corpse run it exists to rescue you from). The whole
+    // price stays Unstuck Sickness plus the five-minute success cooldown.
+    p.ghost = false;
+    p.corpsePos = null;
     // Inside a delve the module's graveyard rule does not apply: `dungeonAt`
     // returns null for the delve x-band, so `unstuckGraveyardFor` would resolve
     // an OVERWORLD graveyard and hand the player a free escape from a failing
@@ -13585,14 +13903,26 @@ export class Sim {
     p.prevPos = { ...p.pos };
     this.rebucket(p);
     p.facing = 0;
-    p.auras = [];
+    // Only the sicknesses survive, and the block below immediately displaces
+    // whichever one is left: a completed /unstuck must not be a way to wash off
+    // The Keeper's Toll, and the two may never coexist (both are flat
+    // `buff_allstats` drains, so together they would compound to -150%).
+    p.auras = aurasSurvivingDeath(p.auras);
     p.ccDr.clear();
+    const stale = p.auras.findIndex((a) => a.id !== UNSTUCK_SICKNESS_ID);
+    if (stale >= 0) {
+      const old = p.auras[stale];
+      p.auras.splice(stale, 1);
+      this.emit({ type: 'aura', targetId: p.id, name: old.name, gained: false });
+    }
     // Recalc with a clean aura list first, so `p.stats` is the BASE the sickness
     // percentage is taken from; then push the debuff and recalc again, keeping
     // every derived stat inside the one place stats are ever derived.
     recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta), meta.equipmentInstances);
     const sickness = unstuckSicknessAura(p.level, p.stats, p.id);
     if (sickness) {
+      const existing = p.auras.findIndex((a) => a.id === UNSTUCK_SICKNESS_ID);
+      if (existing >= 0) p.auras.splice(existing, 1);
       p.auras.push(sickness);
       this.emit({ type: 'aura', targetId: p.id, name: sickness.name, gained: true });
       recalcPlayerStats(p, meta.cls, meta.equipment, this.playerMods(meta), meta.equipmentInstances);
@@ -13601,6 +13931,14 @@ export class Sim {
       p.hp = p.maxHp;
       p.resource =
         p.resourceType === 'mana' ? p.maxResource : p.resourceType === 'energy' ? 100 : 0;
+      if (wasGhost) {
+        this.emit({
+          type: 'ghostResurrect',
+          via: 'unstuck',
+          sickness: sickness?.remaining ?? 0,
+          pid: meta.entityId,
+        });
+      }
       this.emit({ type: 'respawn', pid: meta.entityId });
     } else {
       // Alive in, alive out: pools are kept, only re-clamped to the maxima the
@@ -15958,6 +16296,7 @@ export class Sim {
 
   private readyArenaFighter(e: Entity, opts: { clearPrep: boolean }): void {
     e.dead = false;
+    this.clearGhostState(e);
     if (opts.clearPrep) {
       e.auras = [];
       e.cooldowns.clear();
@@ -16108,6 +16447,7 @@ export class Sim {
       e.prevPos = { ...e.pos };
       e.facing = ret.facing;
       e.dead = false;
+      this.clearGhostState(e);
       this.rebucket(e);
       this.emit({ type: 'respawn', pid: e.id });
     }
@@ -17641,7 +17981,20 @@ export class Sim {
   enterDungeon(dungeonId: string, pid?: number): void {
     const r = this.resolve(pid);
     const dungeon = DUNGEONS[dungeonId];
-    if (!r || !dungeon || r.e.dead) return;
+    if (!r || !dungeon) return;
+    // A released SPIRIT may walk back through the door of the dungeon its own
+    // body lies in: re-entering IS the corpse run under the instance death model,
+    // so it resurrects at the entry with no penalty (see the revive at the end of
+    // this method). Matching the corpse to THIS dungeon is what stops a ghost
+    // walking through an unrelated door for a free resurrection; every other dead
+    // player is refused exactly as before. The party/raid/lockout gates below
+    // still apply, and a spirit that now fails one simply takes the Spirit Healer.
+    const spiritReentry =
+      r.e.dead &&
+      r.e.ghost &&
+      r.e.corpsePos !== null &&
+      dungeonAt(r.e.corpsePos.x)?.id === dungeonId;
+    if (r.e.dead && !spiritReentry) return;
     const party = this.partyOf(r.meta.entityId);
     const raidAllowed = RAID_ALLOWED_DUNGEON_IDS.has(dungeonId);
     const raidRequired = RAID_REQUIRED_DUNGEON_IDS.has(dungeonId);
@@ -17702,6 +18055,11 @@ export class Sim {
     p.autoAttack = false;
     inst.emptyFor = 0;
     this.emit({ type: 'log', text: dungeon.enterText, color: '#b9f', pid: r.meta.entityId });
+    // The spirit made it back inside: raise it here, on the same terms as a
+    // corpse-side resurrection (half pools, no sickness).
+    if (spiritReentry) {
+      this.reviveFromGhost(r.meta, p, p.pos, RES_HP_FRACTION, false, 'corpse');
+    }
   }
 
   private canEnterNythraxisRaid(meta: PlayerMeta): boolean {
@@ -19197,6 +19555,7 @@ export class Sim {
     if (!r) return;
     const p = r.e;
     p.dead = false;
+    this.clearGhostState(p);
     p.pos = this.groundPos(delve.doorPos.x, delve.doorPos.z - 4);
     p.prevPos = { ...p.pos };
     this.rebucket(p);
@@ -19367,11 +19726,13 @@ export class Sim {
     run.deathsThisRun[pid] = deaths;
     if (deaths >= 2) {
       r.e.dead = false;
+      this.clearGhostState(r.e);
       this.failDelveRun(run);
       return;
     }
     const p = r.e;
     p.dead = false;
+    this.clearGhostState(p);
     const entry = this.delveModuleEntry(run);
     p.pos = entry;
     p.prevPos = { ...entry };

@@ -381,7 +381,11 @@ describe('combat', () => {
     expect(sim.player.resource).toBeCloseTo(1, 5);
   });
 
-  it('mob can kill the player; release respawns at graveyard', () => {
+  // Release is no longer a revive: it raises a GHOST at the graveyard and leaves
+  // the body where it fell (src/sim/spirit.ts). The corpse run and the Spirit
+  // Healer are covered in ghost_wiring.test.ts; this keeps the classic
+  // "you end up at the right graveyard" assertion.
+  it('mob can kill the player; release raises a ghost at the graveyard', () => {
     const sim = makeSim('mage');
     const boss = nearestMob(sim, 'gorrak');
     teleportTo(sim, boss.pos.x + 2, boss.pos.z);
@@ -392,10 +396,19 @@ describe('combat', () => {
       if (events.some((e) => e.type === 'playerDeath')) died = true;
     }
     expect(died).toBe(true);
+    const corpse = { ...sim.player.pos };
     sim.releaseSpirit();
-    expect(sim.player.dead).toBe(false);
+    // Still dead, now a spirit: the body stays where it fell.
+    expect(sim.player.dead).toBe(true);
+    expect(sim.player.ghost).toBe(true);
+    expect(sim.player.corpsePos).toEqual({ x: corpse.x, y: corpse.y, z: corpse.z });
+    // A ghost shows a full (greyed) bar, and rises at the zone's graveyard.
     expect(sim.player.hp).toBe(sim.player.maxHp);
     expect(dist2d(sim.player.pos, { x: -12, y: 0, z: -14 })).toBeLessThan(2);
+    // The Spirit Healer stands there, so the way back is always open.
+    sim.resurrectAtSpiritHealer();
+    expect(sim.player.dead).toBe(false);
+    expect(sim.player.ghost).toBe(false);
   });
 
   it('mobs leash, evade, and reset to full health', () => {

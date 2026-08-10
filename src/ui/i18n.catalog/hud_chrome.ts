@@ -1409,12 +1409,14 @@ export const hudChromeStrings = {
     corpseDistance: 'Your corpse lies {yards} yards away.',
     corpseInRange: 'Your corpse is within reach.',
     corpseLost: 'Your body is beyond reach. Only the Spirit Healer can return you.',
-    healerFar: 'Return to a graveyard to find a Spirit Healer.',
-    healerNear: 'A Spirit Healer waits over you.',
+    // Each states the cost inside the sentence rather than gluing a
+    // parenthetical on at the call site: the punctuation between them would not
+    // be translatable, and a locale may want to lead with the price.
+    healerFar: 'Return to a graveyard to find a Spirit Healer. Its mercy costs Resurrection Sickness.',
+    healerNear: 'A Spirit Healer waits over you. Its mercy costs Resurrection Sickness.',
     // Buttons.
     resurrectAtCorpse: 'Resurrect',
     resurrectAtHealer: 'Spirit Healer',
-    healerWarning: 'Costs Resurrection Sickness',
     // Log lines for the three sim events.
     released: 'Your spirit rises at the graveyard. Run back to your body.',
     releasedNoCorpse: 'Your spirit rises at the graveyard, far from where you fell.',
@@ -1426,7 +1428,6 @@ export const hudChromeStrings = {
     },
     sickness: 'Resurrection Sickness clings to you for {duration}.',
     sicknessAura: 'Resurrection Sickness',
-    sicknessTooltip: 'All attributes reduced. The price of a Spirit Healer resurrection.',
     deny: {
       not_ghost: 'Your spirit is still bound to your body.',
       no_corpse: 'There is no body left to return to.',

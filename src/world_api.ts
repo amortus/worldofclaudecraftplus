@@ -35,6 +35,7 @@ import {
   type QuestProgress,
   type QuestState,
   type ResourceType,
+  type Vec3,
 } from './sim/types';
 
 export type { GuildLeaderboardPage, LeaderboardPage } from './sim/leaderboard_page';
@@ -439,6 +440,20 @@ export interface FiestaMatchInfo {
   powerups: FiestaPowerupView[];
 }
 
+/**
+ * What a released spirit may do right now. String-free, like the rest of this
+ * seam: distances and flags only, the HUD renders the words. `corpse` is null
+ * when the death left no body to run back to (a rift), in which case the Spirit
+ * Healer at the graveyard is the only road back.
+ */
+export interface GhostView {
+  corpse: Vec3 | null;
+  /** Yards to the body, or null when there is none. */
+  corpseDistance: number | null;
+  corpseInRange: boolean;
+  spiritHealerInRange: boolean;
+}
+
 export interface ArenaInfo {
   // Backwards-compatible view of the currently selected/queued/matched bracket.
   rating: number;
@@ -603,7 +618,16 @@ export interface IWorld {
   // the event token; the offline Sim resolves it directly.
   claimEventSkin(skin: number): void;
   unequipMechChroma(chromaId: string): void;
+  // The death loop (src/sim/spirit.ts). `releaseSpirit` no longer revives: it
+  // leaves the body where it fell and raises the spirit at its graveyard as a
+  // ghost. From there `ghostInfo()` says which road back is open and the two
+  // resurrect calls take it. Every gate is re-checked server-side; this surface
+  // only decides which button lights up.
   releaseSpirit(): void;
+  // Null unless the viewer is a released spirit.
+  ghostInfo(): GhostView | null;
+  resurrectAtCorpse(): void;
+  resurrectAtSpiritHealer(): void;
   chat(text: string): void;
   playEmote(emoteId: OverheadEmoteId): void;
   abandonPet(): void;

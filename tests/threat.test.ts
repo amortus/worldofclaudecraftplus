@@ -1622,9 +1622,17 @@ describe('shaman travel and shock mechanics', () => {
 
     (sim as any).dealDamage(wolf, sim.player, sim.player.hp, false, 'physical', null, 'hit', true);
     expect(sim.player.dead).toBe(true);
+    // Release raises a ghost at the graveyard now (src/sim/spirit.ts); the
+    // Spirit Healer standing there is what puts the shaman back on its feet so
+    // the rest of this case (recasting Ghost Wolf while alive) still applies.
     sim.releaseSpirit();
+    expect(sim.player.ghost).toBe(true);
+    sim.resurrectAtSpiritHealer();
     expect(sim.player.dead).toBe(false);
     expect(sim.player.autoAttack).toBe(false);
+    // Resurrection Sickness would leave too little mana for the recast below,
+    // and this case is about Ghost Wolf, not the death loop's economics.
+    sim.player.auras = sim.player.auras.filter((a) => a.id !== 'resurrection_sickness');
 
     sim.moveInput.forward = false;
     sim.moveInput.jump = false;

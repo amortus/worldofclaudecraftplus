@@ -1511,6 +1511,15 @@ export interface Entity {
   dungeonId: string | null; // set on dungeon door/exit portals
   // misc
   dead: boolean;
+  // The released-spirit half of the death loop (players only). `ghost` implies
+  // `dead`: the body is gone from under you but you are not alive yet. A ghost
+  // moves (faster, and immune to snares), cannot fight or be fought, and shows a
+  // full greyed bar. `corpsePos` is where the body lies, or null when the death
+  // happened somewhere a spirit cannot walk back to (a rift), in which case the
+  // Spirit Healer is the only way back. Both are set and cleared in `src/sim/spirit.ts`'s
+  // consumers in sim.ts and are never true for a mob or an npc.
+  ghost: boolean;
+  corpsePos: Vec3 | null;
   scale: number;
   color: number;
   skinCatalog: SkinCatalog; // player appearance catalog: class texture set or cosmetic body.
@@ -1632,6 +1641,24 @@ export type SimEvent = { pid?: number } & (
   | { type: 'comboPoint'; points: number }
   | { type: 'playerDeath' }
   | { type: 'respawn' }
+  // The death loop (src/sim/spirit.ts). All three carry stable ids and numbers
+  // ONLY, never English: the client renders them from its own `t()` keys, so
+  // these need no `sim_i18n.ts` matcher row. The names are compared as strings
+  // by the HUD, so `tests/ghost_event_contract.test.ts` pins the set.
+  //
+  // `ghostRelease`: the spirit left the body. `corpse` is null when the death
+  // happened where no corpse run is possible (a rift), meaning the Spirit Healer
+  // is the only way back.
+  | { type: 'ghostRelease'; corpse: Vec3 | null }
+  // `ghostResurrect`: back among the living. `via` says which road was taken and
+  // `sickness` is the seconds of Resurrection Sickness charged (0 when none).
+  | {
+      type: 'ghostResurrect';
+      via: 'corpse' | 'healer' | 'unstuck' | 'revive';
+      sickness: number;
+    }
+  // `ghostDeny`: a resurrection the server refused, with the reason id.
+  | { type: 'ghostDeny'; reason: 'not_ghost' | 'no_corpse' | 'corpse_too_far' | 'no_healer' }
   // itemId names the single item for buy/sell/buyback; it is omitted for the
   // bulk "sell all junk" sweep, which the client treats as a plain refresh signal.
   | { type: 'vendor'; action: 'buy' | 'sell' | 'buyback'; itemId?: string }

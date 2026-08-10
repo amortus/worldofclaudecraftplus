@@ -104,6 +104,14 @@ export interface UnstuckSnapshot {
   pos: { x: number; y: number; z: number };
   level: number;
   dead: boolean;
+  /**
+   * Whether the dead player is a RELEASED SPIRIT rather than a body on the
+   * ground. Optional (absent means "not a ghost") so a caller written before the
+   * death loop existed keeps its exact behaviour. It matters only to
+   * `motionBlock`: a corpse is frozen and its motion fields are stale forever, a
+   * ghost genuinely walks, so the ghost is held to the living motion gates.
+   */
+  ghost?: boolean;
   inCombat: boolean;
   /** Seconds since the last combat event (the sim's `Entity.combatTimer`). */
   combatTimer: number;
@@ -268,9 +276,13 @@ export function unstuckGraveyardFor(pos: { x: number; z: number }): { x: number;
  * exists to rescue (dying mid-fall leaves `onGround` false permanently), so the
  * motion gates are skipped for the dead. The action gates still apply: our
  * death path already clears casting, sitting, charge, and follow.
+ *
+ * A released GHOST is the exception to that exception: it moves under its own
+ * power, so its motion fields are live and it is held to the living gates. Without
+ * this a spirit could /unstuck mid-run and mid-air.
  */
 function motionBlock(s: UnstuckSnapshot): UnstuckBlockedReason | null {
-  if (s.dead) return null;
+  if (s.dead && !s.ghost) return null;
   if (!s.onGround || s.jumping) return 'falling';
   if (s.forcedMovement || s.speed > VELOCITY_EPS) return 'moving';
   return null;

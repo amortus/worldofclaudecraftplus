@@ -471,13 +471,24 @@ describe('rift floor progression', () => {
     player.dead = true;
     sim.releaseSpirit(pid);
 
-    expect(player.dead).toBe(false);
+    // Release raises a GHOST (src/sim/spirit.ts), it no longer revives, and a
+    // rift death leaves NO corpse to run back to: the instance is torn down
+    // behind the spirit, so the Spirit Healer at the graveyard is the only road
+    // back. That is also what stops a rift death stranding a ghost.
+    expect(player.dead).toBe(true);
+    expect(player.ghost).toBe(true);
+    expect(player.corpsePos).toBeNull();
     // Out of the instance plane entirely, at the RIGHT zone's graveyard: the
     // rift's own z belongs to an instance slot, not to a place in the world.
     expect(player.pos.x).toBeLessThan(1000);
     const zone = ZONES.find((z) => z.id === portal.zoneId)!;
     expect(player.pos.x).toBeCloseTo(zone.graveyard.x, 5);
     expect(player.pos.z).toBeCloseTo(zone.graveyard.z, 5);
+    // And the spirit rose exactly on that graveyard, so the angel is in reach
+    // and the run's failure can never leave a player with no way back.
+    expect(sim.ghostInfo(pid)?.spiritHealerInRange).toBe(true);
+    sim.resurrectAtSpiritHealer(pid);
+    expect(player.dead).toBe(false);
   });
 
   it('frees a slot whose party is gone, and leaving works from inside', () => {
