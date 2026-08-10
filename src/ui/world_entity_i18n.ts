@@ -137,6 +137,11 @@ const MOB_IDS = [
   'scree_binder',
   'coldhearth_marauder',
   'old_grimfang',
+  // The ring zones (willowfen, galecrest, palmreach, evergarden).
+  'bogtoad', 'drowsy_croaker', 'lily_wisp', 'willow_sprite', 'moor_ram',
+  'gale_wisp', 'shoal_scuttler', 'downs_bandit', 'wreck_thief', 'the_wreck_warden',
+  'drowned_deckhand', 'tide_scuttler', 'thicket_boar', 'canopy_weaver', 'idol_guardian',
+  'topiary_stag', 'topiary_wolf', 'hedge_knight', 'hedge_gnome', 'the_topiary_bull',
 ] as const;
 
 const NPC_IDS = [
@@ -180,6 +185,11 @@ const NPC_IDS = [
   'hearthwarden_ottil',
   'pickmaster_gethin',
   'provisioner_dagny',
+  // The ring zones.
+  'waykeeper_pell', 'bridgewright_alden', 'netter_maris', 'mother_sedge',
+  'watcher_maren', 'harbormaster_odile', 'keeper_bram', 'salvager_edda',
+  'strandwatcher_pell', 'salvage_boss_ryna', 'pearlmother_isha', 'hermit_okku',
+  'gatewarden_pell', 'head_gardener_amaranth', 'wickmother_sorrel', 'gardener_yew',
 ] as const;
 
 const QUEST_IDS = [
@@ -325,6 +335,19 @@ const QUEST_IDS = [
   'q_aldric_reliquary',
   'q_moggers_trail',
   'q_redbrook_verlan',
+  // The ring zones.
+  'q_wf_across_the_fenway', 'q_wf_rope_chewers', 'q_wf_mind_the_moorings',
+  'q_wf_eels_for_the_smokehouse', 'q_wf_toll_and_tangle', 'q_wf_witch_of_willowweep',
+  'q_wf_wisplight_charms', 'q_wf_croakers_hush',
+  'q_gc_down_the_windway', 'q_gc_wool_off_the_downs', 'q_gc_scuttlers_in_the_pots',
+  'q_gc_keeper_of_the_flame', 'q_gc_lanterns_on_the_shear', 'q_gc_wind_against_the_wick',
+  'q_gc_the_far_shore', 'q_gc_dead_mens_cargo', 'q_gc_the_wreck_warden',
+  'q_pr_down_to_drifthaven', 'q_pr_wreck_line_cargo', 'q_pr_scuttler_cull',
+  'q_pr_boars_in_the_gardens', 'q_pr_the_man_who_went_in', 'q_pr_canopy_silk',
+  'q_pr_what_the_drums_guard', 'q_pr_idol_guardian',
+  'q_eg_gate_report', 'q_eg_hungry_shapes', 'q_eg_stolen_shears',
+  'q_eg_gnomes_in_the_green', 'q_eg_who_trims_the_hedges', 'q_eg_bloom_clippings',
+  'q_eg_four_statues', 'q_eg_bull_of_the_court',
 ] as const;
 
 // The four strip bands plus the two column zones that flank the Vale's band east
@@ -336,6 +359,11 @@ const ZONE_IDS = [
   'ashen_wastes',
   'alderfen_shallows',
   'grimhold_crags',
+  // The ring: upstream's four zones that close the grid around our strip.
+  'willowfen',
+  'galecrest',
+  'palmreach',
+  'evergarden',
 ] as const;
 
 /**

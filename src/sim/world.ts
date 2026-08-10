@@ -103,6 +103,26 @@ export interface BorderEdge {
   fullRow: boolean; // spans the whole world row: no end feather
   passAt: number; // pass coordinate along the span
   sealed: boolean;
+  /**
+   * This end BUTTS INTO another edge on the same line rather than stopping in
+   * open ground, so it must be cut off square instead of feathering out.
+   *
+   * A grid with more than one column per row produces COLINEAR border edges:
+   * the wall along z = 180 is three edges (one per column), and the wall along
+   * x = -180 is four (one per band it passes). Each carries its own `passAt`,
+   * which is why they cannot be merged into one span. Feathering them would be
+   * wrong twice over: at the shared end BOTH edges are at full strength, so the
+   * ridge doubles to 44yd there, and each one's tail reaches 24yd into its
+   * neighbour's zone, which is ground players already stand on.
+   *
+   * Cutting square is seamless because two abutting edges on the same line
+   * evaluate the same profile, the same crest noise (a function of `at` and the
+   * along coordinate only) and the same height, so the wall is continuous
+   * across the joint. The span is half open, [lo, hi), so exactly one edge owns
+   * the joint coordinate.
+   */
+  cutLo: boolean;
+  cutHi: boolean;
 }
 
 /** All shared edges between adjacent zone rects. Pure; exported for tests. */
@@ -132,6 +152,8 @@ export function computeBorderEdges(zones: readonly ZoneDef[]): BorderEdge[] {
             fullRow,
             passAt: b.southPassX ?? 0,
             sealed,
+            cutLo: false,
+            cutHi: false,
           });
         }
       }
@@ -148,9 +170,23 @@ export function computeBorderEdges(zones: readonly ZoneDef[]): BorderEdge[] {
             fullRow: false, // a column border never spans the world's full z
             passAt: b.westPassZ ?? a.eastPassZ ?? (lo + hi) / 2,
             sealed: false,
+            cutLo: false,
+            cutHi: false,
           });
         }
       }
+    }
+  }
+  // Mark the ends that butt into a colinear neighbour (see BorderEdge.cutLo).
+  // A sealed edge is left alone: its crest is offset off the line, so it is
+  // never colinear with an unsealed one, and it has no pass to preserve.
+  for (const edge of edges) {
+    if (edge.sealed) continue;
+    for (const other of edges) {
+      if (other === edge || other.sealed) continue;
+      if (other.kind !== edge.kind || other.at !== edge.at) continue;
+      if (other.hi === edge.lo) edge.cutLo = true;
+      if (other.lo === edge.hi) edge.cutHi = true;
     }
   }
   return edges;
@@ -236,7 +272,15 @@ export function borderRidgeContribution(
   const along = edge.kind === 'h' ? x : z;
   let end = 1;
   if (!edge.fullRow) {
-    const outside = Math.max(edge.lo - along, along - edge.hi, 0);
+    // A cut end owns [lo, hi) and stops dead there; the colinear neighbour that
+    // butts into it carries the wall on from the same value.
+    if (edge.cutLo && along < edge.lo) return 0;
+    if (edge.cutHi && along >= edge.hi) return 0;
+    const outside = Math.max(
+      edge.cutLo ? 0 : edge.lo - along,
+      edge.cutHi ? 0 : along - edge.hi,
+      0,
+    );
     if (outside >= RIDGE_END_FEATHER) return 0;
     end = 1 - smoothstep(0, RIDGE_END_FEATHER, outside);
   }

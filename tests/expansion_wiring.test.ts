@@ -45,6 +45,7 @@ import { DUNGEON_END_WALL_HW, DUNGEON_WALL_HW } from '../src/sim/dungeon_layout'
 import { Sim } from '../src/sim/sim';
 import { COLUMN_OBJECTS } from '../src/sim/content/columns';
 import { ZONE1_VALE_OBJECTS } from '../src/sim/content/zone1';
+import { REALM_OBJECTS } from '../src/sim/content/realms';
 
 const CINDERFORGE_INDEX = 8;
 // Widest primitive a dungeon layout places, plus its half thickness: the whole
@@ -81,7 +82,7 @@ describe('expansion wiring: the pack reaches the flat tables', () => {
     // Every pack merged AFTER this one is allowed to sit after it; anything else
     // means a pack inserted itself mid-array and moved a shipped entity id.
     // ADD YOUR PACK HERE when you merge a new object set into GROUND_OBJECTS.
-    const laterPacks = [COLUMN_OBJECTS, ZONE1_VALE_OBJECTS];
+    const laterPacks = [COLUMN_OBJECTS, ZONE1_VALE_OBJECTS, REALM_OBJECTS];
     const later = new Set(laterPacks.flat());
     const after = GROUND_OBJECTS.slice(first + EXPANSION_OBJECTS.length);
     const shifted = after.filter((o) => !later.has(o));

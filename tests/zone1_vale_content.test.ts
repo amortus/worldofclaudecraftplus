@@ -20,6 +20,7 @@ import {
   REWARD_ARCHETYPE,
 } from '../src/sim/data';
 import { ZONE1_VALE_OBJECTS } from '../src/sim/content/zone1';
+import { REALM_OBJECTS } from '../src/sim/content/realms';
 import { GROUND_PICKUP_LINES } from '../src/sim/content/ground_pickup_lines';
 import { canEquipItem } from '../src/sim/equipment_rules';
 import { ALL_CLASSES, XP_TABLE, angleTo, type Vec3 } from '../src/sim/types';
@@ -213,9 +214,24 @@ describe('Eastbrook errands: the pack adds no camp, so the rng cursor cannot mov
 });
 
 describe('Eastbrook errands: ground objects are placeable, slack, and flavored', () => {
-  it('the pack is merged LAST into GROUND_OBJECTS so no shipped object id moves', () => {
-    const tail = GROUND_OBJECTS.slice(-ZONE1_VALE_OBJECTS.length).map((o) => o.itemId);
-    expect(tail).toEqual(ZONE1_VALE_OBJECTS.map((o) => o.itemId));
+  it('is merged AFTER every pack that predates it, so no shipped object id moves', () => {
+    // The invariant is about ENTITY IDS, not about being literally last: ids
+    // are handed out in array order, so a pack may only ever append. This pack
+    // was the tail when it landed; the ported realm ring then appended after
+    // it, exactly as the rule allows. Assert the real property, the way
+    // tests/expansion_wiring.test.ts does: the pack is one contiguous run, and
+    // everything after it belongs to a pack that shipped later.
+    const first = GROUND_OBJECTS.indexOf(ZONE1_VALE_OBJECTS[0]);
+    expect(first, 'the vale errands are not in GROUND_OBJECTS at all').toBeGreaterThanOrEqual(0);
+    const run = GROUND_OBJECTS.slice(first, first + ZONE1_VALE_OBJECTS.length);
+    expect(run.map((o) => o.itemId)).toEqual(ZONE1_VALE_OBJECTS.map((o) => o.itemId));
+    // ADD YOUR PACK HERE when you merge a new object set into GROUND_OBJECTS.
+    const later = new Set(REALM_OBJECTS);
+    const after = GROUND_OBJECTS.slice(first + ZONE1_VALE_OBJECTS.length);
+    expect(
+      after.filter((o) => !later.has(o)).map((o) => o.itemId),
+      'these predate the vale errands but sit after them',
+    ).toEqual([]);
   });
 
   for (const set of ZONE1_VALE_OBJECTS) {

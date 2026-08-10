@@ -25,9 +25,18 @@ describe('Mirefen impact site', () => {
     expect(MIREFEN_IMPACT_SITE.z).toBe(295);
     expect(zoneAt(MIREFEN_IMPACT_SITE.x, MIREFEN_IMPACT_SITE.z).id).toBe('mirefen_marsh');
 
+    // The wall this site sits at the base of is the one at |x| = 180. It used
+    // to be the world RIM, whose toe reached in to about x 150; since the
+    // Galecrest took the grid cell on the far side of that line it is a COLUMN
+    // border ridge instead (COLUMN_RIDGE_SIGMA 12, so its toe is at 144 and it
+    // starts climbing a few yards further out). Same wall, same crest height
+    // (about 24 at x 180 on this seed), just a slightly later foot, so the
+    // probe steps 8yd toward it rather than 4.
     const impactY = terrainHeight(MIREFEN_IMPACT_SITE.x, MIREFEN_IMPACT_SITE.z, SEED);
-    const wallY = terrainHeight(MIREFEN_IMPACT_SITE.x + 4, MIREFEN_IMPACT_SITE.z, SEED);
+    const wallY = terrainHeight(MIREFEN_IMPACT_SITE.x + 8, MIREFEN_IMPACT_SITE.z, SEED);
     expect(wallY).toBeGreaterThan(impactY + 1.5);
+    // and it really is a wall: it keeps climbing all the way to the border
+    expect(terrainHeight(180, MIREFEN_IMPACT_SITE.z, SEED)).toBeGreaterThan(impactY + 20);
   });
 
   it('keeps the authoritative floor dry and terrain-driven around the crater', () => {

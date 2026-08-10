@@ -16,6 +16,18 @@ import {
   COLUMN_ROADS,
   COLUMN_ZONE_DEFS,
 } from './content/columns';
+import {
+  REALM_CAMPS,
+  REALM_ITEMS,
+  REALM_MOBS,
+  REALM_NPCS,
+  REALM_OBJECTS,
+  REALM_PROP_SETS,
+  REALM_QUEST_ORDER,
+  REALM_QUESTS,
+  REALM_ROADS,
+  REALM_ZONE_DEFS,
+} from './content/realms';
 import type {
   CampDef,
   DelveDef,
@@ -191,6 +203,8 @@ export const ITEMS: Record<string, ItemDef> = mergeItems(
   // The column ring's own items: five quest objects plus the two capstone
   // reward sets. Everything else those zones hand out or sell is a shipped id.
   COLUMN_ITEMS,
+  // The realm ring's quest items and quest rewards, ported from upstream.
+  REALM_ITEMS,
   // Reins. The mount system owns its own catalog (src/sim/mounts.ts) because it
   // is a mechanic, not zone content; only the item table is merged here.
   MOUNT_ITEMS,
@@ -216,6 +230,9 @@ export const MOBS: Record<string, MobTemplate> = {
   // objective matches `targetMobId` worldwide, so a column camp of a Mirefen
   // mob would credit the Mirefen's quests from a zone away.
   ...COLUMN_MOBS,
+  // The upstream realm ring's roster (Willowfen, Galecrest, Palmreach,
+  // Evergarden). Their ids, upstream's own, so a later sync stays a diff.
+  ...REALM_MOBS,
 };
 
 export const NPCS: Record<string, NpcDef> = {
@@ -230,6 +247,8 @@ export const NPCS: Record<string, NpcDef> = {
   // Object.values(NPCS) in insertion order, so every shipped NPC keeps its
   // entity id and its exact placement. NPC placement draws no rng either way.
   ...COLUMN_NPCS,
+  // The realm ring's givers, appended last for the same reason.
+  ...REALM_NPCS,
 };
 
 // Reins go on a vendor's shelf here rather than in zone content, because the
@@ -258,6 +277,7 @@ export const QUESTS: Record<string, QuestDef> = {
   ...ZONE4_QUESTS,
   ...EXPANSION_QUESTS,
   ...COLUMN_QUESTS,
+  ...REALM_QUESTS,
 };
 
 export const QUEST_ORDER: string[] = [
@@ -268,6 +288,7 @@ export const QUEST_ORDER: string[] = [
   ...ZONE4_QUEST_ORDER,
   ...EXPANSION_QUEST_ORDER,
   ...COLUMN_QUEST_ORDER,
+  ...REALM_QUEST_ORDER,
 ];
 
 // Camps spawn in array order, each drawing world-gen RNG, so an entry inserted
@@ -287,6 +308,13 @@ export const CAMPS: CampDef[] = [
   // declares `positions`, so world generation draws NO new rng at all and the
   // post-worldgen rng cursor is bit-identical to the strip-only world.
   ...COLUMN_CAMPS,
+  // The upstream realm ring, appended at the very END for the same reason.
+  // Upstream authored these as SCATTER camps, which would have drawn world-gen
+  // rng and moved the post-worldgen cursor every seeded fixture in the suite
+  // reads from (measured: seven of them). They carry frozen exact `positions`
+  // instead, captured once from that very scatter at the live world seed, so
+  // world generation draws nothing new and the cursor is bit-identical.
+  ...REALM_CAMPS,
 ];
 
 export const GROUND_OBJECTS: GroundObjectDef[] = [
@@ -307,6 +335,9 @@ export const GROUND_OBJECTS: GroundObjectDef[] = [
   // same reason: they are the newest set, so putting them at the tail leaves
   // every shipped object's entity id exactly where it was.
   ...ZONE1_VALE_OBJECTS,
+  // The realm ring's quest objects, newest pack at the tail so every shipped
+  // object's entity id is exactly where it was.
+  ...REALM_OBJECTS,
 ];
 
 export const ROADS: { x: number; z: number }[][] = [
@@ -318,6 +349,10 @@ export const ROADS: { x: number; z: number }[][] = [
   // past it), so `roadDistance` inside the strip is unchanged everywhere the
   // decoration road clearance (5yd) can reach.
   ...COLUMN_ROADS,
+  // The realm ring's roads. Every one of them lies inside its own column rect,
+  // and the two that touch a border start 4yd past it, so `roadDistance` inside
+  // the strip is unchanged everywhere the 5yd decoration clearance can reach.
+  ...REALM_ROADS,
 ];
 
 export const PROPS: ZonePropsDef = mergeProps([
@@ -326,6 +361,10 @@ export const PROPS: ZonePropsDef = mergeProps([
   ZONE3_PROPS,
   TEMPLE_PROPS,
   ZONE4_PROPS,
+  // The realm ring's settlements. Props carry explicit positions and draw no
+  // world-gen rng, but the renderer and the collider grid walk these arrays in
+  // order, so the newest pack goes at the tail.
+  ...REALM_PROP_SETS,
 ]);
 
 function mergeProps(sets: ZonePropsDef[]): ZonePropsDef {
@@ -391,6 +430,11 @@ export const ZONES: ZoneDef[] = [
   // order) is what keeps every shipped index stable, which is why "the last
   // entry" stopped meaning "the north end" here (see WORLD_MAX_Z below).
   ...COLUMN_ZONE_DEFS,
+  // The upstream realm ring: the four grid cells that surround what we already
+  // had. Appended after the column ring for the same reason it was appended
+  // last: append order, not band order, is what keeps every shipped index
+  // stable.
+  ...REALM_ZONE_DEFS,
 ];
 
 export const WORLD_SIZE = 360; // the original strip's width (one grid column)
@@ -443,15 +487,29 @@ export function riftEligibleZones(): ZoneDef[] {
 // still containing z is the fallback for a point south of every zMin, and a
 // point north of every zMax clamps to the northmost band.
 export function zoneAt(x: number, z: number): ZoneDef {
-  let fallback: ZoneDef | null = null;
   for (const zone of ZONES) {
-    if (z >= zone.zMax) continue;
-    if (fallback === null || zone.zMax < fallback.zMax) fallback = zone; // southmost band containing z
+    if (z >= zone.zMax || z < zone.zMin) continue;
     const x0 = zone.xMin ?? STRIP_MIN_X;
     const x1 = zone.xMax ?? STRIP_MAX_X;
-    if (z >= zone.zMin && x >= x0 && x < x1) return zone;
+    if (x >= x0 && x < x1) return zone;
   }
-  return fallback ?? ZONES.reduce((a, b) => (b.zMax > a.zMax ? b : a));
+  // Outside every rect: the far-east instance plane, a position past the world
+  // rim, or (before the realm ring filled the grid) a row a column did not
+  // occupy. The answer is the STRIP band, never a column.
+  //
+  // This used to be "the zone with the smallest zMax still north of z", which
+  // was the same thing only while every column shared a strip band exactly:
+  // the strip's own band was always the narrowest. Once a column spans two
+  // strip bands (the Willowfen runs z 180..700 across the Mirefen/Thornpeak
+  // boundary at 540) that tie-break starts answering `willowfen` for a
+  // DUNGEON position at z 541, which is how the zone name, the biome, the sky
+  // and the respawn graveyard all get read for a player standing in an
+  // instance. Walking STRIP_ZONES, which tile z contiguously, is the same
+  // arithmetic the 1D strip-era lookup did and cannot drift again.
+  for (const zone of STRIP_ZONES) {
+    if (z < zone.zMax) return zone;
+  }
+  return STRIP_ZONES[STRIP_ZONES.length - 1];
 }
 
 // Strict rect containment: the zone whose rectangle literally contains (x, z),

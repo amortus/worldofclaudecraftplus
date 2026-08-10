@@ -68,10 +68,12 @@ const STRIP_X_SAMPLES = (() => {
 })();
 
 describe('world topology: the strip answers exactly as it always did', () => {
-  it('ships the four strip zones plus one mirrored column ring', () => {
-    expect(ZONES).toHaveLength(6);
+  it('ships the four strip zones plus the mirrored column rings', () => {
+    // 4 strip bands + the first column ring (alderfen/grimhold, ours) + the
+    // four zones ported from upstream (willowfen/galecrest/palmreach/evergarden).
+    expect(ZONES).toHaveLength(10);
     expect(STRIP_ZONES).toHaveLength(4);
-    expect(COLUMN_ZONES).toHaveLength(2);
+    expect(COLUMN_ZONES).toHaveLength(6);
     for (const zone of STRIP_ZONES) {
       expect(zone.xMin, `${zone.id}.xMin`).toBeUndefined();
       expect(zone.xMax, `${zone.id}.xMax`).toBeUndefined();
@@ -92,13 +94,24 @@ describe('world topology: the strip answers exactly as it always did', () => {
     }
   });
 
-  it('opens each column at exactly one border pass, and seals nothing', () => {
+  it('opens each column on exactly one shared edge with the strip, and seals nothing', () => {
+    // A column touches the strip on ONE vertical edge (the side facing x = 0),
+    // so it declares exactly one of eastPassZ/westPassZ and that pass must fall
+    // inside its own z band. A column stacked on another column may also
+    // declare a southPassX; that one has to fall inside its own x range.
     for (const zone of COLUMN_ZONES) {
       const passes = [zone.eastPassZ, zone.westPassZ].filter((v) => v !== undefined);
       expect(passes, `${zone.id} border passes`).toHaveLength(1);
-      expect(passes[0]).toBe(0); // the Eastbrook latitude
+      expect(passes[0], `${zone.id} pass z`).toBeGreaterThanOrEqual(zone.zMin);
+      expect(passes[0], `${zone.id} pass z`).toBeLessThanOrEqual(zone.zMax);
+      // the pass sits on the side that faces the strip, never the outer rim
+      const facing = (zone.xMin ?? 0) >= STRIP_MAX_X ? zone.westPassZ : zone.eastPassZ;
+      expect(facing, `${zone.id} pass is on the strip-facing edge`).toBeTypeOf('number');
       expect(zone.sealedSouthBorder).toBeUndefined();
-      expect(zone.southPassX).toBeUndefined();
+      if (zone.southPassX !== undefined) {
+        expect(zone.southPassX, `${zone.id} southPassX`).toBeGreaterThanOrEqual(zone.xMin!);
+        expect(zone.southPassX, `${zone.id} southPassX`).toBeLessThanOrEqual(zone.xMax!);
+      }
     }
   });
 
@@ -121,12 +134,16 @@ describe('world topology: the strip answers exactly as it always did', () => {
     for (let i = 1; i < STRIP_ZONES.length; i++) {
       expect(STRIP_ZONES[i].zMin, `${STRIP_ZONES[i].id}.zMin`).toBe(STRIP_ZONES[i - 1].zMax);
     }
-    // Every column shares an existing band exactly, so no column can create a
-    // z boundary the strip cascade does not already know about.
+    // A column no longer has to share a strip band (the Willowfen runs
+    // z 180..700, straight across the Mirefen/Thornpeak boundary at 540), so
+    // the rule that matters is weaker and structural: every column starts at a
+    // z another zone in ITS OWN grid column ends at, or at the world's south
+    // edge, so each column tiles z contiguously too and leaves no seam.
     for (const col of COLUMN_ZONES) {
+      const sameColumn = COLUMN_ZONES.filter((c) => c.xMin === col.xMin && c.xMax === col.xMax);
       expect(
-        STRIP_ZONES.some((s) => s.zMin === col.zMin && s.zMax === col.zMax),
-        `${col.id} band`,
+        col.zMin === WORLD_MIN_Z || sameColumn.some((c) => c.zMax === col.zMin),
+        `${col.id} south neighbour`,
       ).toBe(true);
     }
   });
@@ -211,7 +228,7 @@ describe('world topology: the grid outside the strip', () => {
     }
   });
 
-  it('leaves the rest of the bounding box a hole, honestly reported', () => {
+  it('now tiles the whole bounding box: the realm ring filled the last hole', () => {
     let holes = 0;
     for (let x = WORLD_MIN_X; x < WORLD_MAX_X; x += 7.5) {
       for (let z = WORLD_MIN_Z; z < WORLD_MAX_Z; z += 7.5) {
@@ -227,7 +244,10 @@ describe('world topology: the grid outside the strip', () => {
         }
       }
     }
-    // Two of the twelve grid cells are filled; the rest of the box is hole.
-    expect(holes).toBeGreaterThan(0);
+    // Grimhold/Willowfen/Palmreach fill the west column and Alderfen/Galecrest/
+    // Evergarden the east one, so every one of the box's cells is now real
+    // ground. The hole handling above is kept, not deleted: `zoneContaining`
+    // still has to answer honestly the moment the grid grows unevenly again.
+    expect(holes).toBe(0);
   });
 });

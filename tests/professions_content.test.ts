@@ -37,7 +37,16 @@ import {
 const ZONE_IDS = ['eastbrook_vale', 'mirefen_marsh', 'thornpeak_heights', 'ashen_wastes'];
 // ...plus the column zones, which are side content at the rung of the band they
 // border rather than a fifth rung of their own.
-const ALL_ZONE_IDS = [...ZONE_IDS, 'alderfen_shallows', 'grimhold_crags'];
+const ALL_ZONE_IDS = [
+  ...ZONE_IDS,
+  'alderfen_shallows',
+  'grimhold_crags',
+  // the upstream realm ring
+  'willowfen',
+  'galecrest',
+  'palmreach',
+  'evergarden',
+];
 
 describe('professions', () => {
   it('registers exactly the four gathering professions with upstream’s caps', () => {
@@ -65,6 +74,12 @@ describe('zone tiers', () => {
     expect(ZONES.map((z) => z.id).sort()).toEqual([...ALL_ZONE_IDS].sort());
     expect(ZONE_IDS.map(zoneGatherTier)).toEqual([1, 2, 3, 4]);
     expect(['alderfen_shallows', 'grimhold_crags'].map(zoneGatherTier)).toEqual([1, 2]);
+    // The realm ring is level 19-20 side content, so it sits on the top rungs
+    // rather than adding a fifth (the four rungs are what land the mastery
+    // curve on the level-20 cap).
+    expect(['willowfen', 'galecrest', 'palmreach', 'evergarden'].map(zoneGatherTier)).toEqual([
+      3, 3, 4, 4,
+    ]);
   });
 
   it('falls back to the starter tier for an unmapped zone', () => {

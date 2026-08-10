@@ -21,6 +21,14 @@ import { terrainHeight, WATER_LEVEL, zoneBiomeAt } from '../src/sim/world';
 
 const SEED = 1337;
 
+// Phase 2 shipped the FIRST column ring (Alderfen east, Grimhold west, both in
+// the Eastbrook Vale's band). The four zones ported from upstream later joined
+// them in the same two grid columns, so `COLUMN_ZONES` is no longer "the phase 2
+// pair". Every assertion here that is about phase 2 specifically now names its
+// two zones instead of walking COLUMN_ZONES; the ones that are about the GRID
+// still walk it.
+const PHASE2_COLUMNS = [ALDERFEN_ZONE, GRIMHOLD_ZONE];
+
 describe('phase 2: the two column zones', () => {
   it('ships exactly the strip plus one mirrored east/west column ring', () => {
     expect(STRIP_ZONES.map((z) => z.id)).toEqual([
@@ -29,7 +37,14 @@ describe('phase 2: the two column zones', () => {
       'thornpeak_heights',
       'ashen_wastes',
     ]);
-    expect(COLUMN_ZONES.map((z) => z.id)).toEqual(['alderfen_shallows', 'grimhold_crags']);
+    expect(COLUMN_ZONES.map((z) => z.id)).toEqual([
+      'alderfen_shallows',
+      'grimhold_crags',
+      'willowfen',
+      'galecrest',
+      'palmreach',
+      'evergarden',
+    ]);
     // The strip still tiles the z axis contiguously; that is what makes the
     // zoneAt southmost-band fallback exact for a point beyond a column's rect.
     for (let i = 1; i < STRIP_ZONES.length; i++) {
@@ -40,12 +55,15 @@ describe('phase 2: the two column zones', () => {
   });
 
   it('adds NO new biome, because BiomeId feeds exhaustive render tables', () => {
+    // Phase 2's own rule. The ported realms DO bring their own biomes, which is
+    // legal now only because BiomeId grew to 14 members with a full row in every
+    // exhaustive table (tests/biomes_tables.test.ts is the guard for that).
     const shipped = new Set(STRIP_ZONES.map((z) => z.biome));
-    for (const col of COLUMN_ZONES) expect(shipped.has(col.biome)).toBe(true);
+    for (const col of PHASE2_COLUMNS) expect(shipped.has(col.biome)).toBe(true);
   });
 
   it('shares the vale band exactly, so the columns are a row and not a band', () => {
-    for (const col of COLUMN_ZONES) {
+    for (const col of PHASE2_COLUMNS) {
       expect(col.zMin).toBe(-180);
       expect(col.zMax).toBe(180);
     }
@@ -62,10 +80,13 @@ describe('phase 2: the two column zones', () => {
     expect(zoneBiomeAt(300, 0)).toBe('marsh');
     expect(zoneBiomeAt(-300, 0)).toBe('peaks');
 
-    // Rows without a column are holes in the grid: zoneAt clamps (it must
-    // always answer), zoneContaining tells the truth.
-    expect(zoneContaining(300, 300)).toBeNull();
-    expect(zoneContaining(-300, 1000)).toBeNull();
+    // Those two rows were holes in the grid until the realm ring filled them;
+    // the hole contract itself is asserted on the instance plane, which is
+    // outside every rect and always will be.
+    expect(zoneContaining(300, 300)?.id).toBe('galecrest');
+    expect(zoneContaining(-300, 1000)?.id).toBe('palmreach');
+    expect(zoneContaining(900, 300)).toBeNull();
+    expect(zoneAt(900, 300).id).toBe('mirefen_marsh'); // the instance plane reads its band
     expect(zoneContaining(300, 0)).toBe(ALDERFEN_ZONE);
     expect(zoneContaining(180, 0)).toBe(ALDERFEN_ZONE); // half-open: xMin is inside
     expect(zoneContaining(179.999, 0)?.id).toBe('eastbrook_vale');
@@ -166,14 +187,11 @@ describe('phase 2: world generation draws no new randomness', () => {
     return { rows, rngAfterWorldgen };
   })();
 
-  it('leaves the post-worldgen rng cursor bit-identical', () => {
-    // Every column camp declares exact `positions`, so world generation makes
-    // no rng draw for them at all. This is the single assertion that proves no
-    // shipped mob moved: if the cursor matches, every draw before it matched.
-    expect(live.rngAfterWorldgen).toBe(SNAP.rngAfterWorldgen);
-  });
-
   it('declares exact positions for every column camp, which is why', () => {
+    // Still EVERY column camp, the four ported realm zones included: upstream
+    // authored theirs as scatter camps, and that scatter was captured once at
+    // the live world seed and frozen into `positions` for exactly this reason
+    // (see src/sim/content/realms/CLAUDE.md).
     const columnIds = new Set(COLUMN_ZONES.map((z) => z.id));
     for (const camp of CAMPS) {
       const zone = zoneContaining(camp.center.x, camp.center.z);
@@ -183,8 +201,12 @@ describe('phase 2: world generation draws no new randomness', () => {
       expect(MOBS[camp.mobId], `camp ${camp.mobId} template`).toBeDefined();
       for (const p of camp.positions!) {
         expect(zoneContaining(p.x, p.z), `${camp.mobId} spawn ${p.x},${p.z}`).toBe(zone);
-        // and on dry land: a fixed-position camp skips the water check
-        expect(terrainHeight(p.x, p.z, SEED)).toBeGreaterThan(WATER_LEVEL + 0.3);
+        // and on dry land: a fixed-position camp skips the water check. A
+        // swimmer (the Willowfen's bogtoads and its toad-king) may wade.
+        const swims = MOBS[camp.mobId].canSwim === true;
+        expect(terrainHeight(p.x, p.z, SEED), `${camp.mobId} at ${p.x},${p.z}`).toBeGreaterThan(
+          swims ? WATER_LEVEL - 0.5 : WATER_LEVEL + 0.3,
+        );
       }
     }
   });
@@ -203,6 +225,15 @@ describe('phase 2: world generation draws no new randomness', () => {
     expect(columnMobs.length).toBe(
       CAMPS.filter((c) => Math.abs(c.center.x) > STRIP_MAX_X).reduce((n, c) => n + c.count, 0),
     );
+  });
+
+  it('leaves the post-worldgen rng cursor bit-identical', () => {
+    // Every column camp declares exact `positions`, so world generation makes
+    // no rng draw for them at all. This is the single assertion that proves no
+    // shipped mob moved: if the cursor matches, every draw before it matched.
+    // It also covers the ported realm ring, which is why its 43 camps carry
+    // frozen positions rather than upstream's scatter.
+    expect(live.rngAfterWorldgen).toBe(SNAP.rngAfterWorldgen);
   });
 });
 

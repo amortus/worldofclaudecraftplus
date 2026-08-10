@@ -158,6 +158,39 @@ export const GROUND_PICKUP_LINES: Record<string, GroundPickupLines> = {
     deny: "Somebody else's stock, stacked under somebody else's oilcloth.",
     enough: "You have recovered enough of Dagny's load.",
   },
+  // The upstream realm ring (src/sim/content/realms), under the same rule.
+  fenway_mooring_line: {
+    deny: 'A chewed-through mooring line, coiled where the skiff slipped it. Bridgemere has not asked you to gather rope.',
+    enough: 'You are carrying all the line Alden can splice.',
+  },
+  bridgemere_toll_chest: {
+    deny: 'A strongbox, half sunk in the shallows. Prying at it uninvited is how people vanish out here.',
+    enough: 'You have hauled up every chest the toll skiff lost.',
+  },
+  shear_storm_lantern: {
+    deny: 'The wick is soaked and cold, and you have nothing to light it with.',
+    enough: 'Every lantern on the cliff road is burning again.',
+  },
+  wreckfield_flotsam_crate: {
+    deny: "Salvage law is simple on this beach, and this crate is not yours yet.",
+    enough: 'You have hauled in all the flotsam Edda asked for.',
+  },
+  pearlwake_cargo_crate: {
+    deny: 'The crate is still rolling in the surf. Somebody in Drifthaven will want it, but nobody has asked you.',
+    enough: 'You have brought in all the Pearlwake cargo Ryna wanted.',
+  },
+  sunken_offering_bowl: {
+    deny: 'The bowl is packed fresh with moss and shell. Whatever it feeds, it is not yours to disturb.',
+    enough: 'You are carrying all the offerings Okku needs to read.',
+  },
+  hedgewick_tool_cart: {
+    deny: 'A tipped cart, iron scattered in the grass. Righting it is somebody else\'s errand.',
+    enough: 'Every spilled cart is back on the pegs in Hedgewick.',
+  },
+  evergarden_statue_rubbing: {
+    deny: 'The marble sister looks past you. She has not been asked to notice you yet.',
+    enough: 'All four sisters have taken your measure.',
+  },
 };
 
 export function groundPickupDeny(itemId: string, itemName: string): string {

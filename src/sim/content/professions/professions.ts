@@ -68,6 +68,15 @@ export const ZONE_GATHER_TIER: Record<string, number> = {
   // fifth: the four rungs are what make the mastery curve land on the cap.
   alderfen_shallows: 1, // levels 4-8, east of the vale
   grimhold_crags: 2, // levels 6-10, west of the vale
+  // The upstream realm ring, on the same rule: a column takes the rung of the
+  // band it borders. All four are level 19-20 side content beside the two
+  // endgame bands, so all four land on the top rungs rather than adding a
+  // fifth. They carry no gather nodes of their own yet, so this only decides
+  // what a node placed there later would be worth.
+  willowfen: 3, // 19-20, beside the Thornpeak band
+  galecrest: 3, // 20, beside the Thornpeak band
+  palmreach: 4, // 20, beside the Ashen Wastes band
+  evergarden: 4, // 20, beside the Ashen Wastes band
 };
 
 /** The gather tier of a zone. An unmapped zone (a dungeon interior, the arena)

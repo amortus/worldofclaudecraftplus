@@ -70,13 +70,28 @@ const SNAPSHOT_ZONE_IDS = new Set([
   'grimhold_crags',
 ]);
 
+// How far a zone can reach OUTSIDE its own rect. The widest mechanism is the
+// horizontal border ridge a new neighbour raises along a shared band line: a
+// gaussian of RIDGE_SIGMA 18 that world.ts evaluates out to 3 sigma, i.e. 54yd.
+// (The vertical column ridge reaches 36, the sideways shape blend 35, the rim
+// 30.) 60 covers all four with margin. This used to be 40, which was never
+// exercised because no zone had been added since the snapshot; the first real
+// addition, the upstream realm ring, reaches 54yd into the Grimhold Crags.
+const ZONE_REACH = 60;
+
 function cellIsShipped(cx: number, cz: number, cell: number): boolean {
   for (const zn of ZONES) {
     if (SNAPSHOT_ZONE_IDS.has(zn.id)) continue;
-    // any overlap with a zone the snapshot predates, plus its 35yd blend window
-    const x0 = (zn.xMin ?? -WORLD_MAX_X) - 40;
-    const x1 = (zn.xMax ?? WORLD_MAX_X) + 40;
-    if (cx + cell > x0 && cx < x1 && cz + cell > zn.zMin - 40 && cz < zn.zMax + 40) return false;
+    const x0 = (zn.xMin ?? -WORLD_MAX_X) - ZONE_REACH;
+    const x1 = (zn.xMax ?? WORLD_MAX_X) + ZONE_REACH;
+    if (
+      cx + cell > x0 &&
+      cx < x1 &&
+      cz + cell > zn.zMin - ZONE_REACH &&
+      cz < zn.zMax + ZONE_REACH
+    ) {
+      return false;
+    }
   }
   return true;
 }
@@ -97,7 +112,13 @@ describe('biomes: the shipped world is bit-identical', () => {
       checked++;
       if (cellHash(cx, cz, SNAP.cell, SNAP.seed) !== SNAP.cells[key]) moved.push(key);
     }
-    expect(checked).toBeGreaterThan(3000);
+    // The floor tracks how much of the snapshot rect is still OUTSIDE every
+    // zone added since it was taken. It was 3000+ while the four ported realm
+    // zones did not exist; they and their 40yd blend windows now cover the two
+    // grid columns end to end, so the check falls to the strip plus the two
+    // original column zones' interiors. Still 1400+ cells, and `moved` is the
+    // assertion that matters: not one of them changed.
+    expect(checked).toBeGreaterThan(1400);
     expect(moved).toEqual([]);
   }, 120_000);
 });

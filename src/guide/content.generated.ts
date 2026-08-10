@@ -1325,6 +1325,80 @@ export const GUIDE_ZONES: GuideZoneInfo[] = [
       "The Broken Watchtower"
     ],
     "welcome": "East of the vale the Grimhold Crags climb out of the treeline. Coldhearth burns against them."
+  },
+  {
+    "id": "willowfen",
+    "name": "The Willowfen",
+    "min": 19,
+    "max": 20,
+    "biome": "fen",
+    "hub": "Bridgemere",
+    "pois": [
+      "Bridgemere",
+      "The Amberfen Steps",
+      "The Lilymoors",
+      "Bogshine Pools",
+      "Willowweep",
+      "The Drowsy Flats"
+    ],
+    "welcome": "The fen hums with dragonflies and bees. Cross the bridge into Bridgemere and rest your feet awhile."
+  },
+  {
+    "id": "galecrest",
+    "name": "The Galecrest",
+    "min": 20,
+    "max": 20,
+    "biome": "gale",
+    "hub": "Wickharbor",
+    "pois": [
+      "Wickharbor",
+      "The Windway",
+      "The Howling Downs",
+      "The Old Beacon",
+      "The Shear",
+      "The Wreckfields",
+      "The Mirror Tarn"
+    ],
+    "welcome": "The wind has never once stopped here, and the Old Beacon has never once gone out. Wickharbor asks only that you close the inn door behind you."
+  },
+  {
+    "id": "palmreach",
+    "name": "The Palmreach",
+    "min": 20,
+    "max": 20,
+    "biome": "jungle",
+    "hub": "Drifthaven",
+    "pois": [
+      "Drifthaven",
+      "The Tanglemouth",
+      "The Palmstrand",
+      "The Emerald Tangle",
+      "The Vinefall",
+      "The Sapphire Lagoon",
+      "The Sunken Idol"
+    ],
+    "welcome": "Warm sand, loud birds, and a jungle that eats the horizon. Drifthaven keeps a fire lit on the beach for you."
+  },
+  {
+    "id": "evergarden",
+    "name": "The Evergarden",
+    "min": 20,
+    "max": 20,
+    "biome": "garden",
+    "hub": "Hedgewick",
+    "pois": [
+      "Hedgewick",
+      "The Garden Gate",
+      "The Parterre Walk",
+      "Dawnhold Castle",
+      "The Petal Pond",
+      "The Great Maze",
+      "The Fountain Court",
+      "The Old Mill",
+      "The North Watch",
+      "The Lily Basin"
+    ],
+    "welcome": "Someone is still trimming the hedges, though no gardener has been seen for a hundred years. Mind the maze: it minds you back."
   }
 ];
 
