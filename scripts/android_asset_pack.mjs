@@ -17,7 +17,7 @@
 //   node scripts/android_asset_pack.mjs stage    (default)
 //   node scripts/android_asset_pack.mjs verify [path/to/app-release.aab]
 
-import { existsSync, mkdirSync, openSync, readSync, closeSync, readdirSync, renameSync, rmSync, statSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, openSync, readSync, closeSync, readdirSync, renameSync, rmSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
@@ -73,7 +73,30 @@ function stage() {
   const moved = measure(src);
   rmSync(dest, { recursive: true, force: true });
   mkdirSync(path.dirname(dest), { recursive: true });
-  renameSync(src, dest);
+  // Copy-then-remove rather than a bare rename. On Windows the Gradle daemon keeps
+  // handles open on android/app/src/main/assets after a build, so renaming the source
+  // directory fails with EPERM on every run after the first. That failure was silent
+  // in practice: the pack stayed empty, the media stayed in the BASE module, and
+  // gradle then had nothing to rebuild, so a STALE aab sat on disk while `verify`
+  // happily read it and passed.
+  cpSync(src, dest, { recursive: true });
+  for (let attempt = 0; ; attempt++) {
+    try {
+      rmSync(src, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+      break;
+    } catch (err) {
+      if (attempt >= 3) {
+        console.error(`FAIL: could not remove ${path.relative(root, src)} after staging.`);
+        console.error('Media would ship in BOTH the base module and the pack. Close any');
+        console.error('running Gradle daemon (./gradlew --stop) and re-run.');
+        throw err;
+      }
+    }
+  }
+  if (existsSync(src)) {
+    console.error(`FAIL: ${path.relative(root, src)} still exists after staging`);
+    process.exit(1);
+  }
 
   const base = measure(APP_ASSETS);
   console.log(
