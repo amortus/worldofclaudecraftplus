@@ -313,6 +313,18 @@ const QUEST_IDS = [
   'q_gh_sled',
   'q_gh_watchtower',
   'q_gh_grimfang',
+  // Eastbrook Vale: the solo bounty ladder that closed the level-7 xp hole left
+  // when the old chains were retired.
+  'q_haldren_fangs',
+  'q_redbrook_mileposts',
+  'q_haldren_scale',
+  'q_lin_glade',
+  'q_haldren_tallow',
+  'q_lin_boneash',
+  'q_wilkes_colors',
+  'q_aldric_reliquary',
+  'q_moggers_trail',
+  'q_redbrook_verlan',
 ] as const;
 
 // The four strip bands plus the two column zones that flank the Vale's band east

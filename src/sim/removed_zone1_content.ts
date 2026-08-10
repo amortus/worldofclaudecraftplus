@@ -1,3 +1,12 @@
+// Legacy-save scrubbing for the Eastbrook Vale content retired upstream: the
+// ten-step Warden's Ledger, the two Brightwood Glade quests, and the wildlife
+// pack their objectives targeted.
+//
+// This list is FROZEN. The Vale was refilled with a new pack of townsfolk
+// errands (see the banner in `content/zone1.ts`) rather than by reviving these
+// chains, precisely so no retired id ever has to come back off this list: a
+// revived id would silently mark a scrubbed legacy save as having already
+// completed the new quest. Every id below stays scrubbed forever.
 import type { CharacterState } from './sim';
 import type { InvSlot } from './types';
 
@@ -17,6 +26,10 @@ export const REMOVED_ZONE1_QUEST_IDS = [
   'q_ledger_outlaw_captain',
 ] as const;
 
+// Reward gear the retirement deliberately KEPT in the tables so equipped players
+// did not lose the piece. `bramblehide_jerkin` is obtainable again as the reward
+// for `q_wilkes_colors`; `monarch_crown_helm` is still shipped but unobtainable,
+// because its name belongs to a stag that no longer exists.
 export const RETIRED_ZONE1_ITEM_IDS = ['bramblehide_jerkin', 'monarch_crown_helm'] as const;
 
 export const REMOVED_ZONE1_OBJECTIVE_ITEM_IDS = ['glade_pelt', 'monarch_heart'] as const;

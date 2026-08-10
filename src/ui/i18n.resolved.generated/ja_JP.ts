@@ -1280,6 +1280,34 @@ export const ja_JP: EnTranslations = {
         "disconnected": "Your connection dropped."
       }
     },
+    "ghost": {
+      "ghostTitle": "Your spirit wanders",
+      "corpseDistance": "Your corpse lies {yards} yards away.",
+      "corpseInRange": "Your corpse is within reach.",
+      "corpseLost": "Your body is beyond reach. Only the Spirit Healer can return you.",
+      "healerFar": "Return to a graveyard to find a Spirit Healer.",
+      "healerNear": "A Spirit Healer waits over you.",
+      "resurrectAtCorpse": "Resurrect",
+      "resurrectAtHealer": "Spirit Healer",
+      "healerWarning": "Costs Resurrection Sickness",
+      "released": "Your spirit rises at the graveyard. Run back to your body.",
+      "releasedNoCorpse": "Your spirit rises at the graveyard, far from where you fell.",
+      "resurrected": {
+        "corpse": "Your spirit returns to your body.",
+        "healer": "The Spirit Healer restores you to life.",
+        "unstuck": "Your spirit is drawn back into your body.",
+        "revive": "You are pulled back from the edge."
+      },
+      "sickness": "Resurrection Sickness clings to you for {duration}.",
+      "sicknessAura": "Resurrection Sickness",
+      "sicknessTooltip": "All attributes reduced. The price of a Spirit Healer resurrection.",
+      "deny": {
+        "not_ghost": "Your spirit is still bound to your body.",
+        "no_corpse": "There is no body left to return to.",
+        "corpse_too_far": "You are too far from your corpse.",
+        "no_healer": "No Spirit Healer stands within reach."
+      }
+    },
     "rift": {
       "name": "{noun} {suffix}",
       "rank": {
@@ -6608,6 +6636,18 @@ export const ja_JP: EnTranslations = {
       "cut_withy": {
         "name": "Cut Withy"
       },
+      "splintered_road_marker": {
+        "name": "Splintered Road Marker"
+      },
+      "sunleaf_frond": {
+        "name": "Sunleaf Frond"
+      },
+      "reliquary_seal": {
+        "name": "Broken Reliquary Seal"
+      },
+      "splintered_axle": {
+        "name": "Splintered Cart Axle"
+      },
       "alder_char": {
         "name": "Alder Char"
       },
@@ -8790,6 +8830,106 @@ export const ja_JP: EnTranslations = {
         "objectives": {
           "0": {
             "label": "Old Grimfang slain"
+          }
+        }
+      },
+      "q_haldren_fangs": {
+        "title": "The Maker's Mark",
+        "text": "Every blade I send out with the militia carries a wolf's fang set in the pommel. It is not steel, it does nothing for the edge, and no Eastbrook man has ever walked the north road without one. I am not going to be the smith who breaks that. The wolves are thick up there now, {playerName}. Bring me five fangs and the next five blades go out marked.",
+        "completion": "Five. That is five men who will not think about it when they walk out the gate, which is the whole of what a mark is for. Take your pay, and mind the sparks.",
+        "objectives": {
+          "0": {
+            "label": "Cracked Wolf Fang"
+          }
+        }
+      },
+      "q_redbrook_mileposts": {
+        "title": "The Milepost Watch",
+        "text": "Eastbrook keeps four road markers between the gate and Wolf Run and every one of them is on its face in the grass. A cart that misses the turn in the dark goes into the trees, and the trees are where the wolves are. Walk the north road, {playerName}, and bring back what is left of the four. This time I will have them cut fresh and set in stone.",
+        "completion": "Splinters, mostly, but I can still read the numbers off two of them and that is enough to set the new ones true. Take the boots. They were cut for a man who walked that road every week and he has no more use for them.",
+        "objectives": {
+          "0": {
+            "label": "Splintered Road Marker"
+          }
+        }
+      },
+      "q_haldren_scale": {
+        "title": "Scale for the Militia",
+        "text": "Chain costs more than Eastbrook has. What Eastbrook has is a lake full of fish-men wearing better armor than my militia. Boil the scale off a Mudfin, sew it onto a leather jack, and you have something that turns a knife, which is more than most of these lads are wearing now. Six scales, {playerName}, off the shore northeast of town. Brandt will not weep for them.",
+        "completion": "Slimy, and they will stink through two boilings, and every man who gets one will complain about it right up until the first time it saves him.",
+        "objectives": {
+          "0": {
+            "label": "Slimy Murloc Scale"
+          }
+        }
+      },
+      "q_lin_glade": {
+        "title": "What the Glade Still Gives",
+        "text": "There is a grove far north of here, past the wolf runs, that the Vale calls Brightwood. Nothing grazes it any more, which is a sorrow to everyone except me: sunleaf grows waist high there and nowhere else in the Vale. Six fronds, {playerName}, cut green and cut low, at the crown. Anyone can pull a weed. I am asking you to harvest.",
+        "completion": "Cut low, all six, and not one of them bruised. Half of Eastbrook will drink this before the winter is out and none of them will ever know your name for it. I will.",
+        "objectives": {
+          "0": {
+            "label": "Sunleaf Frond"
+          }
+        }
+      },
+      "q_haldren_tallow": {
+        "title": "Tallow for the Quench",
+        "text": "A water quench cracks a thin blade. A tallow quench does not, and the only tallow left in the Vale is stacked in candles down the Copper Dig, southeast of town, in the paws of things that eat by their own light. Odell wants them dead. I want their candles. Six will do the pair of us.",
+        "completion": "Rendered down, that is a season of quenching, and every blade out of this forge until spring will owe a kobold something. Take the trousers off the rack. They are plain and they will outlast you.",
+        "objectives": {
+          "0": {
+            "label": "Tallow Candle"
+          }
+        }
+      },
+      "q_lin_boneash": {
+        "title": "Bone Ash",
+        "text": "I will say this once and I will not say it anywhere near Brother Aldric. Fever takes more of this village in a bad year than the dead do, and the only thing that breaks a fever is bone ash ground into bitter root. The chapel yard northwest of town is full of bone that is already up and walking, {playerName}, so I am not robbing a grave. Eight handfuls.",
+        "completion": "Eight, and ground fine. Aldric would call this a desecration and he would be right, and next spring he will bury four fewer children because of it. I can carry both of those.",
+        "objectives": {
+          "0": {
+            "label": "Bone Fragments"
+          }
+        }
+      },
+      "q_wilkes_colors": {
+        "title": "Red on the Road",
+        "text": "You got my crates back and I am still short a driver, because nobody will take a wagon down the southwest road while that camp is standing. So we will be clever instead of brave, {playerName}. Bring me eight of their red bandanas. My next wagon rolls with every man on it wearing one, and the hills will wave it straight through like family.",
+        "completion": "Eight. That is the whole run to the fen crossing and back, in their own colors, and not one copper of toll paid. Take the jerkin. It came off a hide-runner who is not coming back for it, and it turns more than you would think.",
+        "objectives": {
+          "0": {
+            "label": "Red Bandana"
+          }
+        }
+      },
+      "q_aldric_reliquary": {
+        "title": "The Hill of Small Saints",
+        "text": "Eastbrook had holy ground before it had a chapel: a reliquary on the hill south of town, where the Vale kept the bones of people too small to be saints and too loved to be forgotten. If Morthen read our burial ledger then he read that one as well. Go up the hill, {playerName}, and bring me the seals off whatever he opened. Four will tell me how much he took.",
+        "completion": "Four seals, and every one of them cut, not broken. He had keys. Someone in this village put the keys to our reliquary into a Gravecaller's hand, and I have buried three men this year who could have.",
+        "objectives": {
+          "0": {
+            "label": "Broken Reliquary Seal"
+          }
+        }
+      },
+      "q_moggers_trail": {
+        "title": "Mogger's Trail",
+        "text": "Gorrak is down and the road is still not safe, because the thing breaking my carts out west past the meadow was never a bandit. Mogger drags what he wrecks back toward his den and he leaves a line of it behind him a blind man could follow. Three axles off that line, {playerName}. I want to know exactly where he sleeps before I send anyone to wake him.",
+        "completion": "Three axles, all of them off my carters, and the line runs west and stops. That is his den, and now it is a place on a map instead of a story. Rest tonight. Tomorrow we talk about who goes with you.",
+        "objectives": {
+          "0": {
+            "label": "Splintered Cart Axle"
+          }
+        }
+      },
+      "q_redbrook_verlan": {
+        "title": "The Oathbreaker",
+        "text": "Captain Verlan held this Vale for eleven years and I took my oath standing in front of him. He is still up at the Fallen Chapel northwest of town, still in the coat, still holding ground he was told to hold, and he has killed two of my militia for standing on it. Take someone with you, {playerName}. Do not go up there alone and do not go up there thinking it will be quick.",
+        "completion": "Then it is done, and I will not write it in the ledger as a bandit killing. Take the greaves. They were his. If I am ever still holding ground past the point where holding it means anything, I hope somebody does me the same favor.",
+        "objectives": {
+          "0": {
+            "label": "Captain Verlan slain"
           }
         }
       },

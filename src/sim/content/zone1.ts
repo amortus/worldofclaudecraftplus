@@ -519,7 +519,16 @@ export const ZONE1_NPCS: Record<string, NpcDef> = {
     pos: { x: 4, z: 6 },
     facing: Math.PI,
     color: 0xb7950b,
-    questIds: ['q_wolves', 'q_greyjaw', 'q_bandits', 'q_ringleader', 'q_mogger'],
+    questIds: [
+      'q_wolves',
+      'q_redbrook_mileposts',
+      'q_greyjaw',
+      'q_bandits',
+      'q_ringleader',
+      'q_moggers_trail',
+      'q_mogger',
+      'q_redbrook_verlan',
+    ],
     greeting: 'Keep your blade close, $C. The Vale is not what it was.',
   },
   trader_wilkes: {
@@ -529,7 +538,7 @@ export const ZONE1_NPCS: Record<string, NpcDef> = {
     pos: { x: -7, z: 3 },
     facing: Math.PI / 2,
     color: 0x1e8449,
-    questIds: ['q_boars', 'q_supplies'],
+    questIds: ['q_boars', 'q_supplies', 'q_wilkes_colors'],
     vendorItems: [
       'baked_bread',
       'spring_water',
@@ -553,7 +562,7 @@ export const ZONE1_NPCS: Record<string, NpcDef> = {
     pos: { x: 11, z: -3 },
     facing: -Math.PI / 2,
     color: 0x7d3c98,
-    questIds: ['q_spiders'],
+    questIds: ['q_spiders', 'q_lin_glade', 'q_lin_boneash'],
     greeting: 'Careful where you step in the eastern woods, friend.',
   },
   brother_aldric: {
@@ -572,6 +581,7 @@ export const ZONE1_NPCS: Record<string, NpcDef> = {
       'q_sexton',
       'q_hollow',
       'q_gravecallers_trail',
+      'q_aldric_reliquary',
       'q_fenbridge_muster',
     ],
     greeting: 'The Light keep you. Even the dead find no rest here of late.',
@@ -583,7 +593,7 @@ export const ZONE1_NPCS: Record<string, NpcDef> = {
     pos: { x: 7, z: 16.5 },
     facing: -2.7,
     color: 0x707b7c,
-    questIds: [],
+    questIds: ['q_haldren_fangs', 'q_haldren_scale', 'q_haldren_tallow'],
     vendorItems: [
       'eastbrook_arming_sword',
       'bronzework_mace',
@@ -932,31 +942,319 @@ export const ZONE1_QUESTS: Record<string, QuestDef> = {
       mage: 'sableweb_slippers',
       rogue: 'moggers_stomper_boots',
     },
-    requiresQuest: 'q_gravecallers_trail',
+    // Was gated on q_gravecallers_trail, the tail of the five-player Hollow Crypt
+    // chain, after the outdoor quest that used to gate it was retired. That put the
+    // zone's signature solo-group rare behind a five-player dungeon, so a small
+    // group could never reach him. q_moggers_trail (below) is his prerequisite
+    // again, and it hangs off Redbrook's own road chain instead of Aldric's crypt.
+    requiresQuest: 'q_moggers_trail',
     minLevel: 6,
     suggestedPlayers: 3,
   },
+
+  // -------------------------------------------------------------------------
+  // The townsfolk's errands.
+  //
+  // WHY THESE AND NOT THE OLD CHAINS. Two retired packs used to sit here: the
+  // ten-step Warden's Ledger and the two Brightwood Glade quests. Both were
+  // removed upstream for reasons that still hold, so this is a replacement and
+  // not a revert:
+  //   * Five of the ten Ledger bounties reused the SAME giver and the SAME kill
+  //     objective as a main-story quest, so a finished bounty was
+  //     indistinguishable from a new one. `tests/quest_repeat_repro.test.ts` now
+  //     fails on any giver+objective collision, and the retarget that tried to
+  //     fix it pushed level-1 and level-3 bounties 130 yards north into the
+  //     Brightwood, out of their own level band.
+  //   * The Brightwood itself was eleven wildlife camps packed into one grove,
+  //     an undifferentiated wall of beasts, and its mobs were deleted as orphans
+  //     once the quests went. Reinstating either would reinstate the defect.
+  // So nothing below reuses another quest's giver+objective pair, nothing below
+  // targets a mob that is not already the point of that camp, and no quest sends
+  // a player outside the level band of the ground it names.
+  //
+  // WHAT THIS PACK ADDS INSTEAD. The real gap a play-test hits is that the Vale
+  // runs dry: the solo quest line ends around level 6, and everything past that
+  // is behind the five-player crypt. It also leaves Smith Haldren, the town
+  // armorer, with nothing to say, and Captain Verlan, a rare elite carrying a
+  // deliberately shortened three-minute respawn (`respawnMult: 7.2`, set for
+  // quest flow) with no quest attached to it. These ten fill exactly that: three
+  // material errands for the smith, two for the apothecary, one each for the
+  // trader and the priest, the Marshal's road chain, and the Verlan bounty.
+  //
+  // NO NEW CAMPS, ON PURPOSE. Every kill objective targets a mob a shipped camp
+  // already spawns, and every collect is served either by a shipped junk drop or
+  // by ZONE1_VALE_OBJECTS below, which carry explicit positions. Camps draw
+  // world-gen rng in array order, so one added camp moves every later spawn;
+  // ground objects draw none. The post-worldgen rng cursor is therefore
+  // bit-identical (`tests/world_phase2_zones.test.ts`).
+  //
+  // REWARD ANCHORS. Every xp and copper pair names the shipped quest it is
+  // derived from at the site. The Vale's shipped ladder, measured off the live
+  // tables: level 1 runs 250/75 (q_wolves) to 350/120 (q_boars); level 2 is
+  // 420/140 (q_spiders); level 3 is 520/180 (q_murlocs); level 4 is 620/220
+  // (q_mine) and 600/240 (q_ev_boars, expansion/quests.ts); level 5 is 700/260
+  // (q_bones); level 6 is 800/500 (q_ringleader). Ordinary quests pay copper at
+  // about 0.35x to 0.40x xp; a named target skews it up (q_ringleader 0.63x,
+  // q_mogger 1200/900 at 0.75x). Every reward item below is already shipped.
+  //
+  // COMPASS. +z is NORTH and +x is WEST, so east is -x. Every direction word
+  // below was derived from the live coordinates through the HUD's own bearing
+  // math and is pinned by `tests/zone1_vale_content.test.ts`.
+  // -------------------------------------------------------------------------
+
+  q_haldren_fangs: {
+    id: 'q_haldren_fangs',
+    name: "The Maker's Mark",
+    giverNpcId: 'smith_haldren',
+    turnInNpcId: 'smith_haldren',
+    text: "Every blade I send out with the militia carries a wolf's fang set in the pommel. It is not steel, it does nothing for the edge, and no Eastbrook man has ever walked the north road without one. I am not going to be the smith who breaks that. The wolves are thick up there now, $N. Bring me five fangs and the next five blades go out marked.",
+    completionText:
+      'Five. That is five men who will not think about it when they walk out the gate, which is the whole of what a mark is for. Take your pay, and mind the sparks.',
+    objectives: [{ type: 'collect', itemId: 'wolf_fang', count: 5, label: 'Cracked Wolf Fang' }],
+    // Anchor: between q_wolves (250/75) and q_boars (350/120), the two shipped
+    // level-1 rungs. A five-count collect off a 0.45 drop runs longer than a
+    // kill-8, so it sits above the floor rather than on it.
+    xpReward: 300,
+    copperReward: 100,
+    itemRewards: {},
+  },
+  q_redbrook_mileposts: {
+    id: 'q_redbrook_mileposts',
+    name: 'The Milepost Watch',
+    giverNpcId: 'marshal_redbrook',
+    turnInNpcId: 'marshal_redbrook',
+    text: 'Eastbrook keeps four road markers between the gate and Wolf Run and every one of them is on its face in the grass. A cart that misses the turn in the dark goes into the trees, and the trees are where the wolves are. Walk the north road, $N, and bring back what is left of the four. This time I will have them cut fresh and set in stone.',
+    completionText:
+      'Splinters, mostly, but I can still read the numbers off two of them and that is enough to set the new ones true. Take the boots. They were cut for a man who walked that road every week and he has no more use for them.',
+    objectives: [
+      {
+        type: 'collect',
+        itemId: 'splintered_road_marker',
+        count: 4,
+        label: 'Splintered Road Marker',
+      },
+    ],
+    // Anchor: q_boars (350/120). Same errand length one rung later, and it pays
+    // the level-1 ceiling rather than the level-2 rung (q_spiders, 420/140)
+    // because it carries an item reward instead of a copper skew.
+    xpReward: 350,
+    copperReward: 120,
+    // Reward anchor: `milepost_boots` (items.ts, uncommon feet, armor 30 / agi 1 /
+    // sta 1, sellValue 110, class-neutral). Already the forest_wolf 0.1 drop on
+    // this exact road, so it is a level-2 boot by its own shipped source; the
+    // quest makes it a certainty instead of a one-in-ten. Reused, not reprinted.
+    itemRewards: {
+      warrior: 'milepost_boots',
+      mage: 'milepost_boots',
+      rogue: 'milepost_boots',
+    },
+    requiresQuest: 'q_wolves',
+    minLevel: 2,
+  },
+  q_haldren_scale: {
+    id: 'q_haldren_scale',
+    name: 'Scale for the Militia',
+    giverNpcId: 'smith_haldren',
+    turnInNpcId: 'smith_haldren',
+    text: 'Chain costs more than Eastbrook has. What Eastbrook has is a lake full of fish-men wearing better armor than my militia. Boil the scale off a Mudfin, sew it onto a leather jack, and you have something that turns a knife, which is more than most of these lads are wearing now. Six scales, $N, off the shore northeast of town. Brandt will not weep for them.',
+    completionText:
+      'Slimy, and they will stink through two boilings, and every man who gets one will complain about it right up until the first time it saves him.',
+    objectives: [
+      { type: 'collect', itemId: 'mudfin_scale', count: 6, label: 'Slimy Murloc Scale' },
+    ],
+    // Anchor: between q_spiders (minLevel 2, 420/140) and q_murlocs (minLevel 3,
+    // 520/180). It rides the same camp as q_murlocs, so it pays under that rung.
+    xpReward: 480,
+    copperReward: 170,
+    itemRewards: {},
+    requiresQuest: 'q_haldren_fangs',
+    minLevel: 3,
+  },
+  q_lin_glade: {
+    id: 'q_lin_glade',
+    name: 'What the Glade Still Gives',
+    giverNpcId: 'apothecary_lin',
+    turnInNpcId: 'apothecary_lin',
+    text: 'There is a grove far north of here, past the wolf runs, that the Vale calls Brightwood. Nothing grazes it any more, which is a sorrow to everyone except me: sunleaf grows waist high there and nowhere else in the Vale. Six fronds, $N, cut green and cut low, at the crown. Anyone can pull a weed. I am asking you to harvest.',
+    completionText:
+      'Cut low, all six, and not one of them bruised. Half of Eastbrook will drink this before the winter is out and none of them will ever know your name for it. I will.',
+    objectives: [{ type: 'collect', itemId: 'sunleaf_frond', count: 6, label: 'Sunleaf Frond' }],
+    // Anchor: q_ev_boars (expansion/quests.ts, minLevel 4, 600/240), the shipped
+    // level-4 rung. A long walk with no combat on it, so it pays the rung flat.
+    xpReward: 600,
+    copperReward: 240,
+    itemRewards: {},
+    requiresQuest: 'q_spiders',
+    minLevel: 4,
+  },
+  q_haldren_tallow: {
+    id: 'q_haldren_tallow',
+    name: 'Tallow for the Quench',
+    giverNpcId: 'smith_haldren',
+    turnInNpcId: 'smith_haldren',
+    text: 'A water quench cracks a thin blade. A tallow quench does not, and the only tallow left in the Vale is stacked in candles down the Copper Dig, southeast of town, in the paws of things that eat by their own light. Odell wants them dead. I want their candles. Six will do the pair of us.',
+    completionText:
+      'Rendered down, that is a season of quenching, and every blade out of this forge until spring will owe a kobold something. Take the trousers off the rack. They are plain and they will outlast you.',
+    objectives: [{ type: 'collect', itemId: 'tallow_candle', count: 6, label: 'Tallow Candle' }],
+    // Anchor: q_mine (minLevel 4, 620/220), the shipped level-4 rung at this camp.
+    // Copper follows the ordinary-quest ratio of about 0.37x xp.
+    xpReward: 620,
+    copperReward: 230,
+    // Reward anchor: `quilted_trousers` (items.ts, uncommon legs, armor 30 / sta 2,
+    // sellValue 90, class-neutral), already the gorrak 0.5 drop at this level band.
+    // Reused rather than reprinted; a smith handing over legs is what he has.
+    itemRewards: {
+      warrior: 'quilted_trousers',
+      mage: 'quilted_trousers',
+      rogue: 'quilted_trousers',
+    },
+    requiresQuest: 'q_haldren_scale',
+    minLevel: 4,
+  },
+  q_lin_boneash: {
+    id: 'q_lin_boneash',
+    name: 'Bone Ash',
+    giverNpcId: 'apothecary_lin',
+    turnInNpcId: 'apothecary_lin',
+    text: 'I will say this once and I will not say it anywhere near Brother Aldric. Fever takes more of this village in a bad year than the dead do, and the only thing that breaks a fever is bone ash ground into bitter root. The chapel yard northwest of town is full of bone that is already up and walking, $N, so I am not robbing a grave. Eight handfuls.',
+    completionText:
+      'Eight, and ground fine. Aldric would call this a desecration and he would be right, and next spring he will bury four fewer children because of it. I can carry both of those.',
+    objectives: [{ type: 'collect', itemId: 'bone_fragments', count: 8, label: 'Bone Fragments' }],
+    // Anchor: q_bones (minLevel 5, 700/260), the shipped level-5 rung at this camp.
+    xpReward: 700,
+    copperReward: 260,
+    itemRewards: {},
+    requiresQuest: 'q_lin_glade',
+    minLevel: 5,
+  },
+  q_wilkes_colors: {
+    id: 'q_wilkes_colors',
+    name: 'Red on the Road',
+    giverNpcId: 'trader_wilkes',
+    turnInNpcId: 'trader_wilkes',
+    text: 'You got my crates back and I am still short a driver, because nobody will take a wagon down the southwest road while that camp is standing. So we will be clever instead of brave, $N. Bring me eight of their red bandanas. My next wagon rolls with every man on it wearing one, and the hills will wave it straight through like family.',
+    completionText:
+      'Eight. That is the whole run to the fen crossing and back, in their own colors, and not one copper of toll paid. Take the jerkin. It came off a hide-runner who is not coming back for it, and it turns more than you would think.',
+    objectives: [{ type: 'collect', itemId: 'bandit_bandana', count: 8, label: 'Red Bandana' }],
+    // Anchor: q_bones (minLevel 5, 700/260), the level-5 rung. A touch over it
+    // because the bandana drops at 0.5 against Bone Fragments at 0.6.
+    xpReward: 720,
+    copperReward: 280,
+    // Reward anchor: `bramblehide_jerkin` (items.ts, uncommon chest, armor 40 /
+    // sta 2 / agi 1, sellValue 120, class-neutral). Kept in the tables when the
+    // Brightwood chains were retired but left unobtainable ever since; this puts
+    // a shipped item back in reach instead of minting a new one.
+    itemRewards: {
+      warrior: 'bramblehide_jerkin',
+      mage: 'bramblehide_jerkin',
+      rogue: 'bramblehide_jerkin',
+    },
+    requiresQuest: 'q_supplies',
+    minLevel: 5,
+  },
+  q_aldric_reliquary: {
+    id: 'q_aldric_reliquary',
+    name: 'The Hill of Small Saints',
+    giverNpcId: 'brother_aldric',
+    turnInNpcId: 'brother_aldric',
+    text: 'Eastbrook had holy ground before it had a chapel: a reliquary on the hill south of town, where the Vale kept the bones of people too small to be saints and too loved to be forgotten. If Morthen read our burial ledger then he read that one as well. Go up the hill, $N, and bring me the seals off whatever he opened. Four will tell me how much he took.',
+    completionText:
+      'Four seals, and every one of them cut, not broken. He had keys. Someone in this village put the keys to our reliquary into a Gravecaller\'s hand, and I have buried three men this year who could have.',
+    objectives: [
+      { type: 'collect', itemId: 'reliquary_seal', count: 4, label: 'Broken Reliquary Seal' },
+    ],
+    // Anchor: q_ringleader (800/500) for the level-6 xp band. Copper follows the
+    // ordinary-quest ratio of about 0.40x rather than that quest's named-target
+    // skew, because nothing here has to be killed.
+    xpReward: 800,
+    copperReward: 320,
+    itemRewards: {},
+    requiresQuest: 'q_names_of_the_dead',
+    minLevel: 6,
+  },
+  q_moggers_trail: {
+    id: 'q_moggers_trail',
+    name: "Mogger's Trail",
+    giverNpcId: 'marshal_redbrook',
+    turnInNpcId: 'marshal_redbrook',
+    text: 'Gorrak is down and the road is still not safe, because the thing breaking my carts out west past the meadow was never a bandit. Mogger drags what he wrecks back toward his den and he leaves a line of it behind him a blind man could follow. Three axles off that line, $N. I want to know exactly where he sleeps before I send anyone to wake him.',
+    completionText:
+      'Three axles, all of them off my carters, and the line runs west and stops. That is his den, and now it is a place on a map instead of a story. Rest tonight. Tomorrow we talk about who goes with you.',
+    objectives: [
+      { type: 'collect', itemId: 'splintered_axle', count: 3, label: 'Splintered Cart Axle' },
+    ],
+    // Anchor: between q_bones (minLevel 5, 700/260) and q_ringleader (800/500).
+    // A short collect, so xp sits under the level-6 rung; copper takes part of
+    // q_ringleader's named-target skew because the trail ends at a rare's lair.
+    xpReward: 650,
+    copperReward: 350,
+    itemRewards: {},
+    requiresQuest: 'q_ringleader',
+    minLevel: 6,
+  },
+  q_redbrook_verlan: {
+    id: 'q_redbrook_verlan',
+    name: 'The Oathbreaker',
+    giverNpcId: 'marshal_redbrook',
+    turnInNpcId: 'marshal_redbrook',
+    text: 'Captain Verlan held this Vale for eleven years and I took my oath standing in front of him. He is still up at the Fallen Chapel northwest of town, still in the coat, still holding ground he was told to hold, and he has killed two of my militia for standing on it. Take someone with you, $N. Do not go up there alone and do not go up there thinking it will be quick.',
+    completionText:
+      'Then it is done, and I will not write it in the ledger as a bandit killing. Take the greaves. They were his. If I am ever still holding ground past the point where holding it means anything, I hope somebody does me the same favor.',
+    objectives: [
+      { type: 'kill', targetMobId: 'captain_verlan', count: 1, label: 'Captain Verlan slain' },
+    ],
+    // Anchor: q_ringleader (800/500), the shipped named-target rung, one level up
+    // for a rare elite; copper keeps that quest's 0.62x named-target skew and the
+    // pair stays well under q_mogger (1200/900, suggestedPlayers 3).
+    xpReward: 900,
+    copperReward: 560,
+    // Reward anchor: `oathbound_greaves` (items.ts, uncommon legs, armor 52 /
+    // sta 2 / str 1, sellValue 200, class-neutral), already Verlan's own 0.3 drop.
+    // The bounty makes his best class-neutral piece a certainty; nothing new.
+    itemRewards: {
+      warrior: 'oathbound_greaves',
+      mage: 'oathbound_greaves',
+      rogue: 'oathbound_greaves',
+    },
+    requiresQuest: 'q_bones',
+    minLevel: 7,
+    suggestedPlayers: 2,
+  },
 };
 
+// Offer order inside each giver's list. A chain head always precedes its
+// follow-ups, so a giver never shows a quest whose prerequisite has not been
+// offered yet, and the townsfolk's errands are slotted at the rung they are
+// balanced for rather than appended in a block at the end.
 export const ZONE1_QUEST_ORDER = [
   'q_wolves',
+  'q_haldren_fangs',
   'q_boars',
+  'q_redbrook_mileposts',
   'q_spiders',
   'q_greyjaw',
+  'q_haldren_scale',
   'q_murlocs',
   'q_supplies',
   'q_bandits',
   'q_mine',
+  'q_lin_glade',
+  'q_haldren_tallow',
   'q_bones',
+  'q_lin_boneash',
+  'q_wilkes_colors',
   'q_ringleader',
   'q_whispers',
   'q_names_of_the_dead',
+  'q_aldric_reliquary',
   'q_silence_the_call',
   'q_rite',
   'q_sexton',
   'q_hollow',
   'q_gravecallers_trail',
+  'q_moggers_trail',
   'q_mogger',
+  'q_redbrook_verlan',
 ];
 
 // ---------------------------------------------------------------------------
@@ -1034,6 +1332,79 @@ export const ZONE1_OBJECTS: GroundObjectDef[] = [
     itemId: 'morthen_grimoire',
     name: "Morthen's Grimoire",
     positions: [{ x: 78, z: 86 }],
+  },
+];
+
+// The townsfolk's errands (the quests under that banner above). Merged LAST into
+// GROUND_OBJECTS in data.ts, after the expansion and column packs, for the reason
+// stated there: ground objects draw NO world-gen rng, but they DO consume entity
+// ids in array order, so keeping the newest set at the tail leaves every shipped
+// object's id exactly where it was.
+//
+// Every position below was checked against `terrainHeight` on four seeds for dry
+// land and against `resolvePosition` for a clear cell, and each set carries one
+// node more than its quest requires (the slack the expansion and column packs
+// use). `tests/zone1_vale_content.test.ts` re-derives both checks.
+export const ZONE1_VALE_OBJECTS: GroundObjectDef[] = [
+  {
+    // Strung along the north road out of town toward Wolf Run, following the road
+    // polyline below. North of Eastbrook, which is what q_redbrook_mileposts says.
+    itemId: 'splintered_road_marker',
+    name: 'Splintered Road Marker',
+    positions: [
+      { x: -2, z: 20 },
+      { x: -8, z: 34 },
+      { x: -13, z: 48 },
+      { x: -11, z: 64 },
+      { x: -5, z: 74 },
+    ],
+  },
+  {
+    // Brightwood Glade, the POI at (40,140). The grove kept its name and its map
+    // pin after its wildlife was retired; this is what still grows there, and it
+    // gives the far north of the Vale a reason to be walked again.
+    itemId: 'sunleaf_frond',
+    name: 'Sunleaf Frond',
+    positions: [
+      { x: 30, z: 132 },
+      { x: 44, z: 134 },
+      { x: 52, z: 142 },
+      { x: 36, z: 146 },
+      { x: 26, z: 140 },
+      { x: 46, z: 152 },
+      { x: 34, z: 156 },
+    ],
+  },
+  {
+    // Reliquary Hill, the POI at (-5,-52): the Vale's second graveyard prop and
+    // the Collapsed Reliquary delve marker already stand here with no quest
+    // pointing at them. Clear of the ruin ring at (-5,-60, r 8) and of the
+    // graveyard prop at (4,-56). South of town, which is what q_aldric_reliquary
+    // says.
+    itemId: 'reliquary_seal',
+    name: 'Broken Reliquary Seal',
+    positions: [
+      { x: -14, z: -46 },
+      { x: 2, z: -46 },
+      { x: -16, z: -58 },
+      { x: 6, z: -64 },
+      { x: -2, z: -72 },
+    ],
+  },
+  {
+    // Mogger's drag line, running west out of the far boar meadow toward his camp
+    // at (118,-26). The last node stops 25.3 yd short of the camp centre, so even
+    // a spawn on the near edge of the 5 yd camp disc stays outside his 14 yd
+    // aggro radius: the trail leads a level-6 player into sight of a rare elite's
+    // lair without pulling it for them.
+    itemId: 'splintered_axle',
+    name: 'Splintered Cart Axle',
+    positions: [
+      { x: 78, z: -10 },
+      { x: 85, z: -14 },
+      { x: 90, z: -16 },
+      { x: 94, z: -18 },
+    ],
   },
 ];
 

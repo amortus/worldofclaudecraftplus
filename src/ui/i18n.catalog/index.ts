@@ -1016,6 +1016,11 @@ export const en = {
       cf_quenchless_fang: { name: 'Quenchless Fang' },
       // Alderfen Shallows and Grimhold Crags: quest objects and the two capstone sets.
       cut_withy: { name: 'Cut Withy' },
+      // Eastbrook Vale bounty objects.
+      splintered_road_marker: { name: 'Splintered Road Marker' },
+      sunleaf_frond: { name: 'Sunleaf Frond' },
+      reliquary_seal: { name: 'Broken Reliquary Seal' },
+      splintered_axle: { name: 'Splintered Cart Axle' },
       alder_char: { name: 'Alder Char' },
       mill_sluice_wheel: { name: 'Mill Sluice Wheel' },
       cragcoal: { name: 'Cragcoal' },

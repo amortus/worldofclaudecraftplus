@@ -81,6 +81,7 @@ import {
   ZONE1_QUEST_ORDER,
   ZONE1_QUESTS,
   ZONE1_ROADS,
+  ZONE1_VALE_OBJECTS,
   ZONE1_ZONE,
 } from './content/zone1';
 import {
@@ -302,6 +303,10 @@ export const GROUND_OBJECTS: GroundObjectDef[] = [
   // reason: they consume entity ids in array order, so keeping the newest pack
   // at the end leaves every shipped object's id exactly where it was.
   ...COLUMN_OBJECTS,
+  // The Eastbrook townsfolk's errands, appended after the column ring for the
+  // same reason: they are the newest set, so putting them at the tail leaves
+  // every shipped object's entity id exactly where it was.
+  ...ZONE1_VALE_OBJECTS,
 ];
 
 export const ROADS: { x: number; z: number }[][] = [

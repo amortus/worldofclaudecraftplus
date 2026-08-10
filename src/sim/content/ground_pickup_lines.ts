@@ -89,6 +89,23 @@ export const GROUND_PICKUP_LINES: Record<string, GroundPickupLines> = {
     deny: 'The ritual focus is bound to its rite; it ignores your hand.',
     enough: 'You already have enough ritual foci.',
   },
+  // The Eastbrook townsfolk's errands (ZONE1_VALE_OBJECTS in zone1.ts).
+  splintered_road_marker: {
+    deny: 'A road marker, face down in the grass. Somebody in town will want it, but nobody has asked you.',
+    enough: 'You are carrying all the marker the Marshal asked for.',
+  },
+  sunleaf_frond: {
+    deny: 'Sunleaf, waist high and unclaimed. Cut it wrong and it is worth nothing to anybody.',
+    enough: 'You have cut all the sunleaf Lin asked for.',
+  },
+  reliquary_seal: {
+    deny: 'The seal is cut, not broken, and it is not yours to lift.',
+    enough: 'You have taken enough seals off the hill.',
+  },
+  splintered_axle: {
+    deny: 'A cart axle, snapped clean and left where it fell. It is evidence of something, but not for you.',
+    enough: 'You have all the axle the Marshal needs to read the trail.',
+  },
   // The expansion pack (src/sim/content/expansion). Every ground object it adds
   // needs a line here: `tests/sim.test.ts` asserts this table and the merged
   // GROUND_OBJECTS have exactly the same item ids.

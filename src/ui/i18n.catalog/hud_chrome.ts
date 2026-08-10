@@ -1394,6 +1394,46 @@ export const hudChromeStrings = {
       disconnected: 'Your connection dropped.',
     },
   },
+  // ---------------------------------------------------------------------------
+  // The death loop (src/sim/spirit.ts): the ghost, the corpse run, and the Spirit
+  // Healer. The sim emits stable ids and distances only (ghostRelease /
+  // ghostResurrect / ghostDeny carry no English at all), so every word a player
+  // reads while dead is authored here and rendered by src/ui/ghost_feedback.ts
+  // and src/ui/ghost_panel.ts.
+  // ---------------------------------------------------------------------------
+  ghost: {
+    // The death overlay heading once the spirit is out (the pre-release heading
+    // stays the existing `hud.core.deathTitle` on the static markup).
+    ghostTitle: 'Your spirit wanders',
+    // The corpse-run readout under the buttons.
+    corpseDistance: 'Your corpse lies {yards} yards away.',
+    corpseInRange: 'Your corpse is within reach.',
+    corpseLost: 'Your body is beyond reach. Only the Spirit Healer can return you.',
+    healerFar: 'Return to a graveyard to find a Spirit Healer.',
+    healerNear: 'A Spirit Healer waits over you.',
+    // Buttons.
+    resurrectAtCorpse: 'Resurrect',
+    resurrectAtHealer: 'Spirit Healer',
+    healerWarning: 'Costs Resurrection Sickness',
+    // Log lines for the three sim events.
+    released: 'Your spirit rises at the graveyard. Run back to your body.',
+    releasedNoCorpse: 'Your spirit rises at the graveyard, far from where you fell.',
+    resurrected: {
+      corpse: 'Your spirit returns to your body.',
+      healer: 'The Spirit Healer restores you to life.',
+      unstuck: 'Your spirit is drawn back into your body.',
+      revive: 'You are pulled back from the edge.',
+    },
+    sickness: 'Resurrection Sickness clings to you for {duration}.',
+    sicknessAura: 'Resurrection Sickness',
+    sicknessTooltip: 'All attributes reduced. The price of a Spirit Healer resurrection.',
+    deny: {
+      not_ghost: 'Your spirit is still bound to your body.',
+      no_corpse: 'There is no body left to return to.',
+      corpse_too_far: 'You are too far from your corpse.',
+      no_healer: 'No Spirit Healer stands within reach.',
+    },
+  },
   // Procedural Rifts (src/sim/rift/): the in-rift floor tracker, the overworld
   // portal card and confirmation, the run feedback, and the English behind every
   // stable id the generator emits (`rift.floor.*`, `rift.theme.*`, `rift.noun.*`,

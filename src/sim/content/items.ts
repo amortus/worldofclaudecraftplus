@@ -919,6 +919,38 @@ export const BASE_ITEMS: Record<string, ItemDef> = {
     sellValue: 0,
     questId: 'q_gravecallers_trail',
   },
+  // --- Eastbrook Vale, the townsfolk's errands (zone1.ts ZONE1_VALE_OBJECTS).
+  // Every one is a ground sparkle, so it is picked up rather than looted, and the
+  // `questId` gate is what makes the object refuse a player who has not taken the
+  // quest (see `pickUpObject` in sim.ts, and GROUND_PICKUP_LINES for the refusal).
+  splintered_road_marker: {
+    id: 'splintered_road_marker',
+    name: 'Splintered Road Marker',
+    kind: 'quest',
+    sellValue: 0,
+    questId: 'q_redbrook_mileposts',
+  },
+  sunleaf_frond: {
+    id: 'sunleaf_frond',
+    name: 'Sunleaf Frond',
+    kind: 'quest',
+    sellValue: 0,
+    questId: 'q_lin_glade',
+  },
+  reliquary_seal: {
+    id: 'reliquary_seal',
+    name: 'Broken Reliquary Seal',
+    kind: 'quest',
+    sellValue: 0,
+    questId: 'q_aldric_reliquary',
+  },
+  splintered_axle: {
+    id: 'splintered_axle',
+    name: 'Splintered Cart Axle',
+    kind: 'quest',
+    sellValue: 0,
+    questId: 'q_moggers_trail',
+  },
   // --- Brightwood Glade wildlife pack ---
   soft_down: {
     id: 'soft_down',
@@ -944,6 +976,11 @@ export const BASE_ITEMS: Record<string, ItemDef> = {
     sellValue: 4,
     buyValue: 35,
   },
+  // Kept when the Brightwood chains were retired so equipped players did not lose
+  // the piece. `bramblehide_jerkin` is obtainable again as the reward for
+  // `q_wilkes_colors` (zone1.ts); `monarch_crown_helm` stays unobtainable, because
+  // its name belongs to a stag that no longer exists and re-anchoring it to an
+  // unrelated quest would read as a different item.
   bramblehide_jerkin: {
     id: 'bramblehide_jerkin',
     name: 'Bramblehide Jerkin',
