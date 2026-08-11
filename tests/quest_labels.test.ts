@@ -13,11 +13,21 @@ import { describe, expect, it } from 'vitest';
 import { ITEMS, MOBS, QUESTS } from '../src/sim/data';
 
 // Labels that deliberately do NOT lead with the full name. Each needs a reason;
-// this list is not a place to bury a real miss.
+// this list is not a place to bury a real miss. A listed label still has to
+// NAME the creature (see the short-form check below) - all this waives is the
+// requirement that the label start with the template name verbatim.
 const SHORT_FORM_ALLOWED: Record<string, string> = {
   // The whole quest chain calls him Nythraxis; the full template name would read
   // as a different creature.
   'q_nythraxis_scourges_end:0': 'deliberate short form for the chain boss',
+  // The two below arrived with the full map parity pass, ported VERBATIM from
+  // upstream along with the Veiled Hollow and the Frostveil Reach. Upstream
+  // writes these two objectives as prose rather than as a counter, and the
+  // fork does not rewrite ported copy: "Aurelhorn given peace" drops the
+  // "First of the Herd" epithet the template carries, and "The Frostmane
+  // slain" names the yeti by its clan. Both still name the creature.
+  'q_hollow_first_of_the_herd:0': 'upstream prose label, drops the boss epithet',
+  'q_fv_frostmane_tyrant:0': 'upstream prose label, names the yeti by its clan',
 };
 
 function label(questId: string, index: number): string {
@@ -45,7 +55,13 @@ describe('quest objective labels name real content', () => {
       expect(mob, `${questId} targets unknown mob ${mobId}`).toBeTruthy();
       const text = label(questId, i);
       if (SHORT_FORM_ALLOWED[`${questId}:${i}`]) {
-        expect(mob.name.includes(text.split(' ')[0])).toBe(true);
+        // A waived label may put the creature anywhere in the line, but it must
+        // still carry a distinctive word out of the template name: leading-word
+        // matching alone let "The Frostmane slain" off on the article "The".
+        const named = text
+          .split(/[^A-Za-z']+/)
+          .some((word) => word.length > 3 && mob.name.includes(word));
+        expect(named, `waived label "${text}" still has to name "${mob.name}"`).toBe(true);
         return;
       }
       expect(

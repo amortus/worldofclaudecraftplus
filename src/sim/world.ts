@@ -2,7 +2,7 @@ import { fbm2, hash2, noise2 } from './rng';
 import {
   CAMPS, COLUMN_ZONES, DUNGEON_FLOOR_Y, DUNGEON_X_THRESHOLD, ROADS,
   STRIP_MAX_X, STRIP_MIN_X, STRIP_ZONES, WORLD_MAX_X, WORLD_MAX_Z, WORLD_MIN_Z,
-  worldHalfWidthAt, ZONES, zoneAt, zoneContaining,
+  worldHalfWidthAt, worldNorthEdgeAt, ZONES, zoneAt, zoneContaining,
 } from './data';
 import { cragLayer, highlandMask, reliefBase, warpedCoords } from './terrain_relief';
 import type { BiomeId, ZoneDef } from './types';
@@ -636,13 +636,18 @@ export function terrainHeight(x: number, z: number, seed: number): number {
   }
 
   // Raise the world rim so the player naturally stays in bounds. The half width
-  // is PER ROW (worldHalfWidthAt): a row a column occupies is rimmed at the
-  // column's outer edge, every other row keeps the strip's own rim exactly
-  // where it was, and the transition eases in z so no cliff opens at the corner.
-  const halfWidth = worldHalfWidthAt(z);
+  // is PER ROW AND PER SIDE (worldHalfWidthAt): a row a column occupies is
+  // rimmed at that column's outer edge, every other row and the empty side of a
+  // one-sided row keep the strip's own rim exactly where it was, and the
+  // transition eases in z so no cliff opens at the corner. The north edge is
+  // PER COLUMN (worldNorthEdgeAt) for the mirror-image reason: the strip ends
+  // at the Frostveil while the Amberfall and the Drakelands run further north,
+  // so the rim has to follow the zones that exist rather than one global zMax.
+  const halfWidth = worldHalfWidthAt(z, x);
   const rimX = smoothstep(halfWidth - 30, halfWidth, Math.abs(x));
   const rimS = smoothstep(WORLD_MIN_Z + 30, WORLD_MIN_Z, z);
-  const rimN = smoothstep(WORLD_MAX_Z - 30, WORLD_MAX_Z, z);
+  const northEdge = worldNorthEdgeAt(x);
+  const rimN = smoothstep(northEdge - 30, northEdge, z);
   const rim = Math.max(rimX, rimS, rimN);
   h += rim * 40;
   h += mirefenImpactCraterOffset(x, z);

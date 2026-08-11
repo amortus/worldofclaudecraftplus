@@ -409,7 +409,7 @@ export const DUNGEON_MOBS: Record<string, MobTemplate> = {
       { itemId: 'pw_chest', chance: 0.34, rollGroup: 'ch_bonesmith_set' },
       { itemId: 'hm_chest', chance: 0.33, rollGroup: 'ch_bonesmith_set' },
       { itemId: 'as_chest', chance: 0.33, rollGroup: 'ch_bonesmith_set' },
-      { itemId: 'ash_iron', chance: 1, questId: 'q_ch_attune_4' },
+      // PARKED with the Ashen Wastes (sim/data.ts): { itemId: 'ash_iron', chance: 1, questId: 'q_ch_attune_4' },
     ],
     scale: 1.45, color: 0xd0c8b4,
   },
@@ -430,9 +430,9 @@ export const DUNGEON_MOBS: Record<string, MobTemplate> = {
       { itemId: 'veholt_war', chance: 0.2, rollGroup: 'ch_veholt_chase' },
       { itemId: 'veholt_mag', chance: 0.2, rollGroup: 'ch_veholt_chase' },
       { itemId: 'veholt_rog', chance: 0.2, rollGroup: 'ch_veholt_chase' },
-      { itemId: 'veholt_sigil', chance: 1, questId: 'q_ch_attune_1' },
-      { itemId: 'breach_core', chance: 1, questId: 'q_ch_attune_3' },
-      { itemId: 'hollow_crown', chance: 1, questId: 'q_ch_attune_5' },
+      // PARKED with the Ashen Wastes (sim/data.ts): { itemId: 'veholt_sigil', chance: 1, questId: 'q_ch_attune_1' },
+      // PARKED with the Ashen Wastes (sim/data.ts): { itemId: 'breach_core', chance: 1, questId: 'q_ch_attune_3' },
+      // PARKED with the Ashen Wastes (sim/data.ts): { itemId: 'hollow_crown', chance: 1, questId: 'q_ch_attune_5' },
     ],
     scale: 1.7, color: 0x5a5060,
   },
@@ -489,7 +489,7 @@ export const DUNGEON_MOBS: Record<string, MobTemplate> = {
     stomp: { radius: 11, every: 12, duration: 1.5, min: 28, max: 40, name: 'Unmaking Stomp' },
     aoePulse: { min: 32, max: 46, radius: 11, every: 10, name: 'Putrid Wave', school: 'nature', fx: 'nova' },
     enrage: { belowHpPct: 0.3, dmgMult: 1.45, hasteMult: 1.3 },
-    loot: [{ copper: 1800, chance: 1 }, { itemId: "mp_waist", chance: 0.34, rollGroup: "cx_waist_g" }, { itemId: "vw_waist", chance: 0.33, rollGroup: "cx_waist_g" }, { itemId: "ng_waist", chance: 0.33, rollGroup: "cx_waist_g" }, { itemId: "cx_ep_helm", chance: 0.15, rollGroup: "cx_grosh_bonus" }, { itemId: "mournlight_splinter", chance: 0.08, questId: "q_cx_legend_1" }], scale: 1.8, color: 0x6f7a55,
+    loot: [{ copper: 1800, chance: 1 }, { itemId: "mp_waist", chance: 0.34, rollGroup: "cx_waist_g" }, { itemId: "vw_waist", chance: 0.33, rollGroup: "cx_waist_g" }, { itemId: "ng_waist", chance: 0.33, rollGroup: "cx_waist_g" }, { itemId: "cx_ep_helm", chance: 0.15, rollGroup: "cx_grosh_bonus" }], scale: 1.8, color: 0x6f7a55,
   },
   // Quarter 2 - The Plagueworks
   cx_vexil: {
@@ -513,7 +513,7 @@ export const DUNGEON_MOBS: Record<string, MobTemplate> = {
     aoePulse: { min: 34, max: 48, radius: 12, every: 9, name: 'Pestilence', school: 'nature', fx: 'nova' },
     summonAdds: { mobId: 'cx_plague_swarm', count: 4, atHpPct: [0.66, 0.33] },
     mortalStrike: { chance: 0.4, healReduction: 0.5, duration: 10, name: 'Plague Rot', school: 'nature' },
-    loot: [{ copper: 1900, chance: 1 }, { itemId: "mp_shoulder", chance: 0.34, rollGroup: "cx_shoulder_g" }, { itemId: "vw_shoulder", chance: 0.33, rollGroup: "cx_shoulder_g" }, { itemId: "ng_shoulder", chance: 0.33, rollGroup: "cx_shoulder_g" }, { itemId: "mournlight_splinter", chance: 0.08, questId: "q_cx_legend_1" }], scale: 1.5, color: 0x5f7a3a,
+    loot: [{ copper: 1900, chance: 1 }, { itemId: "mp_shoulder", chance: 0.34, rollGroup: "cx_shoulder_g" }, { itemId: "vw_shoulder", chance: 0.33, rollGroup: "cx_shoulder_g" }, { itemId: "ng_shoulder", chance: 0.33, rollGroup: "cx_shoulder_g" }], scale: 1.5, color: 0x5f7a3a,
   },
   // Quarter 3 - The Deathwatch Barracks
   cx_vanguard: {
@@ -538,7 +538,7 @@ export const DUNGEON_MOBS: Record<string, MobTemplate> = {
     mortalStrike: { chance: 0.4, healReduction: 0.5, duration: 10, name: 'Rider\'s Mark', school: 'physical' },
     summonAdds: { mobId: 'cx_revenant', count: 2, atHpPct: [0.5] },
     enrage: { belowHpPct: 0.25, dmgMult: 1.5, hasteMult: 1.3 },
-    loot: [{ copper: 2100, chance: 1 }, { itemId: "mp_mh", chance: 0.34, rollGroup: "cx_mh_g" }, { itemId: "vw_mh", chance: 0.33, rollGroup: "cx_mh_g" }, { itemId: "ng_mh", chance: 0.33, rollGroup: "cx_mh_g" }, { itemId: "mournlight_splinter", chance: 0.08, questId: "q_cx_legend_1" }], scale: 1.5, color: 0x7a8088,
+    loot: [{ copper: 2100, chance: 1 }, { itemId: "mp_mh", chance: 0.34, rollGroup: "cx_mh_g" }, { itemId: "vw_mh", chance: 0.33, rollGroup: "cx_mh_g" }, { itemId: "ng_mh", chance: 0.33, rollGroup: "cx_mh_g" }], scale: 1.5, color: 0x7a8088,
   },
   // Quarter 4 - The Spinning Dark
   cx_vrallka: {
@@ -563,7 +563,7 @@ export const DUNGEON_MOBS: Record<string, MobTemplate> = {
     aoePulse: { min: 32, max: 46, radius: 12, every: 9, name: 'Widow\'s Venom', school: 'nature', fx: 'nova' },
     summonAdds: { mobId: 'cx_spiderling', count: 5, atHpPct: [0.66, 0.33] },
     enrage: { belowHpPct: 0.25, dmgMult: 1.5, hasteMult: 1.3 },
-    loot: [{ copper: 2100, chance: 1 }, { itemId: "mp_helmet", chance: 0.34, rollGroup: "cx_helm_g" }, { itemId: "vw_helmet", chance: 0.33, rollGroup: "cx_helm_g" }, { itemId: "ng_helmet", chance: 0.33, rollGroup: "cx_helm_g" }, { itemId: "cx_ep_legs", chance: 0.15, rollGroup: "cx_sethelle_bonus" }, { itemId: "mournlight_splinter", chance: 0.08, questId: "q_cx_legend_1" }], scale: 1.75, color: 0x3a2d4a,
+    loot: [{ copper: 2100, chance: 1 }, { itemId: "mp_helmet", chance: 0.34, rollGroup: "cx_helm_g" }, { itemId: "vw_helmet", chance: 0.33, rollGroup: "cx_helm_g" }, { itemId: "ng_helmet", chance: 0.33, rollGroup: "cx_helm_g" }, { itemId: "cx_ep_legs", chance: 0.15, rollGroup: "cx_sethelle_bonus" }], scale: 1.75, color: 0x3a2d4a,
   },
   // Quarter 5 - The Hollow Throne
   cx_rimecore: {
@@ -589,7 +589,7 @@ export const DUNGEON_MOBS: Record<string, MobTemplate> = {
     petSpell: { name: 'Soulfrost Bolt', school: 'frost', min: 48, max: 70, range: 30, every: 2.6 },
     stomp: { radius: 13, every: 13, duration: 1.5, min: 30, max: 44, name: 'Deathknell' },
     enrage: { belowHpPct: 0.2, dmgMult: 1.5, hasteMult: 1.35 },
-    loot: [{ copper: 5000, chance: 1 }, { itemId: "mp_mh", chance: 0.34, rollGroup: "cx_mh_g" }, { itemId: "vw_mh", chance: 0.33, rollGroup: "cx_mh_g" }, { itemId: "ng_mh", chance: 0.33, rollGroup: "cx_mh_g" }, { itemId: "mp_chest", chance: 0.34, rollGroup: "cx_chest2_g" }, { itemId: "vw_chest", chance: 0.33, rollGroup: "cx_chest2_g" }, { itemId: "ng_chest", chance: 0.33, rollGroup: "cx_chest2_g" }, { itemId: "cx_ep_robe", chance: 0.2, rollGroup: "cx_voro_bonus" }, { itemId: "cx_ep_helm", chance: 0.2, rollGroup: "cx_voro_bonus2" }, { itemId: "mournlight_splinter", chance: 0.1, questId: "q_cx_legend_1" }, { itemId: "hollow_star", chance: 0.1, questId: "q_cx_legend_3" }], scale: 2.2, color: 0x5a3d7a,
+    loot: [{ copper: 5000, chance: 1 }, { itemId: "mp_mh", chance: 0.34, rollGroup: "cx_mh_g" }, { itemId: "vw_mh", chance: 0.33, rollGroup: "cx_mh_g" }, { itemId: "ng_mh", chance: 0.33, rollGroup: "cx_mh_g" }, { itemId: "mp_chest", chance: 0.34, rollGroup: "cx_chest2_g" }, { itemId: "vw_chest", chance: 0.33, rollGroup: "cx_chest2_g" }, { itemId: "ng_chest", chance: 0.33, rollGroup: "cx_chest2_g" }, { itemId: "cx_ep_robe", chance: 0.2, rollGroup: "cx_voro_bonus" }, { itemId: "cx_ep_helm", chance: 0.2, rollGroup: "cx_voro_bonus2" }], scale: 2.2, color: 0x5a3d7a,
   },
 };
 

@@ -1,6 +1,20 @@
-// Legacy-save scrubbing for the Eastbrook Vale content retired upstream: the
-// ten-step Warden's Ledger, the two Brightwood Glade quests, and the wildlife
-// pack their objectives targeted.
+// Legacy-save scrubbing for content that no longer exists anywhere in the game.
+//
+// TWO frozen removal sets, both applied by `sanitizeRemovedZone1Content` (the
+// name is kept for its call sites in sim.ts, server/db.ts and
+// scripts/cleanup_removed_zone1_content.ts):
+//   1. The Eastbrook Vale content retired upstream: the ten-step Warden's
+//      Ledger, the two Brightwood Glade quests, and the wildlife pack their
+//      objectives targeted.
+//   2. The two INVENTED column zones (Alderfen Shallows and Grimhold Crags),
+//      deleted whole by the full map parity pass. Upstream never had them, and
+//      the grid cells they occupied belong to upstream's own zones now.
+//
+// The RETIRED Ashen Wastes is deliberately NOT scrubbed. It is parked, not
+// deleted (`src/sim/content/zone4.ts` is intact and `src/sim/data.ts` says how
+// to merge it again in one line), so a player's Ashen Wastes quest history,
+// reputation and items are left exactly as they are: scrubbing them would be
+// the one irreversible act in a reversible retirement.
 //
 // This list is FROZEN. The Vale was refilled with a new pack of townsfolk
 // errands (see the banner in `content/zone1.ts`) rather than by reviving these
@@ -51,11 +65,73 @@ export const REMOVED_ZONE1_MOB_IDS = [
   'brightwood_monarch',
 ] as const;
 
-const REMOVED_QUESTS: ReadonlySet<string> = new Set(REMOVED_ZONE1_QUEST_IDS);
+// ---------------------------------------------------------------------------
+// Set 2: the two invented column zones, deleted by the full map parity pass.
+//
+// FROZEN for the same reason set 1 is: a revived id would silently mark a
+// scrubbed save as having already completed a quest it never saw. Note that
+// `q_af_*` here are the ALDERFEN ids; upstream's Amberfall uses the same
+// prefix with different suffixes (`q_af_goldmelt_road` and friends) and must
+// never be added to this list.
+// ---------------------------------------------------------------------------
+
+export const REMOVED_COLUMN_QUEST_IDS = [
+  'q_af_boards',
+  'q_af_snappers',
+  'q_af_withies',
+  'q_af_poachers',
+  'q_af_char',
+  'q_af_sedgewatch',
+  'q_af_miller',
+  'q_gh_lurkers',
+  'q_gh_ironvein',
+  'q_gh_coal',
+  'q_gh_binders',
+  'q_gh_sled',
+  'q_gh_watchtower',
+  'q_gh_grimfang',
+] as const;
+
+/** The five quest objects and the six capstone rewards those zones minted.
+ *  Unlike `RETIRED_ZONE1_ITEM_IDS`, none of these is kept in the item tables,
+ *  so a save holding one holds an id nothing can resolve: scrubbed from the
+ *  bag, the buyback and the equipment slots alike. */
+export const REMOVED_COLUMN_ITEM_IDS = [
+  'cut_withy',
+  'alder_char',
+  'mill_sluice_wheel',
+  'cragcoal',
+  'plundered_sledload',
+  'weirguard_hauberk',
+  'sedgeweave_robe',
+  'millrace_jerkin',
+  'grimfang_splitter',
+  'coldhearth_emberstaff',
+  'cragmaw_fang',
+] as const;
+
+export const REMOVED_COLUMN_MOB_IDS = [
+  'sedge_skitterer',
+  'mudfin_snapper',
+  'reedwatch_poacher',
+  'weir_husk',
+  'the_drowned_miller',
+  'crag_lurker',
+  'grimhold_scavenger',
+  'scree_binder',
+  'coldhearth_marauder',
+  'old_grimfang',
+] as const;
+
+const REMOVED_QUESTS: ReadonlySet<string> = new Set([
+  ...REMOVED_ZONE1_QUEST_IDS,
+  ...REMOVED_COLUMN_QUEST_IDS,
+]);
+const REMOVED_ITEMS: ReadonlySet<string> = new Set(REMOVED_COLUMN_ITEM_IDS);
 const REMOVED_OBJECTIVE_ITEMS: ReadonlySet<string> = new Set(REMOVED_ZONE1_OBJECTIVE_ITEM_IDS);
 
 function keepItem(slot: InvSlot): boolean {
-  return !REMOVED_OBJECTIVE_ITEMS.has(slot.itemId);
+  return !REMOVED_OBJECTIVE_ITEMS.has(slot.itemId) && !REMOVED_ITEMS.has(slot.itemId);
 }
 
 function sameSlots(a: readonly InvSlot[] | undefined, b: readonly InvSlot[] | undefined): boolean {
@@ -76,10 +152,24 @@ export function sanitizeRemovedZone1Content(state: CharacterState): {
   const questsDone = state.questsDone.filter((questId) => !REMOVED_QUESTS.has(questId));
   const inventory = state.inventory.filter(keepItem).map((slot) => ({ ...slot }));
   const vendorBuyback = state.vendorBuyback?.filter(keepItem).map((slot) => ({ ...slot }));
+  // EQUIPMENT too, for set 2 only. A deleted reward has no ItemDef at all, and
+  // `recalcPlayerStats` skips an unresolvable slot (`if (!item) continue`), so
+  // the piece would sit in the slot forever granting nothing and rendering as a
+  // bare id. Set 1's retired rewards are deliberately KEPT in the item tables
+  // (see RETIRED_ZONE1_ITEM_IDS), so they are never touched here.
+  let equipment = state.equipment;
+  let equipmentChanged = false;
+  for (const [slot, itemId] of Object.entries(state.equipment ?? {})) {
+    if (typeof itemId !== 'string' || !REMOVED_ITEMS.has(itemId)) continue;
+    if (!equipmentChanged) equipment = { ...state.equipment };
+    equipmentChanged = true;
+    delete (equipment as Record<string, unknown>)[slot];
+  }
 
   const changed =
     questLog.length !== state.questLog.length ||
     questsDone.length !== state.questsDone.length ||
+    equipmentChanged ||
     !sameSlots(inventory, state.inventory) ||
     !sameSlots(vendorBuyback, state.vendorBuyback);
 
@@ -89,6 +179,7 @@ export function sanitizeRemovedZone1Content(state: CharacterState): {
       ...state,
       inventory,
       vendorBuyback,
+      equipment,
       questLog,
       questsDone,
     },

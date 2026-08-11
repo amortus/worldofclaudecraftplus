@@ -95,7 +95,49 @@ returned null past the arena at 5400, so the arena moved to 6000 and the delves 
 A stale saved position from the old bands now ejects to the character's own zone hub
 rather than to a door in the level-20 zone.
 
-## The map question: moving toward their 2D world
+## FULL MAP PARITY (SHIPPED)
+
+All 14 of upstream's zones are live. The three original strip bands stayed where
+they were; the other eleven are ported verbatim into `src/sim/content/realms/`
+(see that directory's CLAUDE.md for the table, the dropped fields and the
+frozen-camp rule).
+
+Two zones were **deleted**: `alderfen_shallows` and `grimhold_crags`, the
+invented column pair from phase 2, plus `src/sim/content/columns/` whole. Their
+ids are scrubbed from legacy saves by `src/sim/removed_zone1_content.ts`.
+
+One zone was **retired, not deleted**: `ashen_wastes`. Upstream's `veiled_hollow`
+takes the z 900..1440 strip band, and two zones cannot tile the same rows.
+`src/sim/content/zone4.ts` is intact on disk and `src/sim/data.ts` carries a
+PARKED banner saying exactly what is parked and how to merge it again. Nothing
+about it is scrubbed from saves, which is what makes the retirement reversible.
+
+What the numbers in the section below got right and wrong, measured after the
+fact:
+- **Biomes were NOT the blocker.** `BiomeId` had already grown to 14 members
+  with a full row in every exhaustive table, so all eleven zones ported with no
+  new art and no new palette row.
+- **Terrain residency was the blocker, and it was already fixed.** The grid is
+  18 x 44 = **792 cells**, which merge to **576 slots** after the 2x2 far
+  super-chunk pass. Steady-state RESIDENT chunks at the low tier
+  (`keep: 580`) measured per hub: 107 (Lanternmere) to 280 (Highwatch), median
+  about 190, i.e. 36k to 95k vertices. The pre-residency build kept every slot
+  meshed, so this is the whole reason the pass was possible.
+- **The instance plane did not have to move.** The overworld reaches x 540 and
+  z 2420; `DUNGEON_X_THRESHOLD` is still 600, the arena 6000, the delve band
+  6600 and the rift band 12000. Only x is compared, so growing z costs nothing.
+- **The world box is no longer a full rectangle.** Upstream's grid is ragged
+  (nothing faces the Farshore across the vale's row; the strip ends at the
+  Frostveil while the Amberfall and the Drakelands run north to 2380 and 2420).
+  `worldHalfWidthAt(z, x)` became per side and `worldNorthEdgeAt(x)` is new, so
+  the containment rim follows the zones that exist instead of one global box.
+  Upstream fills those edges with ocean it shapes in its own `world.ts`; that
+  shaper is not ported.
+- **The post-worldgen rng cursor moved once**, and only because the retired
+  Ashen Wastes' SCATTER camps stopped drawing. Every ported camp is frozen to
+  exact positions and draws nothing (proved A/B at three seeds).
+
+## The map question: moving toward their 2D world (HISTORICAL)
 
 Asked 2026-08-09: make our map and gameplay resemble theirs, on our base, focused on mobile.
 Measured rather than estimated, so the decision starts from numbers.

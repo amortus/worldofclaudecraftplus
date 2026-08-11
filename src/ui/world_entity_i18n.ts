@@ -92,20 +92,6 @@ const MOB_IDS = [
   'reliquary_saintless_effigy',
   'deacon_varric',
   'acolyte_tessa',
-  // Zone 4 - The Ashen Wastes (Dawn of Claude)
-  'blighted_husk',
-  'ashen_ghoul',
-  'plague_crawler',
-  'corrupted_acolyte',
-  'bone_reaver',
-  'wraithling',
-  'rotting_behemoth',
-  'plaguebringer_zealot',
-  'naxx_deathguard',
-  'morthax_the_hollow',
-  'gravelord_oss',
-  'blighted_stag',
-  'rotting_fox',
   // Claudeholme dungeon (trash + 8 wing bosses)
   'claudeholme_husk',
   'claudeholme_reaver',
@@ -125,23 +111,35 @@ const MOB_IDS = [
   'cx_gutpile', 'cx_fleshwright', 'cx_grosh', 'cx_vexil', 'cx_apothecary', 'cx_maggath',
   'cx_vanguard', 'cx_korreth', 'cx_triad', 'cx_vrallka', 'cx_silkbound', 'cx_sethelle',
   'cx_rimecore', 'cx_wardens', 'cx_vorothne',
-  // Alderfen Shallows (east column)
-  'sedge_skitterer',
-  'mudfin_snapper',
-  'reedwatch_poacher',
-  'weir_husk',
-  'the_drowned_miller',
-  // Grimhold Crags (west column)
-  'crag_lurker',
-  'grimhold_scavenger',
-  'scree_binder',
-  'coldhearth_marauder',
-  'old_grimfang',
   // The ring zones (willowfen, galecrest, palmreach, evergarden).
   'bogtoad', 'drowsy_croaker', 'lily_wisp', 'willow_sprite', 'moor_ram',
   'gale_wisp', 'shoal_scuttler', 'downs_bandit', 'wreck_thief', 'the_wreck_warden',
   'drowned_deckhand', 'tide_scuttler', 'thicket_boar', 'canopy_weaver', 'idol_guardian',
   'topiary_stag', 'topiary_wolf', 'hedge_knight', 'hedge_gnome', 'the_topiary_bull',
+  // ---------------------------------------------------------------------------
+  // The upstream realm ring (src/sim/content/realms/): the eleven grid zones of
+  // the 14-zone map that are not one of the three original strip bands.
+  // ---------------------------------------------------------------------------
+  // The Veiled Hollow
+  'glimmerwisp', 'duskwisp', 'veiled_stag', 'veiled_doe', 'gleamstag',
+  'mushroom_pixie', 'sporeling_gatherer', 'corrupted_sporeling', 'treant_elder',
+  'ancient_guardian', 'old_marrowshell', 'aurelhorn', 'waking_warden',
+  // The Frostveil Reach
+  'snowdrift_wolf', 'ice_wisp', 'rime_elemental', 'fen_sprite', 'terrace_howler',
+  'frostmane_yeti',
+  // The Farshore
+  'riftspawn', 'breach_wretch', 'void_stalker', 'sundered_horror',
+  // The Nightbloom
+  'moonfleece_grazer', 'gloam_strider', 'nightkin_stargazer', 'barrow_king',
+  'barrow_wight',
+  // The Wraithwood
+  'widowsilk_spinner', 'wood_wraith', 'gravenbark_shambler', 'pale_huntsman',
+  // The Amberfall
+  'gilded_stag', 'gloam_fox', 'orchard_treant', 'harvest_sprite', 'mere_lurker',
+  'the_meredark',
+  // The Drakelands
+  'emberwing_drake', 'dragonkin_broodguard', 'drakemaw_broodlord',
+  'ashbone_raider', 'ashbone_warcaller', 'dune_troll', 'cindraleth_maw_matriarch',
 ] as const;
 
 const NPC_IDS = [
@@ -167,29 +165,28 @@ const NPC_IDS = [
   'auctioneer_voss', // second World Market auctioneer (Highwatch, zone 3)
   'brother_aldric_raid', // dynamically-spawned raid turn-in NPC (Crypt of Nythraxis)
   'brother_halven', // Collapsed Reliquary delve board NPC
-  // Zone 4 - The Ashen Wastes (Dawn of Claude garrison at Gravewatch)
-  'dawn_commander_sera',
-  'dawn_chaplain_orin',
-  'dawn_quartermaster_henning',
-  'dawn_scout_irelle',
-  'dawn_archivist_vael',
-  'dawn_vanguard_kael',
-  'dawn_reclaimer_sela',
-  'dawn_warbringer_torv',
-  'dawn_loreseeker_miren',
-  'dawn_huntsman_varik',
-  // Alderfen Shallows and Grimhold Crags (the two column zones)
-  'weirwarden_ondrey',
-  'bailiff_hesk',
-  'provisioner_tarrow',
-  'hearthwarden_ottil',
-  'pickmaster_gethin',
-  'provisioner_dagny',
   // The ring zones.
   'waykeeper_pell', 'bridgewright_alden', 'netter_maris', 'mother_sedge',
   'watcher_maren', 'harbormaster_odile', 'keeper_bram', 'salvager_edda',
   'strandwatcher_pell', 'salvage_boss_ryna', 'pearlmother_isha', 'hermit_okku',
   'gatewarden_pell', 'head_gardener_amaranth', 'wickmother_sorrel', 'gardener_yew',
+  // The upstream realm ring.
+  // The Veiled Hollow
+  'keeper_saelwyn', 'loremother_bryn', 'provisioner_fenna', 'wardsmith_orun',
+  'archivist_tullo', 'huntsman_deral',
+  // The Frostveil Reach
+  'warden_kaldra', 'hearthkeeper_maeve', 'scout_einna', 'aurorist_veyla', 'trapper_brosk',
+  // The Farshore
+  'warden_coalfast', 'riftwatch_ollun', 'quartermaster_edda', 'mender_saul',
+  'bellkeeper_tam', 'fisher_nell',
+  // The Nightbloom
+  'lamplighter_sorrel', 'lira_dewsong', 'weaver_amelle', 'astronomer_cassian',
+  // The Wraithwood
+  'lampman_cobb', 'sexton_marrow', 'widow_tansy', 'vicar_creel',
+  // The Amberfall
+  'reeve_ottoline', 'waywatcher_sorrel', 'ferrymaster_caddow', 'orchardist_pomeline',
+  // The Drakelands
+  'gatecaptain_brannoc', 'quartermaster_sela', 'scout_yerrin',
 ] as const;
 
 const QUEST_IDS = [
@@ -264,66 +261,6 @@ const QUEST_IDS = [
   'q_nythraxis_bound_guardian',
   'q_nythraxis_scourges_end',
   'q_mogger',
-  // Zone 4 - The Ashen Wastes (Dawn of Claude)
-  'q_aw_arrival',
-  'q_aw_husks',
-  'q_aw_ghouls',
-  'q_aw_crawlers',
-  'q_aw_samples',
-  'q_aw_acolytes',
-  'q_aw_orders',
-  'q_aw_reavers',
-  'q_aw_wraiths',
-  'q_aw_relics',
-  'q_aw_hold',
-  'q_aw_behemoth',
-  'q_aw_zealots',
-  'q_aw_deathguard',
-  'q_aw_morthax',
-  'q_aw_pale_reach',
-  'q_aw_ritual',
-  'q_aw_attune_1',
-  'q_aw_gravelord',
-  'q_aw_attunement',
-  'q_aw_rotting_herd',
-  'q_aw_ash_scavengers',
-  'q_aw_corrupt_sample',
-  // Claudeholme dungeon quests + the Breachkey (raid attunement) chain
-  'q_ch_breach',
-  'q_ch_vats',
-  'q_ch_toll',
-  'q_ch_pit',
-  'q_ch_chapel',
-  'q_ch_muster',
-  'q_ch_forge',
-  'q_ch_deathlord',
-  'q_ch_streets',
-  'q_ch_relics',
-  'q_ch_attune_1',
-  'q_ch_attune_2',
-  'q_ch_attune_3',
-  'q_ch_attune_4',
-  'q_ch_attune_5',
-  // Claudexxaramas raid
-  'q_cx_breach', 'q_cx_plague', 'q_cx_barracks', 'q_cx_spinning', 'q_cx_throne',
-  'q_cx_legend_1', 'q_cx_legend_2', 'q_cx_legend_3',
-  // Alderfen Shallows: the weir under the crossing is failing
-  'q_af_boards',
-  'q_af_snappers',
-  'q_af_withies',
-  'q_af_poachers',
-  'q_af_char',
-  'q_af_sedgewatch',
-  'q_af_miller',
-  // Grimhold Crags: one fire that has never gone out, fed by one ore road
-  'q_gh_lurkers',
-  'q_gh_ironvein',
-  'q_gh_coal',
-  'q_gh_binders',
-  'q_gh_sled',
-  'q_gh_watchtower',
-  'q_gh_grimfang',
-  // Eastbrook Vale: the solo bounty ladder that closed the level-7 xp hole left
   // when the old chains were retired.
   'q_haldren_fangs',
   'q_redbrook_mileposts',
@@ -348,6 +285,38 @@ const QUEST_IDS = [
   'q_eg_gate_report', 'q_eg_hungry_shapes', 'q_eg_stolen_shears',
   'q_eg_gnomes_in_the_green', 'q_eg_who_trims_the_hedges', 'q_eg_bloom_clippings',
   'q_eg_four_statues', 'q_eg_bull_of_the_court',
+  // The upstream realm ring.
+  // The Veiled Hollow
+  'q_veil_thinned', 'q_calming_the_deep', 'q_spore_hearts', 'q_sunken_court',
+  'q_waking_warden', 'q_seal_restored', 'q_gleaming_antlers', 'q_wisp_lights',
+  'q_treant_accord', 'q_monument_tour', 'q_grove_menace', 'q_shards_of_starfall',
+  'q_spore_tide', 'q_wardens_echoes', 'q_hollow_the_huntsman',
+  'q_hollow_old_marrowshell', 'q_hollow_first_of_the_herd',
+  // The Frostveil Reach
+  'q_fv_snowline_report', 'q_fv_wolves_at_the_door', 'q_fv_winter_pelts',
+  'q_fv_ember_caches', 'q_fv_lights_over_steps', 'q_fv_aurora_motes',
+  'q_fv_rime_unbound', 'q_fv_silent_trapline', 'q_fv_sprung_traps',
+  'q_fv_howl_above', 'q_fv_frostmane_tyrant',
+  // The Farshore
+  'q_fs_bell_at_the_landing', 'q_fs_hold_the_riftfields', 'q_fs_steel_for_the_redoubt',
+  'q_fs_the_three_bells', 'q_fs_song_before_the_break', 'q_fs_moss_and_mending',
+  'q_fs_stalkers_off_the_light', 'q_fs_the_great_break',
+  // The Nightbloom
+  'q_nb_road_of_lanterns', 'q_nb_striders_in_the_dark', 'q_nb_wool_by_moonlight',
+  'q_nb_night_gardens', 'q_nb_eyes_on_the_vigil', 'q_nb_charts_of_the_stones',
+  'q_nb_restless_mounds', 'q_nb_the_barrow_king',
+  // The Wraithwood
+  'q_ww_bells_of_gallowmere', 'q_ww_silk_in_the_eaves', 'q_ww_widows_skeins',
+  'q_ww_candles_at_the_bounds', 'q_ww_the_last_vicar', 'q_ww_wraiths_of_the_tarn',
+  'q_ww_what_the_bark_holds', 'q_ww_horn_of_the_huntsman',
+  // The Amberfall
+  'q_af_goldmelt_road', 'q_af_foxes_in_the_lamplight', 'q_af_orchard_call',
+  'q_af_sprites_and_spigots', 'q_af_amber_from_the_herd', 'q_af_lanterns_on_the_water',
+  'q_af_what_took_the_moorings', 'q_af_the_meredark',
+  // The Drakelands
+  'q_dk_ash_on_the_wind', 'q_dk_trolls_on_the_road', 'q_dk_scorched_stores',
+  'q_dk_banners_over_the_dunes', 'q_dk_watcher_at_the_wargate', 'q_dk_marrow_and_ash',
+  'q_dk_scales_of_the_maw', 'q_dk_matriarch_of_the_maw',
 ] as const;
 
 // The four strip bands plus the two column zones that flank the Vale's band east
@@ -356,14 +325,19 @@ const ZONE_IDS = [
   'eastbrook_vale',
   'mirefen_marsh',
   'thornpeak_heights',
-  'ashen_wastes',
-  'alderfen_shallows',
-  'grimhold_crags',
   // The ring: upstream's four zones that close the grid around our strip.
   'willowfen',
   'galecrest',
   'palmreach',
   'evergarden',
+  // The rest of the 14-zone grid, ported from upstream.
+  'veiled_hollow',
+  'frostveil',
+  'farshore_isle',
+  'nightbloom',
+  'wraithwood',
+  'amberfall',
+  'drakelands',
 ] as const;
 
 /**

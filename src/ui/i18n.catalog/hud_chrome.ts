@@ -1242,12 +1242,12 @@ export const hudChromeStrings = {
         desc: 'Set foot in Thornpeak Heights.',
       },
       exp_ashen_wayfarer: {
-        name: 'Into the Ash',
-        desc: 'Set foot in the Ashen Wastes.',
+        name: 'Into the Hollow',
+        desc: 'Set foot in the Veiled Hollow.',
       },
       exp_world_traveler: {
         name: 'The Long Road North',
-        desc: 'Walk every zone from Eastbrook Vale to the Ashen Wastes.',
+        desc: 'Walk every zone from Eastbrook Vale to the Veiled Hollow.',
       },
       exp_errand_runner: {
         name: 'Errand Runner',
@@ -1262,12 +1262,12 @@ export const hudChromeStrings = {
         desc: 'Complete 100 quests.',
       },
       exp_ashen_arrival: {
-        name: 'Reporting to Gravewatch',
-        desc: 'Answer the muster and complete "Arrival" in the Ashen Wastes.',
+        name: 'Beneath the Great Tree',
+        desc: 'Read how deep the wound runs and complete "The Thinned Veil".',
       },
       exp_ashen_attuned: {
         name: 'Attuned',
-        desc: 'Complete the Ashen Wastes attunement.',
+        desc: "Set the Warden's seal back in the Hollow sealstone.",
       },
       exp_first_rare: {
         name: 'Something Blue',

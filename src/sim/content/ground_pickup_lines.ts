@@ -81,14 +81,6 @@ export const GROUND_PICKUP_LINES: Record<string, GroundPickupLines> = {
     deny: 'The ritual circle lies cold and dormant.',
     enough: 'The circle has nothing more to give you.',
   },
-  desecrated_relic: {
-    deny: 'The relic will not stir until the Chaplain sends you for it.',
-    enough: 'You already carry enough desecrated relics.',
-  },
-  ritual_focus: {
-    deny: 'The ritual focus is bound to its rite; it ignores your hand.',
-    enough: 'You already have enough ritual foci.',
-  },
   // The Eastbrook townsfolk's errands (ZONE1_VALE_OBJECTS in zone1.ts).
   splintered_road_marker: {
     deny: 'A road marker, face down in the grass. Somebody in town will want it, but nobody has asked you.',
@@ -138,26 +130,6 @@ export const GROUND_PICKUP_LINES: Record<string, GroundPickupLines> = {
     enough: 'You have carried off enough slag.',
   },
   // The column ring (src/sim/content/columns), under the same rule.
-  cut_withy: {
-    deny: "The withies are somebody else's stand. Cut them when the weir asks.",
-    enough: 'You are carrying all the withy Ondrey asked for.',
-  },
-  alder_char: {
-    deny: 'The burn is cold and unclaimed. Leave it for whoever ordered it.',
-    enough: 'Your baskets of char are full.',
-  },
-  mill_sluice_wheel: {
-    deny: 'The wheel is turning under the weight of the whole fen. You would need a reason.',
-    enough: 'The sluice is shut. Leave it shut.',
-  },
-  cragcoal: {
-    deny: 'Black stone, loose on the scree. Nobody up here has called it fuel yet.',
-    enough: 'You are carrying all the cragcoal you can drag.',
-  },
-  plundered_sledload: {
-    deny: "Somebody else's stock, stacked under somebody else's oilcloth.",
-    enough: "You have recovered enough of Dagny's load.",
-  },
   // The upstream realm ring (src/sim/content/realms), under the same rule.
   fenway_mooring_line: {
     deny: 'A chewed-through mooring line, coiled where the skiff slipped it. Bridgemere has not asked you to gather rope.',
@@ -190,6 +162,80 @@ export const GROUND_PICKUP_LINES: Record<string, GroundPickupLines> = {
   evergarden_statue_rubbing: {
     deny: 'The marble sister looks past you. She has not been asked to notice you yet.',
     enough: 'All four sisters have taken your measure.',
+  },
+  // ---------------------------------------------------------------------------
+  // The upstream realm ring's quest objects (src/sim/content/realms/).
+  // ---------------------------------------------------------------------------
+  // The Veiled Hollow
+  hollow_sealstone: {
+    deny: 'The sealstone is cold and shut. Nothing you carry belongs in it yet.',
+    enough: 'The seal is set. The Hollow can begin to heal.',
+  },
+  monument_overlook: {
+    deny: 'Weathered verses, and no reason yet to puzzle at them.',
+    enough: 'You have already read the Overlook stone.',
+  },
+  monument_court: {
+    deny: 'The sunken verses mean nothing to you until someone asks for them.',
+    enough: 'You have already read the Court stone.',
+  },
+  monument_north: {
+    deny: 'A forgotten stone in a forgotten corner. Leave it forgotten.',
+    enough: 'You have already read the forgotten stone.',
+  },
+  // The Frostveil Reach
+  hearth_ember_cache: {
+    deny: 'The kettle is still banked and sealed; it is not yours to lift.',
+    enough: 'You already have enough ember caches.',
+  },
+  sprung_trap: {
+    deny: 'The trap is frozen into the reeds, and it is not your line to work.',
+    enough: 'You already have enough sprung traps.',
+  },
+  // The Farshore
+  gullhaven_watchbell: {
+    deny: 'The rope is frayed and the clapper still. Tam has not asked you to give it a voice.',
+    enough: 'Every bell on the coast has answered you.',
+  },
+  // The Nightbloom
+  gloamfield_nightbloom: {
+    deny: 'The blossom is closed tight, and no one has asked you to cut it.',
+    enough: 'You already have enough nightbloom blossoms.',
+  },
+  vigil_star_chart: {
+    deny: 'The carved stars mean nothing to you without an astronomer to read them for.',
+    enough: 'You have already read enough of the Vigil stones.',
+  },
+  barrow_grave_offering: {
+    deny: 'Taking from a grave is not yours to do until someone asks it of you.',
+    enough: 'You already have enough grave offerings.',
+  },
+  // The Wraithwood
+  gallowmere_grave_candle: {
+    deny: 'The wick is drowned, and the taper to light it is not yours yet.',
+    enough: 'Every boundary candle is already burning.',
+  },
+  silkbound_remains: {
+    deny: 'The wrapped shape sways out of reach, and no one has asked you to cut it down.',
+    enough: 'You have already cut down enough of the silkbound dead.',
+  },
+  // The Amberfall
+  amberfall_sap_bucket: {
+    deny: 'The bucket is still hooked to its sap-tap.',
+    enough: 'You already have enough sap-tap buckets.',
+  },
+  mere_ferry_lantern: {
+    deny: 'The lantern is not yours to lift off the shore.',
+    enough: 'You already have enough ferry lanterns.',
+  },
+  // The Drakelands
+  scorched_supply_crate: {
+    deny: 'The crate is strapped shut with iron and still too hot to lift.',
+    enough: 'You already have enough scorched crates.',
+  },
+  wyrmwatch_warning_banner: {
+    deny: 'The banner stake means nothing to you yet.',
+    enough: 'You have planted all the warning banners you need.',
   },
 };
 

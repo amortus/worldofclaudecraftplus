@@ -337,6 +337,10 @@ describe('world boss personal loot', () => {
     expect(ownedBySecond).toContain(p1); // still eligible: the kill alone burned nothing
   });
 
+  // 40 world builds. Full map parity roughly doubled the world's entity count
+  // (14 zones, 183 camps, 617 mobs against 66 camps before), so 40 Sim
+  // constructions no longer fit vitest's 5s default. The assertion is
+  // unchanged; only the budget moved.
   it('caps gear at one epic piece per contributor (never a glove AND a belt in one kill)', () => {
     let anyGearDropped = false;
     for (let seed = 1; seed <= 40; seed++) {
@@ -359,7 +363,7 @@ describe('world boss personal loot', () => {
       }
     }
     expect(anyGearDropped).toBe(true);
-  });
+  }, 60_000);
 
   it('looting writes ONE raid-lockout entry that is both the gate and the rendered timer', () => {
     const RESET = 9_999_999_999;

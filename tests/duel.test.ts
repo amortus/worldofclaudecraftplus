@@ -93,8 +93,17 @@ describe('duel: non-lethal cleanup', () => {
     (sim as any).applyAura(eb, opponentDot(ea.id));
     eb.hp = 30; // wounded but alive
 
-    // Bet flees past the forfeit distance, ending the duel as a draw.
-    teleport(sim, b, 400, -40);
+    // Bet flees past the forfeit distance (DUEL_FORFEIT_DISTANCE = 60), ending
+    // the duel as a draw.
+    //
+    // This used to flee to x 400, which was empty ground. The full map parity
+    // pass put `farshore_isle` in the vale's +x column (x 180..540, z -180..180),
+    // so x 400 is now a populated level 3-7 zone and its spawns killed the
+    // 30 HP flee-er inside the three seconds below - a mob kill, not the
+    // lingering DoT this case is about. The flee stays inside the vale now: it
+    // is still well past the forfeit distance, which is the only thing the case
+    // needs from the destination.
+    teleport(sim, b, 100, -40);
     sim.tick();
     expect((sim as any).duels.has(b)).toBe(false);
 

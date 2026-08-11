@@ -9,16 +9,19 @@
 // out of junk and the empty hook and into food fish, with a small bump to the
 // rare, exactly as upstream's FISHING_TABLES_BY_BAND does.
 //
-// The ashen_wastes rows are entirely new. Zone 4 currently has no table of its
-// own and falls back to the Vale's, which is why its two fish are authored
-// here: the Stillmere should not be handing out Eastbrook trout.
+// The veiled_hollow rows are entirely new. That band had no table of its own and
+// fell back to the Vale's, which is why its two fish are authored here: the
+// level 15-20 band should not be handing out Eastbrook trout. They were authored
+// against the Ashen Wastes, which held this band until it was retired (see the
+// PARKED CONTENT banner in `src/sim/data.ts`); only the zone KEY moved, because
+// a key that names no live zone falls straight back to the Vale.
 
 import type { FishingBandTables, FishingEntry } from '../../professions/types';
 import type { ItemDef } from '../../types';
 
-// Zone 4's own catches. Food values follow the shipped ladder (Vale 61,
-// Mirefen 90, Thornpeak 117): zone 4 is the level-20 endgame, so its fish match
-// Thornpeak's restore and sell a little higher.
+// The endgame band's own catches. Food values follow the shipped ladder (Vale
+// 61, Mirefen 90, Thornpeak 117): this is the level 15-20 band above Thornpeak,
+// so its fish match Thornpeak's restore and sell a little higher.
 export const FISHING_WATER_ITEMS: Record<string, ItemDef> = {
   raw_pallid_ashfish: {
     id: 'raw_pallid_ashfish',
@@ -126,7 +129,7 @@ export const FISHING_TABLES_BY_BAND: Record<string, FishingBandTables> = {
       e(null, 3),
     ],
   ],
-  ashen_wastes: [
+  veiled_hollow: [
     [
       e('raw_pallid_ashfish', 38),
       e('raw_cinderscale_eel', 28),

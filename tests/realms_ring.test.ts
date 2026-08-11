@@ -8,6 +8,8 @@ import {
   QUEST_ORDER,
   QUESTS,
   STRIP_MAX_X,
+  STRIP_MIN_X,
+  worldHalfWidthAt,
   WORLD_MAX_X,
   WORLD_MAX_Z,
   WORLD_MIN_X,
@@ -24,15 +26,18 @@ import {
   zoneForLevel,
 } from '../src/sim/data';
 import { REALM_ZONE_DEFS } from '../src/sim/content/realms';
-import { terrainHeight, WATER_LEVEL, zoneBiomeAt } from '../src/sim/world';
+import { computeBorderEdges, terrainHeight, WATER_LEVEL, zoneBiomeAt } from '../src/sim/world';
 import { PLAYER_MAX_CLIMB_SLOPE } from '../src/sim/pathfind';
 import { MAX_LEVEL } from '../src/sim/types';
 
 // ---------------------------------------------------------------------------
-// The four zones ported from upstream: the Willowfen and the Galecrest beside
-// the Mirefen Marsh, the Palmreach and the Evergarden beside the Thornpeak
-// Heights and the Ashen Wastes. Their rects, ids and content are upstream's
-// (see src/sim/content/realms/CLAUDE.md for what the port drops and why).
+// The zones ported from upstream. The FIRST ring was four of them: the
+// Willowfen and the Galecrest beside the Mirefen Marsh, the Palmreach and the
+// Evergarden beside the Thornpeak Heights. Full map parity ported the other
+// seven, so upstream's whole 14-zone grid is here now: two more STRIP bands
+// (the Veiled Hollow and the Frostveil Reach) and five more column zones.
+// Their rects, ids and content are upstream's (see
+// src/sim/content/realms/CLAUDE.md for what the port drops and why).
 //
 // This file asserts the things a PORT can get wrong: a rect that overlaps
 // something we already ship, a border with no way through it, a quest that
@@ -42,38 +47,61 @@ import { MAX_LEVEL } from '../src/sim/types';
 
 const SEED = 1337;
 
-const RING = {
+// Every ported zone, in REALM_ZONE_DEFS order. A STRIP band spans the whole
+// row and therefore declares no x bounds at all, which is written here as null
+// rather than a number so the registration check below stays exact.
+const PORTED = {
+  veiled_hollow: { biome: 'dusk', zMin: 900, zMax: 1440, xMin: null, xMax: null, levels: [15, 20] },
+  frostveil: { biome: 'frost', zMin: 1440, zMax: 1960, xMin: null, xMax: null, levels: [17, 20] },
+  farshore_isle: { biome: 'vale', zMin: -180, zMax: 180, xMin: 180, xMax: 540, levels: [3, 7] },
   willowfen: { biome: 'fen', zMin: 180, zMax: 700, xMin: -540, xMax: -180, levels: [19, 20] },
   galecrest: { biome: 'gale', zMin: 180, zMax: 700, xMin: 180, xMax: 540, levels: [20, 20] },
   palmreach: { biome: 'jungle', zMin: 700, zMax: 1260, xMin: -540, xMax: -180, levels: [20, 20] },
   evergarden: { biome: 'garden', zMin: 700, zMax: 1260, xMin: 180, xMax: 540, levels: [20, 20] },
+  nightbloom: { biome: 'night', zMin: 1260, zMax: 1820, xMin: -540, xMax: -180, levels: [20, 20] },
+  wraithwood: { biome: 'haunt', zMin: 1260, zMax: 1820, xMin: 180, xMax: 540, levels: [20, 20] },
+  amberfall: { biome: 'amber', zMin: 1820, zMax: 2380, xMin: -540, xMax: -180, levels: [18, 20] },
+  drakelands: { biome: 'ember', zMin: 1820, zMax: 2420, xMin: 180, xMax: 540, levels: [16, 20] },
 } as const;
 
-type RingId = keyof typeof RING;
-const RING_IDS = Object.keys(RING) as RingId[];
+type PortedId = keyof typeof PORTED;
+const PORTED_IDS = Object.keys(PORTED) as PortedId[];
 
-function zone(id: RingId) {
+// The FIRST ported ring, the four column zones around the Mirefen and the
+// Thornpeak. The content-wiring assertions at the bottom of this file are
+// scoped to these four (their quest prefixes, their giver count); the seven
+// zones of the full-map pass carry their own content and are covered by
+// tests/world_phase2_zones.test.ts and tests/realms_compass.test.ts.
+const RING_IDS = ['willowfen', 'galecrest', 'palmreach', 'evergarden'] as const;
+type RingId = (typeof RING_IDS)[number];
+
+function zone(id: PortedId) {
   const zn = ZONES.find((z) => z.id === id);
   expect(zn, `zone ${id}`).toBeTruthy();
   return zn!;
 }
 
 describe('realm ring: upstream rects, ids and bands, unaltered', () => {
-  it('registers all four with upstream own rect, biome and level band', () => {
-    expect(REALM_ZONE_DEFS.map((z) => z.id)).toEqual(RING_IDS);
-    for (const id of RING_IDS) {
+  it('registers all eleven with upstream own rect, biome and level band', () => {
+    expect(REALM_ZONE_DEFS.map((z) => z.id)).toEqual(PORTED_IDS);
+    for (const id of PORTED_IDS) {
       const zn = zone(id);
-      const want = RING[id];
+      const want = PORTED[id];
       expect(zn.zMin, `${id}.zMin`).toBe(want.zMin);
       expect(zn.zMax, `${id}.zMax`).toBe(want.zMax);
-      expect(zn.xMin, `${id}.xMin`).toBe(want.xMin);
-      expect(zn.xMax, `${id}.xMax`).toBe(want.xMax);
+      expect(zn.xMin ?? null, `${id}.xMin`).toBe(want.xMin);
+      expect(zn.xMax ?? null, `${id}.xMax`).toBe(want.xMax);
       expect(zn.biome, `${id}.biome`).toBe(want.biome);
       expect(zn.levelRange, `${id}.levelRange`).toEqual([...want.levels]);
     }
+    // The two ported STRIP bands are strip bands, and the nine others columns.
+    expect(PORTED_IDS.filter((id) => PORTED[id].xMin === null)).toEqual([
+      'veiled_hollow',
+      'frostveil',
+    ]);
   });
 
-  it('overlaps no zone that already shipped, and grows the world box not at all', () => {
+  it('overlaps no zone that already shipped, and grows the world box only northward', () => {
     for (let i = 0; i < ZONES.length; i++) {
       for (let j = i + 1; j < ZONES.length; j++) {
         const a = ZONES[i];
@@ -86,16 +114,21 @@ describe('realm ring: upstream rects, ids and bands, unaltered', () => {
         expect(overlaps, `${a.id} overlaps ${b.id}`).toBe(false);
       }
     }
-    // The ring fits inside the box the first column ring already established,
-    // which is why the instance plane did not have to move (asserted below).
+    // The box's X did not move one yard: the ported grid is two columns wide,
+    // exactly the width the first column ring already established, which is why
+    // the instance plane did not have to move (asserted below). Z DID grow, and
+    // only northward: upstream stacks five rows of columns, the last of them
+    // the Drakelands at z 1820..2420. The south edge is untouched.
     expect(WORLD_MIN_X).toBe(-540);
     expect(WORLD_MAX_X).toBe(540);
     expect(WORLD_MIN_Z).toBe(-180);
-    expect(WORLD_MAX_Z).toBe(1260);
+    expect(WORLD_MAX_Z).toBe(2420);
+    expect(WORLD_MAX_Z).toBe(zone('drakelands').zMax);
+    expect(WORLD_MAX_Z).toBe(Math.max(...ZONES.map((z) => z.zMax)));
   });
 
   it('resolves by rect, and lands its own hub, graveyard, POIs and lakes inside it', () => {
-    for (const id of RING_IDS) {
+    for (const id of PORTED_IDS) {
       const zn = zone(id);
       const probes = [
         { x: zn.hub.x, z: zn.hub.z, what: 'hub' },
@@ -166,24 +199,46 @@ describe('realm ring: every border is real ground a player can cross', () => {
   });
 
   it('walls the z 180 column border, which is why the ring is entered from the strip', () => {
-    // Grimhold -> Willowfen and Alderfen -> Galecrest at z 180 cut NO road
-    // pass: upstream had no zone south of the Willowfen or the Galecrest, so it
-    // never authored a southPassX, and inventing one here would have been our
-    // content, not theirs. The resulting wall is deliberate and it is the right
-    // shape for the map: a level 4-10 column must not open straight onto a
-    // level 19-20 realm. Every ring zone's real entrance is its strip-facing
-    // pass (the Mirewalk and the Windway above), and the Palmreach and the
-    // Evergarden add their own authored southPassX (below).
+    // Neither the Willowfen nor the Galecrest declares a southPassX: upstream
+    // authored none, and inventing one here would have been our content, not
+    // theirs. Every ring zone's real entrance is its strip-facing pass (the
+    // Mirewalk and the Windway above); the Palmreach and the Evergarden add
+    // their own authored southPassX (below).
     for (const id of ['willowfen', 'galecrest'] as const) {
       expect(zone(id).southPassX, `${id}.southPassX`).toBeUndefined();
     }
-    for (const x of [-460, -360, -260, 260, 360, 460]) {
+    // What the z 180 line looks like now is NOT what it looked like when the
+    // invented ring shipped, and the two halves differ, so re-derive it.
+    //
+    // +x: `farshore_isle` sits south of the Galecrest, so there IS a shared
+    // rect boundary and `computeBorderEdges` raises a wall along it. With no
+    // southPassX the pass coordinate falls back to x = 0, which lies OUTSIDE
+    // that edge's own span [180, 540), so the wall is at full height along its
+    // whole length. That is the right shape for the map: a level 3-7 isle must
+    // not open straight onto a level 20 realm.
+    const edges = computeBorderEdges(ZONES);
+    const east = edges.filter((e) => e.kind === 'h' && e.at === 180 && e.lo >= STRIP_MAX_X);
+    expect(east, 'one h180 edge between the Farshore and the Galecrest').toHaveLength(1);
+    expect([east[0].lo, east[0].hi]).toEqual([180, 540]);
+    expect(east[0].passAt, 'its pass falls outside its own span, so nothing opens').toBe(0);
+    expect(east[0].sealed).toBe(false);
+    for (const x of [200, 260, 300, 360, 420, 460, 520]) {
       const crest = terrainHeight(x, 180, SEED);
       const south = terrainHeight(x, 120, SEED);
       const north = terrainHeight(x, 240, SEED);
       expect(crest - south, `z=180 wall rises out of the south at x=${x}`).toBeGreaterThan(12);
       expect(crest - north, `z=180 wall rises out of the north at x=${x}`).toBeGreaterThan(12);
     }
+    // -x: upstream leaves the vale's row EMPTY on this side, so there is no
+    // shared boundary and no wall at all there. The Willowfen's south side is
+    // closed by the world rim instead: the per-side half width stands at the
+    // strip's own edge through that whole row, which puts the hole outside the
+    // containment wall rather than behind a ridge.
+    expect(edges.some((e) => e.kind === 'h' && e.at === 180 && e.hi <= STRIP_MIN_X)).toBe(false);
+    for (let z = WORLD_MIN_Z; z <= 150; z += 5) {
+      expect(worldHalfWidthAt(z, -1), `west half width at z=${z}`).toBe(STRIP_MAX_X);
+    }
+    expect(zoneContaining(-360, 0), 'and the row really is empty at -x').toBeNull();
   });
 
   it('opens the Tanglemouth and the Garden Gate, the two authored southPassX', () => {

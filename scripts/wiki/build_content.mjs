@@ -28,7 +28,7 @@ const entrySource = `
   export { ZONE1_MOBS } from './src/sim/content/zone1.ts';
   export { ZONE2_MOBS } from './src/sim/content/zone2.ts';
   export { ZONE3_MOBS } from './src/sim/content/zone3.ts';
-  export { ZONE4_MOBS } from './src/sim/content/zone4.ts';
+  export { REALM_MOBS } from './src/sim/content/realms/index.ts';
   export { TEMPLE_MOBS } from './src/sim/content/temple.ts';
   export { DELVE_COMPANIONS, DELVE_AFFIXES } from './src/sim/content/delves/index.ts';
   export { VISUALS, visualKeyFor } from './src/render/characters/manifest.ts';
@@ -61,7 +61,7 @@ const {
   ZONE1_MOBS,
   ZONE2_MOBS,
   ZONE3_MOBS,
-  ZONE4_MOBS,
+  REALM_MOBS,
   TEMPLE_MOBS,
   DELVE_LIST,
   NPCS,
@@ -236,7 +236,10 @@ for (const [id, m] of Object.entries({
   ...ZONE1_MOBS,
   ...ZONE2_MOBS,
   ...ZONE3_MOBS,
-  ...ZONE4_MOBS,
+  // The Ashen Wastes (ZONE4_MOBS) is PARKED, see the banner in src/sim/data.ts,
+  // so its roster is no longer a live wild creature. The ported realm ring took
+  // its band and nine other grid cells; those are the wild creatures now.
+  ...REALM_MOBS,
   ...TEMPLE_MOBS,
 })) {
   if (m.elite || m.boss) continue;

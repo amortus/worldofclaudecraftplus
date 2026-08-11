@@ -41,10 +41,13 @@
 //   Claudexxaramas (10-player raid, 15 bosses)  one tier-1 epic per boss plus a
 //     0.15 diversity epic on six of them: about 16 epics per clear, split ten
 //     ways.
-//   Ashen Wastes (zone 4, open-world endgame)  uncommons at 700-1100 sell and the
-//     `gravelord_*` rares; the Dawn of Claude tier-0.5 set is REPUTATION VENDOR
-//     stock and is deliberately absent from every pool below, so rifts cannot
-//     shortcut the reputation grind.
+//   The level 15-20 open-world endgame  uncommons at 900-1100 sell (the realm
+//     ring's own stock, one uncommon per zone, plus the Veiled Hollow's Wardsmith
+//     trio) and the rares just under the five-man band. This rung USED to be read
+//     off the Ashen Wastes (zone 4); that zone is retired (see the PARKED CONTENT
+//     banner in `src/sim/data.ts`) and the Veiled Hollow now holds its ground, so
+//     every pool below was re-sourced onto live gear. The substitution table is
+//     cited at the B pool.
 //
 // A rift is ONE boss and about 43 elite trash over three to six floors (4.67
 // floors and 43.0 trash averaged over 200 seeds of the real generator; the
@@ -142,29 +145,71 @@ export const RIFT_LOOT_POOLS: Record<RiftRank, RiftRankPools> = {
     chase: ['wyrmfang_greatblade', 'staff_of_the_gravewyrm', 'fang_of_korzul'],
   },
 
-  // B is a hard five-man. Anchored on the zone-4 Ashen Wastes drop tier, the
+  // B is a hard five-man. Anchored on the level 15-20 open-world drop tier, the
   // fork's open-world endgame, which is the rung above the Sanctum.
+  //
+  // THE ASHEN WASTES SUBSTITUTION. Every id this pool used to name came from
+  // `content/zone4.ts`, which `data.ts` no longer merges, so each one was a
+  // dangling reference: `rollRiftLoot` returned it, the sim could not resolve it
+  // to an `ItemDef`, and the drop silently vanished (at B a warden could hand out
+  // nothing at all). Each parked id is replaced ONCE, here, and the same
+  // replacement is used everywhere that id appeared, so the A and S pools below
+  // stay the subsets of this one they always were:
+  //
+  //   ashen_warboots     -> wardplate_cuirass       unc  mail chest   1100
+  //   ashen_slippers     -> veilcloth_robe          unc  cloth chest  1100
+  //   ashen_treads       -> nightweave_tunic        unc  leather chest 1100
+  //   dawnward_gauntlets -> lilybed_mantle          rare shoulder     2400
+  //   dawnward_gloves    -> wardens_oathband        rare cloth gloves 1800
+  //   dawnward_grips     -> sunken_idol_mantle      rare shoulder     2400
+  //   behemoth_girdle    -> fountain_court_mantle   rare shoulder     2400
+  //   behemoth_sash      -> barrowshade_mantle      rare shoulder     2400
+  //   behemoth_belt      -> mantle_of_the_unhorsed  rare shoulder     2400
+  //   deathward_helm     -> frostmane_mantle        rare shoulder     2200
+  //   deathward_hood     -> mantle_of_the_meredark  rare shoulder     2300
+  //   deathward_cowl     -> mawscale_pauldrons      rare shoulder     2200
+  //   gravelord_pauldrons-> cf_ef_feet              rare feet         1500
+  //   gravelord_amice    -> cf_cs_feet              rare feet         1500
+  //   gravelord_spaulders-> cf_ss_feet              rare feet         1500
+  //
+  // WHY THE TRASH ROWS WENT BLUE. Zone 4's greens were stat-rich for their sell
+  // value (deathward_helm: 14 primary points at 1100 sell) and nothing live at
+  // this band matches them; the best live greens here carry 8 to 9 points, which
+  // is UNDER the C pool's Sanctum greens (9.17 average). Filling twelve slots
+  // with them would have made a B rift's trash worse than a C rift's, which
+  // `tests/rift_loot.test.ts` rank monotonicity catches and which is the wrong
+  // ladder besides. So the pool keeps the Veiled Hollow's own greens at the
+  // bottom and spends the rest on the rare mantle each ported realm zone drops,
+  // which is what the level 15-20 open world actually pays now. Still green to
+  // blue, never epic, exactly as the interface doc above requires.
+  //
+  // The `gravelord_*` rares become the Cinderforge's, `content/expansion`: a
+  // level-20 five-man that sits between the Sanctum (C) and Claudeholme (A),
+  // which is precisely the B rung. Pool SIZES are unchanged everywhere, so the
+  // fixed draw contract and every `pickFrom` index are untouched.
   B: {
-    // Ashen Wastes endgame uncommons (content/zone4.ts, 700-1100 sell).
+    // The Veiled Hollow's Wardsmith stock (realms/veiled_hollow.ts, uncommon
+    // 1100) plus the Hollow's capstone rare and one rare mantle from each of the
+    // other ported zones.
     trash: [
-      'ashen_warboots',
-      'ashen_slippers',
-      'ashen_treads',
-      'dawnward_gauntlets',
-      'dawnward_gloves',
-      'dawnward_grips',
-      'behemoth_girdle',
-      'behemoth_sash',
-      'behemoth_belt',
-      'deathward_helm',
-      'deathward_hood',
-      'deathward_cowl',
+      'wardplate_cuirass',
+      'veilcloth_robe',
+      'nightweave_tunic',
+      'lilybed_mantle',
+      'wardens_oathband',
+      'sunken_idol_mantle',
+      'fountain_court_mantle',
+      'barrowshade_mantle',
+      'mantle_of_the_unhorsed',
+      'frostmane_mantle',
+      'mantle_of_the_meredark',
+      'mawscale_pauldrons',
     ],
-    // The `gravelord_*` Ashen Wastes rares plus the top Sanctum rares.
+    // The Cinderforge's rare boots plus the top Sanctum rares.
     boss: [
-      'gravelord_pauldrons',
-      'gravelord_amice',
-      'gravelord_spaulders',
+      'cf_ef_feet',
+      'cf_cs_feet',
+      'cf_ss_feet',
       'gravewyrm_scale_hauberk',
       'wyrmcult_grand_robe',
       'wyrmscale_jerkin',
@@ -190,17 +235,18 @@ export const RIFT_LOOT_POOLS: Record<RiftRank, RiftRankPools> = {
   // only the small slots and the weapons, and only one guaranteed piece per RUN
   // against Claudeholme's one per BOSS (eight of them).
   A: {
-    // The heavier half of the Ashen Wastes uncommons plus its rares.
+    // The heavier half of the B trash pool plus its rares, the same six-then-three
+    // split it always had, under the Ashen Wastes substitution table cited there.
     trash: [
-      'behemoth_girdle',
-      'behemoth_sash',
-      'behemoth_belt',
-      'deathward_helm',
-      'deathward_hood',
-      'deathward_cowl',
-      'gravelord_pauldrons',
-      'gravelord_amice',
-      'gravelord_spaulders',
+      'fountain_court_mantle',
+      'barrowshade_mantle',
+      'mantle_of_the_unhorsed',
+      'frostmane_mantle',
+      'mantle_of_the_meredark',
+      'mawscale_pauldrons',
+      'cf_ef_feet',
+      'cf_cs_feet',
+      'cf_ss_feet',
     ],
     // Claudeholme tier 0.55, low band (feet/gloves/waist, 2400 sell) plus the
     // three set weapons (6000 sell): content/dungeons.ts CLAUDEHOLME_ITEMS.
@@ -240,14 +286,15 @@ export const RIFT_LOOT_POOLS: Record<RiftRank, RiftRankPools> = {
   // the raid's OFF-SET epics. A rift never drops a Claudexxaramas tier-1 SET
   // piece and never drops Mournlight; the raid keeps both.
   S: {
-    // Ashen Wastes helms and the `gravelord_*` rares. Still no epics from trash.
+    // The top of the A trash pool, under the Ashen Wastes substitution table
+    // cited at the B pool. Still no epics from trash.
     trash: [
-      'deathward_helm',
-      'deathward_hood',
-      'deathward_cowl',
-      'gravelord_pauldrons',
-      'gravelord_amice',
-      'gravelord_spaulders',
+      'frostmane_mantle',
+      'mantle_of_the_meredark',
+      'mawscale_pauldrons',
+      'cf_ef_feet',
+      'cf_cs_feet',
+      'cf_ss_feet',
     ],
     // Claudeholme tier 0.55, high band.
     boss: [

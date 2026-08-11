@@ -17,7 +17,7 @@
 //      (sim/world raises it at `worldHalfWidthAt(z)`), so the old constant
 //      half-width inset has to follow the row.
 import {
-  STRIP_MAX_X, STRIP_MIN_X, WORLD_MAX_Z, WORLD_MIN_Z, worldHalfWidthAt, ZONES,
+  STRIP_MAX_X, STRIP_MIN_X, WORLD_MIN_Z, worldHalfWidthAt, worldNorthEdgeAt, ZONES,
 } from '../sim/data';
 
 export interface XSpan {
@@ -33,8 +33,11 @@ export interface XSpan {
  * where it always was.
  */
 export function insideWorldRim(x: number, z: number, inset: number): boolean {
-  if (z < WORLD_MIN_Z + inset || z > WORLD_MAX_Z - inset) return false;
-  return Math.abs(x) <= worldHalfWidthAt(z) - inset;
+  // The north edge is per column too (sim/data worldNorthEdgeAt): the strip
+  // ends at the Frostveil while the two columns beside it run further north, so
+  // a single WORLD_MAX_Z would call the corridor between them in bounds.
+  if (z < WORLD_MIN_Z + inset || z > worldNorthEdgeAt(x) - inset) return false;
+  return Math.abs(x) <= worldHalfWidthAt(z, x) - inset;
 }
 
 /**

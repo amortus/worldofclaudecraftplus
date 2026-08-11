@@ -88,7 +88,13 @@ describe('raid loot cross-group dedup', () => {
       expect(ids.length).toBeGreaterThan(0);
       expect(new Set(ids).size).toBe(ids.length);
     }
-  });
+    // 60s, not the 5s default: every seed here builds a whole `Sim`, and the
+    // full map parity pass took the world from 5 zones to 14, so world
+    // generation per Sim (and therefore this 200-seed sweep) got several times
+    // more expensive. The sweep width is the point of the case - a duplicate
+    // only shows on the seeds where two groups actually collide - so the
+    // budget moves rather than the seed count.
+  }, 60_000);
 
   it('is deterministic: the same seed reproduces the exact same drop set', () => {
     for (const seed of [7, 42, 1234]) {

@@ -1274,57 +1274,56 @@ export const GUIDE_ZONES: GuideZoneInfo[] = [
     "welcome": "Captain Thessaly holds the wall at Highwatch — barely."
   },
   {
-    "id": "ashen_wastes",
-    "name": "The Ashen Wastes",
-    "min": 20,
+    "id": "veiled_hollow",
+    "name": "The Veiled Hollow",
+    "min": 15,
     "max": 20,
-    "biome": "blight",
-    "hub": "Gravewatch",
+    "biome": "dusk",
+    "hub": "Eldergleam",
     "pois": [
-      "Gravewatch",
-      "The Ashen Pass",
-      "The Stillmere",
-      "The Bonefields",
-      "Hollow Barrows",
-      "The Pale Reach"
+      "Eldergleam",
+      "Duskfall Cave",
+      "Duskfall Overlook",
+      "Elder Grove",
+      "Starfall Basin",
+      "The Sunken Court",
+      "Crystalline Shallows",
+      "The Gleaming Deep"
     ],
-    "welcome": "The Ashen Wastes stretch out, grey and lifeless. Something vast drifts low over the dead ground."
+    "welcome": "The air hums with old magic. Seek Keeper Saelwyn beneath the great tree of Eldergleam."
   },
   {
-    "id": "alderfen_shallows",
-    "name": "Alderfen Shallows",
-    "min": 4,
-    "max": 8,
-    "biome": "marsh",
-    "hub": "Reedwatch",
+    "id": "frostveil",
+    "name": "The Frostveil Reach",
+    "min": 17,
+    "max": 20,
+    "biome": "frost",
+    "hub": "Icemantle",
     "pois": [
-      "Reedwatch",
-      "The Alderfen Crossing",
-      "Otter Hollow",
-      "The Rotting Weir",
-      "Alderfen Water",
-      "Sedgewatch Ruin",
-      "The Drowned Mill"
+      "Icemantle",
+      "The Snowline",
+      "Glacier Tarn",
+      "The Aurora Steps",
+      "The Shiverfen",
+      "The Howling Terraces"
     ],
-    "welcome": "West of the vale the ground gives way to standing water. Reedwatch holds the crossing."
+    "welcome": "Snow swallows every sound. Under the dancing lights, the cold itself feels awake."
   },
   {
-    "id": "grimhold_crags",
-    "name": "Grimhold Crags",
-    "min": 6,
-    "max": 10,
-    "biome": "peaks",
-    "hub": "Coldhearth",
+    "id": "farshore_isle",
+    "name": "The Farshore",
+    "min": 3,
+    "max": 7,
+    "biome": "vale",
+    "hub": "Gullhaven",
     "pois": [
-      "Coldhearth",
-      "The Grimhold Stair",
-      "Scree Fall",
-      "The Cragmaw Dens",
-      "Coldhearth Tarn",
-      "Ironvein Cut",
-      "The Broken Watchtower"
+      "Gullhaven",
+      "The Landing",
+      "The Watch Meadow",
+      "The Sundered Cliffs",
+      "The Riftfields"
     ],
-    "welcome": "East of the vale the Grimhold Crags climb out of the treeline. Coldhearth burns against them."
+    "welcome": "Cross the sandbar and Gullhaven's bell will find you before the town does. The breaks tear open without warning, and the redoubt holds its shore against whatever pours through. They have been waiting a long while for someone like you."
   },
   {
     "id": "willowfen",
@@ -1399,6 +1398,76 @@ export const GUIDE_ZONES: GuideZoneInfo[] = [
       "The Lily Basin"
     ],
     "welcome": "Someone is still trimming the hedges, though no gardener has been seen for a hundred years. Mind the maze: it minds you back."
+  },
+  {
+    "id": "nightbloom",
+    "name": "The Nightbloom",
+    "min": 20,
+    "max": 20,
+    "biome": "night",
+    "hub": "Moonrest",
+    "pois": [
+      "Moonrest",
+      "The Nightgate",
+      "The Moonwell",
+      "Gloamfield",
+      "The Standing Vigil",
+      "The Sleepless Barrow"
+    ],
+    "welcome": "Past the Nightgate the air itself dreams. Follow the flower-light to Moonrest, and mind the sleeping world that hangs in the sky."
+  },
+  {
+    "id": "wraithwood",
+    "name": "The Wraithwood",
+    "min": 20,
+    "max": 20,
+    "biome": "haunt",
+    "hub": "Gallowmere",
+    "pois": [
+      "Gallowmere",
+      "The Crowgate",
+      "Widow's Thicket",
+      "The Hanging Glade",
+      "The Mournstone Chapel",
+      "The Huntsman's Clearing"
+    ],
+    "welcome": "The canopy closes over the road like a lid. Keep to the lanterns of Gallowmere, and do not answer if the wood calls your name."
+  },
+  {
+    "id": "amberfall",
+    "name": "The Amberfall",
+    "min": 18,
+    "max": 20,
+    "biome": "amber",
+    "hub": "Lanternmere",
+    "pois": [
+      "Lanternmere",
+      "The Goldmelt",
+      "The Gilded Orchard",
+      "Harvest Hollow",
+      "The Great Mere",
+      "Cindermaple Rise",
+      "The Leaning Monolith"
+    ],
+    "welcome": "Every leaf here burns gold and red, yet none ever fall. The lanterns of Lanternmere are lit for you."
+  },
+  {
+    "id": "drakelands",
+    "name": "The Drakelands",
+    "min": 16,
+    "max": 20,
+    "biome": "ember",
+    "hub": "Wyrmwatch",
+    "pois": [
+      "Wyrmwatch",
+      "The Gatewood",
+      "Cinder Dunes",
+      "Trollmoot",
+      "The Last Keep",
+      "Bloodglass Fields",
+      "Drakemaw Caldera"
+    ],
+    "welcome": "Hot wind rolls off the wastes ahead. Dragons wheel over the Drakemaw, and troll fires burn in the dunes."
   }
 ];
 
@@ -1554,6 +1623,16 @@ export const GUIDE_FAMILIES: GuideFamily[] = [
         "still": "/guide-stills/mob_wolf__566061.webp"
       },
       {
+        "name": "Void Stalker",
+        "min": 5,
+        "max": 6,
+        "rare": false,
+        "templateId": "void_stalker",
+        "model": "mob_wolf",
+        "tint": "#2f2a44",
+        "still": "/guide-stills/mob_wolf__2f2a44.webp"
+      },
+      {
         "name": "Mire Prowler",
         "min": 7,
         "max": 8,
@@ -1584,34 +1663,144 @@ export const GUIDE_FAMILIES: GuideFamily[] = [
         "still": "/guide-stills/mob_wolf__8c8270.webp"
       },
       {
-        "name": "Blighted Stag",
-        "min": 20,
-        "max": 20,
+        "name": "Veiled Doe",
+        "min": 14,
+        "max": 15,
         "rare": false,
-        "templateId": "blighted_stag",
-        "model": "mob_stag",
-        "tint": "#6e7a48",
-        "still": "/guide-stills/mob_stag__6e7a48.webp"
-      },
-      {
-        "name": "Plague Crawler",
-        "min": 20,
-        "max": 20,
-        "rare": false,
-        "templateId": "plague_crawler",
+        "templateId": "veiled_doe",
         "model": "mob_wolf",
-        "tint": "#8a7b4a",
-        "still": "/guide-stills/mob_wolf__8a7b4a.webp"
+        "tint": "#cdbfdc",
+        "still": "/guide-stills/mob_wolf__cdbfdc.webp"
       },
       {
-        "name": "Rotting Fox",
+        "name": "Veiled Stag",
+        "min": 15,
+        "max": 16,
+        "rare": false,
+        "templateId": "veiled_stag",
+        "model": "mob_wolf",
+        "tint": "#b9a3cf",
+        "still": "/guide-stills/mob_wolf__b9a3cf.webp"
+      },
+      {
+        "name": "Snowdrift Wolf",
+        "min": 17,
+        "max": 18,
+        "rare": false,
+        "templateId": "snowdrift_wolf",
+        "model": "mob_wolf",
+        "tint": "#eef4f8",
+        "still": "/guide-stills/mob_wolf__eef4f8.webp"
+      },
+      {
+        "name": "Gilded Stag",
+        "min": 18,
+        "max": 19,
+        "rare": false,
+        "templateId": "gilded_stag",
+        "model": "mob_wolf",
+        "tint": "#d8a848",
+        "still": "/guide-stills/mob_wolf__d8a848.webp"
+      },
+      {
+        "name": "Gloam Fox",
+        "min": 18,
+        "max": 18,
+        "rare": false,
+        "templateId": "gloam_fox",
+        "model": "mob_wolf",
+        "tint": "#d87838",
+        "still": "/guide-stills/mob_wolf__d87838.webp"
+      },
+      {
+        "name": "Terrace Howler",
+        "min": 19,
+        "max": 20,
+        "rare": false,
+        "templateId": "terrace_howler",
+        "model": "mob_wolf",
+        "tint": "#9db4c8",
+        "still": "/guide-stills/mob_wolf__9db4c8.webp"
+      },
+      {
+        "name": "Gloam Strider",
         "min": 20,
         "max": 20,
         "rare": false,
-        "templateId": "rotting_fox",
-        "model": "mob_fox",
-        "tint": "#7c6a3e",
-        "still": "/guide-stills/mob_fox__7c6a3e.webp"
+        "templateId": "gloam_strider",
+        "model": "mob_wolf",
+        "tint": "#4c4a72",
+        "still": "/guide-stills/mob_wolf__4c4a72.webp"
+      },
+      {
+        "name": "Moonfleece Grazer",
+        "min": 20,
+        "max": 20,
+        "rare": false,
+        "templateId": "moonfleece_grazer",
+        "model": "mob_wolf",
+        "tint": "#e6e9f4",
+        "still": "/guide-stills/mob_wolf__e6e9f4.webp"
+      },
+      {
+        "name": "Moor Ram",
+        "min": 20,
+        "max": 20,
+        "rare": false,
+        "templateId": "moor_ram",
+        "model": "mob_wolf",
+        "tint": "#d8d0c0",
+        "still": "/guide-stills/mob_wolf__d8d0c0.webp"
+      },
+      {
+        "name": "Shoal Scuttler",
+        "min": 20,
+        "max": 20,
+        "rare": false,
+        "templateId": "shoal_scuttler",
+        "model": "mob_wolf",
+        "tint": "#8898a8",
+        "still": "/guide-stills/mob_wolf__8898a8.webp"
+      },
+      {
+        "name": "Thicket Boar",
+        "min": 20,
+        "max": 20,
+        "rare": false,
+        "templateId": "thicket_boar",
+        "model": "mob_wolf",
+        "tint": "#6a4e38",
+        "still": "/guide-stills/mob_wolf__6a4e38.webp"
+      },
+      {
+        "name": "Tide Scuttler",
+        "min": 20,
+        "max": 20,
+        "rare": false,
+        "templateId": "tide_scuttler",
+        "model": "mob_wolf",
+        "tint": "#e86848",
+        "still": "/guide-stills/mob_wolf__e86848.webp"
+      },
+      {
+        "name": "Topiary Stag",
+        "min": 20,
+        "max": 20,
+        "rare": false,
+        "templateId": "topiary_stag",
+        "model": "mob_wolf",
+        "tint": "#3f7e3c",
+        "still": "/guide-stills/mob_wolf__3f7e3c.webp"
+      },
+      {
+        "name": "Topiary Wolf",
+        "min": 20,
+        "max": 20,
+        "rare": false,
+        "templateId": "topiary_wolf",
+        "model": "mob_wolf",
+        "tint": "#4a8a4e",
+        "still": "/guide-stills/mob_wolf__4a8a4e.webp"
       }
     ]
   },
@@ -1637,6 +1826,26 @@ export const GUIDE_FAMILIES: GuideFamily[] = [
         "model": "mob_spider",
         "tint": "#283747",
         "still": "/guide-stills/mob_spider__283747.webp"
+      },
+      {
+        "name": "Canopy Weaver",
+        "min": 20,
+        "max": 20,
+        "rare": false,
+        "templateId": "canopy_weaver",
+        "model": "mob_spider",
+        "tint": "#4e8a3c",
+        "still": "/guide-stills/mob_spider__4e8a3c.webp"
+      },
+      {
+        "name": "Widowsilk Spinner",
+        "min": 20,
+        "max": 20,
+        "rare": false,
+        "templateId": "widowsilk_spinner",
+        "model": "mob_spider",
+        "tint": "#3a3440",
+        "still": "/guide-stills/mob_spider__3a3440.webp"
       }
     ]
   },
@@ -1672,12 +1881,42 @@ export const GUIDE_FAMILIES: GuideFamily[] = [
         "model": "mob_murloc",
         "tint": "#8fb6c4",
         "still": "/guide-stills/mob_murloc__8fb6c4.webp"
+      },
+      {
+        "name": "Bogtoad",
+        "min": 19,
+        "max": 20,
+        "rare": false,
+        "templateId": "bogtoad",
+        "model": "mob_murloc",
+        "tint": "#7aa848",
+        "still": "/guide-stills/mob_murloc__7aa848.webp"
+      },
+      {
+        "name": "Mere Lurker",
+        "min": 19,
+        "max": 20,
+        "rare": false,
+        "templateId": "mere_lurker",
+        "model": "mob_murloc",
+        "tint": "#a8b048",
+        "still": "/guide-stills/mob_murloc__a8b048.webp"
       }
     ]
   },
   {
     "family": "kobold",
     "creatures": [
+      {
+        "name": "Breach Wretch",
+        "min": 3,
+        "max": 5,
+        "rare": false,
+        "templateId": "breach_wretch",
+        "model": "mob_kobold",
+        "tint": "#5a4a78",
+        "still": "/guide-stills/mob_kobold__5a4a78.webp"
+      },
       {
         "name": "Tunnel Rat Digger",
         "min": 4,
@@ -1697,6 +1936,76 @@ export const GUIDE_FAMILIES: GuideFamily[] = [
         "model": "mob_kobold",
         "tint": "#9c7a3c",
         "still": "/guide-stills/mob_kobold__9c7a3c.webp"
+      },
+      {
+        "name": "Gleamfolk Pixie",
+        "min": 15,
+        "max": 16,
+        "rare": false,
+        "templateId": "mushroom_pixie",
+        "model": "mob_kobold",
+        "tint": "#d8c4f0",
+        "still": "/guide-stills/mob_kobold__d8c4f0.webp"
+      },
+      {
+        "name": "Sporeling Gatherer",
+        "min": 15,
+        "max": 15,
+        "rare": false,
+        "templateId": "sporeling_gatherer",
+        "model": "mob_kobold",
+        "tint": "#d8b98a",
+        "still": "/guide-stills/mob_kobold__d8b98a.webp"
+      },
+      {
+        "name": "Corrupted Sporeling",
+        "min": 16,
+        "max": 17,
+        "rare": false,
+        "templateId": "corrupted_sporeling",
+        "model": "mob_kobold",
+        "tint": "#5e4a72",
+        "still": "/guide-stills/mob_kobold__5e4a72.webp"
+      },
+      {
+        "name": "Fen Sprite",
+        "min": 17,
+        "max": 18,
+        "rare": false,
+        "templateId": "fen_sprite",
+        "model": "mob_kobold",
+        "tint": "#cfe0ea",
+        "still": "/guide-stills/mob_kobold__cfe0ea.webp"
+      },
+      {
+        "name": "Harvest Sprite",
+        "min": 18,
+        "max": 19,
+        "rare": false,
+        "templateId": "harvest_sprite",
+        "model": "mob_kobold",
+        "tint": "#e8c878",
+        "still": "/guide-stills/mob_kobold__e8c878.webp"
+      },
+      {
+        "name": "Willow Sprite",
+        "min": 19,
+        "max": 20,
+        "rare": false,
+        "templateId": "willow_sprite",
+        "model": "mob_kobold",
+        "tint": "#c8e0b8",
+        "still": "/guide-stills/mob_kobold__c8e0b8.webp"
+      },
+      {
+        "name": "Hedge Gnome",
+        "min": 20,
+        "max": 20,
+        "rare": false,
+        "templateId": "hedge_gnome",
+        "model": "mob_kobold",
+        "tint": "#5a8a46",
+        "still": "/guide-stills/mob_kobold__5a8a46.webp"
       }
     ]
   },
@@ -1764,11 +2073,31 @@ export const GUIDE_FAMILIES: GuideFamily[] = [
         "still": "/guide-stills/mob_dark_caster__533566.webp"
       },
       {
-        "name": "Corrupted Acolyte",
+        "name": "Dawnhold Knight",
         "min": 20,
         "max": 20,
         "rare": false,
-        "templateId": "corrupted_acolyte",
+        "templateId": "hedge_knight",
+        "model": "mob_bandit",
+        "tint": "#6b3a32",
+        "still": "/guide-stills/mob_bandit__6b3a32.webp"
+      },
+      {
+        "name": "Downs Bandit",
+        "min": 20,
+        "max": 20,
+        "rare": false,
+        "templateId": "downs_bandit",
+        "model": "mob_bandit",
+        "tint": "#6b3a32",
+        "still": "/guide-stills/mob_bandit__6b3a32.webp"
+      },
+      {
+        "name": "Wreckfield Thief",
+        "min": 20,
+        "max": 20,
+        "rare": false,
+        "templateId": "wreck_thief",
         "model": "mob_bandit",
         "tint": "#6b3a32",
         "still": "/guide-stills/mob_bandit__6b3a32.webp"
@@ -1797,6 +2126,16 @@ export const GUIDE_FAMILIES: GuideFamily[] = [
         "model": "mob_troll",
         "tint": "#145a32",
         "still": "/guide-stills/mob_troll__145a32.webp"
+      },
+      {
+        "name": "Dune Troll",
+        "min": 17,
+        "max": 19,
+        "rare": false,
+        "templateId": "dune_troll",
+        "model": "mob_troll",
+        "tint": "#b07040",
+        "still": "/guide-stills/mob_troll__b07040.webp"
       }
     ]
   },
@@ -1812,6 +2151,16 @@ export const GUIDE_FAMILIES: GuideFamily[] = [
         "model": "mob_ogre",
         "tint": "#9e7b53",
         "still": "/guide-stills/mob_ogre__9e7b53.webp"
+      },
+      {
+        "name": "Gravenbark Shambler",
+        "min": 20,
+        "max": 20,
+        "rare": false,
+        "templateId": "gravenbark_shambler",
+        "model": "mob_ogre",
+        "tint": "#4e4a3a",
+        "still": "/guide-stills/mob_ogre__4e4a3a.webp"
       }
     ]
   },
@@ -1849,6 +2198,26 @@ export const GUIDE_FAMILIES: GuideFamily[] = [
         "still": "/guide-stills/skel_minion__6c8f8a.webp"
       },
       {
+        "name": "Ashbone Raider",
+        "min": 17,
+        "max": 18,
+        "rare": false,
+        "templateId": "ashbone_raider",
+        "model": "skel_minion",
+        "tint": "#e8dcc8",
+        "still": "/guide-stills/skel_minion__e8dcc8.webp"
+      },
+      {
+        "name": "Ashbone Warcaller",
+        "min": 18,
+        "max": 19,
+        "rare": false,
+        "templateId": "ashbone_warcaller",
+        "model": "skel_minion",
+        "tint": "#d8c8a8",
+        "still": "/guide-stills/skel_minion__d8c8a8.webp"
+      },
+      {
         "name": "Boneclad Revenant",
         "min": 18,
         "max": 19,
@@ -1859,50 +2228,60 @@ export const GUIDE_FAMILIES: GuideFamily[] = [
         "still": "/guide-stills/skel_warrior__cacfd2.webp"
       },
       {
-        "name": "Ashen Ghoul",
+        "name": "Barrow Wight",
         "min": 20,
         "max": 20,
         "rare": false,
-        "templateId": "ashen_ghoul",
+        "templateId": "barrow_wight",
         "model": "skel_minion",
-        "tint": "#7d8268",
-        "still": "/guide-stills/skel_minion__7d8268.webp"
+        "tint": "#9fb0c4",
+        "still": "/guide-stills/skel_minion__9fb0c4.webp"
       },
       {
-        "name": "Barrow Wraithling",
+        "name": "Drowned Deckhand",
         "min": 20,
         "max": 20,
         "rare": false,
-        "templateId": "wraithling",
+        "templateId": "drowned_deckhand",
         "model": "skel_minion",
-        "tint": "#9fb6c4",
-        "still": "/guide-stills/skel_minion__9fb6c4.webp"
-      },
-      {
-        "name": "Blighted Husk",
-        "min": 20,
-        "max": 20,
-        "rare": false,
-        "templateId": "blighted_husk",
-        "model": "skel_minion",
-        "tint": "#6b6f5c",
-        "still": "/guide-stills/skel_minion__6b6f5c.webp"
-      },
-      {
-        "name": "Bone Reaver",
-        "min": 20,
-        "max": 20,
-        "rare": false,
-        "templateId": "bone_reaver",
-        "model": "skel_minion",
-        "tint": "#cac3b0",
-        "still": "/guide-stills/skel_minion__cac3b0.webp"
+        "tint": "#86988e",
+        "still": "/guide-stills/skel_minion__86988e.webp"
       }
     ]
   },
   {
     "family": "elemental",
     "creatures": [
+      {
+        "name": "Duskwisp",
+        "min": 15,
+        "max": 16,
+        "rare": false,
+        "templateId": "duskwisp",
+        "model": "mob_elemental",
+        "tint": "#7a5f9e",
+        "still": "/guide-stills/mob_elemental__7a5f9e.webp"
+      },
+      {
+        "name": "Glimmerwisp",
+        "min": 15,
+        "max": 16,
+        "rare": false,
+        "templateId": "glimmerwisp",
+        "model": "mob_elemental",
+        "tint": "#ffc4ec",
+        "still": "/guide-stills/mob_elemental__ffc4ec.webp"
+      },
+      {
+        "name": "Ice Wisp",
+        "min": 17,
+        "max": 18,
+        "rare": false,
+        "templateId": "ice_wisp",
+        "model": "mob_elemental",
+        "tint": "#bfe4ff",
+        "still": "/guide-stills/mob_elemental__bfe4ff.webp"
+      },
       {
         "name": "Stormcrag Elemental",
         "min": 17,
@@ -1914,6 +2293,16 @@ export const GUIDE_FAMILIES: GuideFamily[] = [
         "still": "/guide-stills/mob_elemental__5dade2.webp"
       },
       {
+        "name": "Rime Elemental",
+        "min": 18,
+        "max": 19,
+        "rare": false,
+        "templateId": "rime_elemental",
+        "model": "mob_elemental",
+        "tint": "#9fd0f0",
+        "still": "/guide-stills/mob_elemental__9fd0f0.webp"
+      },
+      {
         "name": "Shardlord Kazzix",
         "min": 18,
         "max": 18,
@@ -1922,6 +2311,46 @@ export const GUIDE_FAMILIES: GuideFamily[] = [
         "model": "mob_elemental",
         "tint": "#aed6f1",
         "still": "/guide-stills/mob_elemental__aed6f1.webp"
+      },
+      {
+        "name": "Lily Wisp",
+        "min": 19,
+        "max": 19,
+        "rare": false,
+        "templateId": "lily_wisp",
+        "model": "mob_elemental",
+        "tint": "#d0f2c8",
+        "still": "/guide-stills/mob_elemental__d0f2c8.webp"
+      },
+      {
+        "name": "Gale Wisp",
+        "min": 20,
+        "max": 20,
+        "rare": false,
+        "templateId": "gale_wisp",
+        "model": "mob_elemental",
+        "tint": "#bfe0e8",
+        "still": "/guide-stills/mob_elemental__bfe0e8.webp"
+      },
+      {
+        "name": "Nightkin Stargazer",
+        "min": 20,
+        "max": 20,
+        "rare": false,
+        "templateId": "nightkin_stargazer",
+        "model": "mob_elemental",
+        "tint": "#8fa8e0",
+        "still": "/guide-stills/mob_elemental__8fa8e0.webp"
+      },
+      {
+        "name": "Wood Wraith",
+        "min": 20,
+        "max": 20,
+        "rare": false,
+        "templateId": "wood_wraith",
+        "model": "mob_elemental",
+        "tint": "#9ab4a0",
+        "still": "/guide-stills/mob_elemental__9ab4a0.webp"
       }
     ]
   },
@@ -1937,6 +2366,16 @@ export const GUIDE_FAMILIES: GuideFamily[] = [
         "model": "mob_dragonkin",
         "tint": "#bcd2e6",
         "still": "/guide-stills/mob_dragonkin__bcd2e6.webp"
+      },
+      {
+        "name": "Dragonkin Broodguard",
+        "min": 19,
+        "max": 20,
+        "rare": false,
+        "templateId": "dragonkin_broodguard",
+        "model": "mob_dragonkin",
+        "tint": "#3e6b4f",
+        "still": "/guide-stills/mob_dragonkin__3e6b4f.webp"
       }
     ]
   }
@@ -2202,18 +2641,6 @@ export const GUIDE_MODELS: Record<string, GuideModelSpec> = {
     "idle": "Idle_Combat",
     "height": 2.5,
     "tintStrength": 0.25
-  },
-  "mob_stag": {
-    "url": "models/creatures/stag.glb",
-    "idle": "Idle",
-    "height": 1.9,
-    "tintStrength": 0.35
-  },
-  "mob_fox": {
-    "url": "models/creatures/fox.glb",
-    "idle": "Idle",
-    "height": 1,
-    "tintStrength": 0.35
   },
   "mob_dragonkin": {
     "url": "models/creatures/dragonevolved.glb",

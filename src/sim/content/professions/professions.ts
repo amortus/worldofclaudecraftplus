@@ -62,21 +62,21 @@ export const ZONE_GATHER_TIER: Record<string, number> = {
   eastbrook_vale: 1, // levels 1-7
   mirefen_marsh: 2, // levels 6-13
   thornpeak_heights: 3, // levels 13-20
-  ashen_wastes: 4, // level 20 endgame
-  // The column zones beside the vale. A column is side content at the level of
-  // the band it borders, so it takes an existing rung rather than adding a
-  // fifth: the four rungs are what make the mastery curve land on the cap.
-  alderfen_shallows: 1, // levels 4-8, east of the vale
-  grimhold_crags: 2, // levels 6-10, west of the vale
-  // The upstream realm ring, on the same rule: a column takes the rung of the
-  // band it borders. All four are level 19-20 side content beside the two
-  // endgame bands, so all four land on the top rungs rather than adding a
-  // fifth. They carry no gather nodes of their own yet, so this only decides
-  // what a node placed there later would be worth.
+  // The upstream realm ring. A rung is chosen from the zone's own level band,
+  // never from a fifth rung: four rungs are what make the mastery curve land on
+  // our level-20 cap. Only the strip bands carry gather nodes today, so for the
+  // columns this only decides what a node placed there later would be worth.
+  farshore_isle: 1, // levels 3-7, beside the vale
   willowfen: 3, // 19-20, beside the Thornpeak band
   galecrest: 3, // 20, beside the Thornpeak band
-  palmreach: 4, // 20, beside the Ashen Wastes band
-  evergarden: 4, // 20, beside the Ashen Wastes band
+  veiled_hollow: 4, // 15-20, the strip band north of the Thornpeak
+  palmreach: 4, // 20, beside the Veiled Hollow band
+  evergarden: 4, // 20, beside the Veiled Hollow band
+  nightbloom: 4, // 20
+  wraithwood: 4, // 20
+  frostveil: 4, // 17-20, the northmost strip band
+  amberfall: 4, // 18-20
+  drakelands: 4, // 16-20
 };
 
 /** The gather tier of a zone. An unmapped zone (a dungeon interior, the arena)

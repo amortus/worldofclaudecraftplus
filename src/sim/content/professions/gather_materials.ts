@@ -61,25 +61,31 @@ function row(itemId: string): GatherMaterialRow {
   return { itemId, qtyByRarity: MATERIAL_QTY_BY_RARITY };
 }
 
+// The tier-4 rung is keyed on `veiled_hollow`. It was keyed on `ashen_wastes`
+// until that zone was retired (see the PARKED CONTENT banner in
+// `src/sim/data.ts`); the Veiled Hollow holds the same ground and the same
+// tier-4 nodes, so the KEY moved and the material ids did not. Leaving the old
+// key would have dropped the whole rung through the fallback below and yielded
+// Vale copper at the level-20 band.
 /** Which material a node type yields in which zone. */
 export const NODE_MATERIAL_TABLE: Record<GatherNodeType, Record<string, GatherMaterialRow>> = {
   ore: {
     eastbrook_vale: row('copper_ore'),
     mirefen_marsh: row('iron_ore'),
     thornpeak_heights: row('thorium_ore'),
-    ashen_wastes: row('cinderite_ore'),
+    veiled_hollow: row('cinderite_ore'),
   },
   wood: {
     eastbrook_vale: row('ironbark_log'),
     mirefen_marsh: row('ashwood_log'),
     thornpeak_heights: row('elderwood_log'),
-    ashen_wastes: row('boneash_log'),
+    veiled_hollow: row('boneash_log'),
   },
   herb: {
     eastbrook_vale: row('silverleaf_herb'),
     mirefen_marsh: row('goldleaf_herb'),
     thornpeak_heights: row('sunpetal_herb'),
-    ashen_wastes: row('gravebloom_herb'),
+    veiled_hollow: row('gravebloom_herb'),
   },
 };
 

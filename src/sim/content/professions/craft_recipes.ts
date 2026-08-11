@@ -179,7 +179,18 @@ const ROWS: CraftRow[] = [
     slot: 'helmet',
     armorType: 'mail',
     // Helmet rides 0.80 of chest armor.
-    stats: { armor: 96, sta: 3, str: 1 },
+    //
+    // The str point this used to carry came off with the full map parity pass.
+    // This is the ladder's ONLY helmet, and the only shipped helmets that ever
+    // out-statted it were the Ashen Wastes' level-20 greens (deathward_helm and
+    // friends, 13 to 14 primary points). Uncommons are ungated
+    // (`item_level_req.ts` keeps leveling greens at required level 1), so those
+    // sat in every rung's comparison pool. The Ashen Wastes is parked now (see
+    // the PARKED CONTENT banner in `src/sim/data.ts`) and the best shipped
+    // helmet a level-10 character can reach carries 3 primary points, so 3 is
+    // what the crafted one carries: crafted gear buys availability, never the
+    // best piece in the band. `tests/crafting_content.test.ts` pins this.
+    stats: { armor: 96, sta: 3 },
     reagents: [r('iron_ore', 9), r('ashwood_log', 3)],
   },
   {

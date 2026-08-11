@@ -286,15 +286,24 @@ function marshWeightAt(x: number, z: number): number {
   return w;
 }
 
-// The world's half width at a row, memoized on z. sampleVertex runs down a
-// chunk's inner loop with z held constant, so one slot hits on every vertex but
-// the first of each row and the rim tint costs no per-vertex column scan.
+// The world's half width at a row, memoized on z AND on the side of the strip
+// the sample sits on. sampleVertex runs down a chunk's inner loop with z held
+// constant, so one slot hits on every vertex but the first of each row and the
+// rim tint costs no per-vertex column scan.
+//
+// The side is part of the key because the half width is per side now: upstream's
+// grid has rows with a column on ONE side only (the Farshore's band), and the
+// empty side keeps the strip's own rim (see sim/data worldHalfWidthAt). A chunk
+// never straddles x = 0 by more than its own width, so this stays a 1-slot hit.
 let rimHalfZ = Number.NaN;
+let rimHalfSide = 0;
 let rimHalfWidth = 0;
-function rimHalfWidthAt(z: number): number {
-  if (z !== rimHalfZ) {
+function rimHalfWidthAt(z: number, x: number): number {
+  const side = x < 0 ? -1 : 1;
+  if (z !== rimHalfZ || side !== rimHalfSide) {
     rimHalfZ = z;
-    rimHalfWidth = worldHalfWidthAt(z);
+    rimHalfSide = side;
+    rimHalfWidth = worldHalfWidthAt(z, side);
   }
   return rimHalfWidth;
 }
@@ -408,7 +417,7 @@ function sampleVertex(x: number, z: number, seed: number, out: Float64Array, o: 
   // row without a column zone still gets the haze on its own wall at |x| = 180
   // instead of only at the grid's outer box edge.
   const edge = Math.max(
-    Math.abs(x) - (rimHalfWidthAt(z) - 32),
+    Math.abs(x) - (rimHalfWidthAt(z, x) - 32),
     WORLD_MIN_Z + 32 - z,
     z - (WORLD_MAX_Z - 32),
   );

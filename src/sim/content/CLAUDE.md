@@ -19,8 +19,14 @@ module and spreads it into the flat tables the engine reads (`ITEMS`, `MOBS`,
 - `talents_warrior.ts` / `talents_classic.ts` — the authored trees: warrior lives in
   `talents_warrior.ts`, the other 8 (paladin…druid) in `talents_classic.ts`. Copy
   `talents_warrior.ts` as the template for any new tree.
-- `zone1.ts`/`zone2.ts`/`zone3.ts` — one zone each. `zone1` items live in
-  `items.ts` (`BASE_ITEMS`); `zone2`/`zone3` export their own `ZONE{N}_ITEMS`.
+- `zone1.ts`/`zone2.ts`/`zone3.ts`: the three ORIGINAL strip bands, one zone
+  each. `zone1` items live in `items.ts` (`BASE_ITEMS`); `zone2`/`zone3` export
+  their own `ZONE{N}_ITEMS`.
+- `realms/`: the other ELEVEN zones of the 14-zone map, ported verbatim from
+  upstream, one file each behind an `index.ts` barrel. Has its own CLAUDE.md.
+- `zone4.ts`: the Ashen Wastes. **PARKED**, intact on disk, no longer merged by
+  `data.ts` (upstream's `veiled_hollow` took its z band). See the `PARKED
+  CONTENT` banner in `src/sim/data.ts` for what is parked and how to restore it.
 - `temple.ts` — the temple zone+dungeon module: `TEMPLE_MOBS`/`TEMPLE_DUNGEON_MOBS`,
   `TEMPLE_NPCS`, `TEMPLE_QUESTS`/`TEMPLE_QUEST_ORDER`, `TEMPLE_ITEMS`, `TEMPLE_CAMPS`,
   `TEMPLE_OBJECTS`, `TEMPLE_PROPS`, `TEMPLE_DUNGEON_DEFS` (all merged in `data.ts`).

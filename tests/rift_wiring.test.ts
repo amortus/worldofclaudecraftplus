@@ -492,6 +492,10 @@ describe('rift floor progression', () => {
   });
 
   it('frees a slot whose party is gone, and leaving works from inside', () => {
+    // Builds several worlds. Full map parity roughly doubled world-generation
+    // cost (14 zones, 183 camps, 617 mobs, z out to 2420), which puts this case
+    // over vitest's 5s default when the full suite runs in parallel. Assertions
+    // unchanged; only the budget is.
     const { sim, pid } = makeWorld(808);
     const { run } = enterFirstRift(sim, pid);
     const mobIds = [...run.mobIds];
@@ -506,7 +510,7 @@ describe('rift floor progression', () => {
     expect(run.seed).toBe(0);
     expect(run.mobIds.length).toBe(0);
     for (const id of mobIds) expect(sim.entities.has(id)).toBe(false);
-  });
+  }, 30_000);
 });
 
 // ---------------------------------------------------------------------------

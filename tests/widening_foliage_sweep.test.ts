@@ -4,15 +4,21 @@
 // generateDecorations (sim/world.ts) does, or it scatters over void no player
 // can reach.
 //
-// The grid had HOLES when this file was written: only the vale's band had
-// columns, so most z rows were void beside the strip. The ported realm ring
-// (Willowfen/Galecrest beside the marsh, Palmreach/Evergarden beside the
-// heights and the wastes) filled both columns end to end, so the bounding box
-// is solid now and `skippedVoid` is zero. The GATES are still what is under
-// test: they are what makes a sweep correct for a ragged grid, and the grid
-// goes ragged again the moment one more cell is authored. What moved is the
-// fixture, not the contract, so the void probes below sit past the world's
-// north edge (the one hole that cannot be filled) instead of beside a column.
+// The grid has HOLES, and after the full map parity pass it has them for good.
+// Upstream's 14-zone map is deliberately RAGGED, and the bounding box
+// (x -540..540, z -180..2420) leaves exactly three cells with no zone in them:
+//
+//   1. the -x half of the vale's row (z -180..180): `farshore_isle` is the only
+//      column in that band and it sits on +x, with nothing opposite it;
+//   2. the middle column past z 1960, where the strip ends at the Frostveil
+//      while the two columns beside it run on to 2380 and 2420;
+//   3. the -x column at z 2380..2420, where the Amberfall stops 40yd short of
+//      the Drakelands.
+//
+// So the GATES this file pins are load bearing again rather than merely
+// future-proofing: `skippedVoid` is non-zero and the sweep must still agree
+// exactly with a gate-only reference walk. What moved since the file was
+// written is the fixture, not the contract.
 import { describe, expect, it } from 'vitest';
 import {
   CAMPS, STRIP_MAX_X, STRIP_MIN_X, WORLD_MAX_X, WORLD_MAX_Z, WORLD_MIN_X, WORLD_MIN_Z,
@@ -29,40 +35,55 @@ import { isLeapableWater } from '../src/render/fish';
 const SEED = 1337;
 const HIGH = { step: DRESS_STEP_HIGH, densityScale: 1, scaleBoost: 1 };
 
-// The void the sweeps must never scatter into. The bounding box is solid now,
-// so the nearest one is the row past the world's north edge, at an x only a
-// grid column reaches.
+// The void the sweeps must never scatter into: the row past the world's north
+// edge, at an x only a grid column reaches.
 const HOLE = { x: 360, z: WORLD_MAX_Z + 40 };
 
 describe('world bounds on a grid', () => {
-  it('fills both grid columns from the south edge to the north one', () => {
+  it('fills the grid except the three holes upstream\'s map leaves', () => {
     // the premise the rest of the file rests on
     expect(WORLD_MIN_X).toBe(-540);
     expect(WORLD_MAX_X).toBe(540);
     expect(zoneContaining(HOLE.x, HOLE.z)).toBeNull(); // past the north edge
-    expect(zoneContaining(HOLE.x, 0)).not.toBeNull(); // the vale's band
-    expect(zoneContaining(HOLE.x, 700)).not.toBeNull(); // was a hole, now Evergarden
+    expect(zoneContaining(HOLE.x, 0)).not.toBeNull(); // the vale's band, Farshore
+    expect(zoneContaining(HOLE.x, 700)).not.toBeNull(); // Evergarden
     expect(zoneContaining(-HOLE.x, 700)).not.toBeNull(); // ...and Palmreach
+    // ...and the three holes inside the bounding box, in the order the header
+    // lists them. These are the fixture the gates below are tested against.
+    expect(zoneContaining(-HOLE.x, 0)).toBeNull(); // no -x column in the vale's row
+    expect(zoneContaining(0, 2000)).toBeNull(); // the strip ends at the Frostveil
+    expect(zoneContaining(-HOLE.x, 2400)).toBeNull(); // Amberfall stops at 2380
   });
 
   it('reports the rim per row, not one half width for the whole world', () => {
-    // a row with a column: the world reaches the grid's outer edge
+    // a row with a column on both sides: the world reaches the grid's outer edge
+    expect(insideWorldRim(500, 400, 16)).toBe(true);
+    expect(insideWorldRim(-500, 400, 16)).toBe(true);
+    // the vale's row has a column on the +x side ONLY, so the rim is out at the
+    // grid edge there and back at the strip's own wall on the -x side. This is
+    // the PER SIDE half width (`worldHalfWidthAt(z, x)`) the ragged grid needs:
+    // one half width for the row would push the wall 360yd out over the hole.
     expect(insideWorldRim(500, 0, 16)).toBe(true);
-    // every row has one now, so the rim is out at the grid edge everywhere
-    expect(insideWorldRim(500, 700, 16)).toBe(true);
-    expect(insideWorldRim(160, 700, 16)).toBe(true);
+    expect(insideWorldRim(160, 0, 16)).toBe(true);
+    expect(insideWorldRim(-500, 0, 16)).toBe(false);
     // ...and it still comes back to the strip past the last band
     expect(insideWorldRim(500, WORLD_MAX_Z + 40, 16)).toBe(false);
-    // the z rim is unchanged
+    // the z rim is unchanged, and is now per COLUMN too: the middle column ends
+    // at the Frostveil (1960) while the columns beside it run past 2380
     expect(insideWorldRim(0, WORLD_MIN_Z + 1, 16)).toBe(false);
     expect(insideWorldRim(0, WORLD_MAX_Z - 1, 16)).toBe(false);
+    expect(insideWorldRim(0, 2000, 16)).toBe(false);
+    expect(insideWorldRim(360, 2000, 16)).toBe(true);
   });
 
   it('spans only the columns a row actually has', () => {
-    const columnRow = zoneRowSpanX(0);
-    expect(columnRow).toEqual({ minX: WORLD_MIN_X, maxX: WORLD_MAX_X });
+    // The vale's row: Farshore on +x, nothing on -x, so the span stops at the
+    // strip's own west edge rather than reaching the grid's bounding box.
+    expect(zoneRowSpanX(0)).toEqual({ minX: STRIP_MIN_X, maxX: WORLD_MAX_X });
     // z 700 used to be a strip-only row; the realm ring gave it both columns
     expect(zoneRowSpanX(700)).toEqual({ minX: WORLD_MIN_X, maxX: WORLD_MAX_X });
+    // the northmost row is a single column again (Drakelands, +x only)
+    expect(zoneRowSpanX(2400)).toEqual({ minX: 180, maxX: WORLD_MAX_X });
     // the span is still DERIVED per row, not hardcoded: past the last band
     // there is no zone at all and it says so
     expect(zoneRowSpanX(WORLD_MAX_Z + 50)).toBeNull();
@@ -142,10 +163,11 @@ describe('ground dressing sweep', () => {
       }
     }
     expect(sweep.spots).toEqual(reference);
-    // ...and with the grid solid the prefilter now skips NOTHING. That is the
-    // point of asserting against the reference sweep rather than against the
-    // prefilter: the two agree whether the grid is ragged or full.
-    expect(sweep.stats.skippedVoid).toBe(0);
+    // ...and the prefilter really is skipping the three holes: the reference
+    // walk above visits those cells and rejects them on the gates, the real
+    // sweep never visits them at all, and the two agree spot for spot. That
+    // agreement is the contract; the count is only evidence the holes exist.
+    expect(sweep.stats.skippedVoid).toBeGreaterThan(0);
     expect(sweep.stats.cells).toBe(sweep.stats.evaluated + sweep.stats.skippedVoid);
   });
 

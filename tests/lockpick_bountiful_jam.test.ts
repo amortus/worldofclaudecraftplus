@@ -84,6 +84,10 @@ describe('Bountiful lockpick, flawless sim path', () => {
 
 describe('Bountiful lockpick, the old jam is gone (authoritative-state picking)', () => {
   it('opens every seed when each pick reads the live column, with NO drain', () => {
+    // Full map parity roughly doubled world-generation cost (14 zones, 183
+    // camps, 617 mobs, z out to 2420) and this case builds one Sim per seed,
+    // which took it past vitest's 5s default. The sweep and the assertions are
+    // unchanged; only the budget is.
     // This is the headline regression: previously a frozen HUD column jammed
     // most seeds on the single premium try. Reading sim.lockpickState directly
     // (what the rewritten board does) cannot freeze, so every seed opens.
@@ -101,7 +105,7 @@ describe('Bountiful lockpick, the old jam is gone (authoritative-state picking)'
       if (run.objectState[chestId].looted) opened++;
     }
     expect(opened).toBe(N);
-  });
+  }, 60_000);
 
   it('first page (16 cols) seats and rolls onto page 2 without any drain', () => {
     const sim = makeSim(99);

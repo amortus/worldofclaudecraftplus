@@ -242,15 +242,12 @@ const LOOSE: Case[] = [
     to: { object: 'grave_captain_voss' },
     template: 'Royal Assassin Voss by the {dirAdj} cliff',
   },
-  // The herd is east of Gravewatch and only slightly south of it, so "north"
-  // names the weaker axis. Loose rather than rewritten: it still points a
-  // player the right way.
-  {
-    quest: 'q_aw_rotting_herd',
-    from: { camp: 'blighted_stag' },
-    to: { poi: 'Gravewatch' },
-    template: 'wander {dir} toward Gravewatch',
-  },
+  // The two Ashen Wastes cases (`q_aw_rotting_herd` toward Gravewatch and
+  // `q_aw_wraiths` toward the Hollow Barrows) were removed when full map parity
+  // gave that band to upstream's Veiled Hollow and parked the whole zone (see
+  // the PARKED banner in sim/data.ts). Neither quest, neither camp and neither
+  // POI is in the live tables any more, so the cases cannot be re-derived; the
+  // Veiled Hollow's own compass copy is covered by tests/realms_compass.test.ts.
   {
     quest: 'q_cult_camp',
     from: { lake: ['mirefen_marsh', 2] },
@@ -287,12 +284,6 @@ const LOOSE: Case[] = [
     to: { poi: 'Gravewyrm Sanctum' },
     template: 'They point {dir}',
     field: 'completionText',
-  },
-  {
-    quest: 'q_aw_wraiths',
-    from: { npc: 'dawn_chaplain_orin' },
-    to: { camp: 'wraithling' },
-    template: 'The old barrows {dir} of here',
   },
 ];
 

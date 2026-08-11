@@ -9,13 +9,26 @@
 // VERBATIM from upstream, coordinates and tiers included: their zone ids and
 // z-bands are identical to ours, so every one of these already sits at the
 // intended landmark (the Copper Dig outcrops, Webwood, Mirror Lake, the Fenbridge
-// approaches, Deeprock Burrows, the Glimmermere treeline). The ashen_wastes set
-// is ours: upstream has no zone-4 equivalent, so it is authored against zone 4's
-// own POIs and is the only place tier-4 nodes appear.
+// approaches, Deeprock Burrows, the Glimmermere treeline). The tier-4 set is
+// ours.
+//
+// THE TIER-4 SET MOVED ZONES WITHOUT MOVING A YARD. It was authored for the
+// Ashen Wastes, whose band (z 900..1260) is now held by the Veiled Hollow
+// (z 900..1440); the Wastes are retired, not deleted (see the PARKED CONTENT
+// banner in `src/sim/data.ts`). Every one of the nine nodes below still resolves
+// through `zoneAt` to a real zone at the exact coordinates it was authored at,
+// and the Veiled Hollow is a tier-4 gather zone (`ZONE_GATHER_TIER`), so the
+// placements and the tiers are both still correct and NOTHING was moved. Only
+// the `zoneId` LABEL was stale, and a stale label is not cosmetic here: it is the
+// key `nodeMaterialFor` and `fishingTablesFor` look the zone's yields up by, so a
+// dangling label would have silently dropped the whole rung back to the Vale's
+// copper. The node ids keep their `*_ashen_*` spelling on purpose: a node id is
+// also its ground object's item id, so renaming them would mint ids across the
+// i18n lists for no gameplay gain.
 //
 // `level` is a one-time snapshot of the zone's levelRange midpoint (Vale [1,7]
-// -> 4, Mirefen [6,13] -> 10, Thornpeak [13,20] -> 17, Ashen Wastes [20,20] ->
-// 20), not a live lookup: it feeds the minimap difficulty band and a later
+// -> 4, Mirefen [6,13] -> 10, Thornpeak [13,20] -> 17, Veiled Hollow [15,20] ->
+// 18), not a live lookup: it feeds the minimap difficulty band and a later
 // profession-XP curve.
 
 import type { GatherNodeDef, GatherNodeType } from '../../professions/types';
@@ -29,19 +42,22 @@ const NODE_NAMES: Record<GatherNodeType, Record<string, string>> = {
     eastbrook_vale: 'Copper Vein',
     mirefen_marsh: 'Iron Deposit',
     thornpeak_heights: 'Thorium Vein',
-    ashen_wastes: 'Cinderite Seam',
+    // The three tier-4 names below are kept exactly as authored: they are live
+    // player-visible English with locale rows behind them, and the zone key is
+    // the only thing the Ashen Wastes retirement made stale.
+    veiled_hollow: 'Cinderite Seam',
   },
   wood: {
     eastbrook_vale: 'Ironbark Stand',
     mirefen_marsh: 'Ashwood Stand',
     thornpeak_heights: 'Elderwood Stand',
-    ashen_wastes: 'Boneash Snag',
+    veiled_hollow: 'Boneash Snag',
   },
   herb: {
     eastbrook_vale: 'Silverleaf Patch',
     mirefen_marsh: 'Goldleaf Patch',
     thornpeak_heights: 'Sunpetal Patch',
-    ashen_wastes: 'Gravebloom Patch',
+    veiled_hollow: 'Gravebloom Patch',
   },
 };
 
@@ -49,7 +65,7 @@ const ZONE_LEVEL: Record<string, number> = {
   eastbrook_vale: 4,
   mirefen_marsh: 10,
   thornpeak_heights: 17,
-  ashen_wastes: 20,
+  veiled_hollow: 18,
 };
 
 function node(
@@ -126,19 +142,24 @@ export const GATHER_NODES: readonly GatherNodeDef[] = [
   node('wood_thornpeak_t3', 'thornpeak_heights', 'wood', -92, 793, 3),
   node('herb_thornpeak_t3', 'thornpeak_heights', 'herb', -28, 690, 3),
 
-  // --- The Ashen Wastes (tier 4 only: the one place a 75-plus gatherer still
-  // gains at full rate, and the reason the endgame zone is worth farming).
-  // Placed off the Bonefields, the Hollow Barrows and the Pale Reach, clear of
-  // the Gravewatch hub (0, 1020, r20) and the Stillmere (-60, 1100, r16).
-  node('ore_ashen_1', 'ashen_wastes', 'ore', 75, 1068, 4),
-  node('ore_ashen_2', 'ashen_wastes', 'ore', 86, 1082, 4),
-  node('ore_ashen_3', 'ashen_wastes', 'ore', 70, 1085, 4),
-  node('wood_ashen_1', 'ashen_wastes', 'wood', -50, 1162, 4),
-  node('wood_ashen_2', 'ashen_wastes', 'wood', -62, 1178, 4),
-  node('wood_ashen_3', 'ashen_wastes', 'wood', -44, 1176, 4),
-  node('herb_ashen_1', 'ashen_wastes', 'herb', 40, 1208, 4),
-  node('herb_ashen_2', 'ashen_wastes', 'herb', 52, 1220, 4),
-  node('herb_ashen_3', 'ashen_wastes', 'herb', 36, 1222, 4),
+  // --- The Veiled Hollow (tier 4 only: the one place a 75-plus gatherer still
+  // gains at full rate, and the reason the endgame band is worth farming).
+  // Authored for the Ashen Wastes and NOT moved when that zone was retired: the
+  // nine coordinates below sat in the z 900..1260 band then and sit in the Veiled
+  // Hollow's z 900..1440 band now (see the header). They read against the
+  // Hollow's own landmarks unchanged: the ore off the Sunken Court approach
+  // (125, 1085), the timber west of the Gleaming Deep (-70, 1155), the herbs in
+  // the north meadows, all clear of Eldergleam (-40, 1030, r30) and of every lake
+  // carve in `realms/veiled_hollow.ts`.
+  node('ore_ashen_1', 'veiled_hollow', 'ore', 75, 1068, 4),
+  node('ore_ashen_2', 'veiled_hollow', 'ore', 86, 1082, 4),
+  node('ore_ashen_3', 'veiled_hollow', 'ore', 70, 1085, 4),
+  node('wood_ashen_1', 'veiled_hollow', 'wood', -50, 1162, 4),
+  node('wood_ashen_2', 'veiled_hollow', 'wood', -62, 1178, 4),
+  node('wood_ashen_3', 'veiled_hollow', 'wood', -44, 1176, 4),
+  node('herb_ashen_1', 'veiled_hollow', 'herb', 40, 1208, 4),
+  node('herb_ashen_2', 'veiled_hollow', 'herb', 52, 1220, 4),
+  node('herb_ashen_3', 'veiled_hollow', 'herb', 36, 1222, 4),
 ];
 
 const NODES_BY_ID: ReadonlyMap<string, GatherNodeDef> = new Map(

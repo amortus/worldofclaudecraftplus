@@ -16,8 +16,11 @@ import {
   STRIP_MIN_X,
   STRIP_ZONES,
   WORLD_MAX_X,
+  WORLD_MAX_Z,
   WORLD_MIN_X,
+  WORLD_MIN_Z,
   worldHalfWidthAt,
+  worldNorthEdgeAt,
   ZONES,
   zoneContaining,
   zoneForLevel,
@@ -31,8 +34,15 @@ import { groundHeight } from '../src/sim/world';
 //    (`Math.abs(x) > WORLD_MAX_X - n` in render/critters, fish, foliage, motes,
 //    terrain; `WORLD_MAX_X * 2` and `(x + WORLD_MAX_X) / (WORLD_MAX_X * 2)` in
 //    render/terrain; `p.pos.x / WORLD_MAX_X` in sim/obs.ts; the map rect in
-//    ui/hud.ts) read it as a half width about x = 0. The grid must therefore
-//    stay mirrored, or each of those has to be rewritten first.
+//    ui/hud.ts) read it as a half width about x = 0.
+//
+//    That used to be enforced as ROW SYMMETRY: every column had a mirror twin
+//    across x = 0. Upstream's grid is deliberately not row-symmetric (the
+//    Farshore Isle sits at +x in the vale's row with nothing opposite it, and
+//    the Drakelands reaches z 2420 where the Amberfall stops at 2380), so the
+//    rule that actually protects those nine call sites is asserted instead:
+//    the BOUNDING BOX is still symmetric, and the PER SIDE rim
+//    (`worldHalfWidthAt(z, x)`) never reaches past WORLD_MAX_X and never steps.
 //
 // 2. THE INSTANCE PLANE MUST NOT COLLIDE. `groundHeight` flattens everything
 //    past DUNGEON_X_THRESHOLD (600) into an instance floor, and `dungeonAt`
@@ -62,40 +72,103 @@ const reload = (x: number, level: number, z = -1250) => {
   return sim.entities.get(pid)!;
 };
 
-describe('phase 2: the world grid stays symmetric about x = 0', () => {
-  it('mirrors every column, so WORLD_MAX_X is still a true half width', () => {
+describe('phase 2: the world box stays symmetric, and the rim never reaches past it', () => {
+  it('keeps the bounding box symmetric, so WORLD_MAX_X is still a true half width', () => {
     expect(WORLD_MIN_X).toBe(-WORLD_MAX_X);
     expect(WORLD_MAX_X).toBe(540);
-    // Each column has a mirror twin at the same z band.
+    // Every column rect lies inside the box on BOTH axes, so |x| never exceeds
+    // the half width the nine call sites assume.
     for (const col of COLUMN_ZONES) {
       const x0 = col.xMin ?? STRIP_MIN_X;
       const x1 = col.xMax ?? STRIP_MAX_X;
-      const twin = COLUMN_ZONES.find(
-        (o) =>
-          o !== col &&
-          o.zMin === col.zMin &&
-          o.zMax === col.zMax &&
-          (o.xMin ?? STRIP_MIN_X) === -x1 &&
-          (o.xMax ?? STRIP_MAX_X) === -x0,
-      );
-      expect(twin, `${col.id} has no mirror column`).toBeDefined();
+      expect(Math.abs(x0), `${col.id}.xMin`).toBeLessThanOrEqual(WORLD_MAX_X);
+      expect(Math.abs(x1), `${col.id}.xMax`).toBeLessThanOrEqual(WORLD_MAX_X);
+    }
+    // ...and the rim itself, which is what actually fences the player, never
+    // reaches past WORLD_MAX_X on either side, never comes inside the strip,
+    // and never steps. THIS is the invariant the mirror rule used to imply.
+    let maxStep = 0;
+    for (const side of [-1, 0, 1]) {
+      for (let z = WORLD_MIN_Z - 200; z <= WORLD_MAX_Z + 200; z += 1) {
+        const half = worldHalfWidthAt(z, side);
+        expect(half, `half width at z=${z} side=${side}`).toBeLessThanOrEqual(WORLD_MAX_X);
+        expect(half, `half width at z=${z} side=${side}`).toBeGreaterThanOrEqual(STRIP_MAX_X);
+        maxStep = Math.max(maxStep, Math.abs(worldHalfWidthAt(z + 1, side) - half));
+      }
+    }
+    // Measured worst case 8.31yd per yard of z, at the Farshore/Willowfen
+    // hand-over (z 182).
+    expect(maxStep, 'the rim eases, it does not step').toBeLessThan(14);
+  });
+
+  it('rims each side at its own half width, because the half width is per side now', () => {
+    // The heightfield noise is not mirrored, so the two rims are not equal
+    // heights; what must match is WHERE they stand. Past THAT SIDE's half width
+    // the ground is fenced, and well inside it, it is not. Reading the half
+    // width per side is the whole point: answering 540 for the empty side of a
+    // one-sided row would push the wall out over ground no zone owns.
+    // Kept clear of the south/north rims, which saturate the same term.
+    for (const side of [-1, 1]) {
+      for (let z = -140; z <= WORLD_MAX_Z; z += 7) {
+        if (z > worldNorthEdgeAt(side * 300) - 70) continue;
+        const half = worldHalfWidthAt(z, side);
+        const out = groundHeight(side * (half + 6), z, 1337);
+        const inside = groundHeight(side * (half - 60), z, 1337);
+        expect(out - inside, `rim at z=${z} side=${side}`).toBeGreaterThan(18);
+      }
     }
   });
 
-  it('rims both sides at the same distance, which is what the half width means', () => {
-    // The heightfield noise is not mirrored, so the two rims are not equal
-    // heights; what must match is WHERE they stand. Past the row's half width
-    // the ground is fenced on both sides, and well inside it, it is not.
-    // Kept clear of the south/north rims, which saturate the same term.
-    for (let z = -140; z <= 1220; z += 7) {
-      const half = worldHalfWidthAt(z);
-      const outEast = groundHeight(half + 6, z, 1337);
-      const outWest = groundHeight(-(half + 6), z, 1337);
-      const inEast = groundHeight(half - 60, z, 1337);
-      const inWest = groundHeight(-(half - 60), z, 1337);
-      expect(outEast - inEast, `east rim at z=${z}`).toBeGreaterThan(18);
-      expect(outWest - inWest, `west rim at z=${z}`).toBeGreaterThan(18);
+  it('rims the one-sided rows at the strip edge on their empty side', () => {
+    // The Farshore Isle occupies x 180..540 in the vale's row and NOTHING sits
+    // opposite it, so that row is 540 wide going west and 180 wide going east
+    // (compass: +x is west). The default `x = 0` keeps the old answer, the
+    // widest column in the row, whichever side it is on.
+    expect(worldHalfWidthAt(0, -1)).toBe(180);
+    expect(worldHalfWidthAt(0, +1)).toBe(540);
+    expect(worldHalfWidthAt(0)).toBe(540);
+    // ...across the whole row, not just at its middle. The -x side eases out
+    // only once the Willowfen's own row window opens, 30yd south of z 180.
+    for (let z = WORLD_MIN_Z; z <= 150; z += 5) {
+      expect(worldHalfWidthAt(z, -1), `west half width at z=${z}`).toBe(STRIP_MAX_X);
     }
+    for (let z = -140; z <= 140; z += 5) {
+      expect(worldHalfWidthAt(z, +1), `east half width at z=${z}`).toBe(WORLD_MAX_X);
+    }
+    // The same asymmetry at the north end: the Drakelands runs to z 2420, the
+    // Amberfall stops at 2380, so past the Amberfall's ease-out the -x side is
+    // back at the strip edge while the +x side is still out at the column.
+    expect(worldHalfWidthAt(2415, -1)).toBe(STRIP_MAX_X);
+    expect(worldHalfWidthAt(2415, +1)).toBeGreaterThan(400);
+  });
+
+  it('follows the columns that exist at the north edge, and eases rather than steps', () => {
+    // The twin of the per-side half width. The strip ends at the Frostveil
+    // (1960) while the two columns beside it run to 2380 and 2420, so a single
+    // global WORLD_MAX_Z would open a 360 x 460yd corridor of no-zone ground.
+    for (const x of [-100, -50, 0, 50, 100]) {
+      expect(worldNorthEdgeAt(x), `north edge over the middle column at x=${x}`).toBe(1960);
+    }
+    for (const x of [200, 300, 400, 540]) {
+      expect(worldNorthEdgeAt(x), `north edge over the Drakelands at x=${x}`).toBe(WORLD_MAX_Z);
+    }
+    for (const x of [-540, -400, -300, -200]) {
+      expect(worldNorthEdgeAt(x), `north edge over the Amberfall at x=${x}`).toBe(2380);
+    }
+    // It hands over across `columnColWeight`'s 30yd window, so the 460yd rise
+    // is spread over 30yd: about 15yd of z per yard of x on average, 22.97 at
+    // the steepest. That is an EASE, not a step, and the check for that is that
+    // the difference scales with the stride rather than jumping at one x.
+    const worstStep = (stride: number): number => {
+      let worst = 0;
+      for (let x = -700; x <= 700; x += stride) {
+        worst = Math.max(worst, Math.abs(worldNorthEdgeAt(x + stride) - worldNorthEdgeAt(x)));
+      }
+      return worst;
+    };
+    expect(worstStep(1)).toBeLessThan(24);
+    expect(worstStep(0.1)).toBeLessThan(2.5);
+    expect(worstStep(0.01)).toBeLessThan(0.25);
   });
 });
 
@@ -173,11 +246,18 @@ describe('phase 2: a saved position from every band still lands somewhere sane',
     }
   });
 
-  it('sends a capped character to the Ashen Wastes, never to a column hub', () => {
+  it('sends a capped character to the Frostveil Reach, never to a column hub', () => {
     // zoneForLevel walks STRIP_ZONES: column zones are side content authored
     // beside a band, and a level-8 column zone must not shadow the level-20 hub.
+    //
+    // The endgame STRIP band used to be the Ashen Wastes. Full map parity gave
+    // its z 900..1260 rows to upstream's Veiled Hollow and stacked the Frostveil
+    // Reach (17-20) north of that, so the Ashen Wastes is parked and the last
+    // strip band whose level band has opened at the cap is the Frostveil. The
+    // assertion that matters is unchanged: a capped character ejected out of a
+    // stale instance position lands in a STRIP hub, never a column hub.
     const endgame = STRIP_ZONES[STRIP_ZONES.length - 1];
-    expect(endgame.id).toBe('ashen_wastes');
+    expect(endgame.id).toBe('frostveil');
     expect(zoneForLevel(20)).toBe(endgame);
     expect(zoneForLevel(1)).toBe(STRIP_ZONES[0]);
     for (let level = 1; level <= 20; level++) {

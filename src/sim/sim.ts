@@ -221,6 +221,7 @@ import {
   riftSlotAt,
   ZONES,
   zoneAt,
+  zoneContaining,
   zoneForLevel,
 } from './data';
 import {
@@ -2251,6 +2252,19 @@ export class Sim {
     } else if (savedPos && savedPos.x > DUNGEON_X_THRESHOLD) {
       const dungeon = dungeonAt(savedPos.x) ?? DUNGEON_LIST[0];
       savedPos = { x: dungeon.doorPos.x, z: dungeon.doorPos.z - 4 };
+    } else if (savedPos && !zoneContaining(savedPos.x, savedPos.z)) {
+      // RETIRED-GROUND MIGRATION, the same mechanism one branch up rather than a
+      // second one. The world is a GRID with holes: full map parity deleted two
+      // invented column zones and retired the Ashen Wastes, and upstream's own
+      // grid is ragged (nothing faces the Farshore across the vale's row, and
+      // the strip ends at the Frostveil while two columns run on north). A
+      // character saved on ground that no zone owns any more would rejoin inside
+      // the containment rim, on a 40yd wall, with no graveyard and no zone text.
+      // `zoneContaining` is the strict rect lookup that reports "nowhere"
+      // honestly (`zoneAt` clamps instead), and this branch is reached only for
+      // an OVERWORLD position, since every instance plane is handled above.
+      const hub = zoneForLevel(savedState?.level ?? 1).hub;
+      savedPos = { x: hub.x, z: hub.z };
     }
     const startPos = savedPos
       ? this.groundPos(savedPos.x, savedPos.z)

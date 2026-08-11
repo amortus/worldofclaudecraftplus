@@ -100,6 +100,10 @@ describe('world.lockpickState is the single board source of truth', () => {
   });
 
   it('opens the lock even with NO event drain anywhere (no cache to freeze)', () => {
+    // Full map parity roughly doubled world-generation cost (14 zones, 183
+    // camps, 617 mobs, z out to 2420) and this case builds one Sim per seed,
+    // which took it past vitest's 5s default. The sweep and the assertions are
+    // unchanged; only the budget is.
     // The old jam reproduced when the HUD froze behind the sim because events
     // were not drained. The rewrite reads state directly, so dropping every
     // drainEvents call cannot desync the board. Every seed must still open.
@@ -117,7 +121,7 @@ describe('world.lockpickState is the single board source of truth', () => {
       if (run.objectState[chestId].looted) opened++;
     }
     expect(opened).toBe(N);
-  });
+  }, 60_000);
 
   it('console sim.lockpickEngage leaves state live at col 0 (board would paint it)', () => {
     const sim = makeSim(42);

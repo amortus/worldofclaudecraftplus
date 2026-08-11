@@ -82,7 +82,11 @@ export const CRAFT_RUNGS: readonly CraftRungDef[] = [
   { rung: 1, zoneId: 'eastbrook_vale', skillReq: 0, level: 5, materialTier: 0 },
   { rung: 2, zoneId: 'mirefen_marsh', skillReq: 25, level: 10, materialTier: 1 },
   { rung: 3, zoneId: 'thornpeak_heights', skillReq: 50, level: 15, materialTier: 2 },
-  { rung: 4, zoneId: 'ashen_wastes', skillReq: 75, level: 20, materialTier: 3 },
+  // rung 4 was keyed on `ashen_wastes` until that zone was retired; the Veiled
+  // Hollow holds the same band and the same tier-4 materials (see
+  // `ZONE_GATHER_TIER`). The zoneId is documentation here, but a dead one would
+  // be the only place in this module still naming a zone that does not exist.
+  { rung: 4, zoneId: 'veiled_hollow', skillReq: 75, level: 20, materialTier: 3 },
 ];
 
 export function craftRung(rung: 1 | 2 | 3 | 4): CraftRungDef {

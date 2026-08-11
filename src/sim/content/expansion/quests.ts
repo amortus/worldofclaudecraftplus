@@ -309,21 +309,41 @@ export const EXPANSION_QUESTS: Record<string, QuestDef> = {
     minLevel: 16,
   },
 
-  // === The Ashen Wastes and the Cinderforge (level 20) =====================
-  // Anchors: q_aw_acolytes (5000 / 2000, rep 400) and q_aw_corrupt_sample
-  // (5200 / 2200, rep 450) for the overworld pair; q_ch_breach (6000 / 3000,
-  // rep 350, five players), q_ch_pit (6500 / 3300, rep 400), q_ch_forge
-  // (6800 / 3500, rep 450) and q_ch_deathlord (9000 / 5000, rep 800) for the
-  // dungeon chain. All zone4.ts.
+  // === The Cinderforge (level 20) ==========================================
+  // ORIGINAL ANCHORS, all zone4.ts: q_aw_acolytes (5000 / 2000, rep 400) and
+  // q_aw_corrupt_sample (5200 / 2200, rep 450) for the overworld pair;
+  // q_ch_breach (6000 / 3000, rep 350, five players), q_ch_pit (6500 / 3300,
+  // rep 400), q_ch_forge (6800 / 3500, rep 450) and q_ch_deathlord
+  // (9000 / 5000, rep 800) for the dungeon chain.
+  //
+  // EVERY ONE OF THOSE IS PARKED. zone4.ts is no longer merged (the PARKED
+  // CONTENT banner in `src/sim/data.ts`), so this line's numbers cited records
+  // that no longer ship, which this pack's own rule forbids. The band is the
+  // Veiled Hollow's now, and its live ladder is q_calming_the_deep (4200 / 2000)
+  // up through q_sunken_court and q_wardens_echoes (5200), q_waking_warden and
+  // q_hollow_first_of_the_herd (6000) to the capstone q_seal_restored
+  // (7400 / 5500). Five of the six steps below already sit inside that live
+  // ladder unchanged; only the capstone did not, and it is re-cited at its own
+  // site.
   q_cf_approach: {
     id: 'q_cf_approach',
     name: 'Clearing the Approach',
     giverNpcId: 'dawn_forgewright_calla',
     turnInNpcId: 'dawn_forgewright_calla',
-    text: 'The bone reavers out of the Bonefields have worked their way along the ridge to within a stone\'s throw of my watch-post, $N, and I have two people and a signal horn. Ten of them, off the approach. Whatever else the Dawn decides to do about that stair, we are not deciding it while fighting on the doorstep.',
+    // RETARGETED by the full-map parity pass. This quest asked for ten
+    // `bone_reaver`, an Ashen Wastes mob, and the Ashen Wastes is retired (see
+    // the PARKED banner in sim/data.ts): the band is the Veiled Hollow now. The
+    // creature that actually holds this ground is the `ancient_guardian` of the
+    // Sunken Court, whose two camps sit at (125, 1085) and (138, 1070) against
+    // the Cinderforge mouth at (122, 1058), i.e. 27yd away. The count is
+    // unchanged and matches the Hollow's own `q_wardens_echoes`, which asks for
+    // ten of the same creature, so no number here is invented.
+    text: 'The court guardians have woken wrong, $N, and they have strayed off their ruins to within a stone\'s throw of my watch-post. I have two people and a signal horn. Ten of them, off the approach. Whatever else the Dawn decides to do about that stair, we are not deciding it while fighting on the doorstep.',
     completionText:
       'The ridge is clear and my two are asleep for the first time in a week. Now we can talk about the hole in the ground.',
-    objectives: [{ type: 'kill', targetMobId: 'bone_reaver', count: 10, label: 'Bone Reaver slain' }],
+    objectives: [
+      { type: 'kill', targetMobId: 'ancient_guardian', count: 10, label: 'Ancient Guardian stilled' },
+    ],
     xpReward: 5000,
     copperReward: 2000,
     itemRewards: {},
@@ -411,7 +431,15 @@ export const EXPANSION_QUESTS: Record<string, QuestDef> = {
       { type: 'kill', targetMobId: 'cf_vharkul', count: 1, label: 'Vharkul the Unquenched slain' },
       { type: 'collect', itemId: 'cf_quenchless_ember', count: 1, label: 'Quenchless Ember' },
     ],
-    xpReward: 9000,
+    // RE-CITED by the full-map parity pass. This was 9000 xp, copied 1:1 off
+    // q_ch_deathlord (9000 / 5000), the Claudeholme finale in the retired
+    // zone4.ts. With that ladder parked, 9000 cited nothing and stood 1600 above
+    // the highest reward any shipped quest pays. Re-anchored on the live
+    // capstone of this band, q_seal_restored (7400 / 5500,
+    // realms/veiled_hollow.ts), which is now the top of the shipped ladder.
+    // Copper is unchanged: 5000 still sits under that anchor's 5500 and holds
+    // the line's 0.3-0.8 copper-to-xp band at 0.68.
+    xpReward: 7400,
     copperReward: 5000,
     itemRewards: { warrior: 'cf_ef_helmet', mage: 'cf_cs_helmet', rogue: 'cf_ss_helmet' },
     repReward: { faction: 'dawn_of_claude', amount: 800 },

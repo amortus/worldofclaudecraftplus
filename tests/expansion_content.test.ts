@@ -228,6 +228,17 @@ describe('expansion: reward curves stay in band', () => {
       anchors: ['q_kobold_tunnels', 'q_glowing_wax', 'q_ogre_edges', 'q_ogre_bounty', 'q_elementals'],
     },
     {
+      // RE-ANCHORED by the full-map parity pass. All six original anchors
+      // (q_aw_acolytes, q_aw_corrupt_sample, q_ch_breach, q_ch_pit, q_ch_forge,
+      // q_ch_deathlord) lived in `content/zone4.ts`, which `data.ts` no longer
+      // merges: the Ashen Wastes is retired and the Veiled Hollow holds its band
+      // (see the PARKED CONTENT banner in src/sim/data.ts). The six below are the
+      // live level 15-20 ladder that replaced it, chosen to span the same shape:
+      // a mid-chain kill quest at the bottom (4200 / 2000), two mid steps, two
+      // two-player steps, and the band's capstone at the top (7400 / 5500). None
+      // was picked to admit a pack number: this envelope is NARROWER than the one
+      // it replaces at the top of the xp range (7400 against 9000), and its
+      // copper ceiling only rises because the live capstone genuinely pays 5500.
       name: 'The Cinderforge (Forgewright Calla)',
       quests: [
         'q_cf_approach',
@@ -237,7 +248,14 @@ describe('expansion: reward curves stay in band', () => {
         'q_cf_bellows',
         'q_cf_unquenched',
       ],
-      anchors: ['q_aw_acolytes', 'q_aw_corrupt_sample', 'q_ch_breach', 'q_ch_pit', 'q_ch_forge', 'q_ch_deathlord'],
+      anchors: [
+        'q_calming_the_deep',
+        'q_sunken_court',
+        'q_wardens_echoes',
+        'q_waking_warden',
+        'q_hollow_first_of_the_herd',
+        'q_seal_restored',
+      ],
     },
   ];
 
@@ -304,26 +322,39 @@ describe('expansion: reward curves stay in band', () => {
 });
 
 describe('expansion: item power stays on the shipped ladder', () => {
-  // Each Cinderforge armour piece is anchored on the Dawn of Claude tier 0.5
-  // piece of the same slot and armour class (zone4.ts). Armour must land within
-  // 5 percent of the anchor and the primary-point total must not exceed it.
+  // RE-ANCHORED by the full-map parity pass. Each Cinderforge armour piece used
+  // to be anchored on the Dawn of Claude tier 0.5 piece of the same slot and
+  // armour class, and all fifteen of those live in `content/zone4.ts`, which
+  // `data.ts` no longer merges (the PARKED CONTENT banner there). The live set
+  // with the same shape (five slots x three archetypes, one rung apart from this
+  // pack) is Claudeholme's tier 0.55, `CLAUDEHOLME_ITEMS` in dungeons.ts, which
+  // the chase-weapon test below already anchors on.
+  //
+  // The claim moves with the anchor and stays two-sided. Against the parked
+  // tier-0.5 set the pack was PEER gear: same sell, same quality, armour within
+  // 5 percent. Against tier 0.55 it is one rung BELOW: rare against epic, cheaper
+  // to vendor, fewer primary points, and armour that measures 88 to 94 percent of
+  // the epic's on all fifteen pieces. The band below is [0.85, 0.95], which is
+  // what "one rung down, not two" means in numbers and is the same width the 5
+  // percent rule had.
   const ARMOUR_ANCHORS: Record<string, string> = {
-    cf_ef_gloves: 'dawnguard_gauntlets',
-    cf_cs_gloves: 'dawn_handwraps',
-    cf_ss_gloves: 'dawnstalker_grips',
-    cf_ef_waist: 'dawnguard_girdle',
-    cf_cs_waist: 'dawn_cord',
-    cf_ss_waist: 'dawnstalker_belt',
-    cf_ef_feet: 'dawnguard_sabatons',
-    cf_cs_feet: 'dawn_slippers',
-    cf_ss_feet: 'dawnstalker_treads',
-    cf_ef_helmet: 'dawnguard_greathelm',
-    cf_cs_helmet: 'dawn_cowl',
-    cf_ss_helmet: 'dawnstalker_mask',
-    cf_ef_chest: 'dawnguard_breastplate',
-    cf_cs_chest: 'dawn_robe',
-    cf_ss_chest: 'dawnstalker_tunic',
+    cf_ef_gloves: 'pw_gloves',
+    cf_cs_gloves: 'hm_gloves',
+    cf_ss_gloves: 'as_gloves',
+    cf_ef_waist: 'pw_waist',
+    cf_cs_waist: 'hm_waist',
+    cf_ss_waist: 'as_waist',
+    cf_ef_feet: 'pw_feet',
+    cf_cs_feet: 'hm_feet',
+    cf_ss_feet: 'as_feet',
+    cf_ef_helmet: 'pw_helmet',
+    cf_cs_helmet: 'hm_helmet',
+    cf_ss_helmet: 'as_helmet',
+    cf_ef_chest: 'pw_chest',
+    cf_cs_chest: 'hm_chest',
+    cf_ss_chest: 'as_chest',
   };
+  const ARMOUR_BAND: [number, number] = [0.85, 0.95];
 
   const primaryPoints = (stats: Record<string, number | undefined> | undefined): number =>
     Object.entries(stats ?? {})
@@ -339,14 +370,19 @@ describe('expansion: item power stays on the shipped ladder', () => {
       const item = EXPANSION_ITEMS[id];
       const anchor = ITEMS[anchorId];
       expect(item, id).toBeTruthy();
+      // Same slot and the same class lock: the pack fills the tier-0.55 shape.
       expect(item.slot).toBe(anchor.slot);
-      expect(item.quality).toBe(anchor.quality);
-      expect(item.sellValue).toBe(anchor.sellValue);
+      expect(item.requiredClass, `${id} class lock`).toEqual(anchor.requiredClass);
+      // ...one rung under it on every axis that reads as power.
+      expect(item.quality, `${id} quality`).toBe('rare');
+      expect(anchor.quality, `${anchorId} quality`).toBe('epic');
+      expect(item.sellValue, `${id} sell`).toBeLessThan(anchor.sellValue);
+      expect(primaryPoints(item.stats), `${id} points`).toBeLessThan(primaryPoints(anchor.stats));
       const armor = item.stats?.armor ?? 0;
       const anchorArmor = anchor.stats?.armor ?? 0;
-      expect(Math.abs(armor - anchorArmor) / anchorArmor, `${id} armor`).toBeLessThanOrEqual(0.05);
-      expect(primaryPoints(item.stats), `${id} points`).toBeLessThanOrEqual(primaryPoints(anchor.stats));
-      expect(item.requiredClass, `${id} class lock`).toEqual(anchor.requiredClass);
+      const ratio = armor / anchorArmor;
+      expect(ratio, `${id} armor ratio ${ratio}`).toBeGreaterThanOrEqual(ARMOUR_BAND[0]);
+      expect(ratio, `${id} armor ratio ${ratio}`).toBeLessThanOrEqual(ARMOUR_BAND[1]);
     }
   });
 

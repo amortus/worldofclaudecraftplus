@@ -6,17 +6,6 @@
 
 import { BASE_ITEMS, FISHING_RARE_ID, FISHING_TABLES } from './content/items';
 import {
-  COLUMN_CAMPS,
-  COLUMN_ITEMS,
-  COLUMN_MOBS,
-  COLUMN_NPCS,
-  COLUMN_OBJECTS,
-  COLUMN_QUEST_ORDER,
-  COLUMN_QUESTS,
-  COLUMN_ROADS,
-  COLUMN_ZONE_DEFS,
-} from './content/columns';
-import {
   REALM_CAMPS,
   REALM_ITEMS,
   REALM_MOBS,
@@ -54,6 +43,11 @@ import {
   COLLAPSED_RELIQUARY_MODULES,
   DELVE_MOBS,
 } from './content/delves';
+import {
+  DAWN_TIER05_ITEM_IDS,
+  DAWN_TIER05_ITEMS,
+  DAWN_TIER05_VENDOR_REQS,
+} from './content/dawn_of_claude';
 import { CLAUDEHOLME_ITEMS, CLAUDEXX_ITEMS, DUNGEON_DEFS, DUNGEON_MOBS } from './content/dungeons';
 import {
   CINDERFORGE_DUNGEON_DEFS,
@@ -121,18 +115,41 @@ import {
   ZONE3_ROADS,
   ZONE3_ZONE,
 } from './content/zone3';
-import {
-  ZONE4_CAMPS,
-  ZONE4_ITEMS,
-  ZONE4_MOBS,
-  ZONE4_NPCS,
-  ZONE4_OBJECTS,
-  ZONE4_PROPS,
-  ZONE4_QUEST_ORDER,
-  ZONE4_QUESTS,
-  ZONE4_ROADS,
-  ZONE4_ZONE,
-} from './content/zone4';
+// ---------------------------------------------------------------------------
+// PARKED CONTENT: the Ashen Wastes (`src/sim/content/zone4.ts`).
+//
+// The full-map parity pass gave the z 900..1440 strip band to upstream's
+// `veiled_hollow`, which is the band the Ashen Wastes held (900..1260). Two
+// zones cannot tile the same strip rows, so the Ashen Wastes is RETIRED, not
+// deleted: `src/sim/content/zone4.ts` is intact on disk and simply no longer
+// merged here.
+//
+// PARKED, exactly: `ZONE4_ZONE` (the zone rect, hub Gravewatch, its POIs and
+// graveyard), `ZONE4_MOBS` (18 blighted templates, every one of which carried
+// `repOnKill: dawn_of_claude`), `ZONE4_NPCS` (18, including the mount vendor
+// `dawn_quartermaster_henning` and the delve giver's neighbours), `ZONE4_QUESTS`
+// + `ZONE4_QUEST_ORDER` (23 quests, `q_aw_*`), `ZONE4_ITEMS`, `ZONE4_CAMPS`,
+// `ZONE4_OBJECTS`, `ZONE4_ROADS` and `ZONE4_PROPS`.
+//
+// NOT parked, because retiring them would kill live content: the tier-4
+// gathering tools and the mount reins moved to Eldergleam (see the shelf blocks
+// below), and the Dawn of Claude TIER-0.5 REWARD SET was extracted verbatim to
+// `content/dawn_of_claude.ts` and re-shelved on the Hollow's armourer. That set
+// is the only thing the still-earnable `dawn_of_claude` faction can be spent on,
+// so parking it left a faction with no sink at all.
+//
+// TO RESTORE IT IN ONE LINE: uncomment the import below and the eight
+// `...ZONE4_*` spreads / `ZONE4_ZONE` entry marked `// PARKED (Ashen Wastes)`,
+// then give the Veiled Hollow a different strip band (or drop it) so the two do
+// not overlap in z. When you do, drop `content/dawn_of_claude.ts` and its two
+// blocks below as well: `ZONE4_ITEMS` defines the same 24 ids (identically) and
+// Henning gets his shelf back.
+//
+// import {
+//   ZONE4_CAMPS, ZONE4_ITEMS, ZONE4_MOBS, ZONE4_NPCS, ZONE4_OBJECTS,
+//   ZONE4_PROPS, ZONE4_QUEST_ORDER, ZONE4_QUESTS, ZONE4_ROADS, ZONE4_ZONE,
+// } from './content/zone4';
+// ---------------------------------------------------------------------------
 import { DUNGEON_WALL_HW } from './dungeon_layout';
 
 export type { DelveShopEntry, DelveShopGate, DelveShopOffer } from './content/delves';
@@ -186,7 +203,7 @@ export const ITEMS: Record<string, ItemDef> = mergeItems(
   ZONE3_ITEMS,
   TEMPLE_ITEMS,
   DELVE_ITEMS,
-  ZONE4_ITEMS,
+  // ZONE4_ITEMS, // PARKED (Ashen Wastes)
   CLAUDEHOLME_ITEMS,
   CLAUDEXX_ITEMS,
   // Gathering professions: materials, tools and zone-4 fish. `simple_fishing_pole`
@@ -200,14 +217,16 @@ export const ITEMS: Record<string, ItemDef> = mergeItems(
   // the 18 new quests. LAST, so a later pack can never be shadowed by an older
   // table redefining one of its ids.
   EXPANSION_ITEMS,
-  // The column ring's own items: five quest objects plus the two capstone
-  // reward sets. Everything else those zones hand out or sell is a shipped id.
-  COLUMN_ITEMS,
   // The realm ring's quest items and quest rewards, ported from upstream.
   REALM_ITEMS,
   // Reins. The mount system owns its own catalog (src/sim/mounts.ts) because it
   // is a mechanic, not zone content; only the item table is merged here.
   MOUNT_ITEMS,
+  // The Dawn of Claude tier-0.5 reward set, extracted from the parked Ashen
+  // Wastes (see the PARKED banner above). The 24 rows are byte-identical to
+  // their `ZONE4_ITEMS` originals, so this spread's position cannot change a
+  // single value even if that table is ever un-parked ahead of it.
+  DAWN_TIER05_ITEMS,
 );
 
 export const MOBS: Record<string, MobTemplate> = {
@@ -219,19 +238,16 @@ export const MOBS: Record<string, MobTemplate> = {
   ...TEMPLE_MOBS,
   ...TEMPLE_DUNGEON_MOBS,
   ...DELVE_MOBS,
-  ...ZONE4_MOBS,
+  // ...ZONE4_MOBS, // PARKED (Ashen Wastes)
   // Procedural rift elites and bosses. The generator picks from these by theme;
   // they never spawn in the overworld.
   ...RIFT_MOBS,
   // The Cinderforge roster (4 trash + 1 summoned add + 3 bosses). Instance-only,
   // like the other dungeon rosters: no camp spawns any of them.
   ...CINDERFORGE_MOBS,
-  // The east/west column ring. Its own roster on purpose: a quest kill
-  // objective matches `targetMobId` worldwide, so a column camp of a Mirefen
-  // mob would credit the Mirefen's quests from a zone away.
-  ...COLUMN_MOBS,
-  // The upstream realm ring's roster (Willowfen, Galecrest, Palmreach,
-  // Evergarden). Their ids, upstream's own, so a later sync stays a diff.
+  // The upstream realm ring's roster: every zone of the 14-zone grid that is
+  // not one of the three original strip bands. Their ids, upstream's own, so a
+  // later sync stays a diff.
   ...REALM_MOBS,
 };
 
@@ -240,14 +256,12 @@ export const NPCS: Record<string, NpcDef> = {
   ...ZONE2_NPCS,
   ...ZONE3_NPCS,
   ...TEMPLE_NPCS,
-  ...ZONE4_NPCS,
+  // ...ZONE4_NPCS, // PARKED (Ashen Wastes)
   brother_halven: BROTHER_HALVEN,
   ...EXPANSION_NPCS,
-  // The column ring's givers and provisioners. Appended LAST: world-gen walks
+  // The realm ring's givers. Appended LAST: world-gen walks
   // Object.values(NPCS) in insertion order, so every shipped NPC keeps its
   // entity id and its exact placement. NPC placement draws no rng either way.
-  ...COLUMN_NPCS,
-  // The realm ring's givers, appended last for the same reason.
   ...REALM_NPCS,
 };
 
@@ -256,9 +270,16 @@ export const NPCS: Record<string, NpcDef> = {
 // exists. It is NOT optional polish: Wave 1 shipped 15 gathering tools no
 // vendor sold, and gathering hard-requires a tool, so 42 nodes were permanent
 // scenery (tests/gather_tools_obtainable.test.ts guards that class of bug now).
-// The Dawn of Claude quartermaster is the right shelf: he is the level-cap
-// convenience vendor, and the reins price is anchored on his own stock.
-export const MOUNT_VENDOR_NPC_ID = 'dawn_quartermaster_henning';
+// The shelf MOVED with full map parity. It used to be the Dawn of Claude
+// quartermaster at Gravewatch, and Gravewatch is inside the retired Ashen Wastes
+// (see the PARKED banner above): the `if (vendor)` guard below would have
+// swallowed that silently and left the reins unbuyable, which is Wave 1's
+// gathering-tool bug all over again. Eldergleam's provisioner is the successor
+// shelf, because the Veiled Hollow is the band that took the Ashen Wastes' rows
+// and Fenna is its convenience vendor (she also inherited the tier-4 gathering
+// tools for the same reason). The reins price is the item's own `buyValue`, so
+// the move changes no number.
+export const MOUNT_VENDOR_NPC_ID = 'provisioner_fenna';
 {
   const vendor = NPCS[MOUNT_VENDOR_NPC_ID];
   if (vendor) {
@@ -269,14 +290,46 @@ export const MOUNT_VENDOR_NPC_ID = 'dawn_quartermaster_henning';
   }
 }
 
+// The Dawn of Claude quartermaster's shelf, re-homed for the same reason the
+// reins above were. The tier-0.5 reputation set was sold by
+// `dawn_quartermaster_henning` at Gravewatch, which the Ashen Wastes'
+// retirement took with it, while the faction itself stayed earnable (the
+// Cinderforge chain still pays `dawn_of_claude` reputation and its roster still
+// grants it on kill). A faction with nothing to buy is a dead end, so the shelf
+// moves to the band that replaced the Ashen Wastes: the Veiled Hollow.
+//
+// WHY THE WARDSMITH AND NOT THE PROVISIONER: Fenna already inherited the tier-4
+// gathering tools and the reins, but she is Eldergleam's food-and-supplies
+// vendor. Wardsmith Orun, "Keeper of the Old Forges", is the Hollow's ARMOURER
+// and his whole shipped stock is one chest piece per archetype
+// (wardplate/nightweave/veilcloth), which is exactly the shape of this set:
+// three archetype sets of seven armour slots plus a weapon. A quartermaster's
+// rack belongs with the armourer, and it keeps Fenna's shelf from becoming a
+// 42-row junk drawer.
+//
+// Attached HERE rather than in `realms/veiled_hollow.ts` so the ported zone
+// module stays byte-verbatim against upstream (see realms/CLAUDE.md), the same
+// seam the mount reins use. Prices are each item's own `buyValue` and the gates
+// are Henning's own `vendorReqs`, so the move changes no number.
+export const DAWN_QUARTERMASTER_NPC_ID = 'wardsmith_orun';
+{
+  const vendor = NPCS[DAWN_QUARTERMASTER_NPC_ID];
+  if (vendor) {
+    NPCS[DAWN_QUARTERMASTER_NPC_ID] = {
+      ...vendor,
+      vendorItems: [...(vendor.vendorItems ?? []), ...DAWN_TIER05_ITEM_IDS],
+      vendorReqs: { ...(vendor.vendorReqs ?? {}), ...DAWN_TIER05_VENDOR_REQS },
+    };
+  }
+}
+
 export const QUESTS: Record<string, QuestDef> = {
   ...ZONE1_QUESTS,
   ...ZONE2_QUESTS,
   ...ZONE3_QUESTS,
   ...TEMPLE_QUESTS,
-  ...ZONE4_QUESTS,
+  // ...ZONE4_QUESTS, // PARKED (Ashen Wastes)
   ...EXPANSION_QUESTS,
-  ...COLUMN_QUESTS,
   ...REALM_QUESTS,
 };
 
@@ -285,9 +338,8 @@ export const QUEST_ORDER: string[] = [
   ...ZONE2_QUEST_ORDER,
   ...ZONE3_QUEST_ORDER,
   ...TEMPLE_QUEST_ORDER,
-  ...ZONE4_QUEST_ORDER,
+  // ...ZONE4_QUEST_ORDER, // PARKED (Ashen Wastes)
   ...EXPANSION_QUEST_ORDER,
-  ...COLUMN_QUEST_ORDER,
   ...REALM_QUEST_ORDER,
 ];
 
@@ -302,13 +354,9 @@ export const CAMPS: CampDef[] = [
   ...TEMPLE_CAMPS,
   ...ZONE1_CHAPEL_CAMPS,
   { mobId: 'grix_the_tunnelking', center: { x: -95, z: -78 }, radius: 4, count: 1 },
-  ...ZONE4_CAMPS,
-  // The first east/west column ring. Appended LAST so every shipped camp keeps
-  // its array index (and therefore its exact rng draws). Every column camp
-  // declares `positions`, so world generation draws NO new rng at all and the
-  // post-worldgen rng cursor is bit-identical to the strip-only world.
-  ...COLUMN_CAMPS,
-  // The upstream realm ring, appended at the very END for the same reason.
+  // ...ZONE4_CAMPS, // PARKED (Ashen Wastes)
+  // The upstream realm ring, appended at the very END so every shipped camp
+  // keeps its array index (and therefore its exact rng draws).
   // Upstream authored these as SCATTER camps, which would have drawn world-gen
   // rng and moved the post-worldgen cursor every seeded fixture in the suite
   // reads from (measured: seven of them). They carry frozen exact `positions`
@@ -322,18 +370,14 @@ export const GROUND_OBJECTS: GroundObjectDef[] = [
   ...ZONE2_OBJECTS,
   ...ZONE3_OBJECTS,
   ...TEMPLE_OBJECTS,
-  ...ZONE4_OBJECTS,
+  // ...ZONE4_OBJECTS, // PARKED (Ashen Wastes)
   // Appended LAST. Ground objects have explicit positions and draw no world-gen
   // rng, but they DO consume entity ids in array order, so keeping the pack at
   // the end leaves every shipped object's id exactly where it was.
   ...EXPANSION_OBJECTS,
-  // The column ring's quest objects, after the expansion pack for the same
-  // reason: they consume entity ids in array order, so keeping the newest pack
-  // at the end leaves every shipped object's id exactly where it was.
-  ...COLUMN_OBJECTS,
-  // The Eastbrook townsfolk's errands, appended after the column ring for the
-  // same reason: they are the newest set, so putting them at the tail leaves
-  // every shipped object's entity id exactly where it was.
+  // The Eastbrook townsfolk's errands, appended after the expansion pack for
+  // the same reason: they consume entity ids in array order, so putting the
+  // newer set at the tail leaves every shipped object's entity id where it was.
   ...ZONE1_VALE_OBJECTS,
   // The realm ring's quest objects, newest pack at the tail so every shipped
   // object's entity id is exactly where it was.
@@ -344,11 +388,7 @@ export const ROADS: { x: number; z: number }[][] = [
   ...ZONE1_ROADS,
   ...ZONE2_ROADS,
   ...ZONE3_ROADS,
-  ...ZONE4_ROADS,
-  // The column roads run OUTWARD from the border (their first vertex is 4yd
-  // past it), so `roadDistance` inside the strip is unchanged everywhere the
-  // decoration road clearance (5yd) can reach.
-  ...COLUMN_ROADS,
+  // ...ZONE4_ROADS, // PARKED (Ashen Wastes)
   // The realm ring's roads. Every one of them lies inside its own column rect,
   // and the two that touch a border start 4yd past it, so `roadDistance` inside
   // the strip is unchanged everywhere the 5yd decoration clearance can reach.
@@ -360,7 +400,7 @@ export const PROPS: ZonePropsDef = mergeProps([
   ZONE2_PROPS,
   ZONE3_PROPS,
   TEMPLE_PROPS,
-  ZONE4_PROPS,
+  // ZONE4_PROPS, // PARKED (Ashen Wastes)
   // The realm ring's settlements. Props carry explicit positions and draw no
   // world-gen rng, but the renderer and the collider grid walk these arrays in
   // order, so the newest pack goes at the tail.
@@ -425,15 +465,13 @@ export const ZONES: ZoneDef[] = [
   ZONE1_ZONE,
   ZONE2_ZONE,
   ZONE3_ZONE,
-  ZONE4_ZONE,
-  // The first east/west column ring, appended LAST. Append order (not band
-  // order) is what keeps every shipped index stable, which is why "the last
-  // entry" stopped meaning "the north end" here (see WORLD_MAX_Z below).
-  ...COLUMN_ZONE_DEFS,
-  // The upstream realm ring: the four grid cells that surround what we already
-  // had. Appended after the column ring for the same reason it was appended
-  // last: append order, not band order, is what keeps every shipped index
-  // stable.
+  // ZONE4_ZONE, // PARKED (Ashen Wastes)
+  // The upstream realm ring: the eleven grid cells of the 14-zone map that are
+  // not one of the three original strip bands. `REALM_ZONE_DEFS` lists its two
+  // STRIP zones first, in ascending z (the Veiled Hollow 900..1440 then the
+  // Frostveil Reach 1440..1960), because `STRIP_ZONES` below is a filter that
+  // preserves this order and the band cascade in world.ts walks it as a stack.
+  // The nine column zones follow; among those, append order is free.
   ...REALM_ZONE_DEFS,
 ];
 
@@ -445,10 +483,16 @@ export const STRIP_MAX_X = WORLD_SIZE / 2;
 //
 // WORLD_MAX_X IS READ AS A SYMMETRIC HALF WIDTH in nine call sites outside this
 // file (`Math.abs(x) > WORLD_MAX_X - n`, `WORLD_MAX_X * 2`, `(x + WORLD_MAX_X) /
-// (WORLD_MAX_X * 2)`, and `p.pos.x / WORLD_MAX_X` in obs.ts). The grid therefore
-// stays SYMMETRIC about x = 0: a column added east must have its mirror west, or
-// every one of those sites has to be rewritten first.
-// `tests/world_phase2_bands.test.ts` fails if the two ever stop mirroring.
+// (WORLD_MAX_X * 2)`, and `p.pos.x / WORLD_MAX_X` in obs.ts), so the BOUNDING BOX
+// must stay symmetric about x = 0.
+//
+// Note what that does and does not require. It is a claim about the BOX, not
+// about every row: upstream's grid has rows with a column on one side only (the
+// Farshore's), and full map parity took those rows verbatim. The box stays
+// symmetric because some OTHER row reaches -540, which is all those nine sites
+// need. What follows the rows instead is the containment RIM, which is per side
+// (`worldHalfWidthAt(z, x)`) and per column at the north end
+// (`worldNorthEdgeAt(x)`). `tests/world_phase2_bands.test.ts` pins both.
 export const WORLD_MIN_X = Math.min(...ZONES.map((zn) => zn.xMin ?? STRIP_MIN_X));
 export const WORLD_MAX_X = Math.max(...ZONES.map((zn) => zn.xMax ?? STRIP_MAX_X));
 // Derived over ALL zone rects, not the array ends: with columns appended last,
@@ -565,11 +609,25 @@ export function columnRowWeight(zone: ZoneDef, z: number): number {
 }
 
 // Half-width of the world at a given z, eased in z so the rim never steps.
-// The grid is symmetric about x = 0 (see WORLD_MAX_X), so one half-width says
-// everything. Returns exactly STRIP_MAX_X in every row no column touches.
-export function worldHalfWidthAt(z: number): number {
+// Returns exactly STRIP_MAX_X in every row no column touches.
+//
+// PER SIDE, and that is what the Farshore made necessary. The grid used to be
+// symmetric row by row: every column had a mirror across x = 0, so one
+// half-width said everything about both sides. Upstream's grid is NOT symmetric
+// in two rows: `farshore_isle` occupies x 180..540 in the vale's band with
+// nothing opposite it, and `drakelands` reaches z 2420 where `amberfall` stops
+// at 2380. Answering 540 for the empty side of those rows would push the rim
+// wall 360yd out over ground that belongs to no zone, i.e. open a hole in the
+// map. `x` therefore selects the side: a negative x ignores the +x columns and
+// a positive x ignores the -x ones.
+//
+// The default `x = 0` keeps the OLD answer (the widest column in the row,
+// whichever side it is on), so every existing caller and every existing
+// assertion in `tests/world_phase2_terrain.test.ts` reads exactly what it did.
+export function worldHalfWidthAt(z: number, x = 0): number {
   let half = STRIP_MAX_X;
   for (let i = 0; i < COLUMN_ZONES.length; i++) {
+    if (x < 0 ? COLUMN_SIDES[i] > 0 : x > 0 ? COLUMN_SIDES[i] < 0 : false) continue;
     const col = COLUMN_ZONES[i];
     const t = columnRowWeight(col, z);
     if (t <= 0) continue;
@@ -585,6 +643,50 @@ export function worldHalfWidthAt(z: number): number {
 const COLUMN_HALF_WIDTHS: readonly number[] = COLUMN_ZONES.map((col) =>
   Math.max(Math.abs(col.xMin ?? STRIP_MIN_X), Math.abs(col.xMax ?? STRIP_MAX_X)),
 );
+
+// +1 for a column on the +x side of the strip, -1 for the -x side. Same order
+// and the same reason as COLUMN_HALF_WIDTHS: no ZoneDef read per sample.
+const COLUMN_SIDES: readonly number[] = COLUMN_ZONES.map((col) =>
+  (col.xMin ?? STRIP_MIN_X) >= STRIP_MAX_X ? 1 : -1,
+);
+
+// How much of a column zone's COLUMN a given x is inside: the x mirror of
+// `columnRowWeight`, 1 across the rect's interior and easing to exactly 0 over
+// the same 30yd window, with no z term.
+function columnColWeight(zone: ZoneDef, x: number): number {
+  const x0 = zone.xMin ?? STRIP_MIN_X;
+  const x1 = zone.xMax ?? STRIP_MAX_X;
+  if (x <= x0 - 30 || x >= x1 + 30) return 0;
+  return smoothstep01((x - (x0 - 30)) / 30) * (1 - smoothstep01((x - x1) / 30));
+}
+
+// The northmost z any strip band reaches. The strip tiles z contiguously, so
+// this is where the world's middle column ends.
+const STRIP_NORTH_Z = Math.max(...STRIP_ZONES.map((zn) => zn.zMax));
+
+// North edge of the world at a given x, eased in x so the rim never steps.
+//
+// The twin of `worldHalfWidthAt`, and needed for the same reason: upstream's
+// grid is RAGGED at the north. The strip ends at the Frostveil's zMax (1960)
+// while the two columns beside it run on to 2380 (Amberfall) and 2420
+// (Drakelands), so a single global WORLD_MAX_Z would leave a 180 x 460yd
+// corridor of no-zone ground open in the middle of the map. Upstream fills that
+// corridor with an ocean bay it shapes in its own world.ts; we have no coast
+// shaper, so the honest answer is that the world's containment rim follows the
+// zones that actually exist. Returns exactly WORLD_MAX_Z wherever the widest
+// column reaches, so a world whose columns all end with the strip (every world
+// before this one) is answered identically everywhere.
+export function worldNorthEdgeAt(x: number): number {
+  let edge = STRIP_NORTH_Z;
+  for (let i = 0; i < COLUMN_ZONES.length; i++) {
+    const col = COLUMN_ZONES[i];
+    if (col.zMax <= edge) continue;
+    const t = columnColWeight(col, x);
+    if (t <= 0) continue;
+    edge = edge + (col.zMax - edge) * t;
+  }
+  return edge;
+}
 
 export function zoneWelcomeText(
   zone: ZoneDef,

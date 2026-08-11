@@ -70,6 +70,30 @@ const SNAPSHOT_ZONE_IDS = new Set([
   'grimhold_crags',
 ]);
 
+// The mirror case, and the one the skip logic above cannot see. It knows about
+// zones that were ADDED; three of the six zones the snapshot was taken over
+// have since been REMOVED, and removing a zone moves the heightfield exactly as
+// adding one does (its biome shape stops blending, its camps stop flattening,
+// its border ridges disappear, the rim moves). So the retired rects are
+// excluded by name, with the same reach an added zone gets.
+//
+//   ashen_wastes       RETIRED (parked in sim/content/zone4.ts, no longer
+//                      merged): full map parity gave its strip band, z
+//                      900..1260, to upstream's Veiled Hollow.
+//   alderfen_shallows  DELETED: an invented column, replaced by upstream's own
+//                      farshore_isle on the same rect.
+//   grimhold_crags     DELETED: an invented column with no upstream mirror, so
+//                      the -x half of the vale's row is a hole now.
+//
+// The snapshot is NOT regenerated. It is the oracle proving the world we
+// already shipped never moved, and regenerating it would destroy that proof
+// rather than extend it.
+const RETIRED_RECTS = [
+  { id: 'ashen_wastes', x0: -180, x1: 180, z0: 900, z1: 1260 },
+  { id: 'alderfen_shallows', x0: 180, x1: 540, z0: -180, z1: 180 },
+  { id: 'grimhold_crags', x0: -540, x1: -180, z0: -180, z1: 180 },
+] as const;
+
 // How far a zone can reach OUTSIDE its own rect. The widest mechanism is the
 // horizontal border ridge a new neighbour raises along a shared band line: a
 // gaussian of RIDGE_SIGMA 18 that world.ts evaluates out to 3 sigma, i.e. 54yd.
@@ -80,6 +104,16 @@ const SNAPSHOT_ZONE_IDS = new Set([
 const ZONE_REACH = 60;
 
 function cellIsShipped(cx: number, cz: number, cell: number): boolean {
+  for (const r of RETIRED_RECTS) {
+    if (
+      cx + cell > r.x0 - ZONE_REACH &&
+      cx < r.x1 + ZONE_REACH &&
+      cz + cell > r.z0 - ZONE_REACH &&
+      cz < r.z1 + ZONE_REACH
+    ) {
+      return false;
+    }
+  }
   for (const zn of ZONES) {
     if (SNAPSHOT_ZONE_IDS.has(zn.id)) continue;
     const x0 = (zn.xMin ?? -WORLD_MAX_X) - ZONE_REACH;
@@ -113,12 +147,18 @@ describe('biomes: the shipped world is bit-identical', () => {
       if (cellHash(cx, cz, SNAP.cell, SNAP.seed) !== SNAP.cells[key]) moved.push(key);
     }
     // The floor tracks how much of the snapshot rect is still OUTSIDE every
-    // zone added since it was taken. It was 3000+ while the four ported realm
-    // zones did not exist; they and their 40yd blend windows now cover the two
-    // grid columns end to end, so the check falls to the strip plus the two
-    // original column zones' interiors. Still 1400+ cells, and `moved` is the
-    // assertion that matters: not one of them changed.
-    expect(checked).toBeGreaterThan(1400);
+    // zone added since it was taken AND outside every zone retired since. It
+    // was 3000+ while the ported realm zones did not exist, then 1400+ once the
+    // first four filled the two grid columns end to end. Full map parity took
+    // it to 612 (measured): the invented column pair is gone, so both column
+    // rects are excluded as retired ground, and the Ashen Wastes' strip band is
+    // excluded for the same reason.
+    //
+    // What is left, and what the 612 cells are, is the strip's own interior
+    // south of the Ashen Wastes' band and clear of every column's 60yd reach,
+    // i.e. the Eastbrook Vale, the Mirefen Marsh and the Thornpeak Heights.
+    // `moved` is the assertion that matters: not one of them changed.
+    expect(checked).toBeGreaterThan(600);
     expect(moved).toEqual([]);
   }, 120_000);
 });
@@ -127,18 +167,26 @@ describe('biomes: the inlined column blend still equals columnBlendAt', () => {
   // world.ts flattened `columnBlendAt` into a Float64Array read to keep the
   // heightfield's hot loop off ZoneDef property access. The two must agree
   // everywhere or the shape blend silently drifts from the rest of the world.
+  // The sweep is nine columns over a world that now runs z -180..2420, so the
+  // mismatches are COLLECTED and asserted once: one `expect` per sample was
+  // most of the runtime and pushed this past the default 5s timeout.
   it('matches over the whole world, including both blend windows', () => {
+    const mismatched: string[] = [];
+    let samples = 0;
     for (let i = 0; i < COLUMN_ZONES.length; i++) {
       const col = COLUMN_ZONES[i];
       for (let x = -WORLD_MAX_X; x <= WORLD_MAX_X; x += 7) {
         for (let z = WORLD_MIN_Z; z <= WORLD_MAX_Z; z += 13) {
+          samples++;
           const want = columnBlendAt(col, x, z);
           const got = terrainShapeColumnBlend(i, x, z);
-          expect(got, `${col.id} at ${x},${z}`).toBe(want);
+          if (got !== want) mismatched.push(`${col.id} at ${x},${z}: ${got} != ${want}`);
         }
       }
     }
-  });
+    expect(mismatched.slice(0, 10)).toEqual([]);
+    expect(samples).toBeGreaterThan(150_000);
+  }, 60_000);
 });
 
 // The flattened blend is module-private in world.ts on purpose (it is a hot

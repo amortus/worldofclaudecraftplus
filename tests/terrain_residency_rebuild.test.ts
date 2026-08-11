@@ -192,7 +192,12 @@ describe('terrain chunk residency', () => {
     converge(view, HUB);
 
     expectSameBytes(before, snapshot(view));
-  });
+    // 60s, not the 5s default: the full map parity pass took the chunk grid
+    // from 432 cells to 792 (576 slots after the 2x2 far super-chunk merge), and
+    // this case builds the PBR tier of the whole resident set THREE times (hub,
+    // away, hub) and byte-compares it. It is the sweep that got slower, not the
+    // code under test, so the budget moves rather than the sweep.
+  }, 60_000);
 
   it('leaves no hole inside the keep radius and nothing resident past release', async () => {
     const { GFX } = await import('../src/render/gfx');

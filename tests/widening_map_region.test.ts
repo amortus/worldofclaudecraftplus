@@ -61,14 +61,25 @@ describe('zone map region', () => {
 });
 
 describe('every marker the zone map plots', () => {
+  // Retargeted by the full map parity pass. This file used to drive the two
+  // INVENTED column zones (`alderfen_shallows` / `grimhold_crags`), which were
+  // deleted whole; upstream's own grid occupies those cells now. The subject is
+  // `farshore_isle`, the +x column in the vale's row, because the projection
+  // this file pins is exactly "a column zone must get its own column, not the
+  // world box". NOTE the vale's row is RAGGED: Farshore has no mirror on the -x
+  // side, so the three-zones-in-one-band case below moves to the marsh's row
+  // (Willowfen -x, Mirefen strip, Galecrest +x), which still has all three.
   const vale = zone('eastbrook_vale');
-  const alderfen = zone('alderfen_shallows');
-  const grimhold = zone('grimhold_crags');
+  const farshore = zone('farshore_isle');
+  const marsh = zone('mirefen_marsh');
+  const willowfen = zone('willowfen');
+  const galecrest = zone('galecrest');
   const valeRegion = zoneMapRegion(vale);
-  const alderfenRegion = zoneMapRegion(alderfen);
+  const farshoreRegion = zoneMapRegion(farshore);
+  const marshRegion = zoneMapRegion(marsh);
 
   it('lands inside the canvas for anything inside the zone', () => {
-    for (const zn of [vale, alderfen, grimhold, zone('mirefen_marsh')]) {
+    for (const zn of [vale, farshore, galecrest, willowfen, marsh]) {
       const region = zoneMapRegion(zn);
       const points = [
         { x: zn.hub.x, z: zn.hub.z },
@@ -86,23 +97,37 @@ describe('every marker the zone map plots', () => {
   });
 
   it('puts each hub where the eye expects it, not a third of the map off', () => {
-    // Reedwatch sits at x 360, dead centre of the east column. With the world
-    // box as the rect it landed at 1/6 of the canvas instead of the middle.
-    const { mx } = toMap(alderfenRegion, alderfen.hub.x, alderfen.hub.z);
-    expect(mx).toBeCloseTo(S / 2, 6);
-    const boxRegion = { minX: WORLD_MIN_X, maxX: WORLD_MAX_X, minZ: alderfen.zMin, maxZ: alderfen.zMax };
-    expect(toMap(boxRegion, alderfen.hub.x, alderfen.hub.z).mx).toBeCloseTo(S / 6, 6);
+    // Gullhaven sits at x 305 inside the 180..540 column, a little east of the
+    // column's middle (east is -x), so the rect draws it just right of the
+    // canvas centre. The world box is three columns wide, so the SAME hub drawn
+    // against it lands at a third of that offset: the one-third compression is
+    // the bug this rect exists to prevent. Derived from the rect rather than
+    // pinned so a hub that moves keeps the test.
+    const { mx } = toMap(farshoreRegion, farshore.hub.x, farshore.hub.z);
+    expect(mx).toBeCloseTo(((farshoreRegion.maxX - farshore.hub.x) / WORLD_SIZE) * S, 6);
+    expect(mx).toBeGreaterThan(S / 2); // right of centre, where Gullhaven really is
+    const boxRegion = { minX: WORLD_MIN_X, maxX: WORLD_MAX_X, minZ: farshore.zMin, maxZ: farshore.zMax };
+    expect(toMap(boxRegion, farshore.hub.x, farshore.hub.z).mx).toBeCloseTo(mx / 3, 6);
   });
 
   it('excludes a neighbouring column that shares the band', () => {
-    // The vale, Alderfen and Grimhold share z -180..180: a band test alone puts
-    // all three zones' NPCs, portals and quest markers on each other's maps.
-    expect(vale.zMin).toBe(alderfen.zMin);
-    expect(vale.zMax).toBe(alderfen.zMax);
-    expect(inMapRegion(valeRegion, alderfen.hub.x, alderfen.hub.z)).toBe(false);
-    expect(inMapRegion(valeRegion, grimhold.hub.x, grimhold.hub.z)).toBe(false);
-    expect(inMapRegion(alderfenRegion, vale.hub.x, vale.hub.z)).toBe(false);
-    expect(inMapRegion(alderfenRegion, alderfen.hub.x, alderfen.hub.z)).toBe(true);
+    // Willowfen, the Mirefen and Galecrest all cover z 180..540: a band test
+    // alone puts all three zones' NPCs, portals and quest markers on each
+    // other's maps. (The vale's own row is the one row with a single column,
+    // so the three-way case lives here.)
+    expect(willowfen.zMin).toBeLessThanOrEqual(marsh.zMin);
+    expect(willowfen.zMax).toBeGreaterThanOrEqual(marsh.zMax);
+    expect(galecrest.zMin).toBeLessThanOrEqual(marsh.zMin);
+    expect(inMapRegion(marshRegion, willowfen.hub.x, marsh.hub.z)).toBe(false);
+    expect(inMapRegion(marshRegion, galecrest.hub.x, marsh.hub.z)).toBe(false);
+    expect(inMapRegion(zoneMapRegion(galecrest), marsh.hub.x, marsh.hub.z)).toBe(false);
+    expect(inMapRegion(zoneMapRegion(galecrest), galecrest.hub.x, galecrest.hub.z)).toBe(true);
+    // ...and the same across the vale's row, which has only the +x column.
+    expect(vale.zMin).toBe(farshore.zMin);
+    expect(vale.zMax).toBe(farshore.zMax);
+    expect(inMapRegion(valeRegion, farshore.hub.x, farshore.hub.z)).toBe(false);
+    expect(inMapRegion(farshoreRegion, vale.hub.x, vale.hub.z)).toBe(false);
+    expect(inMapRegion(farshoreRegion, farshore.hub.x, farshore.hub.z)).toBe(true);
   });
 
   it('excludes the instance plane, which the old x <= WORLD_MAX_X bound covered', () => {
@@ -119,11 +144,11 @@ describe('every marker the zone map plots', () => {
     const DEADBAND = 5;
     const past = (from: ZoneDef, x: number, z: number): boolean =>
       !inMapRegion(paddedRegion(zoneMapRegion(from), DEADBAND), x, z);
-    // walking east out of the vale into Alderfen
+    // walking out of the vale across the +x border into the Farshore
     expect(past(vale, STRIP_MAX_X + 1, 0)).toBe(false); // still inside the dead band
     expect(past(vale, STRIP_MAX_X + DEADBAND + 1, 0)).toBe(true);
-    // and back west out of Alderfen into the vale
-    expect(past(alderfen, STRIP_MAX_X - DEADBAND - 1, 0)).toBe(true);
+    // and back out of the Farshore into the vale
+    expect(past(farshore, STRIP_MAX_X - DEADBAND - 1, 0)).toBe(true);
     // the north-south behaviour is unchanged
     expect(past(vale, 0, vale.zMax + 1)).toBe(false);
     expect(past(vale, 0, vale.zMax + DEADBAND + 1)).toBe(true);
@@ -132,7 +157,7 @@ describe('every marker the zone map plots', () => {
 
   it('is half-open in both axes, so a border point belongs to exactly one zone', () => {
     const owners = ZONES.filter((zn) => inMapRegion(zoneMapRegion(zn), STRIP_MAX_X, 0));
-    expect(owners.map((zn) => zn.id)).toEqual(['alderfen_shallows']);
+    expect(owners.map((zn) => zn.id)).toEqual(['farshore_isle']);
     const northBorder = ZONES.filter((zn) => inMapRegion(zoneMapRegion(zn), 0, vale.zMax));
     expect(northBorder.map((zn) => zn.id)).toEqual(['mirefen_marsh']);
   });

@@ -32,17 +32,20 @@ export const EXPLORATION_DEEDS: readonly DeedDef[] = [
     trigger: { kind: 'mark', mark: deedMark('zone', 'thornpeak_heights') },
   },
   {
+    // RETARGETED: the Ashen Wastes is retired (see the PARKED banner in
+    // sim/data.ts) and upstream's Veiled Hollow holds its band now. The deed id
+    // is UNCHANGED on purpose, so a character who already earned it keeps it.
     id: 'exp_ashen_wayfarer',
-    name: 'Into the Ash',
-    desc: 'Set foot in the Ashen Wastes.',
+    name: 'Into the Hollow',
+    desc: 'Set foot in the Veiled Hollow.',
     category: 'exploration',
     renown: 10,
-    trigger: { kind: 'mark', mark: deedMark('zone', 'ashen_wastes') },
+    trigger: { kind: 'mark', mark: deedMark('zone', 'veiled_hollow') },
   },
   {
     id: 'exp_world_traveler',
     name: 'The Long Road North',
-    desc: 'Walk every zone from Eastbrook Vale to the Ashen Wastes.',
+    desc: 'Walk every zone from Eastbrook Vale to the Veiled Hollow.',
     category: 'exploration',
     renown: 25,
     // A meta deed: it completes off the four wayfarers rather than re-reading
@@ -81,21 +84,25 @@ export const EXPLORATION_DEEDS: readonly DeedDef[] = [
     renown: 25,
     trigger: { kind: 'counter', counter: 'questsCompleted', count: 100 },
   },
+  // RETARGETED, ids UNCHANGED so a character who already earned either keeps it.
+  // Both hung off Ashen Wastes quests, and that zone is retired (see the PARKED
+  // banner in sim/data.ts). Their successors are the opening quest and the
+  // capstone of the Veiled Hollow, the band that took those rows.
   {
     id: 'exp_ashen_arrival',
-    name: 'Reporting to Gravewatch',
-    desc: 'Answer the muster and complete "Arrival" in the Ashen Wastes.',
+    name: 'Beneath the Great Tree',
+    desc: 'Read how deep the wound runs and complete "The Thinned Veil".',
     category: 'exploration',
     renown: 10,
-    trigger: { kind: 'mark', mark: deedMark('quest', 'q_aw_arrival') },
+    trigger: { kind: 'mark', mark: deedMark('quest', 'q_veil_thinned') },
   },
   {
     id: 'exp_ashen_attuned',
     name: 'Attuned',
-    desc: 'Complete the Ashen Wastes attunement.',
+    desc: "Set the Warden's seal back in the Hollow sealstone.",
     category: 'exploration',
     renown: 25,
-    trigger: { kind: 'mark', mark: deedMark('quest', 'q_aw_attunement') },
+    trigger: { kind: 'mark', mark: deedMark('quest', 'q_seal_restored') },
   },
   {
     id: 'exp_first_rare',

@@ -44,7 +44,10 @@ describe('the crafting profession roster', () => {
       'eastbrook_vale',
       'mirefen_marsh',
       'thornpeak_heights',
-      'ashen_wastes',
+      // rung 4 named `ashen_wastes` until that zone was retired for the full-map
+      // parity pass; the Veiled Hollow holds the same band and the same tier-4
+      // materials (ZONE_GATHER_TIER), so the rung follows it.
+      'veiled_hollow',
     ]);
   });
 });

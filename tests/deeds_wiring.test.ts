@@ -164,7 +164,9 @@ describe('deeds wiring: the live sites', () => {
   it('credits a quest turn-in and marks the quest id', () => {
     const sim = makeSim();
     const meta = sim.meta(sim.playerId)!;
-    const questId = 'q_aw_arrival';
+    // `exp_ashen_arrival` kept its id but moved its trigger when the Ashen
+    // Wastes was retired: it now fires on the Veiled Hollow's opening quest.
+    const questId = 'q_veil_thinned';
     (sim as any).queueDeed(meta, { kind: 'questDone', questId });
     drain(sim);
     expect(deedCounter(progress(sim), 'questsCompleted')).toBe(1);

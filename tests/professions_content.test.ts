@@ -33,20 +33,17 @@ import {
   gatherSkillGain,
 } from '../src/sim/professions';
 
-// The strip's four bands, one per tier rung: these carry the whole progression.
-const ZONE_IDS = ['eastbrook_vale', 'mirefen_marsh', 'thornpeak_heights', 'ashen_wastes'];
-// ...plus the column zones, which are side content at the rung of the band they
-// border rather than a fifth rung of their own.
-const ALL_ZONE_IDS = [
-  ...ZONE_IDS,
-  'alderfen_shallows',
-  'grimhold_crags',
-  // the upstream realm ring
-  'willowfen',
-  'galecrest',
-  'palmreach',
-  'evergarden',
-];
+// The four bands that carry the whole progression, one per tier rung. The
+// fourth rung is `veiled_hollow`: it holds the z 900..1440 band the retired
+// Ashen Wastes used to hold (see the PARKED CONTENT banner in src/sim/data.ts)
+// along with that zone's tier-4 nodes, materials and water.
+const ZONE_IDS = ['eastbrook_vale', 'mirefen_marsh', 'thornpeak_heights', 'veiled_hollow'];
+// ...plus every other zone on the map, which is side content sitting on the rung
+// of the band it borders rather than a fifth rung of its own. DERIVED from the
+// live world rather than restated: a zone added to `ZONES` without a gather tier
+// must fail the next test, and a hand-kept copy would only mean editing the list
+// in two places every time the map grows.
+const ALL_ZONE_IDS = ZONES.map((z) => z.id);
 
 describe('professions', () => {
   it('registers exactly the four gathering professions with upstream’s caps', () => {
@@ -70,16 +67,34 @@ describe('professions', () => {
 
 describe('zone tiers', () => {
   it('assigns one tier per real zone, matching the world’s zone ids', () => {
+    // Exactly one tier per live zone, no tier for a zone that is not on the map:
+    // set equality both ways, against the live roster.
     expect(Object.keys(ZONE_GATHER_TIER).sort()).toEqual([...ALL_ZONE_IDS].sort());
-    expect(ZONES.map((z) => z.id).sort()).toEqual([...ALL_ZONE_IDS].sort());
+    // ...and the roster really is the full 14-zone map, so the line above is
+    // checking something. Three original bands plus the eleven ported zones.
+    expect(ALL_ZONE_IDS).toHaveLength(14);
+    expect(ZONE_IDS.every((id) => ALL_ZONE_IDS.includes(id))).toBe(true);
     expect(ZONE_IDS.map(zoneGatherTier)).toEqual([1, 2, 3, 4]);
-    expect(['alderfen_shallows', 'grimhold_crags'].map(zoneGatherTier)).toEqual([1, 2]);
-    // The realm ring is level 19-20 side content, so it sits on the top rungs
-    // rather than adding a fifth (the four rungs are what land the mastery
-    // curve on the level-20 cap).
-    expect(['willowfen', 'galecrest', 'palmreach', 'evergarden'].map(zoneGatherTier)).toEqual([
-      3, 3, 4, 4,
-    ]);
+    // Every zone off the four-rung ladder sits ON one of those rungs, picked
+    // from its own level band, rather than adding a fifth (the four rungs are
+    // what land the mastery curve on the level-20 cap). This used to check the
+    // invented column zones `alderfen_shallows` / `grimhold_crags`; those were
+    // deleted for the full-map parity pass and the ported ring below is what
+    // occupies their columns now.
+    expect(
+      [
+        'farshore_isle', // levels 3-7, beside the Vale
+        'willowfen', // 19-20
+        'galecrest', // 20
+        'palmreach', // 20
+        'evergarden', // 20
+        'nightbloom', // 20
+        'wraithwood', // 20
+        'frostveil', // 17-20
+        'amberfall', // 18-20
+        'drakelands', // 16-20
+      ].map(zoneGatherTier),
+    ).toEqual([1, 3, 3, 4, 4, 4, 4, 4, 4, 4]);
   });
 
   it('falls back to the starter tier for an unmapped zone', () => {
@@ -118,7 +133,9 @@ describe('gather nodes', () => {
   it('puts tier-4 nodes only in the endgame zone, so the top of the curve has somewhere to live', () => {
     const t4 = GATHER_NODES.filter((n) => n.tier === 4);
     expect(t4.length).toBeGreaterThan(0);
-    for (const n of t4) expect(n.zoneId).toBe('ashen_wastes');
+    // The endgame zone is the Veiled Hollow now: it holds the z band, and the
+    // tier-4 nodes, that the retired Ashen Wastes used to hold.
+    for (const n of t4) expect(n.zoneId).toBe('veiled_hollow');
     // and they are the only nodes that still pay full skill at 75+
     for (const n of t4) expect(gatherSkillGain(75, n.tier, 100)).toBe(1);
   });
@@ -137,7 +154,7 @@ describe('gather nodes', () => {
       eastbrook_vale: 4,
       mirefen_marsh: 10,
       thornpeak_heights: 17,
-      ashen_wastes: 20,
+      veiled_hollow: 18, // [15,20] midpoint, the same rule as the three above
     };
     for (const n of GATHER_NODES) expect(n.level, n.id).toBe(mid[n.zoneId]);
   });
@@ -259,7 +276,7 @@ describe('the tool ladder actually opens every node', () => {
     }
   });
 
-  it('the tier-1 starter tool alone opens every Vale node and no zone-4 node', () => {
+  it('the tier-1 starter tool alone opens every Vale node and no tier-4 node', () => {
     const starter = [{ itemId: 'worn_miners_pick', count: 1 }];
     const vale = gatherNodesInZone('eastbrook_vale').filter((n) => n.type === 'ore');
     for (const n of vale) {
@@ -273,8 +290,9 @@ describe('the tool ladder actually opens every node', () => {
       });
       expect(r.ok, n.id).toBe(true);
     }
-    const ashen = gatherNodesInZone('ashen_wastes').filter((n) => n.type === 'ore');
-    for (const n of ashen) {
+    const endgame = gatherNodesInZone('veiled_hollow').filter((n) => n.type === 'ore');
+    expect(endgame.length).toBeGreaterThan(0); // an empty loop would prove nothing
+    for (const n of endgame) {
       const r = beginHarvest({
         node: n,
         proficiency: 0,
@@ -297,9 +315,11 @@ describe('fishing water', () => {
     }
   });
 
-  it('gives zone 4 its own water instead of falling back to the Vale', () => {
-    expect(FISHING_TABLES_BY_BAND.ashen_wastes[0]).not.toEqual(FISHING_TABLES.eastbrook_vale);
-    const ids = FISHING_TABLES_BY_BAND.ashen_wastes[0]
+  it('gives the endgame band its own water instead of falling back to the Vale', () => {
+    // Authored for the Ashen Wastes; the Veiled Hollow holds that band now, and
+    // the table is keyed by live zone id or `fishingTablesFor` falls through.
+    expect(FISHING_TABLES_BY_BAND.veiled_hollow[0]).not.toEqual(FISHING_TABLES.eastbrook_vale);
+    const ids = FISHING_TABLES_BY_BAND.veiled_hollow[0]
       .map((row) => row.itemId)
       .filter((id): id is string => id !== null);
     for (const id of ids) expect(PROFESSION_ITEMS[id] ?? ITEMS[id], id).toBeDefined();
@@ -335,7 +355,7 @@ describe('fishing water', () => {
 
   it('falls back to the Vale for water with no table of its own', () => {
     expect(fishingTablesFor('some_dungeon')).toBe(FISHING_TABLES_BY_BAND.eastbrook_vale);
-    expect(fishingTablesFor('ashen_wastes')).toBe(FISHING_TABLES_BY_BAND.ashen_wastes);
+    expect(fishingTablesFor('veiled_hollow')).toBe(FISHING_TABLES_BY_BAND.veiled_hollow);
   });
 
   it('names the junk catches explicitly rather than reading the item kind', () => {

@@ -26,6 +26,17 @@
 // ch_tollkeeper, ch_ashmarshal) and its deathlord (ch_veholt), because the
 // Cinderforge is Claudeholme's SIBLING at the cap, not its successor. Every
 // anchor is named at the site.
+//
+// REPUTATION. The Ember Covenant are the Dawn of Claude's own fallen chapter and
+// this dungeon is the Dawn's remaining front, so its roster pays
+// `dawn_of_claude` standing on death the way the Ashen Wastes' blighted dead did
+// (Argent-Dawn style). This is NOT new balance: it is the parked zone's own
+// per-rank rungs re-homed, and it is load-bearing. The six quests here pay 2850
+// reputation in total, one time each, and Friendly begins at 3000
+// (`src/sim/reputation.ts`), so without a REPEATABLE source the faction could
+// not reach its own first standing at all, let alone the Exalted weapon, and the
+// tier-0.5 shelf (`content/dawn_of_claude.ts`) would be 24 permanently greyed
+// rows. `tests/dawn_rep_loop.test.ts` is the tripwire for that.
 import type { DungeonDef, DungeonSpawn, MobTemplate } from '../../types';
 import type { DungeonLayout } from '../../dungeon_layout';
 
@@ -65,6 +76,9 @@ export const CINDERFORGE_MOBS: Record<string, MobTemplate> = {
       { itemId: 'cf_slag_ingot', chance: 0.6 },
       { itemId: 'cf_covenant_ledger', chance: 0.8, questId: 'q_cf_covenant' },
     ],
+    // Anchor: `naxx_deathguard` (zone4.ts), the parked zone's ELITE rung, 22.
+    // Its non-elite dead paid 11-22 and its rare/zone bosses 60/120.
+    repOnKill: { faction: 'dawn_of_claude', amount: 22 },
     scale: 1.05,
     color: 0x8a5a32,
   },
@@ -91,6 +105,7 @@ export const CINDERFORGE_MOBS: Record<string, MobTemplate> = {
       { copper: 330, chance: 1 },
       { itemId: 'cf_slag_ingot', chance: 0.5 },
     ],
+    repOnKill: { faction: 'dawn_of_claude', amount: 22 }, // elite rung, as above
     scale: 1.0,
     color: 0xb5482a,
   },
@@ -118,6 +133,7 @@ export const CINDERFORGE_MOBS: Record<string, MobTemplate> = {
       { copper: 350, chance: 1 },
       { itemId: 'cf_slag_ingot', chance: 0.6 },
     ],
+    repOnKill: { faction: 'dawn_of_claude', amount: 22 }, // elite rung, as above
     scale: 1.2,
     color: 0xc2521e,
   },
@@ -140,6 +156,7 @@ export const CINDERFORGE_MOBS: Record<string, MobTemplate> = {
     aggroRadius: 13,
     enrage: { belowHpPct: 0.35, dmgMult: 1.35, hasteMult: 1.25 },
     loot: [{ copper: 320, chance: 1 }],
+    repOnKill: { faction: 'dawn_of_claude', amount: 22 }, // elite rung, as above
     scale: 0.9,
     color: 0xd96b2a,
   },
@@ -161,6 +178,10 @@ export const CINDERFORGE_MOBS: Record<string, MobTemplate> = {
     moveSpeed: 8,
     aggroRadius: 10,
     loot: [], // summoned add - nothing to loot
+    // ...and no `repOnKill` either, for the same reason: a summoned add is a
+    // mechanic, not a kill the Dawn is paying you for. Its summoners fire at
+    // fixed hp thresholds so this could not be farmed either way, but keeping
+    // adds worthless leaves ONE reputation number per real pull.
     scale: 0.7,
     color: 0xe08a3c,
   },
@@ -198,6 +219,8 @@ export const CINDERFORGE_MOBS: Record<string, MobTemplate> = {
       { itemId: 'cf_cs_gloves', chance: 0.33, rollGroup: 'cf_bexley_set' },
       { itemId: 'cf_ss_gloves', chance: 0.33, rollGroup: 'cf_bexley_set' },
     ],
+    // Anchor: `gravelord_oss` (zone4.ts), the parked zone's BOSS rung, 120.
+    repOnKill: { faction: 'dawn_of_claude', amount: 120 },
     scale: 1.35,
     color: 0x9c5a2e,
   },
@@ -233,6 +256,7 @@ export const CINDERFORGE_MOBS: Record<string, MobTemplate> = {
       { itemId: 'cf_cs_waist', chance: 0.33, rollGroup: 'cf_slagheart_set' },
       { itemId: 'cf_ss_waist', chance: 0.33, rollGroup: 'cf_slagheart_set' },
     ],
+    repOnKill: { faction: 'dawn_of_claude', amount: 120 }, // boss rung, as above
     scale: 1.5,
     color: 0xd4551c,
   },
@@ -275,6 +299,7 @@ export const CINDERFORGE_MOBS: Record<string, MobTemplate> = {
       { itemId: 'cf_quenchless_fang', chance: 0.2, rollGroup: 'cf_vharkul_chase' },
       { itemId: 'cf_quenchless_ember', chance: 1, questId: 'q_cf_unquenched' },
     ],
+    repOnKill: { faction: 'dawn_of_claude', amount: 120 }, // boss rung, as above
     scale: 1.7,
     color: 0xb03018,
   },

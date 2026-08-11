@@ -1136,12 +1136,12 @@ export const zh_CN: EnTranslations = {
           "desc": "Set foot in Thornpeak Heights."
         },
         "exp_ashen_wayfarer": {
-          "name": "Into the Ash",
-          "desc": "Set foot in the Ashen Wastes."
+          "name": "Into the Hollow",
+          "desc": "Set foot in the Veiled Hollow."
         },
         "exp_world_traveler": {
           "name": "The Long Road North",
-          "desc": "Walk every zone from Eastbrook Vale to the Ashen Wastes."
+          "desc": "Walk every zone from Eastbrook Vale to the Veiled Hollow."
         },
         "exp_errand_runner": {
           "name": "Errand Runner",
@@ -1156,12 +1156,12 @@ export const zh_CN: EnTranslations = {
           "desc": "Complete 100 quests."
         },
         "exp_ashen_arrival": {
-          "name": "Reporting to Gravewatch",
-          "desc": "Answer the muster and complete \"Arrival\" in the Ashen Wastes."
+          "name": "Beneath the Great Tree",
+          "desc": "Read how deep the wound runs and complete \"The Thinned Veil\"."
         },
         "exp_ashen_attuned": {
           "name": "Attuned",
-          "desc": "Complete the Ashen Wastes attunement."
+          "desc": "Set the Warden's seal back in the Hollow sealstone."
         },
         "exp_first_rare": {
           "name": "Something Blue",
@@ -6631,9 +6631,6 @@ export const zh_CN: EnTranslations = {
       "cf_quenchless_fang": {
         "name": "Quenchless Fang"
       },
-      "cut_withy": {
-        "name": "Cut Withy"
-      },
       "plump_fen_eel": {
         "name": "Plump Fen Eel"
       },
@@ -6700,6 +6697,165 @@ export const zh_CN: EnTranslations = {
       "fountain_court_mantle": {
         "name": "Mantle of the Fountain Court"
       },
+      "duskwisp_essence": {
+        "name": "Duskwisp Essence"
+      },
+      "spore_heart": {
+        "name": "Spore Heart"
+      },
+      "gleaming_antler": {
+        "name": "Gleaming Antler"
+      },
+      "wisp_mote": {
+        "name": "Wisp Mote"
+      },
+      "starfall_shard": {
+        "name": "Starfall Shard"
+      },
+      "elder_bark": {
+        "name": "Elder Bark"
+      },
+      "hollow_sealstone": {
+        "name": "The Hollow Sealstone"
+      },
+      "monument_overlook": {
+        "name": "Weathered Monument"
+      },
+      "monument_court": {
+        "name": "Sunken Monument"
+      },
+      "monument_north": {
+        "name": "Forgotten Monument"
+      },
+      "guardian_core": {
+        "name": "Guardian Core"
+      },
+      "wardens_seal": {
+        "name": "The Warden's Seal"
+      },
+      "gleamstag_charm": {
+        "name": "Gleamstag Charm"
+      },
+      "veilsteel_blade": {
+        "name": "Veilsteel Blade"
+      },
+      "duskfang_dirk": {
+        "name": "Duskfang Dirk"
+      },
+      "gleamwood_stave": {
+        "name": "Gleamwood Stave"
+      },
+      "wardens_oathband": {
+        "name": "Warden's Oathband"
+      },
+      "wardplate_cuirass": {
+        "name": "Wardplate Cuirass"
+      },
+      "nightweave_tunic": {
+        "name": "Nightweave Tunic"
+      },
+      "veilcloth_robe": {
+        "name": "Veilcloth Robe"
+      },
+      "thick_winter_pelt": {
+        "name": "Thick Winter Pelt"
+      },
+      "aurora_mote": {
+        "name": "Aurora Mote"
+      },
+      "hearth_ember_cache": {
+        "name": "Ember Cache"
+      },
+      "sprung_trap": {
+        "name": "Sprung Fen Trap"
+      },
+      "hearthlined_treads": {
+        "name": "Hearth-Lined Treads"
+      },
+      "frostmane_mantle": {
+        "name": "Mantle of the Frostmane"
+      },
+      "breakscarred_steel": {
+        "name": "Break-Scarred Steel"
+      },
+      "farshore_salt_moss": {
+        "name": "Farshore Salt Moss"
+      },
+      "gullhaven_watchbell": {
+        "name": "Coastal Watchbell"
+      },
+      "saltforged_grips": {
+        "name": "Saltforged Grips"
+      },
+      "mantle_of_the_unbroken_shore": {
+        "name": "Mantle of the Unbroken Shore"
+      },
+      "moonfleece_tuft": {
+        "name": "Moonfleece Tuft"
+      },
+      "gloamfield_nightbloom": {
+        "name": "Nightbloom Blossom"
+      },
+      "vigil_star_chart": {
+        "name": "Vigil Star Chart"
+      },
+      "barrow_grave_offering": {
+        "name": "Scattered Grave Offering"
+      },
+      "moonfleece_mitts": {
+        "name": "Moonfleece Mitts"
+      },
+      "barrowshade_mantle": {
+        "name": "Barrowshade Mantle"
+      },
+      "widowsilk_skein": {
+        "name": "Widowsilk Skein"
+      },
+      "gallowmere_grave_candle": {
+        "name": "Grave-Candle"
+      },
+      "silkbound_remains": {
+        "name": "Silkbound Remains"
+      },
+      "gravebound_silk_wraps": {
+        "name": "Gravebound Silk Wraps"
+      },
+      "mantle_of_the_unhorsed": {
+        "name": "Mantle of the Unhorsed"
+      },
+      "gilded_sap_clot": {
+        "name": "Gilded Sap Clot"
+      },
+      "amberfall_sap_bucket": {
+        "name": "Sap-Tap Bucket"
+      },
+      "mere_ferry_lantern": {
+        "name": "Ferry Lantern"
+      },
+      "orchard_sapbinder_grips": {
+        "name": "Sapbinder Grips"
+      },
+      "mantle_of_the_meredark": {
+        "name": "Mantle of the Meredark"
+      },
+      "ashbone_war_brand": {
+        "name": "Ashbone War-Brand"
+      },
+      "emberwing_scale": {
+        "name": "Emberwing Scale"
+      },
+      "scorched_supply_crate": {
+        "name": "Scorched Supply Crate"
+      },
+      "wyrmwatch_warning_banner": {
+        "name": "Wyrmwatch Warning Banner"
+      },
+      "cinderwalk_treads": {
+        "name": "Cinderwalk Treads"
+      },
+      "mawscale_pauldrons": {
+        "name": "Mawscale Pauldrons"
+      },
       "splintered_road_marker": {
         "name": "Splintered Road Marker"
       },
@@ -6711,36 +6867,6 @@ export const zh_CN: EnTranslations = {
       },
       "splintered_axle": {
         "name": "Splintered Cart Axle"
-      },
-      "alder_char": {
-        "name": "Alder Char"
-      },
-      "mill_sluice_wheel": {
-        "name": "Mill Sluice Wheel"
-      },
-      "cragcoal": {
-        "name": "Cragcoal"
-      },
-      "plundered_sledload": {
-        "name": "Plundered Sled Load"
-      },
-      "weirguard_hauberk": {
-        "name": "Weirguard Hauberk"
-      },
-      "sedgeweave_robe": {
-        "name": "Sedgeweave Robe"
-      },
-      "millrace_jerkin": {
-        "name": "Millrace Jerkin"
-      },
-      "grimfang_splitter": {
-        "name": "Grimfang Splitter"
-      },
-      "coldhearth_emberstaff": {
-        "name": "Coldhearth Emberstaff"
-      },
-      "cragmaw_fang": {
-        "name": "Cragmaw Fang"
       }
     },
     "mobs": {
@@ -6939,45 +7065,6 @@ export const zh_CN: EnTranslations = {
       "acolyte_tessa": {
         "name": "侍僧泰莎"
       },
-      "blighted_husk": {
-        "name": "枯萎空壳"
-      },
-      "ashen_ghoul": {
-        "name": "灰烬食尸鬼"
-      },
-      "plague_crawler": {
-        "name": "瘟疫爬行者"
-      },
-      "corrupted_acolyte": {
-        "name": "腐化的侍僧"
-      },
-      "bone_reaver": {
-        "name": "白骨掠夺者"
-      },
-      "wraithling": {
-        "name": "墓穴幽灵仆"
-      },
-      "rotting_behemoth": {
-        "name": "腐烂巨兽"
-      },
-      "plaguebringer_zealot": {
-        "name": "播疫狂信徒"
-      },
-      "naxx_deathguard": {
-        "name": "纳克萨玛斯死亡卫士"
-      },
-      "morthax_the_hollow": {
-        "name": "空洞者莫塔克斯"
-      },
-      "gravelord_oss": {
-        "name": "墓主奥斯"
-      },
-      "blighted_stag": {
-        "name": "枯疫雄鹿"
-      },
-      "rotting_fox": {
-        "name": "腐烂狐狸"
-      },
       "claudeholme_husk": {
         "name": "克劳德霍姆空壳"
       },
@@ -7077,36 +7164,6 @@ export const zh_CN: EnTranslations = {
       "cx_vorothne": {
         "name": "大巫妖沃罗斯涅"
       },
-      "sedge_skitterer": {
-        "name": "Sedge Skitterer"
-      },
-      "mudfin_snapper": {
-        "name": "Mudfin Snapper"
-      },
-      "reedwatch_poacher": {
-        "name": "Reedwatch Poacher"
-      },
-      "weir_husk": {
-        "name": "Weir Husk"
-      },
-      "the_drowned_miller": {
-        "name": "The Drowned Miller"
-      },
-      "crag_lurker": {
-        "name": "Crag Lurker"
-      },
-      "grimhold_scavenger": {
-        "name": "Grimhold Scavenger"
-      },
-      "scree_binder": {
-        "name": "Scree Binder"
-      },
-      "coldhearth_marauder": {
-        "name": "Coldhearth Marauder"
-      },
-      "old_grimfang": {
-        "name": "Old Grimfang"
-      },
       "bogtoad": {
         "name": "Bogtoad"
       },
@@ -7166,6 +7223,141 @@ export const zh_CN: EnTranslations = {
       },
       "the_topiary_bull": {
         "name": "The Topiary Bull"
+      },
+      "glimmerwisp": {
+        "name": "Glimmerwisp"
+      },
+      "duskwisp": {
+        "name": "Duskwisp"
+      },
+      "veiled_stag": {
+        "name": "Veiled Stag"
+      },
+      "veiled_doe": {
+        "name": "Veiled Doe"
+      },
+      "gleamstag": {
+        "name": "The Gleamstag"
+      },
+      "mushroom_pixie": {
+        "name": "Gleamfolk Pixie"
+      },
+      "sporeling_gatherer": {
+        "name": "Sporeling Gatherer"
+      },
+      "corrupted_sporeling": {
+        "name": "Corrupted Sporeling"
+      },
+      "treant_elder": {
+        "name": "Treant Elder"
+      },
+      "ancient_guardian": {
+        "name": "Ancient Guardian"
+      },
+      "old_marrowshell": {
+        "name": "Old Marrowshell"
+      },
+      "aurelhorn": {
+        "name": "Aurelhorn, First of the Herd"
+      },
+      "waking_warden": {
+        "name": "The Waking Warden"
+      },
+      "snowdrift_wolf": {
+        "name": "Snowdrift Wolf"
+      },
+      "ice_wisp": {
+        "name": "Ice Wisp"
+      },
+      "rime_elemental": {
+        "name": "Rime Elemental"
+      },
+      "fen_sprite": {
+        "name": "Fen Sprite"
+      },
+      "terrace_howler": {
+        "name": "Terrace Howler"
+      },
+      "frostmane_yeti": {
+        "name": "Frostmane Yeti"
+      },
+      "riftspawn": {
+        "name": "Riftspawn"
+      },
+      "breach_wretch": {
+        "name": "Breach Wretch"
+      },
+      "void_stalker": {
+        "name": "Void Stalker"
+      },
+      "sundered_horror": {
+        "name": "The Sundered Horror"
+      },
+      "moonfleece_grazer": {
+        "name": "Moonfleece Grazer"
+      },
+      "gloam_strider": {
+        "name": "Gloam Strider"
+      },
+      "nightkin_stargazer": {
+        "name": "Nightkin Stargazer"
+      },
+      "barrow_king": {
+        "name": "The Barrow King"
+      },
+      "barrow_wight": {
+        "name": "Barrow Wight"
+      },
+      "widowsilk_spinner": {
+        "name": "Widowsilk Spinner"
+      },
+      "wood_wraith": {
+        "name": "Wood Wraith"
+      },
+      "gravenbark_shambler": {
+        "name": "Gravenbark Shambler"
+      },
+      "pale_huntsman": {
+        "name": "The Pale Huntsman"
+      },
+      "gilded_stag": {
+        "name": "Gilded Stag"
+      },
+      "gloam_fox": {
+        "name": "Gloam Fox"
+      },
+      "orchard_treant": {
+        "name": "Orchard Treant"
+      },
+      "harvest_sprite": {
+        "name": "Harvest Sprite"
+      },
+      "mere_lurker": {
+        "name": "Mere Lurker"
+      },
+      "the_meredark": {
+        "name": "The Meredark"
+      },
+      "emberwing_drake": {
+        "name": "Emberwing Drake"
+      },
+      "dragonkin_broodguard": {
+        "name": "Dragonkin Broodguard"
+      },
+      "drakemaw_broodlord": {
+        "name": "Drakemaw Broodlord"
+      },
+      "ashbone_raider": {
+        "name": "Ashbone Raider"
+      },
+      "ashbone_warcaller": {
+        "name": "Ashbone Warcaller"
+      },
+      "dune_troll": {
+        "name": "Dune Troll"
+      },
+      "cindraleth_maw_matriarch": {
+        "name": "Cindraleth the Maw Matriarch"
       },
       "rift_frost_revenant": {
         "name": "Frostbound Revenant"
@@ -7489,86 +7681,6 @@ export const zh_CN: EnTranslations = {
         "title": "圣物库守护人",
         "greeting": "下方的圣物库又移位了。"
       },
-      "dawn_commander_sera": {
-        "name": "指挥官塞拉",
-        "title": "克劳德黎明",
-        "greeting": "守住防线，{className}。那座漂浮的坟墓，克劳德萨拉玛斯，已将这整片土地染成灰白。克劳德黎明会把它夺回来，一个灵魂接着一个灵魂。"
-      },
-      "dawn_chaplain_orin": {
-        "name": "牧师奥林",
-        "title": "克劳德黎明",
-        "greeting": "圣光仍能照及此地，{playerName}，尽管已然微弱。帮我照料垂死之人，斩断那艘船倾泻而下的瘟疫吧。"
-      },
-      "dawn_quartermaster_henning": {
-        "name": "军需官亨宁",
-        "title": "克劳德黎明",
-        "greeting": "钢铁与信仰，{playerName}，这便是我能给予的一切。赢得黎明的信任，军需官的仓库便会向你敞开，一件接着一件。"
-      },
-      "dawn_scout_irelle": {
-        "name": "侦察兵艾蕾尔",
-        "title": "克劳德黎明",
-        "greeting": "我已尽我所敢，将那些亡者之路一直勘测到北方，{className}。越是接近苍白边境，那艘船的低语便越发响亮。当心你的脚下。"
-      },
-      "dawn_archivist_vael": {
-        "name": "档案官韦尔",
-        "title": "克劳德黎明",
-        "greeting": "我所能研究的每一片亡灵天灾堡的碎片，都是一道我们终有一日或可撬开的裂隙，{playerName}。把亡者所携之物带给我，我们便一同谋划这场突破。"
-      },
-      "dawn_vanguard_kael": {
-        "name": "先锋队长凯尔",
-        "title": "克劳德黎明",
-        "greeting": "克劳德霍姆曾是一座生机勃勃的城镇，{playerName}，直到那艘船的阴影笼罩了它。如今它的亡者占据了街巷。我们今日便要攻破这里。"
-      },
-      "dawn_reclaimer_sela": {
-        "name": "回收者塞拉",
-        "title": "克劳德黎明",
-        "greeting": "克劳德霍姆的亡者已无法拯救，{playerName}，只能将他们解脱。夺回这座城镇失去的东西，并助我锻造那把能开启克劳德萨拉玛斯本身的钥匙。"
-      },
-      "dawn_warbringer_torv": {
-        "name": "战导者托尔夫",
-        "title": "克劳德黎明",
-        "greeting": "裂隙终于洞开了，{playerName}，亡城正将它的亡者倾泻到苍白边境之上。率领黎明攻入克劳德萨拉玛斯，一区接着一区，将它的主宰们一一击倒。"
-      },
-      "dawn_loreseeker_miren": {
-        "name": "求知者米伦",
-        "title": "克劳德黎明",
-        "greeting": "亡城中有一件遗物比它的主宰更为古老，{playerName}：一柄碎成无数残片、散落于亡者之间的法杖。把它们收集起来，我们便能一同重燃哀光。"
-      },
-      "dawn_huntsman_varik": {
-        "name": "猎人瓦里克",
-        "title": "克劳德黎明",
-        "greeting": "腐疫已经侵染了野兽，{playerName}。南境荒野的雄鹿眼中燃着绿火复活了，狐狸则啃食它们留下的残骸。我猎杀它们，好让腐化不再蔓延。把你的弓借给我吧，或是你的利刃。"
-      },
-      "weirwarden_ondrey": {
-        "name": "Weirwarden Ondrey",
-        "title": "Keeper of the Alderfen Weir",
-        "greeting": "The weir is eighty years of other men's work, {playerName}, and it is mine for as long as it holds. Stand on the crossing and listen. That is not the fen moving. That is the fen leaning."
-      },
-      "bailiff_hesk": {
-        "name": "Bailiff Hesk",
-        "title": "Reedwatch Crossing",
-        "greeting": "Every soul who comes through Reedwatch owes the crossing a toll and gets a night under a roof for it. What is out in those reeds pays nothing and takes what it likes. That is the whole of my job, {className}, stated plain."
-      },
-      "provisioner_tarrow": {
-        "name": "Provisioner Tarrow",
-        "title": "Provisioner",
-        "greeting": "Bread, salt, oil and a pole. Anything that will not keep three days in this air I do not stock, {playerName}, and I would advise you not to want it."
-      },
-      "hearthwarden_ottil": {
-        "name": "Hearthwarden Ottil",
-        "title": "Keeper of the Coldhearth Fire",
-        "greeting": "The fire in that hall was lit before the hold had walls around it and it has not been out since, {playerName}. Not once. Ask anyone here what happens if it goes out and you will get seven answers, and not one of them from somebody who wants to find out."
-      },
-      "pickmaster_gethin": {
-        "name": "Pickmaster Gethin",
-        "title": "Ironvein Cut",
-        "greeting": "One road, one cut, one seam, {className}. Everything Coldhearth is stands on ore coming down that road, and for six weeks what comes down it has been bad news and empty carts."
-      },
-      "provisioner_dagny": {
-        "name": "Provisioner Dagny",
-        "title": "Provisioner",
-        "greeting": "Everything on this table came up the stair on somebody's back, so do not haggle with me, haggle with the mountain. Fair prices, {playerName}, and up here the pick is worth more to you than the sword."
-      },
       "waykeeper_pell": {
         "name": "Waykeeper Pell",
         "title": "Keeper of the Amberfen Steps",
@@ -7648,6 +7760,166 @@ export const zh_CN: EnTranslations = {
         "name": "Gardener Yew",
         "title": "The Last Gardener",
         "greeting": "Hand me that barrow, would you? These lawns do not walk themselves, whatever the hamlet thinks."
+      },
+      "keeper_saelwyn": {
+        "name": "Keeper Saelwyn",
+        "title": "Keeper of the Hollow",
+        "greeting": "Few of your kind have stood beneath these boughs, {className}. Walk gently, and be welcome."
+      },
+      "loremother_bryn": {
+        "name": "Loremother Bryn",
+        "title": "Voice of the Shrine",
+        "greeting": "Every light in this valley remembers something, {playerName}. Help me listen."
+      },
+      "provisioner_fenna": {
+        "name": "Provisioner Fenna",
+        "title": "Eldergleam Provisioner",
+        "greeting": "Bread still warm, water still sweet. The Hollow provides, and so do I."
+      },
+      "wardsmith_orun": {
+        "name": "Wardsmith Orun",
+        "title": "Keeper of the Old Forges",
+        "greeting": "These forges cooled centuries ago, {className}, but their work still holds an edge."
+      },
+      "archivist_tullo": {
+        "name": "Archivist Tullo",
+        "title": "Reader of Stones",
+        "greeting": "The monuments out there have not spoken to anyone in an age. Perhaps they were waiting for fresh ears."
+      },
+      "huntsman_deral": {
+        "name": "Huntsman Deral",
+        "title": "Warden of the Herds",
+        "greeting": "Quiet now. The herd knows every sound this valley makes, and so do I."
+      },
+      "warden_kaldra": {
+        "name": "Warden Kaldra",
+        "title": "Warden of Icemantle",
+        "greeting": "Mind the benches, stranger. The snow keeps what it takes."
+      },
+      "hearthkeeper_maeve": {
+        "name": "Hearthkeeper Maeve",
+        "title": "Keeper of the Hearth-Lodge",
+        "greeting": "Come in off the cold. The lodge fire never goes out, so long as I draw breath."
+      },
+      "scout_einna": {
+        "name": "Scout Einna",
+        "title": "Snowline Scout",
+        "greeting": "You walked the pass alive. Good. Icemantle should hear of it."
+      },
+      "aurorist_veyla": {
+        "name": "Aurorist Veyla",
+        "title": "Reader of the Lights",
+        "greeting": "Hush. The lights are speaking tonight, and they do not repeat themselves."
+      },
+      "trapper_brosk": {
+        "name": "Trapper Brosk",
+        "title": "Shiverfen Trapper",
+        "greeting": "Fen took three of my lines this week. Fen never took a line in twenty years."
+      },
+      "warden_coalfast": {
+        "name": "Warden Coalfast",
+        "title": "Redoubt Commander",
+        "greeting": "The breaks do not care that Gullhaven is small, {className}. We hold this shore, or there is no shore left to hold. Stand with us and I will not forget it."
+      },
+      "riftwatch_ollun": {
+        "name": "Riftwatch Ollun",
+        "title": "Breach Scholar",
+        "greeting": "Every break sings before it opens, if you have the ear for it. I can hear three of them stirring on the island right now, and one of them is close."
+      },
+      "quartermaster_edda": {
+        "name": "Quartermaster Edda",
+        "title": "Redoubt Armorer",
+        "greeting": "Steel and salt, {className}, it is all I have left to hand out. Take it and make the breaks regret opening where I could reach them."
+      },
+      "mender_saul": {
+        "name": "Mender Saul",
+        "title": "Field Surgeon",
+        "greeting": "I have set more bones this one month than in ten years of mending fishing falls. The breaks do not leave much of what they take. Come back to me whole, if you can manage it."
+      },
+      "bellkeeper_tam": {
+        "name": "Bellkeeper Tam",
+        "title": "Watchbell Keeper",
+        "greeting": "The bell is the only warning the breaks give us, {className}. One toll for the fields, two for the cliffs, three when it is close enough that running will not help. Keep an ear on it, and it may keep you whole."
+      },
+      "fisher_nell": {
+        "name": "Frightened Nell",
+        "title": "Gullhaven Fisher",
+        "greeting": "It opened right where the nets dry. Right there, where I stood every morning of my life. I do not go down to the shore anymore. I do not go much of anywhere anymore."
+      },
+      "lamplighter_sorrel": {
+        "name": "Lamplighter Sorrel",
+        "title": "Keeper of the Nightgate",
+        "greeting": "Mind the lamps, friend. Past this gate the sun gives up and the flowers take over."
+      },
+      "lira_dewsong": {
+        "name": "Lira Dewsong",
+        "title": "Night-Gardener of Moonrest",
+        "greeting": "Welcome to Moonrest, where the flowers do our dawning for us."
+      },
+      "weaver_amelle": {
+        "name": "Weaver Amelle",
+        "title": "Moonfleece Weaver",
+        "greeting": "Feel that? Moonfleece on the loom. Warmer than any fire you have sat beside."
+      },
+      "astronomer_cassian": {
+        "name": "Astronomer Cassian",
+        "title": "Watcher at the Vigil",
+        "greeting": "Hush now. The sky never dawns here, so it never stops talking either."
+      },
+      "lampman_cobb": {
+        "name": "Lampman Cobb",
+        "title": "Keeper of the Crowgate Lanterns",
+        "greeting": "Stay in the lamplight, friend. The wood counts everyone who passes the gate."
+      },
+      "sexton_marrow": {
+        "name": "Sexton Marrow",
+        "title": "Sexton of Gallowmere",
+        "greeting": "We bury them deep here, and we ring the bells so they remember to stay down."
+      },
+      "widow_tansy": {
+        "name": "Widow Tansy",
+        "title": "Candlewright of Gallowmere",
+        "greeting": "A candle for every grave, and not one may go out. Not one, do you hear me?"
+      },
+      "vicar_creel": {
+        "name": "Vicar Creel",
+        "title": "Last Vicar of the Mournstone",
+        "greeting": "The chapel fell years ago. The dead beneath it did not notice, and so I stayed."
+      },
+      "reeve_ottoline": {
+        "name": "Reeve Ottoline",
+        "title": "Reeve of Lanternmere",
+        "greeting": "Welcome to Lanternmere, where the harvest never ends and neither does the work."
+      },
+      "waywatcher_sorrel": {
+        "name": "Waywatcher Sorrel",
+        "title": "Watcher of the Goldmelt",
+        "greeting": "Snow behind you, gold ahead. Few walk the Goldmelt twice, so make the crossing count."
+      },
+      "ferrymaster_caddow": {
+        "name": "Ferrymaster Caddow",
+        "title": "Keeper of the Lantern Ferries",
+        "greeting": "Fog is on the Mere again. When the lanterns go out on the water, wise folk stay ashore."
+      },
+      "orchardist_pomeline": {
+        "name": "Orchardist Pomeline",
+        "title": "Keeper of the Gilded Rows",
+        "greeting": "Mind where you step. Every root in these rows is older than the town, and they remember."
+      },
+      "gatecaptain_brannoc": {
+        "name": "Gatecaptain Brannoc",
+        "title": "Commander of Wyrmwatch",
+        "greeting": "Wyrmwatch holds the gate. Has held it forty years. It will hold it tonight."
+      },
+      "quartermaster_sela": {
+        "name": "Quartermaster Sela",
+        "title": "Keeper of the Garrison Stores",
+        "greeting": "Every crate in this yard crossed forty miles of ash to get here. Treat them kindly."
+      },
+      "scout_yerrin": {
+        "name": "Scout Yerrin",
+        "title": "Far-Dune Watcher",
+        "greeting": "Keep low. Sound carries strangely off the glass, and the gate below has ears."
       },
       "houndmaster_teel": {
         "name": "Houndmaster Teel",
@@ -8428,615 +8700,6 @@ export const zh_CN: EnTranslations = {
           }
         }
       },
-      "q_aw_arrival": {
-        "title": "灰烬与凶兆",
-        "text": "欢迎来到守墓地，{playerName}，欢迎来到这片被枯萎瘟疫所剩无几的废墟。每到夜里，倒下者的空壳便撕抓我们的城墙。放倒其中八个，好让我的士兵能够安眠，克劳德黎明便会将你视作初结的友人。",
-        "completion": "城门前少了八个恐怖之物。你的手很稳，{playerName}。黎明铭记每一位与我们并肩之人。",
-        "objectives": {
-          "0": {
-            "label": "枯萎空壳被消灭"
-          }
-        }
-      },
-      "q_aw_husks": {
-        "title": "行走的枯萎",
-        "text": "这些空壳并非毫无心智，{playerName}，它们会聚集，会试探我们的防线。再除掉十二个，趁它们尚未摸清我们最脆弱之处。拿上这双胫甲来赶路吧，这片荒原对靴子可不留情。",
-        "completion": "很好。你焚毁的每一具空壳，今夜便都无法再度爬起。",
-        "objectives": {
-          "0": {
-            "label": "枯萎空壳被消灭"
-          }
-        }
-      },
-      "q_aw_ghouls": {
-        "title": "野性的饥渴",
-        "text": "灰烬食尸鬼成群地在白骨平原上游猎，迅捷而狂躁。它们已经拖走了我两名侦察兵。削减它们的数目，十个应能击溃整群，趁它们尚未壮胆冲击城门之前。",
-        "completion": "鬼群被驱散了。多亏了你，我的侦察兵又能在白骨平原上活动了。",
-        "objectives": {
-          "0": {
-            "label": "灰烬食尸鬼被消灭"
-          }
-        }
-      },
-      "q_aw_crawlers": {
-        "title": "蔓延的疫病",
-        "text": "瘟疫爬行者的撕咬中带着枯萎之毒，{playerName}，它们在静湖的淤泥里繁衍。杀掉其中十个。它们所到之处，疫病随行，而我的病榻早已塞得太满。",
-        "completion": "病榻上的护咒现在能多撑一会儿了。圣光感谢你，即便我有时会忘记言谢。",
-        "objectives": {
-          "0": {
-            "label": "瘟疫爬行者被消灭"
-          }
-        }
-      },
-      "q_aw_samples": {
-        "title": "污秽样本",
-        "text": "要治愈这枯萎之疫，我必须先理解它。那些空壳和爬行者浑身浸透了它，给我带来六份它们腐化血肉的污秽样本，处理时务必小心。那毒秽可不在乎它玷污的是谁的鲜血。",
-        "completion": "六份样本，一份比一份更糟。这腐化……有迹可循，是蓄意为之。这绝非天然的瘟疫，{playerName}。",
-        "objectives": {
-          "0": {
-            "label": "污秽样本"
-          }
-        }
-      },
-      "q_aw_acolytes": {
-        "title": "船之声",
-        "text": "如今活生生的人也跪拜在克劳德萨拉玛斯面前，{playerName}，那些腐化的侍僧在荒原上四处诵念它的意志。他们已不再是我们能拯救的人了。让其中十个噤声。拿上这双护手，在此事了结之前，你还会赢得更糟糕的东西。",
-        "completion": "诵念声开始动摇了。无论那艘船在筹谋什么，你都让它失去了十张甘愿效命的喉舌。",
-        "objectives": {
-          "0": {
-            "label": "腐化的侍僧被消灭"
-          }
-        }
-      },
-      "q_aw_orders": {
-        "title": "来自上方的命令",
-        "text": "那些侍僧身上带着书面命令，{playerName}，船开口，他们便誊录。再砍倒八个，给我带回四套这样的命令。在克劳德萨拉玛斯的旨意降临于我们之前，我要先知道它在下达什么。",
-        "completion": "这些文字你一盯着看就像在蠕动。但它们确实是命令，千真万确：收集亡者，备战苍白边境。它们正在为某件事做准备。",
-        "objectives": {
-          "0": {
-            "label": "腐化的侍僧被消灭"
-          },
-          "1": {
-            "label": "腐化的命令"
-          }
-        }
-      },
-      "q_aw_reavers": {
-        "title": "白骨平原",
-        "text": "那些白骨掠夺者是行走的军械库，{playerName}，是被重铸为那艘船利刃的旧日士兵。在白骨平原上击碎十二个。你打散的每一个掠夺者，都是再也不会朝黎明挥砍的钢铁。",
-        "completion": "十二个掠夺者被砸成碎片。这样的残骸能让我的熔炉一直烧着。干得好。",
-        "objectives": {
-          "0": {
-            "label": "白骨掠夺者被消灭"
-          }
-        }
-      },
-      "q_aw_wraiths": {
-        "title": "空寂墓冢",
-        "text": "此地以北的古老墓冢已经苏醒了，{playerName}。幽灵仆从坟墓中飘出，那些冰冷之物会汲尽活人的暖意。让其中十个安息。这片荒原的亡者，本不该沦为那艘船的奴仆。",
-        "completion": "十个灵魂被抚归黑暗。我按你所述为每一个祈祷。这是渺小的慈悲，但它属于我们。",
-        "objectives": {
-          "0": {
-            "label": "墓穴幽灵仆被消灭"
-          }
-        }
-      },
-      "q_aw_relics": {
-        "title": "受祝的圣物",
-        "text": "那些墓冢中藏着旧日信仰的圣物，曾经受过祝圣，如今却被幽灵仆的触碰所亵渎。从坟墓中找回五件，{playerName}。一经净化与重新祝福，它们守护病榻的效力将远胜我那日渐衰微的祈祷。",
-        "completion": "五件圣物，随着毒秽褪去，每一件都在我手中回暖。圣光并未离弃这片土地。它只是需要有人将它带回家。",
-        "objectives": {
-          "0": {
-            "label": "亵渎的圣物"
-          }
-        }
-      },
-      "q_aw_hold": {
-        "title": "坚守守墓地",
-        "text": "实话告诉你，{playerName}：我们正在节节败退。掠夺者每夜都更猛烈地压向白骨平原。我需要再击碎十四个，好为驻军换来一周的喘息。黎明能指望你吗？",
-        "completion": "一周。你为我们换来了一周。我不会浪费它，也不会忘记是谁赢来了它。",
-        "objectives": {
-          "0": {
-            "label": "白骨掠夺者被消灭"
-          }
-        }
-      },
-      "q_aw_behemoth": {
-        "title": "腐烂巨兽",
-        "text": "静湖上有个庞然大物在移动，{playerName}，一头由缝合的腐烂亡者拼成的巨兽，大得能像踏过篱笆一样踏穿我们的城墙。带上一两名同伴，趁它抵达守墓地之前将它放倒。这条腰带应能助你承受它的重击。",
-        "completion": "你放倒了那座血肉之山。我在这上头都感觉到地面不再颤动了。这一回，黎明欠你一份情。",
-        "objectives": {
-          "0": {
-            "label": "腐烂巨兽被消灭"
-          }
-        }
-      },
-      "q_aw_zealots": {
-        "title": "播疫者",
-        "text": "播疫狂信徒在通往苍白边境的路上播撒一团团腐烂之气，{playerName}，而且它们彼此疗伤的速度，快过一柄独剑放倒它们的速度。杀死八个。要狠狠地打，要齐心协力地打，绝不能让它们绕成圈互相治疗。",
-        "completion": "八个狂信徒，连同它们所播撒的腐烂一同消亡。那条路又能勉强通行了。",
-        "objectives": {
-          "0": {
-            "label": "播疫狂信徒被消灭"
-          }
-        }
-      },
-      "q_aw_deathguard": {
-        "title": "船之看守",
-        "text": "纳克萨玛斯死亡卫士是那艘船自己的看守，{playerName}，是身披黑甲的精锐亡者，驻守在克劳德萨拉玛斯垂得最低之处。击碎其中十个。我得知道黎明能否在那座亡灵天灾堡的阴影正下方作战。这顶头盔曾属于一名死亡卫士，戴上它，去对付它们。",
-        "completion": "十名看守倒下，就在那艘船自己的阴影里。那么，这是办得到的。那么，终有一日，我们便能将战火向上推进。是你让我看到了这一点，{playerName}。",
-        "objectives": {
-          "0": {
-            "label": "纳克萨玛斯死亡卫士被消灭"
-          }
-        }
-      },
-      "q_aw_morthax": {
-        "title": "空洞之主",
-        "text": "上个季节，我们的一员倒在了空寂墓冢中，一位名叫莫塔克斯的骑士。那艘船将他复生了，{playerName}，如今空洞者莫塔克斯正猎杀着他曾经统领的部下。找到他。了结他。给我带回他的心脏，好让我确知那张戴着他面孔的东西已经真正消亡。",
-        "completion": "冰冷。这颗心脏冷如顽石，空洞得正如他们给他起的那个名字。安息吧，莫塔克斯。你为黎明效命直到最后一刻，乃至更远。",
-        "objectives": {
-          "0": {
-            "label": "空洞之心"
-          }
-        }
-      },
-      "q_aw_pale_reach": {
-        "title": "深入苍白边境",
-        "text": "苍白边境是其中最凶险之地，{playerName}，那是停泊的船正下方的空地，死亡卫士密布。我一人无法勘测。为我开辟一条路：在我于你身后描绘地形时，放倒八名纳克萨玛斯死亡卫士。",
-        "completion": "我做到了，整片边境，终于绘成图了，每一支巡逻队，每一根尖柱。档案官韦尔会想要这份图。指挥官也会，等到向那艘船进军的那一天到来之时。",
-        "objectives": {
-          "0": {
-            "label": "纳克萨玛斯死亡卫士被消灭"
-          }
-        }
-      },
-      "q_aw_ritual": {
-        "title": "破除仪式",
-        "text": "那些狂信徒正在苍白边境施行一场仪式，要将克劳德萨拉玛斯拉得更低，{playerName}。它们每一个都携带着一件锚定法事的仪式法器。夺取其中四件，并在此过程中杀死六名狂信徒，斩断这些锚，仪式便会停滞。",
-        "completion": "那些法器一离开边境便随即黯淡。四道锚被斩断。今日那艘船没有再垂低分毫，这便是一场胜利，无论多么渺小。",
-        "objectives": {
-          "0": {
-            "label": "仪式法器"
-          },
-          "1": {
-            "label": "播疫狂信徒被消灭"
-          }
-        }
-      },
-      "q_aw_attune_1": {
-        "title": "克劳德萨拉玛斯的回响",
-        "text": "要突破那座亡灵天灾堡，我们必须先理解它，{playerName}。它的看守们身上带着它船身的碎片，那些死去的金属仍随着船的节律嗡鸣。从死亡卫士身上给我带回三块船骸碎片，我便能着手习得纳克萨玛斯之歌。",
-        "completion": "它们彼此共鸣，听啊。同一首挽歌的三个音符。只要这样的碎片足够多，档案官，我便能绘出通往内部的路。这正是我们突破它的法门。",
-        "objectives": {
-          "0": {
-            "label": "船骸碎片"
-          }
-        }
-      },
-      "q_aw_gravelord": {
-        "title": "墓主奥斯",
-        "text": "墓主奥斯是那艘船在地面上的手，{playerName}，是将这整场枯萎之疫锚定于苍白边境的副官。召集你最强的同伴，这一战绝非一人，甚至三人所能应付。砍倒墓主，这片荒原本身或许便会开始痊愈。",
-        "completion": "奥斯死了，看啊，边境上的灰烬已经在向灰绿色转淡。你斩杀的不只是一名副官，{playerName}。你向黎明证明了，克劳德萨拉玛斯也会流血。",
-        "objectives": {
-          "0": {
-            "label": "墓主奥斯被消灭"
-          }
-        }
-      },
-      "q_aw_attunement": {
-        "title": "纳克萨玛斯的突破",
-        "text": "奥斯既死，墓主的锚已断，那艘船便悬于脆弱之中，{playerName}。就是此刻。再给我带回五块船骸碎片，我便将它们锻造成一枚黎明印记，那是你对纳克萨玛斯本身的共鸣凭证。当克劳德黎明终于强攻那座亡灵天灾堡之时，持印者将引领突破，这场突袭所耗的鲜血与钢铁将减半。",
-        "completion": "成了。黎明印记归你了，{playerName}，这是向这支教团中每一个灵魂证明你已为亡灵天灾堡做好准备的凭证。当我们向克劳德萨拉玛斯进军之时，你将身处最前。在我们之中崇拜，与那场突破共鸣。黎明再难求得比你更名副其实的勇士。",
-        "objectives": {
-          "0": {
-            "label": "船骸碎片"
-          }
-        }
-      },
-      "q_aw_rotting_herd": {
-        "title": "腐烂的鹿群",
-        "text": "南境荒野的雄鹿已不再是雄鹿了，{playerName}。枯疫吞没了整群鹿，如今它们见到任何活物便冲锋，鹿角滴淌着绿脓。削减它们的数目吧，杀掉八头便能瓦解这群鹿，免得它们北上漫游到坟守营地。",
-        "completion": "荒野上又少了八头腐烂的野兽。今夜这群鹿到不了营地了。你猎得很好，{playerName}。",
-        "objectives": {
-          "0": {
-            "label": "已杀枯疫雄鹿"
-          }
-        }
-      },
-      "q_aw_ash_scavengers": {
-        "title": "灰烬中的食腐者",
-        "text": "雄鹿倒下之处，狐狸便会来到，{playerName}。这些腐烂的小食腐者每拖走一具尸体，就把枯疫散播得更广。解决掉它们八只，遏止腐化的蔓延。",
-        "completion": "食腐者被驱散了。很好。你每杀一只，就有一里的荒野能多保持洁净一阵子。",
-        "objectives": {
-          "0": {
-            "label": "已杀腐烂狐狸"
-          }
-        }
-      },
-      "q_aw_corrupt_sample": {
-        "title": "腐疫之种",
-        "text": "我想知道枯疫在这些野兽体内究竟侵蚀得有多深，{playerName}。从雄鹿身上给我带来六支染疫的鹿角，那绿疫在骨中溃烂得最厉害，我便能读出它扩散的速度。倘若这群鹿已无可挽救，克劳德黎明必须知晓。",
-        "completion": "六支鹿角，每一支都已腐烂入骨。枯疫如今已深入它们的骨髓，{playerName}。这群鹿已无从拯救，只能将其了结。但克劳德黎明已经明白自己所面对的是什么，这远比一次干净利落的猎杀更有价值。",
-        "objectives": {
-          "0": {
-            "label": "染疫鹿角"
-          }
-        }
-      },
-      "q_ch_breach": {
-        "title": "克劳德霍姆的突破口",
-        "text": "废墟中的传送门通向克劳德霍姆本身，{playerName}，那是一整座被那艘船在一夜之间杀死的城镇。守门人镇守着第一翼。击破他，黎明便在城内有了立足之地。",
-        "completion": "城门归我们所有了。继续推进，{playerName}。从这里开始，街巷只会愈发凶险。",
-        "objectives": {
-          "0": {
-            "label": "击杀守门人"
-          }
-        }
-      },
-      "q_ch_vats": {
-        "title": "瘟疫之桶",
-        "text": "瘟疫工匠塞芙拉酿造着让克劳德霍姆长眠不醒的腐烂之物，{playerName}，就在第二翼深处的桶中。终结她，她那瘟疫之源便会枯竭。",
-        "completion": "塞芙拉倒下了，她的瘟疫之桶也已冷却。如今第二翼的空气几乎可以呼吸了。",
-        "objectives": {
-          "0": {
-            "label": "击杀瘟疫工匠塞芙拉"
-          }
-        }
-      },
-      "q_ch_toll": {
-        "title": "灵魂之税",
-        "text": "收魂者在第三翼囤积着城镇的灵魂，{playerName}，一片片地将它们喂给那艘船。将它斩倒，让那些灵魂获得自由。",
-        "completion": "收魂者已被击碎，它所囚禁的灵魂如风中的灰烬般四散而去。终于，自由了。",
-        "objectives": {
-          "0": {
-            "label": "击杀收魂者"
-          }
-        }
-      },
-      "q_ch_pit": {
-        "title": "腐尸之坑",
-        "text": "第四翼是一座腐尸之坑，{playerName}，而蛆虫之王布鲁克便是坑底那座由缝合亡者堆成的尸山。带上你全部的队伍。将那东西放倒。",
-        "completion": "布鲁克终于爆裂开来。如今那座坑可以穿越了，{playerName}，不过当你穿越时，我可不会建议你深呼吸。",
-        "objectives": {
-          "0": {
-            "label": "击杀蛆虫之王布鲁克"
-          }
-        }
-      },
-      "q_ch_chapel": {
-        "title": "亵渎的仪式",
-        "text": "唱诗人莫尔在古老的礼拜堂中引领亡者举行亵渎的仪式，{playerName}，那便是第五翼。他曾是一名圣光的牧师。让他的圣歌沉寂，让礼拜堂得以安息。",
-        "completion": "圣歌沉寂了。无论那艘船夺走他之前的莫尔是什么模样，他如今已得到解脱。愿圣光护佑他。",
-        "objectives": {
-          "0": {
-            "label": "击杀唱诗人莫尔"
-          }
-        }
-      },
-      "q_ch_muster": {
-        "title": "击溃集结",
-        "text": "灰烬元帅在第六翼操练着城镇的亡者民兵，{playerName}，将他们集结成列。一支亡者大军是这片荒野最不需要的东西。击溃他们的指挥官。",
-        "completion": "灰烬元帅倒下了，失去了他，他的军列也化作了白骨。今日没有任何军队能开出克劳德霍姆。",
-        "objectives": {
-          "0": {
-            "label": "击杀灰烬元帅"
-          }
-        }
-      },
-      "q_ch_forge": {
-        "title": "让铸骨匠沉寂",
-        "text": "铸骨匠在第七翼将亡者锻造成构造体，{playerName}，为那艘船打造无尽的白骨士兵之列。粉碎他的熔炉，让他的铁锤沉寂。",
-        "completion": "铁锤沉寂了，熔炉也已冷却。白骨士兵之列就此终结，{playerName}。只剩下那位死亡领主了。",
-        "objectives": {
-          "0": {
-            "label": "击杀铸骨匠"
-          }
-        }
-      },
-      "q_ch_deathlord": {
-        "title": "空洞领主",
-        "text": "空洞领主维霍特从最深的一翼统治着克劳德霍姆，{playerName}，他是那艘船的死亡领主化作的血肉之躯。他正是这座城镇永不安息的根源。集结你所能召集的最强者，终结他。永远地解放克劳德霍姆。",
-        "completion": "维霍特死了，一种自那艘船到来后克劳德霍姆从未有过的寂静笼罩了这座城镇。你解放了一处黎明早已放弃的地方，{playerName}。我们不会忘记这一切。",
-        "objectives": {
-          "0": {
-            "label": "击杀空洞领主维霍特"
-          }
-        }
-      },
-      "q_ch_streets": {
-        "title": "亡者的街巷",
-        "text": "在你猎杀那些翼之领主之前，{playerName}，先削减那些堵塞克劳德霍姆街巷的空壳。十五个，为你身后的先锋队清出一条道路。",
-        "completion": "十五个空壳被放倒，街道终于可以通行了。多亏了你，先锋队如今可以行动了。",
-        "objectives": {
-          "0": {
-            "label": "击杀克劳德霍姆空壳"
-          }
-        }
-      },
-      "q_ch_relics": {
-        "title": "夺回的圣物",
-        "text": "克劳德霍姆曾是一座虔诚的城镇，{playerName}，它的圣物至今仍躺在那些曾守护它们的亡者之间。夺回六件。重新受到祝福后，它们在黎明手中所行的善，远胜于在黑暗中腐朽。",
-        "completion": "六件圣物，随着污秽褪去而逐渐回暖。这座城镇一点一点地交还出它的信仰，{playerName}，而我们也因此装备得更精良了。",
-        "objectives": {
-          "0": {
-            "label": "夺回的圣物"
-          }
-        }
-      },
-      "q_ch_attune_1": {
-        "title": "空洞中的回响",
-        "text": "你已与纳克萨玛斯共鸣，{playerName}，但克劳德萨拉玛斯本身是一扇更深的门，而开启它的钥匙就藏在克劳德霍姆之中。它始于维霍特：将他斩倒，把他随身携带的空洞印记带给我。三块碎片中的第一块。",
-        "completion": "空洞印记在我手中如被敲响的钟般低鸣。三块中的一块，{playerName}。这把破界钥匙是真实存在的，而我们已经开始锻造它了。",
-        "objectives": {
-          "0": {
-            "label": "空洞印记"
-          }
-        }
-      },
-      "q_ch_attune_2": {
-        "title": "受污的圣物",
-        "text": "空洞印记沾染了瘟疫，{playerName}，唯有这座城镇自身受过祝福的圣物才能净化它。从克劳德霍姆的亡者那里为我带回五件夺回的圣物，我便会为锻造而洁净这枚印记。",
-        "completion": "五件圣物，环绕印记摆放，污秽如旧皮般从它身上剥落。它如今洁净了，{playerName}，可以入炉锻造了。",
-        "objectives": {
-          "0": {
-            "label": "夺回的圣物"
-          }
-        }
-      },
-      "q_ch_attune_3": {
-        "title": "锻造破界钥匙",
-        "text": "这枚印记需要一枚核心来稳固它，{playerName}，而唯有那位死亡领主身怀此物。返回克劳德霍姆，再次将维霍特斩倒，从他的尸体中为我取来破界核心。第二块碎片。",
-        "completion": "破界核心，仍带着维霍特胸膛中的寒意。三块中的两块，{playerName}。这把破界钥匙正在我手中成形。",
-        "objectives": {
-          "0": {
-            "label": "破界核心"
-          }
-        }
-      },
-      "q_ch_attune_4": {
-        "title": "灰铁与白骨",
-        "text": "这把破界钥匙必须以灰铁包覆，{playerName}，那是铸骨匠所锻造的诅咒金属。从他在克劳德霍姆的熔炉中为我带来一锭灰铁，外壳便算完成了。",
-        "completion": "灰铁，仍带着铸骨匠炉火的余温。外壳已铸成，{playerName}。只剩那位死亡领主的王冠，来为这把钥匙加冕了。",
-        "objectives": {
-          "0": {
-            "label": "灰铁锭"
-          }
-        }
-      },
-      "q_ch_attune_5": {
-        "title": "通往克劳德萨拉玛斯的钥匙",
-        "text": "只剩一块碎片了，{playerName}：取自维霍特眉间的空洞王冠。最后一次返回克劳德霍姆，取下那顶王冠，我便会将它置于破界钥匙之顶。有了它，克劳德萨拉玛斯本身便会向黎明敞开，而你将引领我们穿过它。",
-        "completion": "大功告成。黎明的破界钥匙归你所有了，{playerName}，印记、核心与王冠皆以灰铁包覆。当克劳德黎明强攻克劳德萨拉玛斯之时，由你执掌那把开启它的钥匙。这个教团再无比你更伟大的勇士。做好准备。突破即将来临。",
-        "objectives": {
-          "0": {
-            "label": "维霍特的空洞王冠"
-          }
-        }
-      },
-      "q_cx_breach": {
-        "title": "裂隙洞开",
-        "text": "破隙钥已经转动，{playerName}，克劳德萨拉玛斯就矗立在我们头顶，门户敞开。它的第一区，腐肉大厅，是一处缝合亡者堆叠而成的尸坑。一路杀向未成者格罗什，将那头憎恶击杀，好让黎明在城内站稳脚跟。",
-        "completion": "腐肉大厅已归我们所有。攻破一区，还剩四区。亡城绝不会如此轻易交出余下的部分。",
-        "objectives": {
-          "0": {
-            "label": "击杀未成者格罗什"
-          }
-        }
-      },
-      "q_cx_plague": {
-        "title": "瘟疫工坊",
-        "text": "第二区，瘟疫工坊，正酝酿着克劳德萨拉玛斯倾泻到我们土地上的腐烂之物。瘟疫之主玛加斯看守着它的酿桶。终结他，{playerName}，从源头扼住这场瘟疫。",
-        "completion": "酿桶已枯。瘟疫工坊再也无法荼毒任何田野了。黎明因此得以喘息。",
-        "objectives": {
-          "0": {
-            "label": "击杀瘟疫之主玛加斯"
-          }
-        }
-      },
-      "q_cx_barracks": {
-        "title": "守死兵营",
-        "text": "亡城驻有一支卫戍部队，{playerName}：守死兵营，倒下的士兵在那里为一场永无止境的战争操练不休。守死三人组统领着他们。击破三人组，卫戍部队也将随之瓦解。",
-        "completion": "三人组已经倒下，他们的军列也四散溃逃。兵营再也无法组织起任何反击。前进，深入黑暗。",
-        "objectives": {
-          "0": {
-            "label": "击杀守死三人组"
-          }
-        }
-      },
-      "q_cx_spinning": {
-        "title": "纺转黑暗",
-        "text": "第四区从墙到墙都结满了蛛网，{playerName}：纺转黑暗，蛛后赛瑟勒在那里孵育着她爬行的子嗣。烧尽蛛网，在她的虫群淹没裂隙之前终结蛛后。",
-        "completion": "赛瑟勒的虫群已化为灰烬，纺转黑暗归于沉寂。如今唯有那座王座仍矗立在你之上。",
-        "objectives": {
-          "0": {
-            "label": "击杀蛛后赛瑟勒"
-          }
-        }
-      },
-      "q_cx_throne": {
-        "title": "空心王座",
-        "text": "这便是终局了，{playerName}。空心王座坐落于亡城的心脏，其上端坐着大巫妖沃罗斯涅，那驱动着克劳德萨拉玛斯的意志。集结整支团队。将他击落，亡城便会随它的主宰一同消亡。",
-        "completion": "沃罗斯涅已被消解，克劳德萨拉玛斯在苍白边境之上黯然陨落。你率领黎明直入亡城的心脏，将它撕裂，{playerName}。这场胜利属于你，教团将世代传颂它。",
-        "objectives": {
-          "0": {
-            "label": "击杀大巫妖沃罗斯涅"
-          }
-        }
-      },
-      "q_cx_legend_1": {
-        "title": "哀光的残片",
-        "text": "在亡城拥有主宰之前，{playerName}，它曾持有一柄真光之杖，哀光，而当它陨落时，那杖也随之碎裂。五枚残片落在克劳德萨拉玛斯各区之主的手中。他们极少交出残片，因此你将一次次踏遍亡城。把五枚都带给我。",
-        "completion": "五枚残片，每一枚都从一位不同的亡者之主身上夺来。我能感觉到哀光在它们之间苏醒。拿上这具未燃的杖架，在我们着手之时，它将容纳这些残片。",
-        "objectives": {
-          "0": {
-            "label": "哀光残片"
-          }
-        }
-      },
-      "q_cx_legend_2": {
-        "title": "未燃之杖",
-        "text": "杖架已容纳五枚残片，但它无法苏醒，{playerName}。哀光需要一颗可供焚绕的核心，而如今只剩唯一一颗足够冰冷、足够明亮、堪当此任：空心之星，嵌在沃罗斯涅自己的胸膛之中。把未燃之杖带给我，并为接下来之事振作起来。",
-        "completion": "杖架已被牢牢绑定、调校平衡，每一枚残片都嵌得端正。它如今唯独缺一颗星。你知道它在何处。",
-        "objectives": {
-          "0": {
-            "label": "未燃的哀光之杖"
-          }
-        }
-      },
-      "q_cx_legend_3": {
-        "title": "空心之星",
-        "text": "空心之星在沃罗斯涅的胸中燃烧，只要他还站立，他便绝不交出它，{playerName}。重返王座，再次终结大巫妖，从他的残骸中夺出那颗星。把它带给我，哀光便终将为黎明而燃。",
-        "completion": "成了。空心之星已嵌于杖冠之上，哀光自一个时代以来第一次绽放出洁白之光。拿去吧，{playerName}：哀光，空心黎明之杖。从无一人像你这般配得上它。让它的光，成为克劳德萨拉玛斯的黑暗所见的最后一物。",
-        "objectives": {
-          "0": {
-            "label": "空心之星"
-          }
-        }
-      },
-      "q_af_boards": {
-        "title": "What Chews the Boards",
-        "text": "You crossed on my boards coming in, so you have already trusted them once. Do not do it twice without looking. The skitterers nest under the walkway out at Otter Hollow, southeast of here, and they eat the withy lashings out of the underside where nobody thinks to check. Eight of them, {playerName}. I will do the looking after that.",
-        "completion": "Eight, and you brought the mess back on your boots, which tells me you went under the boards and not around them. Most people go around.",
-        "objectives": {
-          "0": {
-            "label": "Sedge Skitterer slain"
-          }
-        }
-      },
-      "q_af_snappers": {
-        "title": "Mudfin Water",
-        "text": "There is a shelf of shallow water southeast of Alderfen Water where the snappers lie up in the weed with only their backs showing. Two of my toll-payers went in there to fill a cask and one came back out. Eight of them, and mind that they are quicker in that water than you are.",
-        "completion": "Good. I will have the cask filled myself tomorrow and I will do it standing in the boat like a coward, which is how a sensible man does it.",
-        "objectives": {
-          "0": {
-            "label": "Mudfin Snapper slain"
-          }
-        }
-      },
-      "q_af_withies": {
-        "title": "Withies for the Weir",
-        "text": "A weir is not stone, {playerName}, whatever the songs have to say about it. It is ten thousand willow withies woven wet and left to dry hard, and every one of them has a life of about nine years. Mine are all of an age. Cut me six good lengths out of the beds southwest of Reedwatch, and take those boots off the peg while you are at it, because you will be standing in water to the knee.",
-        "completion": "Green, straight, and no heart-rot in any of the six. That is one panel of the south face I do not have to lie awake about. There are two hundred panels.",
-        "objectives": {
-          "0": {
-            "label": "Cut Withy"
-          }
-        }
-      },
-      "q_af_poachers": {
-        "title": "The Reed Toll",
-        "text": "The men working out of the Rotting Weir, southwest of Reedwatch, call themselves fowlers. What they are is cutting the withy beds bare to sell the lengths back to Ondrey at four times the honest price, and last month they started charging travellers to use a crossing they did not build. Ten of them, {playerName}. I have written the warrant. I am short the arm to serve it.",
-        "completion": "Served. I will walk out there myself in the morning and pull their toll-post down, and I will do it slowly, in front of whoever is left to watch.",
-        "objectives": {
-          "0": {
-            "label": "Reedwatch Poacher slain"
-          }
-        }
-      },
-      "q_af_char": {
-        "title": "Alder Char",
-        "text": "Everything I sell has to survive a fen summer, and the only thing that gets it there is char burnt from drowned alder. It burns cold, it burns slow, and it does not spit. The dead stands are northwest of Reedwatch on the shore of Alderfen Water. Six baskets. I am not asking you to burn it. Only to carry it.",
-        "completion": "Cold to the hand and it does not crumble. That is the smokehouse fed until the frost, and it means the ones going on north to Fenbridge leave here with food that will still be food when they arrive.",
-        "objectives": {
-          "0": {
-            "label": "Alder Char"
-          }
-        }
-      },
-      "q_af_sedgewatch": {
-        "title": "The Sedgewatch Never Stood Down",
-        "text": "Before there was Reedwatch there was Sedgewatch, northeast of here, and it held this water for two hundred years until the night the fen came over the top of it. There are men still standing at that wall, {playerName}. Not standing guard. Just standing. Ten of them, and be quick about the ones by the gate, because they still know what a gate is for.",
-        "completion": "Ten down. My grandfather's name is cut into that wall and I have never once been able to walk close enough to read it. You have bought me the walk. I will take it alone, if that is all the same to you.",
-        "objectives": {
-          "0": {
-            "label": "Weir Husk slain"
-          }
-        }
-      },
-      "q_af_miller": {
-        "title": "The Drowned Miller",
-        "text": "Now I will tell you the part Reedwatch does not say out loud. Sedgewatch did not drown because the fen rose. It drowned because a miller northwest of here opened his sluice to fill his own race and then could not get it shut again, and he is still down at that wheel, {playerName}, still winding it the wrong way. Take two others with you. Put him under, then wind the sluice closed. Eighty years is long enough for one man's mistake to keep running.",
-        "completion": "The wheel is turning against the water now instead of with it. I felt the level drop at the crossing while you were still walking back. Take what is off the warden's peg. It was cut for somebody who never had to be told any of this.",
-        "objectives": {
-          "0": {
-            "label": "The Drowned Miller slain"
-          },
-          "1": {
-            "label": "Mill Sluice Wheel wound shut"
-          }
-        }
-      },
-      "q_gh_lurkers": {
-        "title": "What Comes Down the Scree",
-        "text": "Wood does not grow above the cut, so Coldhearth burns what it can drag up, and the drag road runs under Scree Fall, southwest of here. The lurkers have learned to sit above it and come down with the stones. My haulers will not walk it any more and I do not blame them. Ten, {playerName}, and the fire eats tonight.",
-        "completion": "The road is walked again. You will hear the haulers before you see them. They sing going up and they are silent coming down, and both of those are about the weight.",
-        "objectives": {
-          "0": {
-            "label": "Crag Lurker slain"
-          }
-        }
-      },
-      "q_gh_ironvein": {
-        "title": "The Cut",
-        "text": "The scavengers are in my gallery. Not raiding it, living in it. They have hung the ore road with their own lamps and they are working my face with my own picks, and every cart that does come down comes down light. Ten of them out of the Ironvein Cut, northwest of the hold. Take the gloves off the rack. You will want them on that rock.",
-        "completion": "Ten, and they left their lamps burning. I will work by that light for a week out of pure spite and then I will pull every one of them down.",
-        "objectives": {
-          "0": {
-            "label": "Grimhold Scavenger slain"
-          }
-        }
-      },
-      "q_gh_coal": {
-        "title": "Fuel for the Coldhearth",
-        "text": "Dragging timber up a stair is what we do because we must, not because it is sense. There is better fuel lying loose on the scree southwest of Coldhearth: black stone the mountain has been making since before there were men to burn it. Six loads, {playerName}. If it takes, I will never send another hauler down that road again.",
-        "completion": "It caught in under a minute and it burns without a flame worth the name, just heat and a smell like a struck flint. Eighty years of dragging wood up a stair, and it was under our feet the whole time.",
-        "objectives": {
-          "0": {
-            "label": "Cragcoal"
-          }
-        }
-      },
-      "q_gh_binders": {
-        "title": "The Mountain Answers",
-        "text": "We took the coal and the crags have answered. There are things standing up out of the scree southwest of Coldhearth Tarn that were scree yesterday, and they come down toward the drag road with the deliberation of a man walking to a duel. Eight of them. I have kept this hold's fire for thirty years and this is the first time the mountain has said anything back.",
-        "completion": "Eight, and every one of them came apart into exactly the stone it was made of, which I find worse than if it had bled. We will keep burning the coal. I want it written down that the decision was mine and nobody else's.",
-        "objectives": {
-          "0": {
-            "label": "Scree Binder slain"
-          }
-        }
-      },
-      "q_gh_sled": {
-        "title": "The Sled That Did Not Come Back",
-        "text": "Six weeks of stock went up the northeast road on one sled and never reached the watchtower, and I have since had it described to me by three separate men who saw marauders wearing my oilcloth. Bring five loads back off them, {playerName}. I am not sentimental about the sled. I am extremely sentimental about the salt.",
-        "completion": "Salt, lamp oil and two crates of nails, which up here is the same as gold and rather more use. You will notice I have not raised my prices. That is not generosity. That is you having earned it.",
-        "objectives": {
-          "0": {
-            "label": "Plundered Sled Load"
-          }
-        }
-      },
-      "q_gh_watchtower": {
-        "title": "The Broken Watchtower",
-        "text": "The tower northeast of Coldhearth was our eyes for four hundred years, and the marauders are camped in what is left of it, which means they watch us coming and we never see them at all. That is the whole of why the ore road is not safe, and it stays the whole of it until somebody goes up there. Ten.",
-        "completion": "I stood on the stump of that tower this morning and I could see the smoke off the hold, the tarn and every foot of the cut at once. Four hundred years of men knew what I know now, and I had to be told it by a stranger with a wet weapon.",
-        "objectives": {
-          "0": {
-            "label": "Coldhearth Marauder slain"
-          }
-        }
-      },
-      "q_gh_grimfang": {
-        "title": "Old Grimfang",
-        "text": "Every hauler I have lost in thirty years I lost on the drag road, and every one of them I put down to the stone. That was easier than the truth. There is an old thing denned up in the Cragmaw Dens southeast of here that has taken one man a season out of my line since before I held the hearth, and it has never once needed to hurry. Take two others and end it, {playerName}. Then I will go and say the names properly.",
-        "completion": "Thirty years I wrote rockfall on the paper, because rockfall is nobody's fault. Take the weapon. It came off a hauler's sled the year I took the hearth and I have kept it hanging where I could see it, which I understand now was not respect. It was a debt.",
-        "objectives": {
-          "0": {
-            "label": "Old Grimfang slain"
-          }
-        }
-      },
       "q_haldren_fangs": {
         "title": "The Maker's Mark",
         "text": "Every blade I send out with the militia carries a wolf's fang set in the pommel. It is not steel, it does nothing for the edge, and no Eastbrook man has ever walked the north road without one. I am not going to be the smith who breaks that. The wolves are thick up there now, {playerName}. Bring me five fangs and the next five blades go out marked.",
@@ -9479,6 +9142,710 @@ export const zh_CN: EnTranslations = {
           }
         }
       },
+      "q_veil_thinned": {
+        "title": "The Thinned Veil",
+        "text": "So the pass opened for you. Then the seal is weaker than I feared, {playerName}. Where the veil tears, the wisps turn dark and cold. Bring me eight essences from the duskwisps and I will read how deep the wound runs.",
+        "completion": "Cold, every one of them. The Hollow has perhaps a season before the tear becomes a rift. We have work to do, you and I.",
+        "objectives": {
+          "0": {
+            "label": "Duskwisp Essence"
+          }
+        }
+      },
+      "q_calming_the_deep": {
+        "title": "Calming the Deep",
+        "text": "The sporelings of the Gleaming Deep were gentle folk before the tear touched their rings. What the corruption takes, it does not give back. Grant the corrupted ones rest, {playerName}: ten of them, in the north of the Deep.",
+        "completion": "You did what I could not bear to. The gatherers still sing in the south rings; because of you, they will keep singing.",
+        "objectives": {
+          "0": {
+            "label": "Corrupted Sporeling laid to rest"
+          }
+        }
+      },
+      "q_spore_hearts": {
+        "title": "Hearts of the Ring",
+        "text": "When a sporeling falls to the dark, its heart keeps beating with borrowed shadow. Four of those hearts, cleansed at the shrine, may teach us how the corruption spreads. It is grim work, {playerName}, but it is mending work.",
+        "completion": "There. Cleansed, and quiet. Each one shows the same mark: the shadow flows from the Sunken Court. Tell Saelwyn.",
+        "objectives": {
+          "0": {
+            "label": "Spore Heart"
+          }
+        }
+      },
+      "q_sunken_court": {
+        "title": "The Sunken Court",
+        "text": "Bryn read the hearts true: the tear runs through the old court in the west, and its guardians have woken wrong. They were built to protect the seal; now they will crush anyone who nears it. Clear eight of them from the ruins.",
+        "completion": "Eight guardians, stilled. I remember when they were raised, {playerName}. Do not look so surprised; the Hollow keeps its keepers a long time.",
+        "objectives": {
+          "0": {
+            "label": "Ancient Guardian stilled"
+          }
+        }
+      },
+      "q_waking_warden": {
+        "title": "The Waking Warden",
+        "text": "The court is quiet, but its master is not. The Warden that holds the seal has woken twisted, and while it stands, the seal cannot be mended. It will not fall easily; bring a friend if you can find one, {playerName}. Bring two if you can find two.",
+        "completion": "The bell of its voice is silent. I felt it from here, like a weight lifted off the whole valley.",
+        "objectives": {
+          "0": {
+            "label": "The Waking Warden defeated"
+          }
+        }
+      },
+      "q_seal_restored": {
+        "title": "The Seal Restored",
+        "text": "Take the Warden's seal to the sealstone at the heart of the court and set it back where it was struck loose. Then the Hollow can begin to heal, and you, {playerName}, will have done what no one of your kind has done before.",
+        "completion": "I felt it close from here, gentle as dusk. The Hollow remembers its friends, {playerName}. However far you travel, there will always be a light for you beneath the great tree.",
+        "objectives": {
+          "0": {
+            "label": "The seal set back in the sealstone"
+          }
+        }
+      },
+      "q_gleaming_antlers": {
+        "title": "Gleaming Antlers",
+        "text": "The veiled stags shed light where they graze, and their cast antlers hold it for years. Five of them, from the herds in the open glade at the heart of the valley, and my lanterns burn through the winter without oil. The stags need not be harmed, but they do not part with them easily.",
+        "completion": "Look how they hold the light! No flame, no smoke, just the glow. The Hollow provides.",
+        "objectives": {
+          "0": {
+            "label": "Gleaming Antler"
+          }
+        }
+      },
+      "q_wisp_lights": {
+        "title": "Lights of the Shallows",
+        "text": "The glimmerwisps carry motes of the old starlight that fell here when the Hollow was sealed. Six motes, and the shrine lamps will burn for a year. Take only from those that fade; the Hollow gives enough without greed.",
+        "completion": "Soft as the first stars. Set them here by the altar; the shrine will do the rest.",
+        "objectives": {
+          "0": {
+            "label": "Wisp Mote"
+          }
+        }
+      },
+      "q_treant_accord": {
+        "title": "The Treant Accord",
+        "text": "The elders of the Grove shed their outer bark as the corruption gnaws at their roots. Four lengths of it, and I can brew a salve for the whole Grove. They will not thank you while you pry it loose, {playerName}, but they will stand a century longer for it.",
+        "completion": "Thick and sound, all four. The salve will take a week to brew and a hundred years to finish its work. Trees measure kindness differently.",
+        "objectives": {
+          "0": {
+            "label": "Elder Bark"
+          }
+        }
+      },
+      "q_monument_tour": {
+        "title": "What the Stones Remember",
+        "text": "Three monuments still stand from before the sealing: one at the Duskfall Overlook, one in the Sunken Court, and one lost in the far northwest where nobody walks. Read them for me, {playerName}. My knees gave out two centuries of stairs ago.",
+        "completion": "An overlook, a court, and a forgotten corner, and all three verses of the sealing song, together for the first time since it was sung. You have made an old reader very happy.",
+        "objectives": {
+          "0": {
+            "label": "The Overlook monument read"
+          },
+          "1": {
+            "label": "The Court monument read"
+          },
+          "2": {
+            "label": "The forgotten monument read"
+          }
+        }
+      },
+      "q_grove_menace": {
+        "title": "Menace in the Glade",
+        "text": "Duskwisps have started drifting in among my stalls after dark, {playerName}, and their chill spoils everything it touches. Thin them out for me: ten of them, wherever the veil has torn.",
+        "completion": "The night market can open again. You have a customer for life, or at least a discount.",
+        "objectives": {
+          "0": {
+            "label": "Duskwisp dispersed"
+          }
+        }
+      },
+      "q_shards_of_starfall": {
+        "title": "Shards of Starfall",
+        "text": "When the duskwisps pass over the crystal fields, slivers of old starlight cling to them like burrs. Six shards, {playerName}, and I can date the sealing to the very season it was sung.",
+        "completion": "Look at the striations! Autumn. The Hollow was sealed in autumn. Two hundred years of argument, settled by six little stones.",
+        "objectives": {
+          "0": {
+            "label": "Starfall Shard"
+          }
+        }
+      },
+      "q_spore_tide": {
+        "title": "Against the Spore Tide",
+        "text": "The salve holds the Grove, but the corruption presses harder at the Deep with every dusk. Twelve more of the corrupted must be laid to rest before the gatherers can reclaim their north rings, {playerName}.",
+        "completion": "The rings in the north are singing again tonight. Quietly, but singing.",
+        "objectives": {
+          "0": {
+            "label": "Corrupted Sporeling laid to rest"
+          }
+        }
+      },
+      "q_wardens_echoes": {
+        "title": "Echoes of the Warden",
+        "text": "Even with their master silenced, the court guardians repeat its last command like an echo that will not fade. Until the seal is set back, they will keep waking, {playerName}. Still ten more of them so the masons can reach the sealstone.",
+        "completion": "The echo grows fainter each time. Soon the court will hold nothing but wind and ivy, the way a ruin should.",
+        "objectives": {
+          "0": {
+            "label": "Ancient Guardian stilled"
+          }
+        }
+      },
+      "q_hollow_the_huntsman": {
+        "title": "The Warden of the Herds",
+        "text": "You look like someone who can handle more than wisps, {playerName}. Huntsman Deral keeps his lookout among the stag meadows northwest of here, and he has been asking after capable hands for weeks. Whatever he is tracking out there, he will not say it aloud in the village.",
+        "completion": "Fenna sent you? Good. Then she trusts you, and I have two names that need crossing out.",
+        "objectives": {
+          "0": {
+            "label": "Find Huntsman Deral"
+          }
+        }
+      },
+      "q_hollow_old_marrowshell": {
+        "title": "The Old Shell of the Shallows",
+        "text": "The first name is Old Marrowshell, a crab the size of a cart that has hunted the western shallows since before Eldergleam had a gate. It wanders, {playerName}, so you will have to walk the shoreline until you cross its track. Do not go alone, and do not trust its stillness.",
+        "completion": "The shallows are just water again. I have watched that shell break better hunters than me, {playerName}. Not you.",
+        "objectives": {
+          "0": {
+            "label": "Old Marrowshell slain"
+          }
+        }
+      },
+      "q_hollow_first_of_the_herd": {
+        "title": "First of the Herd",
+        "text": "The second name is harder to say. Aurelhorn led these herds when my grandmother kept this lookout, and whatever woke in the Hollow woke him wrong. He tramples what he once warded, and the herd will not survive his madness. He roams the meadows near the old court roads. End him with mercy, {playerName}, and bring a friend to share the weight of it.",
+        "completion": "So the First falls to the last. The herd is already calmer, do you feel it? You did the Hollow a kindness today, even if it does not look like one.",
+        "objectives": {
+          "0": {
+            "label": "Aurelhorn given peace"
+          }
+        }
+      },
+      "q_fv_snowline_report": {
+        "title": "Word from the Snowline",
+        "text": "Every soul who climbs out of the Drakelands passes my fire, {playerName}, and fewer climb every week. Warden Kaldra holds Icemantle up the north road. Tell her the pass is still open, and tell her a stranger walked it alone.",
+        "completion": "The pass holds, then. Einna sits that waycamp through storms that bury the road markers, and she has never once sent me idle news. Welcome to Icemantle, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Report to Warden Kaldra"
+          }
+        }
+      },
+      "q_fv_wolves_at_the_door": {
+        "title": "Wolves at the Door",
+        "text": "The snowdrift packs used to keep to the high benches. Now they cross the tarn road in daylight and my woodcutters will not leave the walls. Thin the packs, {playerName}, ten of them, and the road is a road again.",
+        "completion": "Ten fewer shadows between here and the tarn. The woodcutters are already arguing over who goes out first.",
+        "objectives": {
+          "0": {
+            "label": "Snowdrift Wolf slain"
+          }
+        }
+      },
+      "q_fv_winter_pelts": {
+        "title": "Pelts for the Lodge",
+        "text": "Firewood keeps a body alive, {playerName}, but wool will not turn this cold, only wolf-fur will. Six thick winter pelts off the snowdrift packs and I can line bedrolls for everyone the lodge shelters.",
+        "completion": "Fur like this is the only argument winter listens to. Take these treads, they are lined with the last batch.",
+        "objectives": {
+          "0": {
+            "label": "Thick Winter Pelt"
+          }
+        }
+      },
+      "q_fv_ember_caches": {
+        "title": "Embers on the Tarn Road",
+        "text": "A sledge of ember caches overturned on the tarn road in last night: iron kettles that hold a banked fire alive for a month. Three of them are still lying in the snow, {playerName}, and the lodge cannot spare what they hold. Bring the fire home.",
+        "completion": "Still warm, every one. You have bought the lodge a whole winter of mercy, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Ember Cache recovered"
+          }
+        }
+      },
+      "q_fv_lights_over_steps": {
+        "title": "Lights over the Steps",
+        "text": "The aurora has burned green every night this month, and the old folk will not walk under it. One woman might know why: Veyla, the Aurorist. She camps alone on the Aurora Steps, north past the tarn. Find her camp, {playerName}, and hear what the lights have told her.",
+        "completion": "Kaldra sent you? Then she is finally worried, and she is right to be. Sit, {playerName}. Watch the sky with me a while.",
+        "objectives": {
+          "0": {
+            "label": "Find Aurorist Veyla"
+          }
+        }
+      },
+      "q_fv_aurora_motes": {
+        "title": "Motes of the Aurora",
+        "text": "The wisps that drift these steps are shed by the lights themselves, and each carries a mote of the aurora in its heart. I need six to read what the sky is writing, {playerName}. The wisps do not fight back. Whether that makes the work easier or harder is between you and your conscience.",
+        "completion": "Six motes, still glowing. Look at them, {playerName}: they pulse in time with each other. The lights are not weather. They are a signal.",
+        "objectives": {
+          "0": {
+            "label": "Aurora Mote"
+          }
+        }
+      },
+      "q_fv_rime_unbound": {
+        "title": "Rime Unbound",
+        "text": "When the aurora burns this bright, the cold stands up and walks: rime elementals, frost given a will. They gather where the lights touch the benches, and they are wandering closer to my camp each night. Break eight of them apart, {playerName}, before one of them breaks me.",
+        "completion": "The night feels thinner already. Whatever wakes them is not done, but you have bought the Steps some quiet.",
+        "objectives": {
+          "0": {
+            "label": "Rime Elemental slain"
+          }
+        }
+      },
+      "q_fv_silent_trapline": {
+        "title": "The Silent Trapline",
+        "text": "Old Brosk works the Shiverfen trapline north of here, and every week for eleven years he has sent a bundle of furs up with the wood sledge. Two weeks now, nothing. He is too stubborn to freeze and too careful to drown, {playerName}, so something else is wrong. Find his camp at the fen and see him breathing.",
+        "completion": "Maeve sent you? Ha. Eleven years and the woman still thinks the fen will eat me. Well... this year she might be right. Look at what it's done to my lines.",
+        "objectives": {
+          "0": {
+            "label": "Find Trapper Brosk"
+          }
+        }
+      },
+      "q_fv_sprung_traps": {
+        "title": "Sprites in the Traps",
+        "text": "Fen sprites, {playerName}. The little devils spring my traps for sport and scatter the iron in the reeds. Drive them off, eight should teach the rest, and gather up what is left of my traplines while you are out there.",
+        "completion": "Four good traps back and the reeds gone quiet. You trap with a heavier hand than I do, {playerName}, but I cannot argue with the results.",
+        "objectives": {
+          "0": {
+            "label": "Fen Sprite driven off"
+          },
+          "1": {
+            "label": "Trap recovered"
+          }
+        }
+      },
+      "q_fv_howl_above": {
+        "title": "The Howl on the Terraces",
+        "text": "You hear it at dusk, {playerName}: a howl off the Howling Terraces that is not the snowdrift packs. Bigger throats. The terrace howlers have come down from the peaks for the first time since my grandmother held this post, and they are what pushed the wolves onto my road. Cull eight and push them back.",
+        "completion": "Eight, and the dusk chorus is thinner for it. But howlers do not leave the peaks for nothing. Something up there moved them, and I fear it has a name.",
+        "objectives": {
+          "0": {
+            "label": "Terrace Howler slain"
+          }
+        }
+      },
+      "q_fv_frostmane_tyrant": {
+        "title": "The Frostmane Tyrant",
+        "text": "The howlers were not hunting when they came down the terraces. They were fleeing. A yeti has claimed the high ground, the mountain folk call it the Frostmane, and even the packs will not share a slope with it. It has to end, {playerName}, before winter drives it down to my walls. Bring a friend. Bring two.",
+        "completion": "When the wind dropped last night the whole village heard the silence where the Frostmane used to be. The Reach owes you a debt it will be years in paying, {playerName}. Wear this, and every door in Icemantle is open to you.",
+        "objectives": {
+          "0": {
+            "label": "The Frostmane slain"
+          }
+        }
+      },
+      "q_fs_bell_at_the_landing": {
+        "title": "The Bell at the Landing",
+        "text": "You came over the Ferrywalk, {playerName}? Then you are the first in a week, and the Warden will want to look you over. Gullhaven sits up the shore road, past the drying racks nobody tends anymore. Tell Warden Coalfast the causeway still stands, and that Tam has not rung a three-toll today. Yet.",
+        "completion": "The causeway holds, and Tam still has breath enough to joke about the three-toll. Good. We are an island under siege, {playerName}, and every pair of hands that crosses that sandbar is a pair the breaks must get through before they reach my people. Welcome to Gullhaven.",
+        "objectives": {
+          "0": {
+            "label": "Report to Warden Coalfast"
+          }
+        }
+      },
+      "q_fs_hold_the_riftfields": {
+        "title": "Hold the Riftfields",
+        "text": "West of town the grain rows have gone to wrack, and the wretches that came through the Riftfields break now pick them clean. My people cannot tend a field they cannot stand in, {playerName}. Cull ten of the wretches and give the farmers back their ground.",
+        "completion": "Ten fewer, and the field hands are already arguing over who walks out first. It will not last, the breaks never rest long, but a town that eats is a town that holds.",
+        "objectives": {
+          "0": {
+            "label": "Breach Wretch slain"
+          }
+        }
+      },
+      "q_fs_steel_for_the_redoubt": {
+        "title": "Steel for the Redoubt",
+        "text": "Every blade I hand out is one the sea gave back or one I pried off the dead, {playerName}. The wretches carry scrap through the breaks, hinges, hooks, broken sword-steel, magpie stuff, but it hammers out true. Bring me six pieces of their scavenged steel and the barricade line gets its teeth back.",
+        "completion": "Salt-pitted and break-scarred, and it will hold an edge all the same. Here, I lined these grips myself. Steel for steel, {playerName}: it is the only trade the Farshore runs these days.",
+        "objectives": {
+          "0": {
+            "label": "Break-Scarred Steel"
+          }
+        }
+      },
+      "q_fs_the_three_bells": {
+        "title": "The Three Bells",
+        "text": "Three watchbells stand the coast beyond my own: one on the Landing point, one on the northwest strand, one out by the Riftfields shore. If a rope has rotted or a clapper has been carried off, the town learns of a break when it is already in the streets. Walk the coast, {playerName}, and ring each bell once, so I know it still has a voice.",
+        "completion": "Three voices, three answers, carried clean over the water. Sleep in Gullhaven tonight, {playerName}, and know that if a bell wakes you, it will be by my hand and in good time.",
+        "objectives": {
+          "0": {
+            "label": "Watchbell rung"
+          }
+        }
+      },
+      "q_fs_song_before_the_break": {
+        "title": "The Song Before the Break",
+        "text": "There is a man who hears the breaks before they open. Riftwatch Ollun: a scholar, or a madman, and lately I cannot afford the difference. He keeps his vigil at the Watch Meadow, up the road southwest of town. Find him, {playerName}, and ask him what the island is about to do to us next.",
+        "completion": "The Warden sent you? Good. That means the town has finally started listening. Now be still a moment, {playerName}. There, under the wind, do you hear it? The cliffs are singing, and I do not like the tune.",
+        "objectives": {
+          "0": {
+            "label": "Find Riftwatch Ollun"
+          }
+        }
+      },
+      "q_fs_moss_and_mending": {
+        "title": "Moss and Mending",
+        "text": "The salt moss that grows along the tideline is the best wound-packing I know, and the riftspawn have claimed every stretch of shore it grows on. They carry tufts of it snagged on their hides, of all things. Clear six of them off the southwest reaches, {playerName}, and pull me four good handfuls of moss from what they have trampled through.",
+        "completion": "Moss in one hand and a quieter shoreline in the other. You have restocked my whole surgery, {playerName}. Do me the kindness of not becoming my next patient.",
+        "objectives": {
+          "0": {
+            "label": "Riftspawn slain"
+          },
+          "1": {
+            "label": "Farshore Salt Moss"
+          }
+        }
+      },
+      "q_fs_stalkers_off_the_light": {
+        "title": "Stalkers off the Light",
+        "text": "The stalkers hunt the dark between the watchfires, and every night they circle my meadow a little closer. They are not mindless, {playerName}, they are patient, and patience is the one thing I cannot outlast. Kill eight and push the dark back to the cliffs it came through.",
+        "completion": "Eight nights of circling, ended in one. The fires burn steadier already, or perhaps that is only my hands. Either way the meadow is mine again, and I can hear the island think.",
+        "objectives": {
+          "0": {
+            "label": "Void Stalker slain"
+          }
+        }
+      },
+      "q_fs_the_great_break": {
+        "title": "The Great Break",
+        "text": "Every song this island sings ends on the same low note, and it comes from the Sundered Cliffs. Something came through the great break there, {playerName}, something the cliffs themselves cracked open to admit, and it is still growing. If it walks northeast, no bell will matter. Take a friend, take two, and end it. Then tell Coalfast the tune has changed.",
+        "completion": "Ollun sent word ahead: the singing stopped. My whole town heard the quiet, {playerName}, and half of them wept at the sound of nothing at all. Wear this mantle. The Farshore does not forget who held its shore.",
+        "objectives": {
+          "0": {
+            "label": "The Sundered Horror slain"
+          }
+        }
+      },
+      "q_nb_road_of_lanterns": {
+        "title": "The Road of Lanterns",
+        "text": "Up here the sun never follows, {playerName}, only the lamps I keep lit along the climb. Moonrest lies north where the flower-light gathers. Find Lira Dewsong among her gardens and tell her the Nightgate lamps still burn.",
+        "completion": "The lamps still burn, and the road still carries strangers to us. Sorrel has kept that gate longer than anyone in Moonrest remembers. Welcome, {playerName}, to the realm that never dawns.",
+        "objectives": {
+          "0": {
+            "label": "Find Lira Dewsong in Moonrest"
+          }
+        }
+      },
+      "q_nb_striders_in_the_dark": {
+        "title": "Striders in the Dark",
+        "text": "The gloam striders were always patient hunters, {playerName}, but of late they slip right into the flower beds and take moonfleece lambs beneath our lanterns. Cull ten of them and give the downs back their quiet.",
+        "completion": "Ten striders fewer, and the herds already graze easier. The gardens keep their own hours, but tonight they keep them in peace.",
+        "objectives": {
+          "0": {
+            "label": "Gloam Strider slain"
+          }
+        }
+      },
+      "q_nb_wool_by_moonlight": {
+        "title": "Wool by Moonlight",
+        "text": "Nothing warms like moonfleece, {playerName}, and nothing spins so fine. The grazers carry their silver wool loose in tufts as they drift the downs. Bring me six good tufts off the herds and I will weave you something worth the walking.",
+        "completion": "Silver as starlight and twice as soft. Here, {playerName}: mitts from the last batch, lined the way only moonfleece lines.",
+        "objectives": {
+          "0": {
+            "label": "Moonfleece Tuft"
+          }
+        }
+      },
+      "q_nb_night_gardens": {
+        "title": "The Night Gardens",
+        "text": "The nightbloom opens only under this sky, and Gloamfield holds the oldest beds in the realm. I need four fresh blossoms for the shrine garlands, {playerName}. Cut them gently: a bed remembers a rough hand for a season.",
+        "completion": "Still glowing, every petal. The shrine will smell of night for a week, and Moonrest sleeps easier for it.",
+        "objectives": {
+          "0": {
+            "label": "Nightbloom Blossom gathered"
+          }
+        }
+      },
+      "q_nb_eyes_on_the_vigil": {
+        "title": "Eyes on the Vigil",
+        "text": "Something has the striders bold and the herds uneasy, {playerName}, and I cannot read it in the flowers. Cassian can read it in the sky. He keeps his observatory camp by the Standing Vigil northwest of here, where the nightkin drift among the stones. Find him, and ask what the stars are saying.",
+        "completion": "Lira sent you? Then the gardens feel it too. Sit by the glass a moment, {playerName}. The stars have been restless for a month, and every chart I draw leans northeast toward the barrow.",
+        "objectives": {
+          "0": {
+            "label": "Find Astronomer Cassian at the Standing Vigil"
+          }
+        }
+      },
+      "q_nb_charts_of_the_stones": {
+        "title": "The Charts in the Stones",
+        "text": "The Vigil stones are older than Moonrest, older than the nightkin who tend them, and their faces are cut with star charts I have spent my life learning to read. The sky has shifted, {playerName}, and I must know how far. Read the charts on three of the stones and bring me their bearings.",
+        "completion": "No doubt is left. Every bearing has crept toward the Sleepless Barrow, as if the sky itself leans over that mound to watch. The old kings were buried under aligned stars for a reason, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Star chart read"
+          }
+        }
+      },
+      "q_nb_restless_mounds": {
+        "title": "The Restless Mounds",
+        "text": "The charts were a warning, and the barrow field proves it: the mounds are opening from beneath. Wights walk the grave rows wearing the old honors, and the offerings that kept them sleeping lie scattered in the grass. Put eight of them down, {playerName}, and gather four of the offerings back to me.",
+        "completion": "Grave gold, still cold from the soil. The wights are not rising on their own, {playerName}: something beneath the great mound is calling them out, and I fear the charts have already told us its name.",
+        "objectives": {
+          "0": {
+            "label": "Barrow Wight slain"
+          },
+          "1": {
+            "label": "Grave offering recovered"
+          }
+        }
+      },
+      "q_nb_the_barrow_king": {
+        "title": "The Barrow King Wakes",
+        "text": "Every bearing, every restless star, every opened mound points to one thing: the Barrow King is waking beneath the great mound, and this realm has no dawn to hold him back. He must be put to rest before he remembers his crown, {playerName}. Do not go alone: bring a friend, and keep the flower-light at your back.",
+        "completion": "The stars have settled for the first time in a season, {playerName}. The mounds are closed, the nightkin have gone still at their stones, and the king sleeps below once more. Wear this mantle: Moonrest cut it for whoever the night finally trusted.",
+        "objectives": {
+          "0": {
+            "label": "The Barrow King put to rest"
+          }
+        }
+      },
+      "q_ww_bells_of_gallowmere": {
+        "title": "The Bells of Gallowmere",
+        "text": "Hear that tolling, {playerName}? That is Gallowmere, up the north road, ringing its dead to sleep. Sexton Marrow keeps the count of every soul under the canopy, living and buried. Go and be counted, before the wood counts you itself.",
+        "completion": "Cobb sent you up the road whole, did he? Good man. He has kept those gate lanterns lit for thirty years, and the wood has never once got past him. Welcome to Gallowmere, {playerName}. Mind the bells.",
+        "objectives": {
+          "0": {
+            "label": "Report to Sexton Marrow"
+          }
+        }
+      },
+      "q_ww_silk_in_the_eaves": {
+        "title": "Silk in the Eaves",
+        "text": "Look up when you walk the northeast road, {playerName}, and you will see them: wrapped shapes in the canopy, swaying where no wind reaches. The widowsilk spinners have crept out of the Thicket and strung their larders over my lanterns. Kill ten, and the road is a road again.",
+        "completion": "Ten fewer weavers in the eaves. The lamplighters will walk their rounds tonight without looking up, and that is worth more here than you know.",
+        "objectives": {
+          "0": {
+            "label": "Widowsilk Spinner slain"
+          }
+        }
+      },
+      "q_ww_widows_skeins": {
+        "title": "The Widow's Skeins",
+        "text": "The spinners take our dead for their larders, {playerName}, so I take their silk for our shrouds. It burns clean and it holds a blessing better than linen ever did. Bring me six skeins of widowsilk, and the next soul we bury goes down wrapped and warded.",
+        "completion": "Six skeins, soft as a held breath. The dead will lie easier in this. Take these wraps, I sewed them from the last batch, and the wood has never once bitten through them.",
+        "objectives": {
+          "0": {
+            "label": "Widowsilk Skein"
+          }
+        }
+      },
+      "q_ww_candles_at_the_bounds": {
+        "title": "Candles at the Bounds",
+        "text": "Four boundary stones ring Gallowmere, {playerName}, one on each road out, and a grave-candle burns on every stone. While they burn, the buried stay buried. The drizzle has drowned them, all four, and I am too old to walk the bounds alone. Take my taper and relight them, quickly.",
+        "completion": "All four burning? Then breathe, {playerName}. You did not hear it, but the whole village did: the bells rang easier the moment the last wick caught.",
+        "objectives": {
+          "0": {
+            "label": "Grave-candle relit"
+          }
+        }
+      },
+      "q_ww_the_last_vicar": {
+        "title": "The Last Vicar",
+        "text": "North of here the Mournstone Chapel moulders by its black tarn, and one man still tends it: Vicar Creel, who would not leave when the roof came down. He knows the old rites better than my bells do, {playerName}, and he has not sent word in a month. Walk the chapel road and see him breathing.",
+        "completion": "Marrow worries after me? That is new. Tell him the Mournstone stands, after a fashion, and so do I. Stay a while, {playerName}. The tarn has been whispering, and I would rather not listen alone.",
+        "objectives": {
+          "0": {
+            "label": "Find Vicar Creel"
+          }
+        }
+      },
+      "q_ww_wraiths_of_the_tarn": {
+        "title": "Wraiths of the Tarn",
+        "text": "The wood wraiths were the chapel wardens once, {playerName}, grown from trees planted over the honored dead. Since the tarn turned black they have forgotten their office, and now they drift through my graveyard pulling at the soil. Break eight of them apart before they finish what they have started.",
+        "completion": "Eight wardens laid down at last. I will not call it a mercy in daylight, but between us, {playerName}, it was one.",
+        "objectives": {
+          "0": {
+            "label": "Wood Wraith slain"
+          }
+        }
+      },
+      "q_ww_what_the_bark_holds": {
+        "title": "What the Bark Holds",
+        "text": "In the Hanging Glade northwest of Gallowmere the spinners hang their silk-wrapped dead from the boughs, and the gravenbark shamblers stand guard beneath like patient pallbearers. Those are our people up there, {playerName}. Break five shamblers, cut down three of the wrapped dead, and bring them home to soil.",
+        "completion": "Three souls back under honest ground before nightfall. The shamblers will grow back, bark always does, but tonight the glade hangs empty, and that is enough.",
+        "objectives": {
+          "0": {
+            "label": "Gravenbark Shambler felled"
+          },
+          "1": {
+            "label": "Silkbound remains cut down"
+          }
+        }
+      },
+      "q_ww_horn_of_the_huntsman": {
+        "title": "The Horn of the Huntsman",
+        "text": "You have heard the horn by now, {playerName}, thin and far off, the sound the whole wood holds its breath for. The Pale Huntsman rides his clearing northwest of here, and every grave he passes grows shallower. He was a man once, and he was buried wrong, and I am done pretending prayer will do it. Take a friend, take two, and unhorse him.",
+        "completion": "The horn stopped mid-note. Every bell in Gallowmere rang once, on its own, and then the wood went quieter than I have heard it in thirty years. You have done the rite I could not, {playerName}. Wear this, and walk under the canopy unafraid.",
+        "objectives": {
+          "0": {
+            "label": "The Pale Huntsman unhorsed"
+          }
+        }
+      },
+      "q_af_goldmelt_road": {
+        "title": "The Gold Road Down",
+        "text": "You came over the Goldmelt, {playerName}, snow still on your boots. I keep this shrine so Lanternmere knows who walks in from the cold, and lately I have had little to report. Take the gold road down to the town, find Reeve Ottoline by the well, and tell her the pass is quiet.",
+        "completion": "Quiet on the Goldmelt, and a traveler with snow in their hair to prove it. Sorrel keeps her watch too well to send idle word. Be welcome in Lanternmere, {playerName}. The lanterns burn for you.",
+        "objectives": {
+          "0": {
+            "label": "Report to Reeve Ottoline"
+          }
+        }
+      },
+      "q_af_foxes_in_the_lamplight": {
+        "title": "Foxes in the Lamplight",
+        "text": "The gloam foxes have learned what the lantern stores are worth, {playerName}. Every dusk they slip the fences and carry off the tallow we press for the ferry lamps. Soft paws, softer conscience. Cull ten of them and the rest will remember to fear the town.",
+        "completion": "Ten, and the stores went untouched last night for the first time this season. The lamplighters send their thanks, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Gloam Fox slain"
+          }
+        }
+      },
+      "q_af_orchard_call": {
+        "title": "A Cart for the Orchard",
+        "text": "Orchardist Pomeline keeps the Gilded Orchard on the southeast road, and her sap carts are three days overdue. The whole town runs on that amber sap, {playerName}: lamp resin, sweetening, the harvest ale. Walk the southeast road and find out what keeps her.",
+        "completion": "The Reeve counts her carts, does she? Well, she can count them missing a while longer. Look at my rows, {playerName}. I have greater troubles than a late delivery.",
+        "objectives": {
+          "0": {
+            "label": "Find Orchardist Pomeline"
+          }
+        }
+      },
+      "q_af_sprites_and_spigots": {
+        "title": "Sprites and Spigots",
+        "text": "Harvest sprites, {playerName}. They pry my sap-taps from the trunks for the sweetness inside and fling the buckets into the grass. Drive off eight of the little thieves and bring back four of my buckets, and the carts roll again.",
+        "completion": "Four buckets back on their hooks and the rows gone quiet. You have a heavier hand with sprites than I do, {playerName}, and today I am glad of it.",
+        "objectives": {
+          "0": {
+            "label": "Harvest Sprite driven off"
+          },
+          "1": {
+            "label": "Sap-Tap Bucket recovered"
+          }
+        }
+      },
+      "q_af_amber_from_the_herd": {
+        "title": "Amber off the Herd",
+        "text": "The gilded stags bed down beneath my oldest trees, and the sap drips gold into their coats all night. Combed clots of it are the purest amber in the weald. Bring me six, {playerName}. The stags will not thank you, but they will not miss it either.",
+        "completion": "Six clots, clean as poured honey. These gloves are stitched with the last batch, {playerName}: sap-stiffened, and warmer than they look.",
+        "objectives": {
+          "0": {
+            "label": "Gilded Sap Clot"
+          }
+        }
+      },
+      "q_af_lanterns_on_the_water": {
+        "title": "Lanterns on the Water",
+        "text": "Every ferry on the Mere carries a stern lantern, {playerName}, and three of my boats came back at dawn without theirs. The fog took them, or something in the fog did. They wash up along the west shore when the wind turns. Walk the shore road and bring my lanterns home.",
+        "completion": "All three, and still burning. Ferry lanterns do not go out in water, {playerName}. That is the point of them. What worries me is what pulled them loose.",
+        "objectives": {
+          "0": {
+            "label": "Ferry Lantern recovered"
+          }
+        }
+      },
+      "q_af_what_took_the_moorings": {
+        "title": "What Took the Moorings",
+        "text": "Now I will tell you what I did not say in front of the town. The moorings were not slipped, they were bitten through. Mere lurkers, bolder every night, dragging at the ropes and the rudders. Put eight of them back under the water for good, {playerName}, before a ferryman goes with them.",
+        "completion": "Eight fewer shapes in the shallows, and the crossing ran on time today for the first time in a fortnight. But bold lurkers are driven lurkers, {playerName}. Something beneath the Mere is moving them.",
+        "objectives": {
+          "0": {
+            "label": "Mere Lurker slain"
+          }
+        }
+      },
+      "q_af_the_meredark": {
+        "title": "The Meredark",
+        "text": "The old ferrymen have a name they only say ashore: the Meredark, the first lurker, old as the lake and twice as patient. It rose once before, the year the drowned jetty went under, and it is rising now. At dusk it suns itself on the jetty ruin off the north shore, {playerName}. Take a friend, take two, and end it while it can still be ended.",
+        "completion": "The fog lifted off the Mere this morning, {playerName}, and the whole town saw it. The ferries will run the night crossing again, and every lantern on the water will burn in your name. Take this: it was dredged from the drowned jetty, and no one has better right to wear it.",
+        "objectives": {
+          "0": {
+            "label": "The Meredark slain"
+          }
+        }
+      },
+      "q_dk_ash_on_the_wind": {
+        "title": "Ash on the Wind",
+        "text": "Look north off the palisade, {playerName}. Those fires in the dunes are not troll cookfires, they are ashbone musters, and every night there are more. The dead come up out of the bonefields with sand still in their teeth. Cut down ten raiders before they cut a road to my gate.",
+        "completion": "Ten fewer blades in the dunes, and the muster fires burned lower last night. My sentries slept, which they have not done in a week. Well cut, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Ashbone Raider slain"
+          }
+        }
+      },
+      "q_dk_trolls_on_the_road": {
+        "title": "Trolls on the Road",
+        "text": "The dune trolls have learned the sound of a supply wagon, {playerName}. They hit the Cinder Dunes road three times this month, and the last driver walked in carrying nothing but the reins. Eight trolls off that road and my wagons roll again.",
+        "completion": "Eight, and my drivers have stopped writing farewell letters before every run. The garrison eats because of you, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Dune Troll slain"
+          }
+        }
+      },
+      "q_dk_scorched_stores": {
+        "title": "Scorched Stores",
+        "text": "The last wagon burned, {playerName}, but iron-strapped crates do not burn through. Four of them are still lying scorched along the dunes road with a season of salt, nails, and bowstrings inside. Bring my stores home before the trolls work out how to open them.",
+        "completion": "Scorched black and every latch still holding. The smith gets his nails, the fletcher her strings, and you get the boots I was saving for whoever brought my crates back, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Scorched supply crate recovered"
+          }
+        }
+      },
+      "q_dk_banners_over_the_dunes": {
+        "title": "Banners over the Dunes",
+        "text": "The ashbone muster at the old bonefield graves, {playerName}, and my patrols cannot read the dunes the way they read a wall. Kill five of their warcallers, the ones that scream the dead upright, and plant a warning banner on each muster ground so my sentries can mark it from the ridge.",
+        "completion": "Three banners snapping in the hot wind, right where my glass can find them. With five warcallers silenced, whatever answers their call will come slower. You bought us time, {playerName}.",
+        "objectives": {
+          "0": {
+            "label": "Ashbone Warcaller slain"
+          },
+          "1": {
+            "label": "Warning banner planted"
+          }
+        }
+      },
+      "q_dk_watcher_at_the_wargate": {
+        "title": "The Watcher at the Wargate",
+        "text": "Something is pulling the ashbone west, {playerName}, and I sent my best to learn what. Scout Yerrin has camped a month in the far dunes past Trollmoot, in sight of a gate nobody built in my lifetime. Her reports stopped ten days ago. Find her camp and get me her eyes.",
+        "completion": "Brannoc sent you? Then my last runner never made it. Keep your voice down and sit, {playerName}. You see that gate below? Count the war-banners in front of it, and you will understand why I stopped writing things down.",
+        "objectives": {
+          "0": {
+            "label": "Find Scout Yerrin"
+          }
+        }
+      },
+      "q_dk_marrow_and_ash": {
+        "title": "Marrow and Ash",
+        "text": "Every ashbone raider carries a war-brand, {playerName}: a scorched tally of the host it marches under. I have counted four hosts from this ridge, but guesses are not intelligence. Bring me six brands off the raiders and their warcallers, and I will give Brannoc the shape of the war that is coming.",
+        "completion": "Six brands, and one mark burned into every one of them. This is no raid muster, {playerName}. Every host in the dunes answers to the wargate below us, the trolls call it Orkadia, and no five soldiers I ever served with could break what drums behind that door. Perhaps five like you.",
+        "objectives": {
+          "0": {
+            "label": "Ashbone War-Brand"
+          }
+        }
+      },
+      "q_dk_scales_of_the_maw": {
+        "title": "Scales of the Maw",
+        "text": "When the wind turns off the Drakemaw, the emberwing drakes ride it over my camp low enough to count their teeth, {playerName}. They range farther every day, and something in that crater drives them. Bring me three of their scales. Scales remember heat, and I can read where a drake has been roosting by the burn.",
+        "completion": "Look at the underside of this one, {playerName}: scorched in a spiral, and only one thing nests in circles. These drakes are brood-guards. Something in the Drakemaw is a mother.",
+        "objectives": {
+          "0": {
+            "label": "Emberwing Scale"
+          }
+        }
+      },
+      "q_dk_matriarch_of_the_maw": {
+        "title": "Matriarch of the Maw",
+        "text": "The scales told it true, {playerName}. I climbed the rim at dawn and saw her on the crater floor: Cindraleth, the matriarch every emberwing in this sky was hatched under, gold as a coal about to catch. While she broods, the drakes grow bolder, and Wyrmwatch cannot fight dragons and the ashbone both. End her in her crater, then carry the word to Gatecaptain Brannoc. Do not go alone.",
+        "completion": "The sky over the Drakemaw has been empty for two days, and now you walk through my gate with a matriarch's blood on your boots. Wyrmwatch has stood forty years on watch for exactly this, {playerName}. Take these pauldrons, mawscale, worked by our own smith. Wear them where the drakes can see.",
+        "objectives": {
+          "0": {
+            "label": "Cindraleth the Maw Matriarch slain"
+          }
+        }
+      },
       "q_ev_kennels": {
         "title": "What the Wolves Left",
         "text": "They came over the kennel wall on a still night and they did not eat what they killed, {playerName}. That is the part I cannot square. A hungry wolf takes one hound and runs. These ones stayed until the runs were quiet. Go up the Wolf Run and put ten of them down for me.",
@@ -9607,11 +9974,11 @@ export const zh_CN: EnTranslations = {
       },
       "q_cf_approach": {
         "title": "Clearing the Approach",
-        "text": "The bone reavers out of the Bonefields have worked their way along the ridge to within a stone's throw of my watch-post, {playerName}, and I have two people and a signal horn. Ten of them, off the approach. Whatever else the Dawn decides to do about that stair, we are not deciding it while fighting on the doorstep.",
+        "text": "The court guardians have woken wrong, {playerName}, and they have strayed off their ruins to within a stone's throw of my watch-post. I have two people and a signal horn. Ten of them, off the approach. Whatever else the Dawn decides to do about that stair, we are not deciding it while fighting on the doorstep.",
         "completion": "The ridge is clear and my two are asleep for the first time in a week. Now we can talk about the hole in the ground.",
         "objectives": {
           "0": {
-            "label": "Bone Reaver slain"
+            "label": "Ancient Guardian stilled"
           }
         }
       },
@@ -9838,81 +10205,78 @@ export const zh_CN: EnTranslations = {
           }
         }
       },
-      "ashen_wastes": {
-        "name": "灰烬荒原",
-        "welcome": "灰烬荒原一望无际，灰暗而毫无生机。某个庞然之物低低地飘浮在死寂的大地之上。",
+      "veiled_hollow": {
+        "name": "The Veiled Hollow",
+        "welcome": "The air hums with old magic. Seek Keeper Saelwyn beneath the great tree of Eldergleam.",
         "pois": {
           "0": {
-            "label": "守墓哨"
+            "label": "Eldergleam"
           },
           "1": {
-            "label": "灰烬隘口"
+            "label": "Duskfall Cave"
           },
           "2": {
-            "label": "死寂之湖"
+            "label": "Duskfall Overlook"
           },
           "3": {
-            "label": "白骨之野"
+            "label": "Elder Grove"
           },
           "4": {
-            "label": "空冢"
+            "label": "Starfall Basin"
           },
           "5": {
-            "label": "苍白之境"
+            "label": "The Sunken Court"
+          },
+          "6": {
+            "label": "Crystalline Shallows"
+          },
+          "7": {
+            "label": "The Gleaming Deep"
           }
         }
       },
-      "alderfen_shallows": {
-        "name": "Alderfen Shallows",
-        "welcome": "West of the vale the ground gives way to standing water. Reedwatch holds the crossing.",
+      "frostveil": {
+        "name": "The Frostveil Reach",
+        "welcome": "Snow swallows every sound. Under the dancing lights, the cold itself feels awake.",
         "pois": {
           "0": {
-            "label": "Reedwatch"
+            "label": "Icemantle"
           },
           "1": {
-            "label": "The Alderfen Crossing"
+            "label": "The Snowline"
           },
           "2": {
-            "label": "Otter Hollow"
+            "label": "Glacier Tarn"
           },
           "3": {
-            "label": "The Rotting Weir"
+            "label": "The Aurora Steps"
           },
           "4": {
-            "label": "Alderfen Water"
+            "label": "The Shiverfen"
           },
           "5": {
-            "label": "Sedgewatch Ruin"
-          },
-          "6": {
-            "label": "The Drowned Mill"
+            "label": "The Howling Terraces"
           }
         }
       },
-      "grimhold_crags": {
-        "name": "Grimhold Crags",
-        "welcome": "East of the vale the Grimhold Crags climb out of the treeline. Coldhearth burns against them.",
+      "farshore_isle": {
+        "name": "The Farshore",
+        "welcome": "Cross the sandbar and Gullhaven's bell will find you before the town does. The breaks tear open without warning, and the redoubt holds its shore against whatever pours through. They have been waiting a long while for someone like you.",
         "pois": {
           "0": {
-            "label": "Coldhearth"
+            "label": "Gullhaven"
           },
           "1": {
-            "label": "The Grimhold Stair"
+            "label": "The Landing"
           },
           "2": {
-            "label": "Scree Fall"
+            "label": "The Watch Meadow"
           },
           "3": {
-            "label": "The Cragmaw Dens"
+            "label": "The Sundered Cliffs"
           },
           "4": {
-            "label": "Coldhearth Tarn"
-          },
-          "5": {
-            "label": "Ironvein Cut"
-          },
-          "6": {
-            "label": "The Broken Watchtower"
+            "label": "The Riftfields"
           }
         }
       },
@@ -10029,6 +10393,108 @@ export const zh_CN: EnTranslations = {
             "label": "The Lily Basin"
           }
         }
+      },
+      "nightbloom": {
+        "name": "The Nightbloom",
+        "welcome": "Past the Nightgate the air itself dreams. Follow the flower-light to Moonrest, and mind the sleeping world that hangs in the sky.",
+        "pois": {
+          "0": {
+            "label": "Moonrest"
+          },
+          "1": {
+            "label": "The Nightgate"
+          },
+          "2": {
+            "label": "The Moonwell"
+          },
+          "3": {
+            "label": "Gloamfield"
+          },
+          "4": {
+            "label": "The Standing Vigil"
+          },
+          "5": {
+            "label": "The Sleepless Barrow"
+          }
+        }
+      },
+      "wraithwood": {
+        "name": "The Wraithwood",
+        "welcome": "The canopy closes over the road like a lid. Keep to the lanterns of Gallowmere, and do not answer if the wood calls your name.",
+        "pois": {
+          "0": {
+            "label": "Gallowmere"
+          },
+          "1": {
+            "label": "The Crowgate"
+          },
+          "2": {
+            "label": "Widow's Thicket"
+          },
+          "3": {
+            "label": "The Hanging Glade"
+          },
+          "4": {
+            "label": "The Mournstone Chapel"
+          },
+          "5": {
+            "label": "The Huntsman's Clearing"
+          }
+        }
+      },
+      "amberfall": {
+        "name": "The Amberfall",
+        "welcome": "Every leaf here burns gold and red, yet none ever fall. The lanterns of Lanternmere are lit for you.",
+        "pois": {
+          "0": {
+            "label": "Lanternmere"
+          },
+          "1": {
+            "label": "The Goldmelt"
+          },
+          "2": {
+            "label": "The Gilded Orchard"
+          },
+          "3": {
+            "label": "Harvest Hollow"
+          },
+          "4": {
+            "label": "The Great Mere"
+          },
+          "5": {
+            "label": "Cindermaple Rise"
+          },
+          "6": {
+            "label": "The Leaning Monolith"
+          }
+        }
+      },
+      "drakelands": {
+        "name": "The Drakelands",
+        "welcome": "Hot wind rolls off the wastes ahead. Dragons wheel over the Drakemaw, and troll fires burn in the dunes.",
+        "pois": {
+          "0": {
+            "label": "Wyrmwatch"
+          },
+          "1": {
+            "label": "The Gatewood"
+          },
+          "2": {
+            "label": "Cinder Dunes"
+          },
+          "3": {
+            "label": "Trollmoot"
+          },
+          "4": {
+            "label": "The Last Keep"
+          },
+          "5": {
+            "label": "Bloodglass Fields"
+          },
+          "6": {
+            "label": "Drakemaw Caldera"
+          }
+        }
       }
     },
     "dungeons": {
@@ -10113,13 +10579,13 @@ export const zh_CN: EnTranslations = {
       "herb_thornpeak_heights": {
         "name": "Sunpetal Patch"
       },
-      "ore_ashen_wastes": {
+      "ore_veiled_hollow": {
         "name": "Cinderite Seam"
       },
-      "wood_ashen_wastes": {
+      "wood_veiled_hollow": {
         "name": "Boneash Snag"
       },
-      "herb_ashen_wastes": {
+      "herb_veiled_hollow": {
         "name": "Gravebloom Patch"
       }
     },

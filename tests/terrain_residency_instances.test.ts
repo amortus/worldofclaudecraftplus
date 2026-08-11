@@ -152,7 +152,12 @@ describe('residency across an instance round trip', () => {
 
     converge(view, HUB.x, HUB.z);
     expect(view.residency().resident).toBeGreaterThanOrEqual(atHub);
-  });
+    // 60s, not the 5s default: the full map parity pass took the chunk grid
+    // from 432 cells to 792 (576 slots after the 2x2 far super-chunk merge), so
+    // this case's three real convergences (hub, the far end of the strip, hub
+    // again) each build and evict several times as many chunks. The walk is the
+    // point of the case, so the budget moves rather than the sweep.
+  }, 60_000);
 });
 
 describe('replanning is skipped when nothing can change', () => {

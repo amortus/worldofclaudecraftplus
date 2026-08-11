@@ -13,7 +13,7 @@ import {
   zoneAt,
   zoneContaining,
 } from '../src/sim/data';
-import { zoneBiomeAt } from '../src/sim/world';
+import { computeBorderEdges, zoneBiomeAt } from '../src/sim/world';
 import type { BiomeId, ZoneDef } from '../src/sim/types';
 
 // ---------------------------------------------------------------------------
@@ -21,8 +21,11 @@ import type { BiomeId, ZoneDef } from '../src/sim/types';
 //
 // PHASE 1 grew `zoneAt`/`zoneBiomeAt` an x argument and `ZoneDef` optional x
 // bounds while the world stayed byte-identical. PHASE 2 added the first column
-// ring: `alderfen_shallows` east and `grimhold_crags` west, both sharing the
-// Eastbrook Vale's z band (-180..180).
+// ring, an invented pair (`alderfen_shallows` east, `grimhold_crags` west) in
+// the Eastbrook Vale's band. FULL MAP PARITY deleted that pair and ported
+// upstream's own fourteen zones instead, so the grid is now five strip bands
+// (three original plus the Veiled Hollow and the Frostveil Reach, which took
+// the band the retired Ashen Wastes used to hold) and nine column zones.
 //
 // The ORIGINAL 1D implementations are still the oracle, but their domain is now
 // exactly the strip: inside x [-180, 180) the grid must answer precisely what
@@ -68,12 +71,22 @@ const STRIP_X_SAMPLES = (() => {
 })();
 
 describe('world topology: the strip answers exactly as it always did', () => {
-  it('ships the four strip zones plus the mirrored column rings', () => {
-    // 4 strip bands + the first column ring (alderfen/grimhold, ours) + the
-    // four zones ported from upstream (willowfen/galecrest/palmreach/evergarden).
-    expect(ZONES).toHaveLength(10);
-    expect(STRIP_ZONES).toHaveLength(4);
-    expect(COLUMN_ZONES).toHaveLength(6);
+  it('ships the five strip bands plus the nine column zones of the 14-zone grid', () => {
+    // 3 original strip bands + the 11 zones ported from upstream, two of which
+    // (the Veiled Hollow and the Frostveil Reach) are STRIP bands rather than
+    // columns. The invented alderfen/grimhold pair is gone, and the Ashen
+    // Wastes is parked, not merged (see the PARKED banner in sim/data.ts).
+    expect(ZONES).toHaveLength(14);
+    expect(STRIP_ZONES).toHaveLength(5);
+    expect(COLUMN_ZONES).toHaveLength(9);
+    // The two filters partition ZONES: no zone is both, none is neither.
+    expect(STRIP_ZONES.length + COLUMN_ZONES.length).toBe(ZONES.length);
+    for (const zone of ZONES) {
+      expect(
+        STRIP_ZONES.includes(zone) !== COLUMN_ZONES.includes(zone),
+        `${zone.id} is in exactly one of STRIP_ZONES / COLUMN_ZONES`,
+      ).toBe(true);
+    }
     for (const zone of STRIP_ZONES) {
       expect(zone.xMin, `${zone.id}.xMin`).toBeUndefined();
       expect(zone.xMax, `${zone.id}.xMax`).toBeUndefined();
@@ -85,33 +98,65 @@ describe('world topology: the strip answers exactly as it always did', () => {
   });
 
   it('leaves every strip zone free of the grid fields, so no band moved', () => {
+    // The three ORIGINAL bands still declare nothing at all: that is the
+    // "no band moved" promise, and it is asserted on them by name.
+    const ORIGINAL_BANDS = ['eastbrook_vale', 'mirefen_marsh', 'thornpeak_heights'];
     for (const zone of STRIP_ZONES) {
+      // A strip band spans the whole row, so it can never carry a column pass.
       expect(zone.eastPassZ, `${zone.id}.eastPassZ`).toBeUndefined();
       expect(zone.westPassZ, `${zone.id}.westPassZ`).toBeUndefined();
-      expect(zone.southPassX, `${zone.id}.southPassX`).toBeUndefined();
       expect(zone.sealedSouthBorder, `${zone.id}.sealedSouthBorder`).toBeUndefined();
       expect(zone.trashRespawnSeconds, `${zone.id}.trashRespawnSeconds`).toBeUndefined();
+      if (ORIGINAL_BANDS.includes(zone.id)) {
+        expect(zone.southPassX, `${zone.id}.southPassX`).toBeUndefined();
+      } else {
+        // The two PORTED strip bands legitimately declare their own southPassX
+        // (upstream's), which must land inside the strip's own x range or the
+        // band wall would have no opening at all.
+        if (zone.southPassX !== undefined) {
+          expect(zone.southPassX, `${zone.id}.southPassX`).toBeGreaterThanOrEqual(STRIP_MIN_X);
+          expect(zone.southPassX, `${zone.id}.southPassX`).toBeLessThanOrEqual(STRIP_MAX_X);
+        }
+      }
     }
+    expect(
+      STRIP_ZONES.filter((z) => ORIGINAL_BANDS.includes(z.id)),
+      'the three original bands are all still strip bands',
+    ).toHaveLength(3);
   });
 
-  it('opens each column on exactly one shared edge with the strip, and seals nothing', () => {
-    // A column touches the strip on ONE vertical edge (the side facing x = 0),
-    // so it declares exactly one of eastPassZ/westPassZ and that pass must fall
-    // inside its own z band. A column stacked on another column may also
-    // declare a southPassX; that one has to fall inside its own x range.
+  it('opens each column on a shared edge with the strip, and seals nothing', () => {
+    // A column touches the strip on ONE vertical line (the side facing x = 0).
+    // Upstream declares a pass on most of them but not all: the Farshore Isle
+    // declares none, and `computeBorderEdges` then falls back to the midpoint
+    // of the shared span. So the ZONE FIELD is at most one pass, and what must
+    // hold unconditionally is the EDGE: every column has at least one vertical
+    // border edge on its strip-facing line whose pass lies inside that edge's
+    // own span, i.e. a real opening a player can walk.
+    const vertical = computeBorderEdges(ZONES).filter((e) => e.kind === 'v');
     for (const zone of COLUMN_ZONES) {
       const passes = [zone.eastPassZ, zone.westPassZ].filter((v) => v !== undefined);
-      expect(passes, `${zone.id} border passes`).toHaveLength(1);
-      expect(passes[0], `${zone.id} pass z`).toBeGreaterThanOrEqual(zone.zMin);
-      expect(passes[0], `${zone.id} pass z`).toBeLessThanOrEqual(zone.zMax);
-      // the pass sits on the side that faces the strip, never the outer rim
-      const facing = (zone.xMin ?? 0) >= STRIP_MAX_X ? zone.westPassZ : zone.eastPassZ;
-      expect(facing, `${zone.id} pass is on the strip-facing edge`).toBeTypeOf('number');
+      expect(passes.length, `${zone.id} border passes`).toBeLessThanOrEqual(1);
+      if (passes.length === 1) {
+        expect(passes[0], `${zone.id} pass z`).toBeGreaterThanOrEqual(zone.zMin);
+        expect(passes[0], `${zone.id} pass z`).toBeLessThanOrEqual(zone.zMax);
+        // the pass sits on the side that faces the strip, never the outer rim
+        const facing = (zone.xMin ?? 0) >= STRIP_MAX_X ? zone.westPassZ : zone.eastPassZ;
+        expect(facing, `${zone.id} pass is on the strip-facing edge`).toBeTypeOf('number');
+      }
       expect(zone.sealedSouthBorder).toBeUndefined();
       if (zone.southPassX !== undefined) {
         expect(zone.southPassX, `${zone.id} southPassX`).toBeGreaterThanOrEqual(zone.xMin!);
         expect(zone.southPassX, `${zone.id} southPassX`).toBeLessThanOrEqual(zone.xMax!);
       }
+      const facingX = (zone.xMin ?? 0) >= STRIP_MAX_X ? zone.xMin! : zone.xMax!;
+      const mine = vertical.filter(
+        (e) => e.at === facingX && e.lo < zone.zMax && e.hi > zone.zMin,
+      );
+      expect(mine.length, `${zone.id} strip-facing border edges`).toBeGreaterThan(0);
+      for (const e of mine) expect(e.sealed, `${zone.id} border sealed`).toBe(false);
+      const opening = mine.filter((e) => e.passAt >= e.lo && e.passAt <= e.hi);
+      expect(opening.length, `${zone.id} has a pass inside a shared span`).toBeGreaterThan(0);
     }
   });
 
@@ -125,26 +170,52 @@ describe('world topology: the strip answers exactly as it always did', () => {
     expect(WORLD_MIN_X).toBe(-540);
     expect(WORLD_MAX_X).toBe(540);
     expect(WORLD_MIN_X).toBe(-WORLD_MAX_X);
-    // z is untouched: the columns share an existing band rather than adding one.
+    // z GREW NORTH. The columns no longer only share an existing band: the
+    // ported grid stacks five rows of them, and the Drakelands (z 1820..2420)
+    // is the northmost rect in the whole world. The south edge is untouched.
     expect(WORLD_MIN_Z).toBe(-180);
-    expect(WORLD_MAX_Z).toBe(1260);
+    expect(WORLD_MAX_Z).toBe(2420);
+    expect(WORLD_MAX_Z).toBe(Math.max(...ZONES.map((z) => z.zMax)));
+    expect(ZONES.find((z) => z.zMax === WORLD_MAX_Z)!.id).toBe('drakelands');
   });
 
   it('tiles the z axis contiguously along the strip, which is what makes the fallback exact', () => {
     for (let i = 1; i < STRIP_ZONES.length; i++) {
       expect(STRIP_ZONES[i].zMin, `${STRIP_ZONES[i].id}.zMin`).toBe(STRIP_ZONES[i - 1].zMax);
     }
-    // A column no longer has to share a strip band (the Willowfen runs
-    // z 180..700, straight across the Mirefen/Thornpeak boundary at 540), so
-    // the rule that matters is weaker and structural: every column starts at a
-    // z another zone in ITS OWN grid column ends at, or at the world's south
-    // edge, so each column tiles z contiguously too and leaves no seam.
+    // A column does not have to share a strip band (the Willowfen runs
+    // z 180..700, straight across the Mirefen/Thornpeak boundary at 540), and a
+    // column's south neighbour is never a strip band either, so the old "starts
+    // where a same-column zone ends, or at the world's south edge" rule no
+    // longer holds: the Willowfen starts at z 180 with NOTHING south of it,
+    // because upstream leaves the -x half of the vale's row empty.
+    //
+    // The real rule, and a stronger one: group the columns by their x rect and
+    // each GRID COLUMN tiles ONE contiguous z interval, no gap and no overlap.
+    // Only where that interval starts is allowed to differ from the strip's.
+    const byColumn = new Map<string, ZoneDef[]>();
     for (const col of COLUMN_ZONES) {
-      const sameColumn = COLUMN_ZONES.filter((c) => c.xMin === col.xMin && c.xMax === col.xMax);
-      expect(
-        col.zMin === WORLD_MIN_Z || sameColumn.some((c) => c.zMax === col.zMin),
-        `${col.id} south neighbour`,
-      ).toBe(true);
+      const key = `${col.xMin},${col.xMax}`;
+      const list = byColumn.get(key) ?? [];
+      list.push(col);
+      byColumn.set(key, list);
+    }
+    // Upstream's grid is two columns wide, one each side of the strip.
+    expect([...byColumn.keys()].sort()).toEqual(['-540,-180', '180,540']);
+    for (const [key, list] of byColumn) {
+      const sorted = [...list].sort((a, b) => a.zMin - b.zMin);
+      for (let i = 1; i < sorted.length; i++) {
+        expect(sorted[i].zMin, `${sorted[i].id}.zMin follows ${sorted[i - 1].id}.zMax`).toBe(
+          sorted[i - 1].zMax,
+        );
+      }
+      const span = [sorted[0].zMin, sorted[sorted.length - 1].zMax];
+      // The +x column runs the world's whole z extent; the -x column starts at
+      // z 180 (the vale's row has no -x zone) and stops 40yd short of the
+      // Drakelands' north end. Both holes are asserted as holes further down.
+      expect(span, `grid column ${key} z span`).toEqual(
+        key === '180,540' ? [WORLD_MIN_Z, WORLD_MAX_Z] : [180, 2380],
+      );
     }
   });
 
@@ -228,26 +299,49 @@ describe('world topology: the grid outside the strip', () => {
     }
   });
 
-  it('now tiles the whole bounding box: the realm ring filled the last hole', () => {
+  it('leaves exactly three holes in the bounding box, and clamps every one to a strip band', () => {
+    // The grid used to tile its whole bounding box, because the invented ring
+    // mirrored every row. Upstream's grid is DELIBERATELY ragged, so the box
+    // has three holes and they are named here rather than tolerated: a hole is
+    // ground `zoneContaining` must report honestly, and that `zoneAt` must
+    // still clamp to a STRIP band so no caller (zone name, biome, sky,
+    // respawn graveyard) can crash or read a column.
+    const HOLES: { what: string; x0: number; x1: number; z0: number; z1: number }[] = [
+      // Upstream puts `farshore_isle` at +x in the vale's row and nothing
+      // opposite it, so the -x half of that row is empty.
+      { what: 'the vale row, -x half', x0: WORLD_MIN_X, x1: STRIP_MIN_X, z0: WORLD_MIN_Z, z1: 180 },
+      // The strip ends at the Frostveil's north edge (1960) while both columns
+      // run further north. Upstream fills this corridor with an ocean bay it
+      // shapes in its own world.ts; we have no coast shaper, so it stays a hole
+      // and the world's north rim follows the columns instead (worldNorthEdgeAt).
+      { what: 'the middle column, north of the strip', x0: STRIP_MIN_X, x1: STRIP_MAX_X, z0: 1960, z1: WORLD_MAX_Z },
+      // The Drakelands reaches z 2420, the Amberfall stops at 2380.
+      { what: 'the -x column, north of the Amberfall', x0: WORLD_MIN_X, x1: STRIP_MIN_X, z0: 2380, z1: WORLD_MAX_Z },
+    ];
+    const hit = HOLES.map(() => 0);
     let holes = 0;
     for (let x = WORLD_MIN_X; x < WORLD_MAX_X; x += 7.5) {
       for (let z = WORLD_MIN_Z; z < WORLD_MAX_Z; z += 7.5) {
         const strict = zoneContaining(x, z);
         if (strict === null) {
           holes++;
-          expect(Math.abs(x)).toBeGreaterThanOrEqual(STRIP_MAX_X);
-          // A hole is always in a row no column occupies, and zoneAt still
-          // clamps it to the band's strip zone so no caller can crash.
+          const which = HOLES.findIndex((h) => x >= h.x0 && x < h.x1 && z >= h.z0 && z < h.z1);
+          expect(which, `hole at ${x},${z} is not one of the three known rects`).toBeGreaterThan(-1);
+          hit[which]++;
+          // zoneAt still clamps it to the band's strip zone, exactly as the 1D
+          // strip-era lookup answered, so no caller can crash.
           expect(zoneAt(x, z)).toBe(zoneAtOld(z));
+          expect(STRIP_ZONES).toContain(zoneAt(x, z));
         } else {
           expect(strict).toBe(zoneAt(x, z));
         }
       }
     }
-    // Grimhold/Willowfen/Palmreach fill the west column and Alderfen/Galecrest/
-    // Evergarden the east one, so every one of the box's cells is now real
-    // ground. The hole handling above is kept, not deleted: `zoneContaining`
-    // still has to answer honestly the moment the grid grows unevenly again.
-    expect(holes).toBe(0);
+    // All three rects are real, so none of them is a stale entry quietly
+    // widening the allow-list above.
+    for (let i = 0; i < HOLES.length; i++) {
+      expect(hit[i], `${HOLES[i].what} contributes holes`).toBeGreaterThan(0);
+    }
+    expect(holes).toBe(hit.reduce((a, b) => a + b, 0));
   });
 });

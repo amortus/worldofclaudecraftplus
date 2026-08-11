@@ -506,7 +506,10 @@ describe('delve interactables and affixes', () => {
       for (const id of run.affixes) expect(DELVE_IMPLEMENTED_AFFIXES.has(id)).toBe(true);
       expect(run.affixes.length).toBe(1); // Heroic affixCount = 1
     }
-  });
+    // 200 full world builds. Full map parity roughly doubled world-generation
+    // cost (14 zones, 183 camps, 617 mobs, z out to 2420), which took this loop
+    // past vitest's 5s default. The assertion is unchanged; only the budget is.
+  }, 180_000);
 
   it('Deacon Varric enrages on Heroic but not on Normal (PRD §7.4)', () => {
     for (const tier of ['normal', 'heroic'] as const) {
@@ -700,9 +703,19 @@ describe('delve reward chest + surface exit flow', () => {
 
   it('the Bountiful roll is deterministic for a given seed', () => {
     // Read the raw roll via enterReliquary (enterFinale pins it false). Same seed
-    // ⇒ same outcome; seed 6 is a calibrated seed known to roll Bountiful (the run
+    // ⇒ same outcome; seed 88 is a calibrated seed known to roll Bountiful (the run
     // seed is drawn from the post-worldgen RNG, so this fixture seed is recalibrated
     // whenever overworld content shifts that stream).
+    //
+    // RE-BASELINED by the full-map parity pass: was seed 6, is seed 88. Nothing
+    // about the Bountiful roll changed. Retiring the Ashen Wastes removed its
+    // SCATTER camps, and a scatter camp draws world-gen rng to place each spawn,
+    // so the post-worldgen cursor this run seed is drawn from moved. (The zones
+    // ported in to replace it carry frozen exact `positions` and draw nothing, so
+    // only the removal moved the cursor.) 42, 88 and 106 are the seeds that roll
+    // Bountiful in 1..120 on the new stream; 6 rolled it on the old one and no
+    // longer does. 88 is preferred over 42 only because 42 is this file's default
+    // sim seed and would read as the fixture depending on the default.
     const rollFor = (seed: number) => {
       const s = makeSim('warrior', seed);
       s.setPlayerLevel(DELVES.collapsed_reliquary.minLevel);
@@ -710,7 +723,7 @@ describe('delve reward chest + surface exit flow', () => {
       return s.delveRunForPlayer(s.playerId)?.bountiful;
     };
     expect(rollFor(1234)).toBe(rollFor(1234));
-    expect(rollFor(6)).toBe(true);
+    expect(rollFor(88)).toBe(true);
   });
 
   it('a Bountiful Coffer refuses the lower antes and only opens at Hard-tier + Premium ante', () => {

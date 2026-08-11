@@ -118,10 +118,19 @@ describe('crafting wiring: a successful craft end to end', () => {
 
 describe('crafting wiring: the masterwork proc', () => {
   it('procs from a fixed seed, upgrading exactly one copy', () => {
-    // Seed 6's first draw is below the 0.10 chance a capped smith gets on the
+    // Seed 2's first draw is below the 0.10 chance a capped smith gets on the
     // rung-4 recipe with a signed reagent (0.03 base + 0.02 two tiers above
     // + 0.02 signed + 0.03 material tier 3).
-    const sim = makeSim(6);
+    //
+    // RE-BASELINED from seed 6 by the full map parity pass. This fixture reads
+    // the shared rng stream AFTER world generation, and retiring the Ashen
+    // Wastes removed its SCATTER camps, which removed their world-gen draws and
+    // moved the cursor (at seed 42 the first post-worldgen value went
+    // 0.8164072453510016 -> 0.7349557857960463). The ported realm zones all
+    // carry frozen exact camp positions and draw no rng, so the shift is
+    // entirely the retirement. Nothing about the proc math changed: seed 6's
+    // draw simply is no longer the low one, and seed 2's is.
+    const sim = makeSim(2);
     sim.meta(sim.playerId)!.crafting.smithing = CRAFTING_MAX_SKILL.smithing;
     const recipe = stockReagents(sim, CINDER);
     // One extra, SIGNED, copy of the lead reagent: holding it raises the proc
