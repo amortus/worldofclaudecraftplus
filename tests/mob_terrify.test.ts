@@ -1,13 +1,13 @@
-// "Banshee's Wail" elite mechanic: a mob with a `terrify` template field
+// "Keening Wail" elite mechanic: a mob with a `terrify` template field
 // periodically shrieks while in melee combat, fearing every player inside its
-// radius into a panicked flee. It is the fear analogue of War Stomp — timed and
+// radius into a panicked flee. It is the fear analogue of Shuddering Stomp — timed and
 // room-wide rather than on-hit like `dread` — and reuses the same `fear_incap`
 // aura the player-cast Fear applies. Telegraphed: the first wail only lands one
 // full interval after the fight begins, and the telegraph re-arms on evade.
 import { describe, expect, it } from 'vitest';
-import { Sim } from '../src/sim/sim';
 import { MOBS } from '../src/sim/data';
 import { createMob } from '../src/sim/entity';
+import { Sim } from '../src/sim/sim';
 import type { Entity } from '../src/sim/types';
 
 function makeSim() {
@@ -25,11 +25,23 @@ function engagedWailer(sim: Sim): Entity {
   return mob;
 }
 
-const fearAura = (e: Entity) => e.auras.find((a) => a.id === 'fear_incap' && a.kind === 'incapacitate');
+const fearAura = (e: Entity) =>
+  e.auras.find((a) => a.id === 'fear_incap' && a.kind === 'incapacitate');
 
-describe("Banshee's Wail elite mechanic", () => {
-  it('Sister Nhalia carries a Banshee\'s Wail', () => {
-    expect(MOBS.sister_nhalia.terrify?.name).toBe("Banshee's Wail");
+// The wail spares the boss's current aggro target (the tank), so every fear
+// assertion reads a second, non-tank player standing beside the tank.
+function addBystander(sim: Sim, mob: Entity): Entity {
+  const id = sim.addPlayer('mage', 'Bystander');
+  const bystander = sim.entities.get(id)!;
+  bystander.maxHp = 5000;
+  bystander.hp = 5000;
+  bystander.pos = { ...mob.pos };
+  return bystander;
+}
+
+describe('Keening Wail elite mechanic', () => {
+  it("Sister Nhalia carries a Banshee's Wail", () => {
+    expect(MOBS.sister_nhalia.terrify?.name).toBe('Keening Wail');
   });
 
   it('is telegraphed: a freshly spawned wailer waits one interval before its first scream', () => {
@@ -42,11 +54,12 @@ describe("Banshee's Wail elite mechanic", () => {
     const mob = engagedWailer(sim);
     sim.player.maxHp = 5000;
     sim.player.hp = 5000;
+    const bystander = addBystander(sim, mob);
     mob.terrifyTimer = 0.001; // due now
     (sim as any).updateMob(mob);
 
-    const aura = fearAura(sim.player);
-    expect(aura?.name).toBe("Banshee's Wail");
+    const aura = fearAura(bystander);
+    expect(aura?.name).toBe('Keening Wail');
     expect(aura?.kind).toBe('incapacitate');
     expect(aura?.breaksOnDamage).toBe(true);
     expect(aura?.duration).toBe(MOBS.sister_nhalia.terrify!.duration); // mob source → full duration (DR is PvP-only)
@@ -60,10 +73,11 @@ describe("Banshee's Wail elite mechanic", () => {
     const mob = engagedWailer(sim);
     sim.player.maxHp = 5000;
     sim.player.hp = 5000;
+    const bystander = addBystander(sim, mob);
     mob.terrifyTimer = 0.001;
     (sim as any).updateMob(mob);
-    expect(fearAura(sim.player)).toBeDefined();
-    expect((sim as any).updateFearMovement(sim.player)).toBe(true);
+    expect(fearAura(bystander)).toBeDefined();
+    expect((sim as any).updateFearMovement(bystander)).toBe(true);
   });
 
   it('fears only players inside the wail radius', () => {
@@ -71,6 +85,7 @@ describe("Banshee's Wail elite mechanic", () => {
     const mob = engagedWailer(sim);
     sim.player.maxHp = 5000;
     sim.player.hp = 5000;
+    const bystander = addBystander(sim, mob);
 
     const farId = sim.addPlayer('mage', 'Faraway');
     const far = sim.entities.get(farId)!;
@@ -82,8 +97,27 @@ describe("Banshee's Wail elite mechanic", () => {
     mob.terrifyTimer = 0.001;
     (sim as any).updateMob(mob);
 
-    expect(fearAura(sim.player)).toBeDefined();  // in radius → feared
-    expect(fearAura(far)).toBeUndefined();       // out of radius → spared
+    expect(fearAura(bystander)).toBeDefined(); // in radius → feared
+    expect(fearAura(far)).toBeUndefined(); // out of radius → spared
+  });
+
+  it('spares the current aggro target: the tank is exempt from the wail', () => {
+    const sim = makeSim();
+    const mob = engagedWailer(sim);
+    sim.player.maxHp = 5000;
+    sim.player.hp = 5000;
+
+    const offId = sim.addPlayer('mage', 'Bystander');
+    const off = sim.entities.get(offId)!;
+    off.maxHp = 5000;
+    off.hp = 5000;
+    off.pos = { ...mob.pos }; // in radius beside the tank
+
+    mob.terrifyTimer = 0.001;
+    (sim as any).updateMob(mob);
+
+    expect(fearAura(sim.player)).toBeUndefined(); // the tank holds the boss: exempt
+    expect(fearAura(off)).toBeDefined(); // everyone else in radius still flees
   });
 
   it('does not scream before the timer elapses', () => {

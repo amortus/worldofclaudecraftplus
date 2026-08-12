@@ -5,6 +5,7 @@ vi.mock('../server/db', () => ({
   pool: { query: vi.fn(async () => ({ rows: [] })) },
   saveCharacterState: vi.fn(async () => {}),
   openPlaySession: vi.fn(async () => 1),
+  touchCharacterLogin: vi.fn(async () => {}),
   closePlaySession: vi.fn(async () => {}),
   insertChatLogs: vi.fn(async () => {}),
   walletForAccount: vi.fn(async () => null),
@@ -13,7 +14,6 @@ vi.mock('../server/db', () => ({
 }));
 
 import { type ClientSession, GameServer } from '../server/game';
-import { REALM } from '../server/realm';
 import type { PlayerClass } from '../src/sim/types';
 
 interface FakeClient {
@@ -66,7 +66,7 @@ describe('/who name filter', () => {
   it('filters to names containing the query (case-insensitive)', () => {
     const { server, viewer } = makeServer(ROSTER);
     const out = who(server, viewer, 'mr');
-    expect(out[0]).toBe(`Who: 2 players matching "mr" on ${REALM}.`);
+    expect(out[0]).toBe('Who: 2 players matching "mr" on Claudemoon.');
     expect(out.some((t) => t.startsWith('Mristan'))).toBe(true);
     expect(out.some((t) => t.startsWith('Mrglglgl'))).toBe(true);
     expect(out.some((t) => t.startsWith('Bobbins'))).toBe(false);
@@ -75,7 +75,7 @@ describe('/who name filter', () => {
   it('matches a substring anywhere in the name and singularizes one result', () => {
     const { server, viewer } = makeServer(ROSTER);
     const out = who(server, viewer, 'bin');
-    expect(out[0]).toBe(`Who: 1 player matching "bin" on ${REALM}.`);
+    expect(out[0]).toBe('Who: 1 player matching "bin" on Claudemoon.');
     expect(out.some((t) => t.startsWith('Bobbins'))).toBe(true);
     expect(out.some((t) => t.startsWith('Mr'))).toBe(false);
   });
@@ -83,7 +83,7 @@ describe('/who name filter', () => {
   it('reports zero matches for an unknown filter', () => {
     const { server, viewer } = makeServer(ROSTER);
     const out = who(server, viewer, 'zzz');
-    expect(out).toEqual([`Who: 0 players matching "zzz" on ${REALM}.`]);
+    expect(out).toEqual(['Who: 0 players matching "zzz" on Claudemoon.']);
   });
 });
 
@@ -93,7 +93,7 @@ describe('/who zone filter', () => {
   it('matches on zone name, not just player name', () => {
     const { server, viewer } = makeServer(ROSTER);
     const out = who(server, viewer, 'eastbrook');
-    expect(out[0]).toBe(`Who: 3 players matching "eastbrook" on ${REALM}.`);
+    expect(out[0]).toBe('Who: 3 players matching "eastbrook" on Claudemoon.');
     expect(out.some((t) => t.startsWith('Mristan'))).toBe(true);
     expect(out.some((t) => t.startsWith('Mrglglgl'))).toBe(true);
     expect(out.some((t) => t.startsWith('Bobbins'))).toBe(true);
@@ -102,13 +102,13 @@ describe('/who zone filter', () => {
   it('matches a multi-word zone substring (spaces preserved)', () => {
     const { server, viewer } = makeServer(ROSTER);
     const out = who(server, viewer, 'eastbrook vale');
-    expect(out[0]).toBe(`Who: 3 players matching "eastbrook vale" on ${REALM}.`);
+    expect(out[0]).toBe('Who: 3 players matching "eastbrook vale" on Claudemoon.');
     expect(out.filter((t) => t.includes(' - level ')).length).toBe(3);
   });
 
   it('returns zero for a zone nobody is in', () => {
     const { server, viewer } = makeServer(ROSTER);
     const out = who(server, viewer, 'thornpeak heights');
-    expect(out).toEqual([`Who: 0 players matching "thornpeak heights" on ${REALM}.`]);
+    expect(out).toEqual(['Who: 0 players matching "thornpeak heights" on Claudemoon.']);
   });
 });

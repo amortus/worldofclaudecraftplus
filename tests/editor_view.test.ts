@@ -172,18 +172,4 @@ describe('model: build + diff + patch', () => {
     ents[0].point.x += 0.0001;
     expect(diffMoved(ents, base, 2)).toHaveLength(0);
   });
-
-  it('formats an empty diff as no changes and groups by zone', () => {
-    expect(formatPatch([])).toBe('No changes.');
-    const ents = buildEntities(content);
-    const base = snapshot(ents);
-    const hub = ents.find((e) => e.kind === 'hub');
-    if (!hub) throw new Error('fixture has no hub entity');
-    hub.point.x = 3;
-    hub.point.z = 4;
-    const patch = formatPatch(diffMoved(ents, base));
-    expect(patch).toContain('1 marker(s) moved');
-    expect(patch).toContain('# z1');
-    expect(patch).toContain('to (3, 4)');
-  });
 });

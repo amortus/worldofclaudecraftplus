@@ -4,14 +4,14 @@
 // rolling "24h from kill" window, so a guild can plan its raid night around one
 // predictable boundary. The reset lands at 03:00 (3 AM, the classic daily-reset hour)
 // in the realm's own civil time zone (an IANA name, e.g. America/New_York or
-// America/Sao_Paulo); each realm process picks its zone via REALM_RESET_TZ (see
+// Europe/Paris); each realm process picks its zone via REALM_RESET_TZ (see
 // server/realm.ts), defaulting to US Eastern. 3 AM also keeps the boundary clear of the
 // DST spring-forward gap that skips local midnight in a few zones.
 //
 // This lives on the SERVER, not in src/sim/, on purpose: the reset zone is a host /
 // wall-clock concern (like the lockout clock itself), so the deterministic sim core
 // never reads the host time zone database. The server computes the next-reset instant
-// and injects it into the sim through the lockout seam (SimConfig.raidResetMs); the
+// and injects it into the sim through the lockout seam (SimContext.raidResetMs); the
 // sim just stores the number it is handed. nextRaidResetMs is a pure function of
 // (instant, zone): it draws no randomness and reads no live clock, using only
 // Intl.DateTimeFormat, new Date(ms), and Date.UTC.
@@ -22,7 +22,7 @@ export const DEFAULT_RAID_RESET_TIME_ZONE = 'America/New_York';
 // Deliberately off midnight so the boundary is never a wall-clock time a spring-forward
 // DST transition skips: the common zones jump 02:00 -> 03:00 (so 03:00 always exists),
 // whereas a handful of zones skip 00:00 entirely.
-const RAID_RESET_HOUR = 3;
+export const RAID_RESET_HOUR = 3;
 
 // Whether the host ICU database can resolve the given IANA zone. A Node built without
 // full ICU throws here even for a valid zone, so callers can validate config and fail
@@ -119,4 +119,34 @@ export function nextRaidResetMs(
   const { y, mo, d } = zoneDate(nowMs, zone);
   const today = zoneResetInstant(y, mo, d, zone);
   return today > nowMs ? today : zoneResetInstant(y, mo, d + 1, zone);
+}
+
+function pad2(n: number): string {
+  return n < 10 ? `0${n}` : `${n}`;
+}
+
+/**
+ * The daily-reset WINDOW an instant falls in, as `YYYY-MM-DD`: the civil date of
+ * the reset that opened it. This is the key the sim compares to decide whether a
+ * daily has rolled over (the first battleground win, arena honor DR, the delve
+ * daily), and it deliberately answers the SAME question the raid lockout answers
+ * through `nextRaidResetMs`, so a realm has ONE daily boundary rather than two.
+ *
+ * The alternative it replaces was the UTC calendar date, which put the rollover
+ * at midnight UTC: 5 PM Pacific, in the middle of an evening's play, with no
+ * relation to when the realm's raids reset. Between midnight and the reset hour
+ * the day still belongs to the window that opened yesterday, exactly as
+ * `nextRaidResetMs` treats it for lockouts.
+ *
+ * Pure in (instant, zone), like every other export here: no live clock read, no
+ * randomness. A caller reads the clock and passes the instant in, which is what
+ * keeps the sim deterministic.
+ */
+export function resetDayKey(nowMs: number, zone: string = DEFAULT_RAID_RESET_TIME_ZONE): string {
+  const { y, mo, d } = zoneDate(nowMs, zone);
+  // Date.UTC normalizes the day-before rollback across month and year edges. The
+  // arithmetic is on a pure calendar triple, never on an instant, so no offset or
+  // DST transition can shift which date comes out.
+  const at = new Date(Date.UTC(y, mo - 1, zoneHour(nowMs, zone) < RAID_RESET_HOUR ? d - 1 : d));
+  return `${at.getUTCFullYear()}-${pad2(at.getUTCMonth() + 1)}-${pad2(at.getUTCDate())}`;
 }

@@ -16,13 +16,17 @@
 // leaf sheet is autumn-red, which we shift to green (bushes) / olive (swamp).
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { dedup, meshopt, prune, simplify, textureCompress, weld } from '@gltf-transform/functions';
 import { MeshoptDecoder, MeshoptEncoder, MeshoptSimplifier } from 'meshoptimizer';
 import sharp from 'sharp';
+import { optimizeFoliageVertexDocument } from './foliage_vertex_pipeline.mjs';
 
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..');
+// URL.pathname keeps a leading slash before a Windows drive letter, which
+// path.resolve mangles into "D:\D:\..."; fileURLToPath is correct on every OS.
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const SIMPLIFY_ERROR = 0.05;
 
@@ -68,25 +72,41 @@ async function recolorTextures(doc, rules) {
 async function processItem(io, item) {
   const srcPath = resolveSrc(item.src);
   const outPath = path.join(PUBLIC_DIR, item.out);
-  const doc = await io.read(srcPath);
+  let doc = await io.read(srcPath);
 
   stripWhiteVertexColors(doc);
   if (item.recolor) await recolorTextures(doc, item.recolor);
 
   const transforms = [];
   if (item.simplify) {
-    transforms.push(weld(), simplify({
-      simplifier: MeshoptSimplifier, ratio: item.simplify, error: SIMPLIFY_ERROR,
-    }));
+    transforms.push(
+      weld(),
+      simplify({
+        simplifier: MeshoptSimplifier,
+        ratio: item.simplify,
+        error: SIMPLIFY_ERROR,
+      }),
+    );
   }
   transforms.push(prune(), dedup());
   if (item.maxTex) {
-    transforms.push(textureCompress({
-      encoder: sharp, targetFormat: 'webp', resize: [item.maxTex, item.maxTex],
-    }));
+    transforms.push(
+      textureCompress({
+        encoder: sharp,
+        targetFormat: 'webp',
+        resize: [item.maxTex, item.maxTex],
+      }),
+    );
   }
   transforms.push(meshopt({ encoder: MeshoptEncoder, level: 'high' }));
   await doc.transform(...transforms);
+  // Normalize through the exact encoded/decoded shipping representation.
+  // meshopt's quantization and filters can make formerly different vertices
+  // bitwise-identical only at this boundary.
+  doc = await io.readBinary(await io.writeBinary(doc));
+  // Weld that finalized representation once more, then choose GPU-local
+  // cache/fetch order before writing.
+  await optimizeFoliageVertexDocument(doc, MeshoptEncoder);
 
   let tris = 0;
   for (const mesh of doc.getRoot().listMeshes()) {

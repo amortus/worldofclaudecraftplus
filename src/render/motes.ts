@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { DUNGEON_X_THRESHOLD, zoneContaining } from '../sim/data';
+import { DUNGEON_X_THRESHOLD, WORLD_MAX_X, WORLD_MAX_Z, WORLD_MIN_Z } from '../sim/data';
 import type { BiomeId } from '../sim/types';
-import { terrainHeight, zoneBiomeAt, WATER_LEVEL } from '../sim/world';
+import { isInSowfieldShell } from '../sim/vale_cup_layout';
+import { terrainHeight, WATER_LEVEL, zoneBiomeAt } from '../sim/world';
 import { GFX } from './gfx';
-import { insideWorldRim } from './world_bounds';
 
 // ---------------------------------------------------------------------------
 // Ambient motes — a render-only field of drifting airborne specks (pollen in
@@ -22,7 +22,13 @@ export interface MotesView {
 // per-biome speck colour — warm gold pollen, sickly green marsh spores, pale
 // blue snow dust; kept lighter than GRASS_TINT so they read as glints in air
 const MOTE_TINT: Record<BiomeId, number> = {
-  vale: 0xf4e6a0, marsh: 0xb8d28a, peaks: 0xdce8f2, blight: 0x8a857a,
+  vale: 0xf4e6a0,
+  marsh: 0xb8d28a,
+  peaks: 0xdce8f2,
+  beach: 0xf6e8b0,
+  desert: 0xecd9a0,
+  volcano: 0xe8a070,
+  cave: 0xa8c4b8,
   dusk: 0xf2b8e0,
   ember: 0xffa868,
   frost: 0xcfe8ff,
@@ -35,11 +41,11 @@ const MOTE_TINT: Record<BiomeId, number> = {
   gale: 0xeef6ff, // wind-torn sea spray
 };
 
-// Biomes that drift NO motes: upstream's headland and parkland realms read
-// cleaner without airborne glints. A mote whose candidate spot lands on one of
-// these simply fails placement and is retried elsewhere, exactly like a spot
-// over open water.
-const MOTELESS_BIOMES: ReadonlySet<BiomeId> = new Set<BiomeId>([
+// Realms that drift NO motes: the northern columns and headlands read cleaner
+// without the airborne glints (Palmreach, Willowfen, Galecrest, Evergarden,
+// Drakelands, Nightbloom, Wraithwood). A mote landing on one of these biomes
+// simply parks until the player carries the ring somewhere that drifts.
+const MOTELESS_BIOMES: ReadonlySet<BiomeId> = new Set([
   'jungle',
   'fen',
   'gale',
@@ -50,7 +56,6 @@ const MOTELESS_BIOMES: ReadonlySet<BiomeId> = new Set<BiomeId>([
 ]);
 
 const RADIUS = 26; // motes live within this ring of the player
-const EDGE = 8; // keep clear of the world rim
 const FLOOR = 0.6; // min height above the sampled ground
 const CEIL = 3.4; // max height above the sampled ground
 
@@ -103,9 +108,6 @@ export function buildMotes(seed: number): MotesView {
   const homeZ = new Float32Array(count);
 
   const tmpColor = new THREE.Color();
-  // A mote's tint only changes when it is re-homed (place() below), which is
-  // rare: the positions drift every frame, the colours do not. Tracking that
-  // drops one full colour upload per frame for free.
   let colorsDirty = false;
 
   // (re)home a single mote to a random spot inside the ring around the player,
@@ -116,11 +118,10 @@ export function buildMotes(seed: number): MotesView {
     const r = Math.sqrt(rng()) * RADIUS; // sqrt → even areal spread, not centre-clumped
     const x = px + Math.cos(ang) * r;
     const z = pz + Math.sin(ang) * r;
-    // per-row rim + strict zone containment: no motes drifting over the void
-    // the grid's holes leave beside a column zone
-    if (!insideWorldRim(x, z, EDGE) || !zoneContaining(x, z)) return false;
+    if (Math.abs(x) > WORLD_MAX_X - 8 || z < WORLD_MIN_Z + 8 || z > WORLD_MAX_Z - 8) return false;
+    if (isInSowfieldShell(x, z)) return false; // no pollen drifting over the mown pitch
     const biome = zoneBiomeAt(x, z);
-    if (MOTELESS_BIOMES.has(biome)) return false;
+    if (MOTELESS_BIOMES.has(biome)) return false; // these realms drift no motes
     const h = terrainHeight(x, z, seed);
     if (h < WATER_LEVEL + 0.5) return false; // no motes hovering over open water
     homeX[i] = x;
@@ -140,18 +141,24 @@ export function buildMotes(seed: number): MotesView {
   }
 
   const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  const positionAttribute = new THREE.BufferAttribute(positions, 3).setUsage(
+    THREE.DynamicDrawUsage,
+  );
+  const colorAttribute = new THREE.BufferAttribute(colors, 3);
+  geo.setAttribute('position', positionAttribute);
+  geo.setAttribute('color', colorAttribute);
 
   const mat = new THREE.PointsMaterial({
-    size: GFX.standardMaterials ? 0.5 : 0.7,
+    size: GFX.standardMaterials ? 0.3 : 0.46,
     map: moteSprite(),
     vertexColors: true,
     transparent: true,
     depthWrite: false, // glows shouldn't punch holes in what's behind them
     blending: THREE.AdditiveBlending,
     sizeAttenuation: true,
-    opacity: 0.85,
+    // 0.62 x 0.38u additive white-core dots read as bright noise speckling
+    // every daylight shot; drifting dust should be felt, not counted
+    opacity: 0.45,
   });
 
   const points = new THREE.Points(geo, mat);
@@ -182,7 +189,10 @@ export function buildMotes(seed: number): MotesView {
         const dx = homeX[i] - px;
         const dz = homeZ[i] - pz;
         if (dx * dx + dz * dz > RADIUS * RADIUS) {
-          if (!place(i, px, pz)) { baseY[i] = -1e6; continue; }
+          if (!place(i, px, pz)) {
+            baseY[i] = -1e6;
+            continue;
+          }
         }
         if (baseY[i] < -1e5) continue; // parked
         const ph = phase[i] + t * 0.6;
@@ -190,9 +200,9 @@ export function buildMotes(seed: number): MotesView {
         positions[i * 3 + 1] = baseY[i] + bobAmp[i] + Math.sin(ph * 1.3) * 0.35;
         positions[i * 3 + 2] = homeZ[i] + Math.cos(ph * 0.8) * 0.5;
       }
-      geo.attributes.position.needsUpdate = true;
+      positionAttribute.needsUpdate = true;
       if (colorsDirty) {
-        geo.attributes.color.needsUpdate = true;
+        colorAttribute.needsUpdate = true;
         colorsDirty = false;
       }
     },

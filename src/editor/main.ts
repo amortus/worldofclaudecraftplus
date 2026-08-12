@@ -1,28 +1,35 @@
-// Marker map-editor entry (loaded by editor.html, served at /editor). Reads the
-// built-in world content (ZONES/CAMPS/NPCS/GROUND_OBJECTS/ROADS) as the source of
-// truth, deep-clones it so editing never mutates the imported module globals, and
-// mounts the Tier 0 marker editor over it.
-//
-// Dev-only authoring aid: it imports ONLY the flat sim data tables (allowed for a
-// client-side tool, like the renderer reading sim/data), never the running Sim,
-// render, or net. Its strings are English-only dev-channel text, so there is no
-// i18n bootstrap here (the tool never ships to players).
+// Map-editor entry (loaded by editor.html, served at /editor). Loads the active
+// locale before the first localized paint (mirrors src/guide/main.ts), stamps
+// the document language/direction and title, then mounts the editor over the
+// built-in world content as a starting point.
 
 import { CAMPS, GROUND_OBJECTS, NPCS, ROADS, ZONES } from '../sim/data';
-import { EditorApp } from './app';
 import './styles.css';
+import { ensureLocaleLoaded, getLanguage, languageTag, t } from '../ui/i18n';
+import { EditorApp } from './app';
 
-// Deep clone so editing never mutates the imported module globals (the sim data
-// tables are shared, live references); the editor works on its own copy.
+// Deep clone so editing never mutates the imported module globals (BUILTIN_WORLD
+// shares those arrays); the editor works on its own document.
 function clone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v)) as T;
 }
 
-function boot(): void {
+function isRtl(tag: string): boolean {
+  return /^(ar|he|fa|ur)\b/.test(tag);
+}
+
+async function boot(): Promise<void> {
   const mount = document.getElementById('editor-app');
   if (!mount) return;
-  document.documentElement.lang = 'en';
-  document.title = 'Map Editor - World of ClaudeCraft';
+  try {
+    await ensureLocaleLoaded(getLanguage());
+  } catch {
+    // A missing locale chunk falls back to English; render regardless.
+  }
+  const tag = languageTag(getLanguage());
+  document.documentElement.lang = tag;
+  document.documentElement.dir = isRtl(tag) ? 'rtl' : 'ltr';
+  document.title = t('editor.docTitle');
   const app = new EditorApp(mount, {
     zones: clone(ZONES),
     camps: clone(CAMPS),
@@ -34,4 +41,4 @@ function boot(): void {
   (window as unknown as { __editor?: EditorApp }).__editor = app;
 }
 
-boot();
+void boot();

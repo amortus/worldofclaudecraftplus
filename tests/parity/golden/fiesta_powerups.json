@@ -1,0 +1,1193 @@
+{
+  "scenario": "fiesta_powerups",
+  "seed": 2027,
+  "sampleEvery": 10,
+  "ticks": 573,
+  "coverage": [
+    "fiesta power-up spawn (f.rng pick/next) + telegraph + grab (buff aura)",
+    "hazard ring burn (fiestaRingDamage) outside the closing ring",
+    "down + respawn-timer revive (fiestaRevive)"
+  ],
+  "draws": 4918,
+  "drawDigest": "254f29a9",
+  "frames": [
+    {
+      "tick": 0,
+      "time": 0,
+      "nextId": 963,
+      "state": "5bc471b0",
+      "events": "741638a5",
+      "rng": {
+        "draws": 0,
+        "digest": "811c9dc5"
+      },
+      "label": "init",
+      "players": [],
+      "entities": []
+    },
+    {
+      "tick": 10,
+      "time": 0.5,
+      "nextId": 967,
+      "state": "d1a38cf8",
+      "events": "5c3da5b8",
+      "rng": {
+        "draws": 0,
+        "digest": "811c9dc5"
+      }
+    },
+    {
+      "tick": 20,
+      "time": 1,
+      "nextId": 967,
+      "state": "395029e9",
+      "events": "b1503b81",
+      "rng": {
+        "draws": 0,
+        "digest": "811c9dc5"
+      }
+    },
+    {
+      "tick": 30,
+      "time": 1.5,
+      "nextId": 967,
+      "state": "fb2c9fe1",
+      "events": "1d2401c1",
+      "rng": {
+        "draws": 0,
+        "digest": "811c9dc5"
+      }
+    },
+    {
+      "tick": 40,
+      "time": 2,
+      "nextId": 967,
+      "state": "306e020a",
+      "events": "741638a5",
+      "rng": {
+        "draws": 0,
+        "digest": "811c9dc5"
+      }
+    },
+    {
+      "tick": 50,
+      "time": 2.5,
+      "nextId": 967,
+      "state": "c224a89c",
+      "events": "224cbfd9",
+      "rng": {
+        "draws": 58,
+        "digest": "093e2a8c"
+      }
+    },
+    {
+      "tick": 60,
+      "time": 3,
+      "nextId": 967,
+      "state": "0fc7e6ff",
+      "events": "741638a5",
+      "rng": {
+        "draws": 123,
+        "digest": "4436a4db"
+      }
+    },
+    {
+      "tick": 70,
+      "time": 3.5,
+      "nextId": 967,
+      "state": "b827f9e7",
+      "events": "969ec561",
+      "rng": {
+        "draws": 205,
+        "digest": "ba184640"
+      }
+    },
+    {
+      "tick": 80,
+      "time": 4,
+      "nextId": 967,
+      "state": "4dc62fd8",
+      "events": "741638a5",
+      "rng": {
+        "draws": 295,
+        "digest": "c4103557"
+      }
+    },
+    {
+      "tick": 90,
+      "time": 4.5,
+      "nextId": 967,
+      "state": "cf3c1efa",
+      "events": "507341c9",
+      "rng": {
+        "draws": 378,
+        "digest": "59d383d4"
+      }
+    },
+    {
+      "tick": 100,
+      "time": 5,
+      "nextId": 967,
+      "state": "52ae515d",
+      "events": "741638a5",
+      "rng": {
+        "draws": 481,
+        "digest": "d9cce11e"
+      }
+    },
+    {
+      "tick": 110,
+      "time": 5.5,
+      "nextId": 967,
+      "state": "47281c7d",
+      "events": "faa68a73",
+      "rng": {
+        "draws": 584,
+        "digest": "8fe95b6b"
+      }
+    },
+    {
+      "tick": 120,
+      "time": 6,
+      "nextId": 967,
+      "state": "e4704d5a",
+      "events": "741638a5",
+      "rng": {
+        "draws": 682,
+        "digest": "fc980f27"
+      }
+    },
+    {
+      "tick": 130,
+      "time": 6.5,
+      "nextId": 967,
+      "state": "1ae72d20",
+      "events": "741638a5",
+      "rng": {
+        "draws": 795,
+        "digest": "75056b93"
+      }
+    },
+    {
+      "tick": 140,
+      "time": 7,
+      "nextId": 967,
+      "state": "7d436f7b",
+      "events": "741638a5",
+      "rng": {
+        "draws": 915,
+        "digest": "cd5eaa0b"
+      }
+    },
+    {
+      "tick": 150,
+      "time": 7.5,
+      "nextId": 967,
+      "state": "4cf63327",
+      "events": "741638a5",
+      "rng": {
+        "draws": 1059,
+        "digest": "1909e0b3"
+      }
+    },
+    {
+      "tick": 160,
+      "time": 8,
+      "nextId": 967,
+      "state": "80ef4b28",
+      "events": "741638a5",
+      "rng": {
+        "draws": 1175,
+        "digest": "44eda720"
+      }
+    },
+    {
+      "tick": 170,
+      "time": 8.5,
+      "nextId": 967,
+      "state": "1d4fea16",
+      "events": "741638a5",
+      "rng": {
+        "draws": 1303,
+        "digest": "41c831e5"
+      }
+    },
+    {
+      "tick": 180,
+      "time": 9,
+      "nextId": 967,
+      "state": "fa621119",
+      "events": "741638a5",
+      "rng": {
+        "draws": 1428,
+        "digest": "fd9f60cb"
+      }
+    },
+    {
+      "tick": 190,
+      "time": 9.5,
+      "nextId": 967,
+      "state": "1d947dc5",
+      "events": "741638a5",
+      "rng": {
+        "draws": 1550,
+        "digest": "07e05c0a"
+      }
+    },
+    {
+      "tick": 200,
+      "time": 10,
+      "nextId": 967,
+      "state": "97622546",
+      "events": "741638a5",
+      "rng": {
+        "draws": 1687,
+        "digest": "a97a45b5"
+      }
+    },
+    {
+      "tick": 210,
+      "time": 10.5,
+      "nextId": 967,
+      "state": "394b263b",
+      "events": "741638a5",
+      "rng": {
+        "draws": 1766,
+        "digest": "7984f954"
+      }
+    },
+    {
+      "tick": 220,
+      "time": 11,
+      "nextId": 967,
+      "state": "d9827cb0",
+      "events": "741638a5",
+      "rng": {
+        "draws": 1850,
+        "digest": "96394dec"
+      }
+    },
+    {
+      "tick": 230,
+      "time": 11.5,
+      "nextId": 967,
+      "state": "eb326eb4",
+      "events": "741638a5",
+      "rng": {
+        "draws": 1917,
+        "digest": "eb8f337d"
+      }
+    },
+    {
+      "tick": 240,
+      "time": 12,
+      "nextId": 967,
+      "state": "e2ae34b3",
+      "events": "741638a5",
+      "rng": {
+        "draws": 1977,
+        "digest": "5ac3bac1"
+      }
+    },
+    {
+      "tick": 250,
+      "time": 12.5,
+      "nextId": 967,
+      "state": "bfb78d05",
+      "events": "741638a5",
+      "rng": {
+        "draws": 2036,
+        "digest": "324888ef"
+      }
+    },
+    {
+      "tick": 260,
+      "time": 13,
+      "nextId": 967,
+      "state": "e3684e92",
+      "events": "741638a5",
+      "rng": {
+        "draws": 2108,
+        "digest": "5b3ade08"
+      }
+    },
+    {
+      "tick": 270,
+      "time": 13.5,
+      "nextId": 967,
+      "state": "c16c336e",
+      "events": "689af565",
+      "rng": {
+        "draws": 2198,
+        "digest": "1cc04e8f"
+      }
+    },
+    {
+      "tick": 280,
+      "time": 14,
+      "nextId": 967,
+      "state": "eec29a35",
+      "events": "741638a5",
+      "rng": {
+        "draws": 2275,
+        "digest": "7d35f2dd"
+      }
+    },
+    {
+      "tick": 290,
+      "time": 14.5,
+      "nextId": 967,
+      "state": "8e8245c7",
+      "events": "741638a5",
+      "rng": {
+        "draws": 2386,
+        "digest": "b253c964"
+      }
+    },
+    {
+      "tick": 300,
+      "time": 15,
+      "nextId": 967,
+      "state": "0603c63c",
+      "events": "741638a5",
+      "rng": {
+        "draws": 2467,
+        "digest": "3ad935ac"
+      }
+    },
+    {
+      "tick": 310,
+      "time": 15.5,
+      "nextId": 967,
+      "state": "651be630",
+      "events": "741638a5",
+      "rng": {
+        "draws": 2583,
+        "digest": "54dd5375"
+      }
+    },
+    {
+      "tick": 320,
+      "time": 16,
+      "nextId": 967,
+      "state": "45e8c93f",
+      "events": "741638a5",
+      "rng": {
+        "draws": 2682,
+        "digest": "813e2ae4"
+      }
+    },
+    {
+      "tick": 330,
+      "time": 16.5,
+      "nextId": 967,
+      "state": "1c257bb1",
+      "events": "741638a5",
+      "rng": {
+        "draws": 2794,
+        "digest": "ea530fe3"
+      }
+    },
+    {
+      "tick": 340,
+      "time": 17,
+      "nextId": 967,
+      "state": "a933516e",
+      "events": "741638a5",
+      "rng": {
+        "draws": 2872,
+        "digest": "dcb56c90"
+      }
+    },
+    {
+      "tick": 350,
+      "time": 17.5,
+      "nextId": 967,
+      "state": "0b8f1fb2",
+      "events": "741638a5",
+      "rng": {
+        "draws": 2976,
+        "digest": "7c328039"
+      }
+    },
+    {
+      "tick": 360,
+      "time": 18,
+      "nextId": 967,
+      "state": "66f58389",
+      "events": "741638a5",
+      "rng": {
+        "draws": 3066,
+        "digest": "53df2608"
+      }
+    },
+    {
+      "tick": 370,
+      "time": 18.5,
+      "nextId": 967,
+      "state": "0230c60b",
+      "events": "741638a5",
+      "rng": {
+        "draws": 3152,
+        "digest": "298317f0"
+      }
+    },
+    {
+      "tick": 380,
+      "time": 19,
+      "nextId": 967,
+      "state": "10d4c948",
+      "events": "741638a5",
+      "rng": {
+        "draws": 3250,
+        "digest": "e362e8c3"
+      }
+    },
+    {
+      "tick": 390,
+      "time": 19.5,
+      "nextId": 967,
+      "state": "ce8b5c34",
+      "events": "741638a5",
+      "rng": {
+        "draws": 3334,
+        "digest": "b25abb9f"
+      }
+    },
+    {
+      "tick": 400,
+      "time": 20,
+      "nextId": 967,
+      "state": "11591613",
+      "events": "741638a5",
+      "rng": {
+        "draws": 3416,
+        "digest": "3366ace5"
+      }
+    },
+    {
+      "tick": 410,
+      "time": 20.5,
+      "nextId": 967,
+      "state": "17873678",
+      "events": "741638a5",
+      "rng": {
+        "draws": 3503,
+        "digest": "039bfdd4"
+      }
+    },
+    {
+      "tick": 420,
+      "time": 21,
+      "nextId": 967,
+      "state": "d3770063",
+      "events": "741638a5",
+      "rng": {
+        "draws": 3583,
+        "digest": "270cd2a0"
+      }
+    },
+    {
+      "tick": 430,
+      "time": 21.5,
+      "nextId": 967,
+      "state": "5efe3d6a",
+      "events": "c8de57b7",
+      "rng": {
+        "draws": 3665,
+        "digest": "7c78bfbe"
+      }
+    },
+    {
+      "tick": 440,
+      "time": 22,
+      "nextId": 967,
+      "state": "77a6438e",
+      "events": "c8de57b7",
+      "rng": {
+        "draws": 3749,
+        "digest": "0484ec73"
+      }
+    },
+    {
+      "tick": 450,
+      "time": 22.5,
+      "nextId": 967,
+      "state": "3a59b5d3",
+      "events": "c3d43d4a",
+      "rng": {
+        "draws": 3829,
+        "digest": "062d38fe"
+      }
+    },
+    {
+      "tick": 460,
+      "time": 23,
+      "nextId": 967,
+      "state": "8d896baa",
+      "events": "c8de57b7",
+      "rng": {
+        "draws": 3919,
+        "digest": "5689ced0"
+      }
+    },
+    {
+      "tick": 470,
+      "time": 23.5,
+      "nextId": 967,
+      "state": "ac385e38",
+      "events": "63ab5fb5",
+      "rng": {
+        "draws": 4018,
+        "digest": "fd6d6eaa"
+      }
+    },
+    {
+      "tick": 480,
+      "time": 24,
+      "nextId": 967,
+      "state": "5bff9c83",
+      "events": "580df931",
+      "rng": {
+        "draws": 4105,
+        "digest": "b0b631d5"
+      }
+    },
+    {
+      "tick": 490,
+      "time": 24.5,
+      "nextId": 967,
+      "state": "beacf7dd",
+      "events": "a6f1270c",
+      "rng": {
+        "draws": 4206,
+        "digest": "8e90ba57"
+      }
+    },
+    {
+      "tick": 500,
+      "time": 25,
+      "nextId": 967,
+      "state": "f101d6e9",
+      "events": "abcb19b0",
+      "rng": {
+        "draws": 4300,
+        "digest": "efdd8803"
+      }
+    },
+    {
+      "tick": 510,
+      "time": 25.5,
+      "nextId": 967,
+      "state": "75e62bfa",
+      "events": "abcb19b0",
+      "rng": {
+        "draws": 4380,
+        "digest": "1ce8dac0"
+      }
+    },
+    {
+      "tick": 520,
+      "time": 26,
+      "nextId": 967,
+      "state": "d10e5d2c",
+      "events": "abcb19b0",
+      "rng": {
+        "draws": 4475,
+        "digest": "aadaa6d0"
+      }
+    },
+    {
+      "tick": 530,
+      "time": 26.5,
+      "nextId": 967,
+      "state": "6b49d903",
+      "events": "859ddd6f",
+      "rng": {
+        "draws": 4572,
+        "digest": "97358c8f"
+      }
+    },
+    {
+      "tick": 540,
+      "time": 27,
+      "nextId": 967,
+      "state": "fee3ded0",
+      "events": "fc752a1a",
+      "rng": {
+        "draws": 4668,
+        "digest": "05bab6bf"
+      }
+    },
+    {
+      "tick": 550,
+      "time": 27.5,
+      "nextId": 967,
+      "state": "0b1d0402",
+      "events": "b8e41d13",
+      "rng": {
+        "draws": 4747,
+        "digest": "5142d71b"
+      }
+    },
+    {
+      "tick": 560,
+      "time": 28,
+      "nextId": 967,
+      "state": "62bab09d",
+      "events": "1f56b77f",
+      "rng": {
+        "draws": 4821,
+        "digest": "081665dd"
+      }
+    },
+    {
+      "tick": 570,
+      "time": 28.5,
+      "nextId": 967,
+      "state": "9ffe1519",
+      "events": "c8de57b7",
+      "rng": {
+        "draws": 4896,
+        "digest": "c3907a5e"
+      }
+    },
+    {
+      "tick": 573,
+      "time": 28.65,
+      "nextId": 967,
+      "state": "63e94f17",
+      "events": "741638a5",
+      "rng": {
+        "draws": 4918,
+        "digest": "254f29a9"
+      },
+      "label": "final",
+      "players": [
+        {
+          "activeLoadout": -1,
+          "archetype": {},
+          "arena2v2Rating": 1500,
+          "arenaRating": 1500,
+          "bags": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "bank": {},
+          "bgRating": 1500,
+          "cls": "warrior",
+          "companionUpgrades": {},
+          "counters": {
+            "damageTaken": 1715,
+            "deaths": 1,
+            "kills": 1
+          },
+          "craftSkills": {},
+          "deedStats": {
+            "counters": {
+              "damageDealt": 463
+            },
+            "dungeonClears": {},
+            "itemsDiscovered": [
+              "baked_bread",
+              "eastbrook_buckler",
+              "recruit_tunic",
+              "worn_sword"
+            ],
+            "visited": [
+              "fiesta:pow_speed_demon"
+            ]
+          },
+          "deedsEarned": [
+            [
+              "hid_fall_death",
+              ""
+            ]
+          ],
+          "delveClears": {},
+          "delveDaily": {},
+          "entityId": 963,
+          "equipment": {
+            "chest": "recruit_tunic",
+            "mainhand": "worn_sword",
+            "offhand": "eastbrook_buckler"
+          },
+          "equipmentInstance": {},
+          "fiestaRestore": {
+            "level": 1,
+            "talents": {
+              "rows": {}
+            }
+          },
+          "gatheringProficiency": {},
+          "heroicDaily": {},
+          "honor": 20,
+          "inventory": [
+            {
+              "count": 5,
+              "itemId": "baked_bread"
+            }
+          ],
+          "lifetimeHonor": 20,
+          "mailWelcomed": true,
+          "nodeHarvestReadyAt": {},
+          "recipesGrandfathered": true,
+          "reliquary": {
+            "counts": {},
+            "firstFind": {}
+          },
+          "renown": 5,
+          "talents": {
+            "rows": {
+              "5": "war_row_double_charge",
+              "8": "war_row_second_wind",
+              "11": "war_row_piercing_howl",
+              "14": "war_row_anger_management",
+              "17": "war_row_recklessness",
+              "20": "war_row_colossal_might"
+            },
+            "spec": "arms"
+          },
+          "townFocus": {}
+        },
+        {
+          "activeLoadout": -1,
+          "archetype": {},
+          "arena2v2Rating": 1500,
+          "arenaRating": 1500,
+          "bags": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "bank": {},
+          "bgRating": 1500,
+          "cls": "mage",
+          "companionUpgrades": {},
+          "counters": {},
+          "craftSkills": {},
+          "deedStats": {
+            "counters": {},
+            "dungeonClears": {},
+            "itemsDiscovered": [
+              "apprentice_robe",
+              "baked_bread",
+              "gnarled_staff",
+              "spring_water"
+            ]
+          },
+          "delveClears": {},
+          "delveDaily": {},
+          "entityId": 964,
+          "equipment": {
+            "chest": "apprentice_robe",
+            "mainhand": "gnarled_staff"
+          },
+          "equipmentInstance": {},
+          "fiestaRestore": {
+            "level": 1,
+            "talents": {
+              "rows": {}
+            }
+          },
+          "gatheringProficiency": {},
+          "heroicDaily": {},
+          "inventory": [
+            {
+              "count": 5,
+              "itemId": "baked_bread"
+            },
+            {
+              "count": 5,
+              "itemId": "spring_water"
+            }
+          ],
+          "mailWelcomed": true,
+          "nodeHarvestReadyAt": {},
+          "recipesGrandfathered": true,
+          "reliquary": {
+            "counts": {},
+            "firstFind": {}
+          },
+          "talents": {
+            "rows": {
+              "5": "mag_r5_ice_floes",
+              "8": "mag_r8_warded",
+              "11": "mag_r11_rings_of_frost",
+              "14": "mag_r14_power_echo",
+              "17": "mag_r17_convergence",
+              "20": "mag_r20_rune_of_power"
+            },
+            "spec": "arcane"
+          },
+          "townFocus": {}
+        },
+        {
+          "activeLoadout": -1,
+          "archetype": {},
+          "arena2v2Rating": 1500,
+          "arenaRating": 1500,
+          "bags": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "bank": {},
+          "bgRating": 1500,
+          "cls": "rogue",
+          "companionUpgrades": {},
+          "counters": {
+            "deaths": 1
+          },
+          "craftSkills": {},
+          "deedStats": {
+            "counters": {},
+            "dungeonClears": {},
+            "itemsDiscovered": [
+              "baked_bread",
+              "footpad_jerkin",
+              "rusty_dagger"
+            ]
+          },
+          "delveClears": {},
+          "delveDaily": {},
+          "entityId": 965,
+          "equipment": {
+            "chest": "footpad_jerkin",
+            "mainhand": "rusty_dagger",
+            "offhand": "rusty_dagger"
+          },
+          "equipmentInstance": {},
+          "fiestaRestore": {
+            "level": 1,
+            "talents": {
+              "rows": {}
+            }
+          },
+          "gatheringProficiency": {},
+          "heroicDaily": {},
+          "inventory": [
+            {
+              "count": 5,
+              "itemId": "baked_bread"
+            }
+          ],
+          "mailWelcomed": true,
+          "nodeHarvestReadyAt": {},
+          "recipesGrandfathered": true,
+          "reliquary": {
+            "counts": {},
+            "firstFind": {}
+          },
+          "talents": {
+            "rows": {
+              "5": "rog_r5_shadeslip",
+              "8": "rog_r8_borrowed_breath",
+              "11": "rog_r11_marked_prey",
+              "14": "rog_r14_dusk_economy",
+              "17": "rog_r17_flurry_of_knives",
+              "20": "rog_r20_second_shadow"
+            },
+            "spec": "assassination"
+          },
+          "townFocus": {}
+        },
+        {
+          "activeLoadout": -1,
+          "archetype": {},
+          "arena2v2Rating": 1500,
+          "arenaRating": 1500,
+          "bags": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "bank": {},
+          "bgRating": 1500,
+          "cls": "priest",
+          "companionUpgrades": {},
+          "counters": {},
+          "craftSkills": {},
+          "deedStats": {
+            "counters": {},
+            "dungeonClears": {},
+            "itemsDiscovered": [
+              "apprentice_robe",
+              "baked_bread",
+              "gnarled_staff",
+              "spring_water"
+            ]
+          },
+          "delveClears": {},
+          "delveDaily": {},
+          "entityId": 966,
+          "equipment": {
+            "chest": "apprentice_robe",
+            "mainhand": "gnarled_staff"
+          },
+          "equipmentInstance": {},
+          "fiestaRestore": {
+            "level": 1,
+            "talents": {
+              "rows": {}
+            }
+          },
+          "gatheringProficiency": {},
+          "heroicDaily": {},
+          "inventory": [
+            {
+              "count": 5,
+              "itemId": "baked_bread"
+            },
+            {
+              "count": 5,
+              "itemId": "spring_water"
+            }
+          ],
+          "mailWelcomed": true,
+          "nodeHarvestReadyAt": {},
+          "recipesGrandfathered": true,
+          "reliquary": {
+            "counts": {},
+            "firstFind": {}
+          },
+          "talents": {
+            "rows": {
+              "5": "pri_r5_improved_renew",
+              "8": "pri_r17_desperate_prayer",
+              "11": "pri_r8_silence",
+              "14": "pri_r11_inner_focus",
+              "17": "pri_r17_anointing",
+              "20": "pri_r20_twin_covenant"
+            },
+            "spec": "discipline"
+          },
+          "townFocus": {}
+        }
+      ],
+      "entities": [
+        {
+          "aiState": "idle",
+          "attackPower": 122,
+          "auras": [
+            {
+              "duration": 3600,
+              "id": "battle_stance",
+              "kind": "battle_stance",
+              "name": "Battle Stance",
+              "remaining": 3598.85,
+              "school": "physical",
+              "sourceId": 963
+            }
+          ],
+          "blockChance": 0.05,
+          "blockValue": 6,
+          "combatTimer": 100.15,
+          "comboUntil": -1,
+          "critChance": 0.0695,
+          "detonateTimer": "Infinity",
+          "dodgeChance": 0.0695,
+          "fiveSecondRule": 127.65,
+          "hp": 772,
+          "id": 963,
+          "kind": "player",
+          "level": 20,
+          "lootFfaTimer": "Infinity",
+          "maxHp": 822,
+          "maxResource": 100,
+          "moveSpeed": 7,
+          "offhandItemId": "eastbrook_buckler",
+          "onGround": true,
+          "overpowerUntil": -1,
+          "petMode": "defensive",
+          "pos": {
+            "x": 103593,
+            "z": -1268
+          },
+          "potionCooldownUntil": -1,
+          "resourceType": "rage",
+          "spawnPos": {
+            "x": 2,
+            "y": 1.5,
+            "z": -2
+          },
+          "spellPower": 5,
+          "stats": {
+            "agi": 39,
+            "armor": 410,
+            "int": 10,
+            "spi": 11,
+            "sta": 61,
+            "str": 61
+          },
+          "templateId": "warrior",
+          "weapon": {
+            "max": 5,
+            "min": 2,
+            "speed": 2
+          }
+        },
+        {
+          "aiState": "idle",
+          "attackPower": 10,
+          "combatTimer": 122.6,
+          "comboUntil": -1,
+          "critChance": 0.056,
+          "detonateTimer": "Infinity",
+          "dodgeChance": 0.056,
+          "fiveSecondRule": 127.65,
+          "hp": 271,
+          "id": 964,
+          "kind": "player",
+          "level": 20,
+          "lootFfaTimer": "Infinity",
+          "maxHp": 418,
+          "maxResource": 1581,
+          "moveSpeed": 7,
+          "onGround": true,
+          "overpowerUntil": -1,
+          "petMode": "defensive",
+          "pos": {
+            "x": 103607,
+            "z": -1268
+          },
+          "potionCooldownUntil": -1,
+          "resource": 1581,
+          "resourceType": "mana",
+          "spawnPos": {
+            "x": 2,
+            "y": 1.5,
+            "z": -2
+          },
+          "spellPower": 41,
+          "stats": {
+            "agi": 12,
+            "armor": 133,
+            "int": 82,
+            "spi": 60,
+            "sta": 33,
+            "str": 10
+          },
+          "templateId": "mage",
+          "weapon": {
+            "max": 6,
+            "min": 3,
+            "speed": 2.9
+          }
+        },
+        {
+          "aiState": "idle",
+          "attackPower": 160,
+          "combatTimer": 101.45,
+          "comboUntil": -1,
+          "critChance": 0.211,
+          "detonateTimer": "Infinity",
+          "dodgeChance": 0.091,
+          "dualWielding": true,
+          "facing": 3.141593,
+          "fiveSecondRule": 127.65,
+          "hp": 448,
+          "id": 965,
+          "kind": "player",
+          "level": 20,
+          "lootFfaTimer": "Infinity",
+          "maxHp": 510,
+          "maxResource": 100,
+          "moveSpeed": 7,
+          "offhandItemId": "rusty_dagger",
+          "offhandWeapon": {
+            "dagger": true,
+            "max": 4,
+            "min": 2,
+            "speed": 1.8
+          },
+          "onGround": true,
+          "overpowerUntil": -1,
+          "petMode": "defensive",
+          "pos": {
+            "x": 103593,
+            "z": -1228
+          },
+          "potionCooldownUntil": -1,
+          "resource": 100,
+          "resourceType": "energy",
+          "spawnPos": {
+            "x": 2,
+            "y": 1.5,
+            "z": -2
+          },
+          "spellPower": 6,
+          "stats": {
+            "agi": 82,
+            "armor": 370,
+            "int": 11,
+            "spi": 12,
+            "sta": 36,
+            "str": 36
+          },
+          "templateId": "rogue",
+          "weapon": {
+            "dagger": true,
+            "max": 4,
+            "min": 2,
+            "speed": 1.8
+          }
+        },
+        {
+          "aiState": "idle",
+          "attackPower": 10,
+          "combatTimer": 122.6,
+          "comboUntil": -1,
+          "critChance": 0.0555,
+          "detonateTimer": "Infinity",
+          "dodgeChance": 0.0555,
+          "facing": 3.141593,
+          "fiveSecondRule": 127.65,
+          "hp": 325,
+          "id": 966,
+          "kind": "player",
+          "level": 20,
+          "lootFfaTimer": "Infinity",
+          "maxHp": 483,
+          "maxResource": 1284,
+          "moveSpeed": 7,
+          "onGround": true,
+          "overpowerUntil": -1,
+          "petMode": "defensive",
+          "pos": {
+            "x": 103607,
+            "z": -1228
+          },
+          "potionCooldownUntil": -1,
+          "resource": 1284,
+          "resourceType": "mana",
+          "spawnPos": {
+            "x": 2,
+            "y": 1.5,
+            "z": -2
+          },
+          "spellPower": 32,
+          "stats": {
+            "agi": 11,
+            "armor": 126,
+            "int": 64,
+            "spi": 87,
+            "sta": 38,
+            "str": 10
+          },
+          "templateId": "priest",
+          "weapon": {
+            "max": 6,
+            "min": 3,
+            "speed": 2.9
+          }
+        }
+      ]
+    }
+  ]
+}

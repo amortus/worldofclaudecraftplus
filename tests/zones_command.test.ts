@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { ZONES, zoneAt } from '../src/sim/data';
 import { Sim } from '../src/sim/sim';
-import { SimEvent } from '../src/sim/types';
-import { STRIP_ZONES, ZONES, zoneAt } from '../src/sim/data';
+import type { SimEvent } from '../src/sim/types';
 import { groundHeight } from '../src/sim/world';
 
 function makeWorld() {
@@ -10,7 +10,8 @@ function makeWorld() {
 
 function teleport(sim: Sim, pid: number, x: number, z: number) {
   const e = sim.entities.get(pid)!;
-  e.pos.x = x; e.pos.z = z;
+  e.pos.x = x;
+  e.pos.z = z;
   e.pos.y = groundHeight(x, z, sim.cfg.seed);
   e.prevPos = { ...e.pos };
 }
@@ -46,11 +47,9 @@ describe('/zones command', () => {
   it('tags the zone the player is currently standing in', () => {
     const sim = makeWorld();
     const a = sim.addPlayer('warrior', 'Aleph');
-    // Stand deep in the northmost STRIP zone (x = 0), then read. ZONES appends
-    // column zones last for index stability, so its final entry is no longer
-    // the north end of the strip the player is standing on.
-    const last = STRIP_ZONES[STRIP_ZONES.length - 1];
-    teleport(sim, a, 0, last.zMin + 1);
+    // Stand deep in the last zone, then read.
+    const last = ZONES[ZONES.length - 1];
+    teleport(sim, a, last.hub.x, last.hub.z); // inside the zone's own rect (columns!)
     sim.tick();
     expect(zoneAt(sim.entities.get(a)!.pos.x, sim.entities.get(a)!.pos.z).name).toBe(last.name);
     sim.chat('/zones', a);

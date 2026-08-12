@@ -1,9 +1,10 @@
-import { apiUrl, NATIVE_APP } from './online';
+import { apiUrl, NATIVE_APP } from '../client_origin';
 
 export interface NativeAttestationProof {
   platform: 'android' | 'ios';
   challengeId: string;
   token: string;
+  nonce: string;
 }
 
 interface ChallengeResponse {
@@ -16,37 +17,37 @@ interface NativeAttestationPlugin {
 }
 
 function nativePlugin(): NativeAttestationPlugin | null {
-  const cap = (window as unknown as { Capacitor?: { Plugins?: Record<string, unknown> } }).Capacitor;
+  const cap = (window as unknown as { Capacitor?: { Plugins?: Record<string, unknown> } })
+    .Capacitor;
   const plugin = cap?.Plugins?.NativeAttestation;
   if (!plugin || typeof plugin !== 'object') return null;
   const candidate = plugin as Partial<NativeAttestationPlugin>;
-  return typeof candidate.getToken === 'function' ? candidate as NativeAttestationPlugin : null;
+  return typeof candidate.getToken === 'function' ? (candidate as NativeAttestationPlugin) : null;
 }
 
-export async function createNativeAttestationProof(base: string, action: string): Promise<NativeAttestationProof | null> {
+export async function createNativeAttestationProof(
+  base: string,
+  action: string,
+): Promise<NativeAttestationProof | null> {
   if (!NATIVE_APP) return null;
   const plugin = nativePlugin();
   if (!plugin) return null;
-  try {
-    const challengeRes = await fetch(apiUrl('/api/native-attestation/challenge', base), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action }),
-    });
-    if (!challengeRes.ok) return null;
-    const challenge = await challengeRes.json().catch(() => null) as ChallengeResponse | null;
-    if (typeof challenge?.challengeId !== 'string' || typeof challenge.nonce !== 'string') return null;
-    const token = await plugin.getToken({ nonce: challenge.nonce });
-    if ((token.platform !== 'android' && token.platform !== 'ios') || typeof token.token !== 'string') return null;
-    return {
-      platform: token.platform,
-      challengeId: challenge.challengeId,
-      token: token.token,
-    };
-  } catch {
-    // Best-effort: a failed Play Integrity token (e.g. this build has no matching
-    // cloud project) must never block login. The server treats a missing proof as
-    // un-attested, which is allowed unless NATIVE_ATTESTATION_REQUIRED is set.
+  const challengeRes = await fetch(apiUrl('/api/native-attestation/challenge', base), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action }),
+  });
+  if (!challengeRes.ok) return null;
+  const challenge = (await challengeRes.json().catch(() => null)) as ChallengeResponse | null;
+  if (typeof challenge?.challengeId !== 'string' || typeof challenge.nonce !== 'string')
     return null;
-  }
+  const token = await plugin.getToken({ nonce: challenge.nonce });
+  if ((token.platform !== 'android' && token.platform !== 'ios') || typeof token.token !== 'string')
+    return null;
+  return {
+    platform: token.platform,
+    challengeId: challenge.challengeId,
+    token: token.token,
+    nonce: challenge.nonce,
+  };
 }

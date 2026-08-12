@@ -49,13 +49,36 @@ export function cameraIsManual(mouselookActive: boolean, mouseCameraMode: boolea
 }
 
 export function cameraFollowShouldSettle(mi: CameraFollowMoveInput, clickMoving: boolean): boolean {
-  return clickMoving
-    || mi.forward
-    || mi.back
-    || mi.turnLeft
-    || mi.turnRight
-    || mi.strafeLeft
-    || mi.strafeRight;
+  return (
+    clickMoving ||
+    mi.forward ||
+    mi.back ||
+    mi.turnLeft ||
+    mi.turnRight ||
+    mi.strafeLeft ||
+    mi.strafeRight
+  );
+}
+
+// A respawn/release-spirit (see src/sim/spirit.ts and entity_roster.ts) forces the
+// player's facing to 0. The sim pairs that with prevFacing so the render-interpolated
+// facing lands cleanly on 0 instead of sweeping from the pre-death heading, but the
+// camera follower keeps its OWN lastInterpFacing across frames (see main.ts), which
+// the sim-side fix does not touch. Left stale, the rigid-follow term above reads the
+// reset as a turn and partially rotates the camera before going quiet again, sticking
+// it off-yaw with no way to recover on its own. Call this on the dead/ghost transition
+// edge; on a true edge, resync lastInterpFacing to the current interpFacing that same
+// frame (mirroring the click-to-move release resync already done in main.ts) so the
+// spurious delta is never computed in the first place.
+export function isRespawnFacingResyncEdge(
+  prevDead: boolean,
+  prevGhost: boolean,
+  dead: boolean,
+  ghost: boolean,
+): boolean {
+  if (!prevGhost && ghost) return true; // releasePlayerSpirit: ghost rises, dead stays true
+  if (prevDead && !dead) return true; // any revive: corpse rez, spirit healer, instance reentry, delve
+  return false;
 }
 
 export function wrapAngle(d: number): number {
@@ -92,12 +115,15 @@ export function updateFollowCameraYaw(input: CameraFollowInput): CameraFollowRes
   if (!input.mouselook && !input.cameraDriven) {
     if (input.orbiting) return { camYaw, lastInterpFacing: input.interpFacing };
     let targetYaw = camYaw;
-    if (input.lastInterpFacing !== null && !input.clickMoving) targetYaw += wrapAngle(input.interpFacing - input.lastInterpFacing);
+    if (input.lastInterpFacing !== null && !input.clickMoving)
+      targetYaw += wrapAngle(input.interpFacing - input.lastInterpFacing);
     if (input.moving && !input.orbiting) {
       const delta = wrapAngle(input.interpFacing - targetYaw);
       const clickMoveScale = input.clickMoving ? clickMoveSettleScale(Math.abs(delta)) : 1;
       const rate = input.clickMoving ? CLICK_MOVE_SETTLE_RATE * clickMoveScale : SETTLE_RATE;
-      const maxStep = input.clickMoving ? CLICK_MOVE_MAX_SETTLE_STEP * clickMoveScale : MAX_SETTLE_STEP;
+      const maxStep = input.clickMoving
+        ? CLICK_MOVE_MAX_SETTLE_STEP * clickMoveScale
+        : MAX_SETTLE_STEP;
       const step = delta * (1 - Math.exp(-Math.max(0, input.frameDt) * rate));
       targetYaw += clamp(step, -maxStep, maxStep);
     }

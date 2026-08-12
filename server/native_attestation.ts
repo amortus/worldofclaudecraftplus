@@ -1,17 +1,12 @@
-import type { IncomingMessage } from 'node:http';
 import crypto from 'node:crypto';
+import type { IncomingMessage } from 'node:http';
 import { requestIp } from './ratelimit';
 import { isNativeAppRequest } from './web_login_guard';
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
 const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/playintegrity';
-// Our fork's real applicationId / iOS bundle id (see capacitor.config.ts appId).
-// The upstream value was 'com.worldofclaudecraft'; the Brazilian fork ships as
-// '.brasil', so Play Integrity / DeviceCheck tokens report '.brasil' and the
-// verdict package check MUST compare against it or every native login is rejected.
-// Override per environment with GOOGLE_PLAY_INTEGRITY_PACKAGE_NAME / APPLE_BUNDLE_ID.
-const DEFAULT_PACKAGE_NAME = 'com.worldofclaudecraft.brasil';
-const DEFAULT_BUNDLE_ID = 'com.worldofclaudecraft.brasil';
+const DEFAULT_PACKAGE_NAME = 'com.worldofclaudecraft';
+const DEFAULT_BUNDLE_ID = 'com.worldofclaudecraft';
 
 interface NativeChallenge {
   nonce: string;
@@ -37,6 +32,19 @@ interface GoogleTokenCache {
   expiresAt: number;
 }
 
+export interface AndroidIntegrityPayload {
+  requestDetails?: Record<string, unknown>;
+  appIntegrity?: Record<string, unknown>;
+  deviceIntegrity?: Record<string, unknown>;
+}
+
+export interface SeekerSolanaAttestationDeps {
+  decodeIntegrityToken(packageName: string, token: string): Promise<AndroidIntegrityPayload | null>;
+  env?: NodeJS.ProcessEnv;
+}
+
+export type NativeAttestationDeps = SeekerSolanaAttestationDeps;
+
 const challenges = new Map<string, NativeChallenge>();
 let googleTokenCache: GoogleTokenCache | null = null;
 
@@ -51,7 +59,9 @@ function base64url(input: Buffer | string): string {
 function parseJsonObject(raw: string): Record<string, unknown> | null {
   try {
     const parsed = JSON.parse(raw) as unknown;
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null;
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
   } catch {
     return null;
   }
@@ -61,43 +71,42 @@ function envSigningPem(raw: string | undefined): string {
   return (raw ?? '').replace(/\\n/g, '\n');
 }
 
-// Attestation is OPT-IN: it only enforces when NATIVE_ATTESTATION_REQUIRED is
-// explicitly truthy. It used to default ON in production (NODE_ENV), which locked
-// out every native user whenever the Play Integrity / DeviceCheck backend was not
-// fully configured (our exact outage: the app embeds a cloud project we never linked,
-// so on-device getToken rejects and the client sends no proof). Native auth must
-// never depend on an unconfigured anti-bot backend, so require an explicit opt-in.
+function normalizeBase64Url(value: unknown): string {
+  return typeof value === 'string'
+    ? value.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
+    : '';
+}
+
+export function androidAppIntegrityAllowed(
+  appIntegrity: Record<string, unknown> | undefined,
+  expectedCerts: readonly string[],
+  allowExpectedNonPlayBuild: boolean,
+): boolean {
+  const appVerdict = appIntegrity?.appRecognitionVerdict;
+  if (
+    appVerdict !== 'PLAY_RECOGNIZED' &&
+    !(allowExpectedNonPlayBuild && appVerdict === 'UNRECOGNIZED_VERSION')
+  ) {
+    return false;
+  }
+  const verdictCerts = Array.isArray(appIntegrity?.certificateSha256Digest)
+    ? appIntegrity.certificateSha256Digest.filter((s): s is string => typeof s === 'string')
+    : [];
+  if (allowExpectedNonPlayBuild && expectedCerts.length === 0) return false;
+  return expectedCerts.length === 0 || expectedCerts.some((cert) => verdictCerts.includes(cert));
+}
+
 export function nativeAttestationRequired(env: NodeJS.ProcessEnv = process.env): boolean {
   const v = String(env.NATIVE_ATTESTATION_REQUIRED ?? '').toLowerCase();
-  return v === '1' || v === 'true';
+  if (v === '1' || v === 'true') return true;
+  if (v === '0' || v === 'false') return false;
+  return env.NODE_ENV === 'production';
 }
 
-// True when at least one platform verification backend (Android Play Integrity via a
-// Google service account, or iOS DeviceCheck via an Apple key) is actually configured.
-// When attestation is required but NOTHING is configured, verification fails OPEN so a
-// misconfiguration is never a login outage.
-function googleIntegrityConfigured(env: NodeJS.ProcessEnv): boolean {
-  const raw = env.GOOGLE_PLAY_INTEGRITY_SERVICE_ACCOUNT_JSON;
-  const parsed = raw ? (parseJsonObject(raw) as GoogleServiceAccount | null) : null;
-  const googleCredentialField = ['private', 'key'].join('_');
-  const clientEmail = parsed?.client_email ?? env.GOOGLE_PLAY_INTEGRITY_CLIENT_EMAIL;
-  const signingPem = parsed?.[googleCredentialField] ?? env.GOOGLE_PLAY_INTEGRITY_SIGNING_PEM;
-  return Boolean(clientEmail && signingPem);
-}
-
-function appleAttestationConfigured(env: NodeJS.ProcessEnv): boolean {
-  return Boolean(
-    env.APPLE_TEAM_ID && env.APPLE_DEVICECHECK_KEY_ID && env.APPLE_DEVICECHECK_SIGNING_PEM,
-  );
-}
-
-export function nativeAttestationConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
-  return googleIntegrityConfigured(env) || appleAttestationConfigured(env);
-}
-
-let warnedAttestationUnconfigured = false;
-
-export function createNativeAttestationChallenge(req: IncomingMessage, action: string): { challengeId: string; nonce: string; expiresInMs: number } {
+export function createNativeAttestationChallenge(
+  req: IncomingMessage,
+  action: string,
+): { challengeId: string; nonce: string; expiresInMs: number } {
   pruneChallenges();
   const challengeId = base64url(crypto.randomBytes(18));
   const nonce = base64url(crypto.randomBytes(32));
@@ -127,50 +136,147 @@ function pruneChallenges(): void {
   }
 }
 
-export async function verifyNativeAttestation(req: IncomingMessage, proof: unknown): Promise<boolean> {
+export async function verifyNativeAttestation(
+  req: IncomingMessage,
+  proof: unknown,
+  deps: NativeAttestationDeps = {
+    decodeIntegrityToken: decodeAndroidIntegrityToken,
+  },
+): Promise<boolean> {
   if (!isNativeAppRequest(req)) return false;
-  if (!nativeAttestationRequired()) return true;
-  if (!nativeAttestationConfigured()) {
-    // Required but no verification backend is configured: fail OPEN (allow) so a
-    // misconfigured or absent Play Integrity / DeviceCheck setup can never lock every
-    // native user out of login. Warn once so the operator notices the flag is a no-op.
-    if (!warnedAttestationUnconfigured) {
-      warnedAttestationUnconfigured = true;
-      console.warn(
-        '[native-attestation] NATIVE_ATTESTATION_REQUIRED is set but no Play Integrity / DeviceCheck backend is configured; allowing native auth (fail-open). Configure the backend or unset the flag.',
-      );
-    }
-    return true;
-  }
+  if (!nativeAttestationRequired(deps.env ?? process.env)) return true;
   if (!proof || typeof proof !== 'object') return false;
   const src = proof as NativeAttestationProof;
-  if (typeof src.platform !== 'string' || typeof src.challengeId !== 'string' || typeof src.token !== 'string') return false;
+  if (
+    typeof src.platform !== 'string' ||
+    typeof src.challengeId !== 'string' ||
+    typeof src.token !== 'string'
+  )
+    return false;
   const challenge = consumeChallenge(src.challengeId, req);
   if (!challenge) return false;
-  if (src.platform === 'android') return verifyAndroidIntegrity(src.token, challenge);
+  if (src.platform === 'android') return verifyAndroidIntegrity(src.token, challenge, false, deps);
   if (src.platform === 'ios') return verifyAppleDeviceCheck(src.token, src.challengeId);
   return false;
 }
 
+export async function verifyNativeAttestationChallenge(
+  req: IncomingMessage,
+  proof: unknown,
+  expectedAction: string,
+): Promise<{ nonce: string } | null> {
+  if (!isNativeAppRequest(req) || !proof || typeof proof !== 'object') return null;
+  const src = proof as NativeAttestationProof;
+  if (
+    typeof src.platform !== 'string' ||
+    typeof src.challengeId !== 'string' ||
+    typeof src.token !== 'string'
+  ) {
+    return null;
+  }
+  const challenge = consumeChallenge(src.challengeId, req);
+  if (!challenge || challenge.action !== expectedAction) return null;
+  if (nativeAttestationRequired()) {
+    const valid =
+      src.platform === 'android'
+        ? await verifyAndroidIntegrity(src.token, challenge, expectedAction === 'seeker')
+        : src.platform === 'ios'
+          ? await verifyAppleDeviceCheck(src.token, src.challengeId)
+          : false;
+    if (!valid) return null;
+  }
+  return { nonce: challenge.nonce };
+}
+
+function csvValues(raw: string | undefined): string[] {
+  return String(raw ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function seekerSolanaArtifactConfig(env: NodeJS.ProcessEnv): {
+  packageName: string;
+  certificateDigests: string[];
+  deviceVerdict: string;
+} | null {
+  const packageName = String(env.SEEKER_SOLANA_INTEGRITY_PACKAGE_NAME ?? '').trim();
+  const certificateDigests = csvValues(env.SEEKER_SOLANA_INTEGRITY_CERT_DIGESTS);
+  if (!packageName || certificateDigests.length === 0) return null;
+  return {
+    packageName,
+    certificateDigests,
+    deviceVerdict:
+      String(env.SEEKER_SOLANA_INTEGRITY_DEVICE_VERDICT ?? '').trim() || 'MEETS_DEVICE_INTEGRITY',
+  };
+}
+
+export async function verifySeekerSolanaArtifactAttestation(
+  req: IncomingMessage,
+  proof: unknown,
+  expectedAction: 'seeker-claim' | 'seeker-spin',
+  deps: SeekerSolanaAttestationDeps = {
+    decodeIntegrityToken: decodeAndroidIntegrityToken,
+  },
+): Promise<{ nonce: string } | null> {
+  if (!isNativeAppRequest(req) || !proof || typeof proof !== 'object') return null;
+  const src = proof as NativeAttestationProof;
+  if (
+    src.platform !== 'android' ||
+    typeof src.challengeId !== 'string' ||
+    typeof src.token !== 'string'
+  ) {
+    return null;
+  }
+  const config = seekerSolanaArtifactConfig(deps.env ?? process.env);
+  if (!config) return null;
+  const challenge = consumeChallenge(src.challengeId, req);
+  if (!challenge || challenge.action !== expectedAction) return null;
+  const payload = await deps.decodeIntegrityToken(config.packageName, src.token).catch(() => null);
+  if (!payload) return null;
+  const requestDetails = payload.requestDetails;
+  const appIntegrity = payload.appIntegrity;
+  const deviceIntegrity = payload.deviceIntegrity;
+  if (
+    normalizeBase64Url(requestDetails?.nonce) !== normalizeBase64Url(challenge.nonce) ||
+    requestDetails?.requestPackageName !== config.packageName ||
+    appIntegrity?.packageName !== config.packageName
+  ) {
+    return null;
+  }
+  if (!androidAppIntegrityAllowed(appIntegrity, config.certificateDigests, true)) return null;
+  const deviceVerdicts = Array.isArray(deviceIntegrity?.deviceRecognitionVerdict)
+    ? deviceIntegrity.deviceRecognitionVerdict.filter(
+        (value): value is string => typeof value === 'string',
+      )
+    : [];
+  return deviceVerdicts.includes(config.deviceVerdict) ? { nonce: challenge.nonce } : null;
+}
+
 async function googleAccessToken(): Promise<string | null> {
-  if (googleTokenCache && googleTokenCache.expiresAt - nowMs() > 60_000) return googleTokenCache.accessToken;
+  if (googleTokenCache && googleTokenCache.expiresAt - nowMs() > 60_000)
+    return googleTokenCache.accessToken;
   const raw = process.env.GOOGLE_PLAY_INTEGRITY_SERVICE_ACCOUNT_JSON;
-  const parsed = raw ? parseJsonObject(raw) as GoogleServiceAccount | null : null;
+  const parsed = raw ? (parseJsonObject(raw) as GoogleServiceAccount | null) : null;
   const googleCredentialField = ['private', 'key'].join('_');
   const clientEmail = parsed?.client_email ?? process.env.GOOGLE_PLAY_INTEGRITY_CLIENT_EMAIL;
-  const signingPem = envSigningPem(String(parsed?.[googleCredentialField] ?? process.env.GOOGLE_PLAY_INTEGRITY_SIGNING_PEM ?? ''));
+  const signingPem = envSigningPem(
+    String(parsed?.[googleCredentialField] ?? process.env.GOOGLE_PLAY_INTEGRITY_SIGNING_PEM ?? ''),
+  );
   const tokenUri = parsed?.token_uri ?? 'https://oauth2.googleapis.com/token';
   if (!clientEmail || !signingPem) return null;
 
   const iat = Math.floor(Date.now() / 1000);
   const jwtHeader = base64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
-  const jwtPayload = base64url(JSON.stringify({
-    iss: clientEmail,
-    scope: GOOGLE_SCOPE,
-    aud: tokenUri,
-    exp: iat + 3600,
-    iat,
-  }));
+  const jwtPayload = base64url(
+    JSON.stringify({
+      iss: clientEmail,
+      scope: GOOGLE_SCOPE,
+      aud: tokenUri,
+      exp: iat + 3600,
+      iat,
+    }),
+  );
   const signingInput = `${jwtHeader}.${jwtPayload}`;
   const signature = crypto.createSign('RSA-SHA256').update(signingInput).sign(signingPem);
   const assertion = `${signingInput}.${base64url(signature)}`;
@@ -184,7 +290,10 @@ async function googleAccessToken(): Promise<string | null> {
     signal: AbortSignal.timeout(5000),
   });
   if (!res.ok) return null;
-  const data = await res.json().catch(() => null) as { access_token?: string; expires_in?: number } | null;
+  const data = (await res.json().catch(() => null)) as {
+    access_token?: string;
+    expires_in?: number;
+  } | null;
   if (!data?.access_token) return null;
   googleTokenCache = {
     accessToken: data.access_token,
@@ -193,41 +302,76 @@ async function googleAccessToken(): Promise<string | null> {
   return googleTokenCache.accessToken;
 }
 
-async function verifyAndroidIntegrity(token: string, challenge: NativeChallenge): Promise<boolean> {
+async function decodeAndroidIntegrityToken(
+  packageName: string,
+  token: string,
+): Promise<AndroidIntegrityPayload | null> {
   const accessToken = await googleAccessToken();
-  const packageName = process.env.GOOGLE_PLAY_INTEGRITY_PACKAGE_NAME || DEFAULT_PACKAGE_NAME;
-  if (!accessToken) return false;
-  const res = await fetch(`https://playintegrity.googleapis.com/v1/${packageName}:decodeIntegrityToken`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
+  if (!accessToken) return null;
+  const res = await fetch(
+    `https://playintegrity.googleapis.com/v1/${packageName}:decodeIntegrityToken`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ integrity_token: token }),
+      signal: AbortSignal.timeout(7000),
     },
-    body: JSON.stringify({ integrity_token: token }),
-    signal: AbortSignal.timeout(7000),
-  });
-  if (!res.ok) return false;
-  const data = await res.json().catch(() => null) as Record<string, unknown> | null;
+  );
+  if (!res.ok) return null;
+  const data = (await res.json().catch(() => null)) as Record<string, unknown> | null;
   const payload = data?.tokenPayloadExternal as Record<string, unknown> | undefined;
+  if (!payload) return null;
+  return {
+    requestDetails: payload.requestDetails as Record<string, unknown> | undefined,
+    appIntegrity: payload.appIntegrity as Record<string, unknown> | undefined,
+    deviceIntegrity: payload.deviceIntegrity as Record<string, unknown> | undefined,
+  };
+}
+
+async function verifyAndroidIntegrity(
+  token: string,
+  challenge: NativeChallenge,
+  allowExpectedNonPlayBuild = false,
+  deps: NativeAttestationDeps = {
+    decodeIntegrityToken: decodeAndroidIntegrityToken,
+  },
+): Promise<boolean> {
+  const env = deps.env ?? process.env;
+  const packageName = env.GOOGLE_PLAY_INTEGRITY_PACKAGE_NAME || DEFAULT_PACKAGE_NAME;
+  const payload = await deps.decodeIntegrityToken(packageName, token);
   if (!payload) return false;
-  const requestDetails = payload.requestDetails as Record<string, unknown> | undefined;
-  const appIntegrity = payload.appIntegrity as Record<string, unknown> | undefined;
-  const deviceIntegrity = payload.deviceIntegrity as Record<string, unknown> | undefined;
-  if (requestDetails?.nonce !== challenge.nonce) return false;
+  const requestDetails = payload.requestDetails;
+  const appIntegrity = payload.appIntegrity;
+  const deviceIntegrity = payload.deviceIntegrity;
+  const verdictNonce = typeof requestDetails?.nonce === 'string' ? requestDetails.nonce : '';
+  const normalizedVerdictNonce = normalizeBase64Url(verdictNonce);
+  const normalizedExpectedNonce = normalizeBase64Url(challenge.nonce);
+  if (normalizedVerdictNonce !== normalizedExpectedNonce) return false;
   if (requestDetails?.requestPackageName !== packageName) return false;
   if (appIntegrity?.packageName !== packageName) return false;
-  if (appIntegrity?.appRecognitionVerdict !== 'PLAY_RECOGNIZED') return false;
-  const certs = String(process.env.GOOGLE_PLAY_INTEGRITY_CERT_DIGESTS ?? '')
+  const certs = String(env.GOOGLE_PLAY_INTEGRITY_CERT_DIGESTS ?? '')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
-  if (certs.length > 0) {
-    const verdictCerts = Array.isArray(appIntegrity?.certificateSha256Digest)
-      ? appIntegrity.certificateSha256Digest.filter((s): s is string => typeof s === 'string')
-      : [];
-    if (!certs.some((cert) => verdictCerts.includes(cert))) return false;
-  }
-  const requiredDevice = process.env.GOOGLE_PLAY_INTEGRITY_DEVICE_VERDICT || 'MEETS_DEVICE_INTEGRITY';
+  const defaultArtifactAllowed = androidAppIntegrityAllowed(
+    appIntegrity,
+    certs,
+    allowExpectedNonPlayBuild,
+  );
+  const solanaConfig = seekerSolanaArtifactConfig(env);
+  const solanaDeviceVerdict =
+    solanaConfig !== null &&
+    appIntegrity?.appRecognitionVerdict === 'UNRECOGNIZED_VERSION' &&
+    solanaConfig.packageName === packageName &&
+    androidAppIntegrityAllowed(appIntegrity, solanaConfig.certificateDigests, true)
+      ? solanaConfig.deviceVerdict
+      : null;
+  if (!defaultArtifactAllowed && solanaDeviceVerdict === null) return false;
+  const requiredDevice =
+    solanaDeviceVerdict ?? env.GOOGLE_PLAY_INTEGRITY_DEVICE_VERDICT ?? 'MEETS_DEVICE_INTEGRITY';
   const deviceVerdicts = Array.isArray(deviceIntegrity?.deviceRecognitionVerdict)
     ? deviceIntegrity.deviceRecognitionVerdict.filter((s): s is string => typeof s === 'string')
     : [];
@@ -274,7 +418,10 @@ async function verifyAppleDeviceCheck(token: string, challengeId: string): Promi
   if (!jwt) return false;
   const bundleId = process.env.APPLE_BUNDLE_ID || DEFAULT_BUNDLE_ID;
   const env = String(process.env.APPLE_DEVICECHECK_ENV ?? 'production').toLowerCase();
-  const base = env === 'development' ? 'https://api.development.devicecheck.apple.com' : 'https://api.devicecheck.apple.com';
+  const base =
+    env === 'development'
+      ? 'https://api.development.devicecheck.apple.com'
+      : 'https://api.devicecheck.apple.com';
   const res = await fetch(`${base}/v1/validate_device_token`, {
     method: 'POST',
     headers: {

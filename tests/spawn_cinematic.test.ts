@@ -1,172 +1,168 @@
-// The first-spawn camera cinematic is pure math with no DOM, so the whole
-// contract is testable here: the four eligibility gates, the device carve-out,
-// the start/landing poses, continuity along the approach, and the touch skip.
-
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   type CameraPose,
   decideSpawnCinematic,
-  platformFromUserAgent,
   recordSkipTap,
   SKIP_TAP_COUNT,
   SKIP_TAP_WINDOW_SEC,
-  type SpawnCinematicPolicyInput,
   spawnCinematicFor,
   spawnCinematicPose,
 } from '../src/game/spawn_cinematic';
 
-// The gameplay pose the approach must land on exactly. Inside the shipped
-// clamps: dist 3..22 (Input.zoomBy) and pitch -0.4..1.35 (the look clamps).
+// The gameplay pose the cinematic must land on (input.ts camera defaults).
 const END: CameraPose = { yaw: Math.PI, pitch: 0.32, dist: 12 };
 
-const eligible = (over: Partial<SpawnCinematicPolicyInput> = {}): SpawnCinematicPolicyInput => ({
-  requested: true,
-  seen: false,
-  playerLevel: 1,
-  reducedMotion: false,
-  native: false,
-  platform: 'other',
-  engine: 'chromium',
-  constrainedMemory: false,
-  graphicsPreset: 2,
-  ...over,
-});
+describe('spawn cinematic camera path', () => {
+  const cin = spawnCinematicFor(END);
 
-describe('eligibility', () => {
-  it('plays for a fresh level 1 character that has not seen it', () => {
-    expect(decideSpawnCinematic(eligible())).toEqual({ play: true, reason: 'eligible' });
+  it('opens far out and high, a fraction of a turn behind the landing yaw', () => {
+    const p0 = spawnCinematicPose(0, cin);
+    expect(p0.done).toBe(false);
+    expect(p0.dist).toBe(cin.startDist);
+    expect(p0.pitch).toBe(cin.startPitch);
+    expect(p0.yaw).toBeCloseTo(END.yaw - cin.turns * Math.PI * 2, 10);
+    // An approach, not an orbit: well under half a turn of total sweep.
+    expect(cin.turns).toBeLessThan(0.5);
+    // An establishing shot: it starts far beyond the gameplay camera.
+    expect(cin.startDist).toBeGreaterThan(2 * END.dist);
   });
 
-  it('keeps all four gates', () => {
-    for (const over of [
-      { requested: false },
-      { seen: true },
-      { playerLevel: 2 },
-      { reducedMotion: true },
-    ] as Partial<SpawnCinematicPolicyInput>[]) {
-      expect(decideSpawnCinematic(eligible(over))).toEqual({
-        play: false,
-        reason: 'ineligible',
-      });
+  it('clamps negative time to the opening pose', () => {
+    expect(spawnCinematicPose(-5, cin)).toEqual(spawnCinematicPose(0, cin));
+  });
+
+  it('lands exactly on the gameplay pose and reports done', () => {
+    for (const t of [cin.durationSec, cin.durationSec + 3]) {
+      const p = spawnCinematicPose(t, cin);
+      expect(p.done).toBe(true);
+      expect(p.yaw).toBeCloseTo(END.yaw, 10);
+      expect(p.pitch).toBeCloseTo(END.pitch, 10);
+      expect(p.dist).toBeCloseTo(END.dist, 10);
     }
   });
 
-  it('honours reduced motion even on an otherwise perfect entry', () => {
-    // The accessibility rule: this one gate is never traded away for polish.
-    expect(decideSpawnCinematic(eligible({ reducedMotion: true })).play).toBe(false);
+  it('moves monotonically: yaw forward, camera always closing in and settling', () => {
+    let prev = spawnCinematicPose(0, cin);
+    for (let t = 0.05; t <= cin.durationSec; t += 0.05) {
+      const p = spawnCinematicPose(t, cin);
+      expect(p.yaw).toBeGreaterThanOrEqual(prev.yaw);
+      expect(p.dist).toBeLessThanOrEqual(prev.dist + 1e-9);
+      expect(p.pitch).toBeLessThanOrEqual(prev.pitch + 1e-9);
+      prev = p;
+    }
   });
 
-  it('skips the sweep on constrained native iOS WebKit above Low', () => {
-    const ios = {
-      native: true,
+  it('is continuous: no per-frame jumps anywhere on the path', () => {
+    const step = 1 / 60;
+    let prev = spawnCinematicPose(0, cin);
+    for (let t = step; t <= cin.durationSec + step; t += step) {
+      const p = spawnCinematicPose(t, cin);
+      expect(Math.abs(p.yaw - prev.yaw)).toBeLessThan(0.05);
+      expect(Math.abs(p.dist - prev.dist)).toBeLessThan(0.15);
+      expect(Math.abs(p.pitch - prev.pitch)).toBeLessThan(0.02);
+      prev = p;
+    }
+  });
+});
+
+describe('skip tap burst', () => {
+  it('a lone tap or slow taps never skip', () => {
+    const taps: number[] = [];
+    expect(recordSkipTap(taps, 1)).toBe(false);
+    // One tap every 2 s: the window keeps pruning, never reaches the count.
+    for (let t = 3; t < 20; t += 2) expect(recordSkipTap(taps, t)).toBe(false);
+  });
+
+  it('a rapid burst skips', () => {
+    const taps: number[] = [];
+    let skipped = false;
+    for (let i = 0; i < SKIP_TAP_COUNT; i++) {
+      skipped = recordSkipTap(taps, 1 + i * 0.15);
+    }
+    expect(skipped).toBe(true);
+  });
+
+  it('taps outside the window do not count toward the burst', () => {
+    const taps: number[] = [];
+    for (let i = 0; i < SKIP_TAP_COUNT - 1; i++) recordSkipTap(taps, i * 0.1);
+    // The next tap lands past the window: everything before it is pruned.
+    expect(recordSkipTap(taps, SKIP_TAP_WINDOW_SEC + 1)).toBe(false);
+  });
+});
+
+describe('spawn cinematic entry policy', () => {
+  const eligible = {
+    requested: true,
+    seen: false,
+    playerLevel: 1,
+    reducedMotion: false,
+    platform: 'web',
+    engine: 'chromium',
+    constrainedMemory: false,
+    graphicsPreset: 2,
+  } as const;
+
+  it('plays for an eligible first spawn on ordinary clients', () => {
+    expect(decideSpawnCinematic(eligible)).toEqual({ play: true, reason: 'eligible' });
+  });
+
+  it('suppresses the GPU-heavy pan on constrained iOS WebKit at every non-Low preset, native app or plain browser alike', () => {
+    for (const graphicsPreset of [2, 3, 4, 5]) {
+      expect(
+        decideSpawnCinematic({
+          ...eligible,
+          platform: 'ios',
+          engine: 'webkit',
+          constrainedMemory: true,
+          graphicsPreset,
+        }),
+      ).toEqual({ play: false, reason: 'constrained-ios-webkit' });
+    }
+  });
+
+  it('requires every iOS WebKit risk predicate before suppressing the cinematic', () => {
+    const risky = {
+      ...eligible,
       platform: 'ios',
       engine: 'webkit',
       constrainedMemory: true,
-      graphicsPreset: 2,
     };
-    expect(decideSpawnCinematic(eligible(ios))).toEqual({
-      play: false,
-      reason: 'constrained-ios-webkit',
-    });
-    // Low keeps the cinematic ...
-    expect(decideSpawnCinematic(eligible({ ...ios, graphicsPreset: 1 })).play).toBe(true);
-    // ... and so does an unconstrained device, or the browser (non-native) build.
-    expect(decideSpawnCinematic(eligible({ ...ios, constrainedMemory: false })).play).toBe(true);
-    expect(decideSpawnCinematic(eligible({ ...ios, native: false })).play).toBe(true);
-    // A non-WebKit engine on iOS-labelled hardware is not the case being avoided.
-    expect(decideSpawnCinematic(eligible({ ...ios, engine: 'chromium' })).play).toBe(true);
-  });
-});
-
-describe('platform detection', () => {
-  it('classifies the iOS family, Android, and everything else', () => {
-    expect(platformFromUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0)')).toBe('ios');
-    expect(platformFromUserAgent('Mozilla/5.0 (iPad; CPU OS 17_0)')).toBe('ios');
-    expect(platformFromUserAgent('Mozilla/5.0 (iPod touch)')).toBe('ios');
-    expect(platformFromUserAgent('Mozilla/5.0 (Linux; Android 13; SM-A146M)')).toBe('android');
-    expect(platformFromUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64)')).toBe('other');
-  });
-});
-
-describe('the approach', () => {
-  const c = spawnCinematicFor(END);
-
-  it('opens far out and high above the world', () => {
-    const start = spawnCinematicPose(0, c);
-    expect(start.dist).toBe(c.startDist);
-    expect(start.pitch).toBe(c.startPitch);
-    // Deliberately beyond the wheel-zoom range: an establishing shot, not a
-    // zoom level the player could have dialled in.
-    expect(c.startDist).toBeGreaterThan(22);
-    // ...but the pitch stays inside the look clamp, so the hand-off is legal.
-    expect(c.startPitch).toBeLessThanOrEqual(1.35);
-    expect(c.startPitch).toBeGreaterThanOrEqual(-0.4);
-    // It opens partway around from the gameplay yaw and sweeps in, never orbits.
-    expect(c.turns).toBeGreaterThan(0);
-    expect(c.turns).toBeLessThan(1);
-    expect(start.yaw).toBeCloseTo(END.yaw - c.turns * Math.PI * 2, 10);
-  });
-
-  it('lands on the gameplay pose EXACTLY, so the hand-off cannot snap', () => {
-    const end = spawnCinematicPose(c.durationSec, c);
-    expect(end.yaw).toBeCloseTo(END.yaw, 10);
-    expect(end.pitch).toBeCloseTo(END.pitch, 10);
-    expect(end.dist).toBeCloseTo(END.dist, 10);
-    expect(end.done).toBe(true);
-  });
-
-  it('reports done only at the end, and clamps past it', () => {
-    expect(spawnCinematicPose(0, c).done).toBe(false);
-    expect(spawnCinematicPose(c.durationSec - 0.01, c).done).toBe(false);
-    const past = spawnCinematicPose(c.durationSec * 3, c);
-    expect(past.done).toBe(true);
-    expect(past.dist).toBeCloseTo(END.dist, 10);
-    // A negative elapsed (a clock that jumped) clamps to the opening frame.
-    expect(spawnCinematicPose(-5, c).dist).toBe(c.startDist);
-  });
-
-  it('is continuous and monotonic: one glide, no reversals', () => {
-    let prevDist = Infinity;
-    let prevYaw = -Infinity;
-    let prevPitch = Infinity;
-    for (let i = 0; i <= 100; i++) {
-      const pose = spawnCinematicPose((c.durationSec * i) / 100, c);
-      expect(pose.dist).toBeLessThanOrEqual(prevDist + 1e-9);
-      expect(pose.yaw).toBeGreaterThanOrEqual(prevYaw - 1e-9);
-      expect(pose.pitch).toBeLessThanOrEqual(prevPitch + 1e-9);
-      // No step big enough to read as a cut on a 9 second, 100 sample approach.
-      if (Number.isFinite(prevDist)) expect(prevDist - pose.dist).toBeLessThan(2);
-      prevDist = pose.dist;
-      prevYaw = pose.yaw;
-      prevPitch = pose.pitch;
+    for (const safe of [
+      { ...risky, graphicsPreset: 1 },
+      { ...risky, platform: 'android' },
+      { ...risky, engine: 'chromium' },
+      { ...risky, constrainedMemory: false },
+    ]) {
+      expect(decideSpawnCinematic(safe)).toEqual({ play: true, reason: 'eligible' });
     }
   });
 
-  it('eases in and out rather than moving linearly', () => {
-    const half = spawnCinematicPose(c.durationSec / 2, c);
-    const linearHalf = (c.startDist + END.dist) / 2;
-    expect(half.dist).toBeCloseTo(linearHalf, 6); // sine ease is symmetric at the midpoint
-    // But the first tenth barely moves, which is what makes it a glide.
-    const tenth = spawnCinematicPose(c.durationSec / 10, c);
-    expect(c.startDist - tenth.dist).toBeLessThan((c.startDist - END.dist) / 10);
-  });
-});
-
-describe('the touch skip', () => {
-  it('needs a burst, so a lone stray tap never skips', () => {
-    const taps: number[] = [];
-    for (let i = 1; i < SKIP_TAP_COUNT; i++) {
-      expect(recordSkipTap(taps, i * 0.1)).toBe(false);
-    }
-    expect(recordSkipTap(taps, SKIP_TAP_COUNT * 0.1)).toBe(true);
+  it('preserves the existing eligibility gates', () => {
+    expect(decideSpawnCinematic({ ...eligible, requested: false }).play).toBe(false);
+    expect(decideSpawnCinematic({ ...eligible, seen: true }).play).toBe(false);
+    expect(decideSpawnCinematic({ ...eligible, playerLevel: 2 }).play).toBe(false);
+    expect(decideSpawnCinematic({ ...eligible, reducedMotion: true }).play).toBe(false);
   });
 
-  it('forgets taps outside the sliding window', () => {
-    const taps: number[] = [];
-    for (let i = 0; i < SKIP_TAP_COUNT * 3; i++) {
-      // One tap per window: never enough to reach the threshold.
-      expect(recordSkipTap(taps, i * (SKIP_TAP_WINDOW_SEC + 0.5))).toBe(false);
-      expect(taps).toHaveLength(1);
+  it('wires the live runtime signals into the policy before mutating intro state', () => {
+    const main = readFileSync(new URL('../src/main.ts', import.meta.url), 'utf8');
+    const policyAt = main.indexOf('const introPolicy = decideSpawnCinematic({');
+    const policyBranchAt = main.indexOf('if (introPolicy.play)', policyAt);
+    expect(policyAt).toBeGreaterThan(-1);
+    expect(policyBranchAt).toBeGreaterThan(policyAt);
+    for (const signal of [
+      'requested: playIntro',
+      'seen: introSeen',
+      'playerLevel: world.player.level',
+      "reducedMotion: settings.get('reduceMotion') || osReducedMotion",
+      'platform: mobilePlatform()',
+      'engine: startupBrowserEnv.engine',
+      'constrainedMemory: GFX.constrainedMemory',
+      "graphicsPreset: settings.get('graphicsPreset')",
+    ]) {
+      expect(main.slice(policyAt, policyBranchAt)).toContain(signal);
     }
+    expect(main.slice(policyBranchAt)).toMatch(/if \(introPolicy\.play\) \{\s+intro = \{/);
   });
 });

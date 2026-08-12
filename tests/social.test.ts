@@ -1,27 +1,23 @@
+// Parties, duels, trading, and the dungeon instances. The per-class kit tests
+// and elite-mob scaling live in tests/social_classes.test.ts (sharded so
+// neither file carries the whole bill); shared fixtures are in
+// tests/social_shared.ts. Tests here run on the entity-stripped
+// SOCIAL_TEST_WORLD via makeWorld() except the three that fight or loot a
+// live camp wolf, which keep the full built-in world via makeFullWorld().
 import { describe, expect, it } from 'vitest';
 import {
-  abilitiesKnownAt,
-  CLASSES,
   CRYPT_SPAWNS,
   DUNGEON_X_THRESHOLD,
+  DUNGEONS,
   dungeonAt,
   instanceOrigin,
   MOBS,
 } from '../src/sim/data';
+import { createMob } from '../src/sim/entity';
 import { type Party, Sim } from '../src/sim/sim';
-import { ALL_CLASSES, dist2d, type Entity, MAX_LEVEL } from '../src/sim/types';
-import { groundHeight } from '../src/sim/world';
+import { dist2d, type Entity, INTERACT_RANGE, type LootSlot } from '../src/sim/types';
 import type { PartyMemberInfo } from '../src/world_api';
-
-function makeWorld() {
-  return new Sim({ seed: 42, playerClass: 'warrior', noPlayer: true });
-}
-
-function mustEntity(sim: Sim, pid: number): Entity {
-  const entity = sim.entities.get(pid);
-  if (!entity) throw new Error(`missing entity ${pid}`);
-  return entity;
-}
+import { face, makeFullWorld, makeWorld, mustEntity, nearestMob, teleport } from './social_shared';
 
 function mustParty(sim: Sim, pid: number): Party {
   const party = sim.partyOf(pid);
@@ -35,20 +31,6 @@ function mustPartyMember(sim: Sim, pid: number): PartyMemberInfo {
   return member;
 }
 
-function teleport(sim: Sim, pid: number, x: number, z: number) {
-  const e = mustEntity(sim, pid);
-  e.pos.x = x;
-  e.pos.z = z;
-  e.pos.y = groundHeight(x, z, sim.cfg.seed);
-  e.prevPos = { ...e.pos };
-}
-
-function face(sim: Sim, pid: number, targetId: number) {
-  const e = mustEntity(sim, pid);
-  const t = mustEntity(sim, targetId);
-  e.facing = Math.atan2(t.pos.x - e.pos.x, t.pos.z - e.pos.z);
-}
-
 function fillPartyToFive(sim: Sim, leader: number): number[] {
   const added: number[] = [];
   while ((sim.partyOf(leader)?.members.length ?? 1) < 5) {
@@ -60,244 +42,35 @@ function fillPartyToFive(sim: Sim, leader: number): number[] {
   return added;
 }
 
-function nearestMob(
-  sim: Sim,
-  templateId: string,
-  from: { x: number; z: number } = { x: 0, z: 0 },
-): Entity {
-  let best: Entity | null = null;
-  let bestD = Infinity;
-  for (const e of sim.entities.values()) {
-    if (e.kind !== 'mob' || e.dead || e.templateId !== templateId) continue;
-    const d = Math.hypot(e.pos.x - from.x, e.pos.z - from.z);
-    if (d < bestD) {
-      bestD = d;
-      best = e;
-    }
-  }
-  if (!best) throw new Error(`missing mob ${templateId}`);
-  return best;
-}
-
-describe('nine classes', () => {
-  it('every class spawns with a working kit and stats', () => {
-    for (const cls of ALL_CLASSES) {
-      const sim = new Sim({ seed: 42, playerClass: cls });
-      const p = sim.player;
-      expect(p.maxHp).toBeGreaterThan(30);
-      expect(sim.known.length).toBeGreaterThan(0);
-      // Expanded kits can exceed the 12 action-bar slots; overflow remains
-      // available from the spellbook and can be dragged onto the bar.
-      expect(CLASSES[cls].abilities.length).toBeGreaterThan(0);
-      // the full kit resolves at MAX_LEVEL; the 10-20 band still has things to learn
-      const kit = abilitiesKnownAt(cls, MAX_LEVEL);
-      expect(kit.length).toBe(CLASSES[cls].abilities.length);
-      expect(abilitiesKnownAt(cls, 10).length).toBeLessThan(kit.length);
-      // every class's core kit keeps scaling: something reaches rank 3+ by 20
-      expect(kit.some((k) => k.rank >= 3)).toBe(true);
-      // resource type sane
-      if (cls === 'warrior') expect(p.resourceType).toBe('rage');
-      else if (cls === 'rogue') expect(p.resourceType).toBe('energy');
-      else expect(p.resourceType).toBe('mana');
-    }
-  });
-
-  it('priest heals and shields', () => {
-    const sim = new Sim({ seed: 42, playerClass: 'priest' });
-    const p = sim.player;
-    sim.setPlayerLevel(6);
-    p.hp = 30;
-    sim.castAbility('lesser_heal');
-    for (let i = 0; i < 20 * 3; i++) sim.tick();
-    expect(p.hp).toBeGreaterThan(30);
-    // PW:S absorbs damage
-    sim.castAbility('power_word_shield');
-    sim.tick();
-    expect(p.auras.some((a) => a.kind === 'absorb')).toBe(true);
-    const hpBefore = p.hp;
-    sim.dealDamage(null, p, 20, false, 'physical', 'test', 'hit');
-    expect(p.hp).toBe(hpBefore); // fully soaked
-  });
-
-  it('friendly target spells can affect selected players', () => {
-    const sim = makeWorld();
-    const priestId = sim.addPlayer('priest', 'Healer');
-    const priest = mustEntity(sim, priestId);
-    const allyId = sim.addPlayer('warrior', 'Ally');
-    const ally = mustEntity(sim, allyId);
-    teleport(sim, priestId, ally.pos.x + 5, ally.pos.z);
-    sim.setPlayerLevel(6, priestId);
-    priest.resource = priest.maxResource;
-    ally.hp = 20;
-
-    sim.targetEntity(ally.id, priestId);
-    sim.castAbility('lesser_heal', priestId);
-    for (let i = 0; i < 20 * 3; i++) sim.tick();
-    expect(ally.hp).toBeGreaterThan(20);
-
-    for (let i = 0; i < 25; i++) sim.tick();
-    sim.castAbility('power_word_shield', priestId);
-    sim.tick();
-    expect(ally.auras.some((a) => a.kind === 'absorb')).toBe(true);
-  });
-
-  it('renew ticks healing over time', () => {
-    const sim = new Sim({ seed: 42, playerClass: 'priest' });
-    sim.setPlayerLevel(8);
-    const p = sim.player;
-    p.hp = 20;
-    sim.castAbility('renew');
-    for (let i = 0; i < 20 * 7; i++) sim.tick();
-    expect(p.hp).toBeGreaterThan(30);
-  });
-
-  it('paladin seal empowers swings and judgement consumes it', () => {
-    const sim = new Sim({ seed: 42, playerClass: 'paladin' });
-    sim.setPlayerLevel(4);
-    const p = sim.player;
-    sim.castAbility('seal_of_righteousness');
-    sim.tick();
-    expect(p.auras.some((a) => a.kind === 'imbue')).toBe(true);
-    const wolf = nearestMob(sim, 'forest_wolf');
-    teleport(sim, p.id, wolf.pos.x + 3, wolf.pos.z);
-    sim.targetEntity(wolf.id);
-    face(sim, p.id, wolf.id);
-    p.resource = p.maxResource;
-    // wait out gcd then judge
-    for (let i = 0; i < 35; i++) sim.tick();
-    // Judgement's spell hit is an RNG roll (capped at 99%), so a single cast can
-    // miss on some world seeds and deal no damage. Re-seal and retry until it
-    // lands, so this checks the mechanic (judgement hits and consumes the seal)
-    // rather than a lucky roll — robust to RNG-stream shifts from new content.
-    let landed = false;
-    for (let attempt = 0; attempt < 25 && !landed; attempt++) {
-      if (!p.auras.some((a) => a.kind === 'imbue')) {
-        sim.castAbility('seal_of_righteousness');
-        sim.tick();
-      }
-      p.gcdRemaining = 0;
-      p.cooldowns.delete('judgement');
-      p.resource = p.maxResource;
-      face(sim, p.id, wolf.id);
-      const dealtBefore = sim.counters.damageDealt;
-      sim.castAbility('judgement');
-      sim.tick();
-      landed = sim.counters.damageDealt > dealtBefore;
-    }
-    expect(landed).toBe(true); // judgement connected and dealt damage
-    expect(p.auras.some((a) => a.kind === 'imbue')).toBe(false); // consumed
-  });
-
-  it('warlock life taps and drains life', () => {
-    const sim = new Sim({ seed: 42, playerClass: 'warlock' });
-    sim.setPlayerLevel(10);
-    const p = sim.player;
-    p.resource = 10;
-    const hpBefore = p.hp;
-    sim.castAbility('life_tap');
-    sim.tick();
-    expect(p.hp).toBe(hpBefore - 30);
-    expect(p.resource).toBe(40);
-    // drain life channel heals
-    const wolf = nearestMob(sim, 'forest_wolf');
-    teleport(sim, p.id, wolf.pos.x + 10, wolf.pos.z);
-    sim.targetEntity(wolf.id);
-    face(sim, p.id, wolf.id);
-    p.hp = 30;
-    p.resource = p.maxResource;
-    for (let i = 0; i < 35; i++) sim.tick();
-    face(sim, p.id, wolf.id);
-    sim.castAbility('drain_life');
-    for (let i = 0; i < 20 * 6 && p.castingAbility; i++) sim.tick();
-    expect(p.hp).toBeGreaterThan(30);
-  });
-
-  it('hunter kills with ranged auto shot from distance', () => {
-    const sim = new Sim({ seed: 42, playerClass: 'hunter' });
-    const p = sim.player;
-    const wolf = nearestMob(sim, 'forest_wolf');
-    p.maxHp = 500;
-    p.hp = 500;
-    wolf.hp = 60;
-    teleport(sim, p.id, wolf.pos.x + 35, wolf.pos.z);
-    sim.targetEntity(wolf.id);
-    face(sim, p.id, wolf.id);
-    sim.startAutoAttack();
-    let killed = false;
-    let autoShots = 0;
-    for (let i = 0; i < 20 * 60 && !killed; i++) {
-      face(sim, p.id, wolf.id);
-      const events = sim.tick();
-      for (const ev of events) {
-        if (ev.type === 'damage' && ev.ability === 'Auto Shot' && ev.kind === 'hit') autoShots++;
-        if (ev.type === 'death' && ev.entityId === wolf.id) killed = true;
-      }
-    }
-    expect(killed).toBe(true);
-    expect(autoShots).toBeGreaterThan(0); // ranged shots landed before melee
-  });
-
-  it('lightning shield zaps attackers (thorns)', () => {
-    const sim = new Sim({ seed: 42, playerClass: 'shaman' });
-    sim.setPlayerLevel(8);
-    const p = sim.player;
-    sim.castAbility('lightning_shield');
-    sim.tick();
-    const wolf = nearestMob(sim, 'forest_wolf');
-    // The level-based miss curve means a L1-2 wolf almost never lands a hit on an L8
-    // player, so match its level to the player to actually exercise the reflect.
-    wolf.level = p.level;
-    teleport(sim, p.id, wolf.pos.x + 2, wolf.pos.z);
-    const wolfHpBefore = wolf.hp;
-    let zapped = false;
-    for (let i = 0; i < 20 * 15 && !zapped; i++) {
-      sim.tick();
-      if (wolf.hp < wolfHpBefore) zapped = true;
-    }
-    expect(zapped).toBe(true);
-  });
-
-  it('druid bear form toggles and raises armor', () => {
-    const sim = new Sim({ seed: 42, playerClass: 'druid' });
-    sim.setPlayerLevel(10);
-    const p = sim.player;
-    const armorBefore = p.stats.armor;
-    sim.castAbility('bear_form');
-    sim.tick();
-    expect(p.auras.some((a) => a.kind === 'form_bear')).toBe(true);
-    expect(p.stats.armor).toBeGreaterThan(armorBefore * 1.4);
-    for (let i = 0; i < 35; i++) sim.tick();
-    sim.castAbility('bear_form');
-    sim.tick();
-    expect(p.auras.some((a) => a.kind === 'form_bear')).toBe(false);
-    expect(p.stats.armor).toBe(armorBefore);
-  });
-});
-
-describe('elite mobs', () => {
-  it('elites scale like vanilla elites (~2.3x hp, 1.5x damage, 2x xp)', () => {
-    const sim = makeWorld();
-    const pid = sim.addPlayer('warrior', 'Tank');
-    sim.enterCrypt(pid);
-    const origin = instanceOrigin(0, 0);
-    const shambler = nearestMob(sim, 'crypt_shambler', origin);
-    expect(shambler).toBeTruthy();
-    const t = MOBS.crypt_shambler;
-    const normalHp = t.hpBase + t.hpPerLevel * (shambler.level - 1);
-    expect(shambler.maxHp).toBe(Math.round(normalHp * 2.3));
-    const normalDmg = t.dmgBase + t.dmgPerLevel * (shambler.level - 1);
-    expect(shambler.weapon.max).toBe(Math.round(normalDmg * 1.5 * 1.25));
-  });
-});
-
 describe('parties', () => {
-  function makeDuo(): { sim: Sim; a: number; b: number } {
-    const sim = makeWorld();
+  // Pass makeFullWorld() for the tests that hunt a live camp wolf; the default
+  // entity-stripped world covers everything else.
+  function makeDuo(sim: Sim = makeWorld()): { sim: Sim; a: number; b: number } {
     const a = sim.addPlayer('warrior', 'Aleph');
     const b = sim.addPlayer('priest', 'Bet');
     sim.partyInvite(b, a);
     sim.partyAccept(b);
     return { sim, a, b };
+  }
+
+  // Direct corpse construction (mirroring tests/loot_roll.test.ts's `deadCorpse`)
+  // so the kill-time eligible set (`lootRecipientIds`) is controlled deterministically,
+  // independent of live positions at loot time. Shared by the round-robin and
+  // walk-by autoloot describe blocks below.
+  function deadCorpse(
+    sim: Sim,
+    tapper: number,
+    recipients: number[],
+    loot: { copper: number; items: LootSlot[] },
+  ): Entity {
+    const mob = createMob(sim.nextId++, MOBS.forest_wolf, 2, { x: 0, y: 0, z: 0 });
+    mob.dead = true;
+    mob.lootable = true;
+    mob.tappedById = tapper;
+    mob.lootRecipientIds = recipients;
+    mob.loot = loot;
+    sim.entities.set(mob.id, mob);
+    return mob;
   }
 
   it('invite/accept forms a party; leave disbands at 1', () => {
@@ -386,6 +159,51 @@ describe('parties', () => {
     const info = mustPartyMember(sim, b);
     expect(info.x).toBeCloseTo(17, 3);
     expect(info.z).toBeCloseTo(-23, 3);
+  });
+
+  it('partyInfo produces tactical frame data and filters auras before the cap', () => {
+    const { sim, a, b } = makeDuo();
+    const member = mustEntity(sim, b);
+    const meta = sim.meta(b);
+    if (!meta) throw new Error('missing party member metadata');
+    meta.talentMods.role = 'healer';
+    for (let i = 0; i < 8; i++) {
+      member.auras.push({
+        id: `maintenance_${i}`,
+        name: `Maintenance ${i}`,
+        kind: 'buff_ap',
+        remaining: 60,
+        duration: 60,
+        value: 5,
+        sourceId: b,
+        school: 'physical',
+      });
+    }
+    member.auras.push({
+      id: 'power_word_shield',
+      name: 'Psalm of Warding',
+      kind: 'absorb',
+      remaining: 4.2,
+      duration: 12,
+      value: 75,
+      sourceId: b,
+      school: 'holy',
+    });
+    const hostile = createMob(sim.nextId++, MOBS.forest_wolf, 2, { x: 0, y: 0, z: 0 });
+    hostile.aggroTargetId = b;
+    sim.entities.set(hostile.id, hostile);
+    member.castingAbility = 'lesser_heal';
+    member.castTargetId = a;
+
+    const memberInfo = mustPartyMember(sim, b);
+    expect(memberInfo).toMatchObject({
+      absorb: 75,
+      role: 'healer',
+      connected: 1,
+      hasAggro: 1,
+    });
+    expect(memberInfo.auras).toEqual([{ id: 'power_word_shield', kind: 'absorb', remaining: 5 }]);
+    expect(mustPartyMember(sim, a).incomingHeal).toBe(52.5);
   });
 
   it('converts a party to a two-group raid with a ten player cap', () => {
@@ -485,7 +303,7 @@ describe('parties', () => {
   });
 
   it('party members share kill xp with the group bonus and quest credit', () => {
-    const { sim, a, b } = makeDuo();
+    const { sim, a, b } = makeDuo(makeFullWorld()); // hunts a live camp wolf
     // both accept the wolf quest
     teleport(sim, a, 4, 4);
     teleport(sim, b, 4, 5);
@@ -515,7 +333,7 @@ describe('parties', () => {
   });
 
   it("party members may loot each other's tapped kills and split copper", () => {
-    const { sim, a, b } = makeDuo();
+    const { sim, a, b } = makeDuo(makeFullWorld()); // hunts a live camp wolf
     const wolf = nearestMob(sim, 'forest_wolf');
     wolf.hp = 1;
     teleport(sim, a, wolf.pos.x + 2, wolf.pos.z);
@@ -539,7 +357,7 @@ describe('parties', () => {
   });
 
   it('non-party members cannot loot tapped kills', () => {
-    const sim = makeWorld();
+    const sim = makeFullWorld(); // hunts a live camp wolf
     const a = sim.addPlayer('warrior', 'Aleph');
     const c = sim.addPlayer('rogue', 'Gimel');
     const wolf = nearestMob(sim, 'forest_wolf');
@@ -556,6 +374,200 @@ describe('parties', () => {
     sim.lootCorpse(wolf.id, c);
     expect(sim.meta(c)?.copper).toBe(0);
     expect(wolf.lootable).toBe(true);
+  });
+
+  describe('round-robin common-item distribution', () => {
+    it('rotates a common drop over the kill-time eligible members, not just who is close enough to loot', () => {
+      const { sim, a, b } = makeDuo();
+      // A stays on the corpse and does the actual looting each time. B is well
+      // outside INTERACT_RANGE, but was within PARTY_XP_RANGE at kill time, so B
+      // is still a kill-time loot recipient (`lootRecipientIds`). Round-robin must
+      // rotate over that kill-time set, not the loot-time in-range set: that is the
+      // whole fairness point.
+      teleport(sim, a, 0, 1);
+      teleport(sim, b, 60, 60);
+
+      const mob1 = deadCorpse(sim, a, [a, b], {
+        copper: 0,
+        items: [{ itemId: 'worn_sword', count: 1 }],
+      });
+      sim.lootCorpse(mob1.id, a);
+      expect(sim.countItem('worn_sword', a)).toBe(1);
+      expect(sim.countItem('worn_sword', b)).toBe(0);
+
+      const mob2 = deadCorpse(sim, a, [a, b], {
+        copper: 0,
+        items: [{ itemId: 'worn_sword', count: 1 }],
+      });
+      sim.lootCorpse(mob2.id, a);
+      // The second kill's drop rotates to B even though B never came near either
+      // corpse: across the two kills, both A's and B's bags gain the item.
+      expect(sim.countItem('worn_sword', a)).toBe(1);
+      expect(sim.countItem('worn_sword', b)).toBe(1);
+    });
+
+    it('spreads multiple common drops on one corpse across members (per-item cursor advance)', () => {
+      const { sim, a, b } = makeDuo();
+      teleport(sim, a, 0, 1);
+      const mob = deadCorpse(sim, a, [a, b], {
+        copper: 0,
+        items: [
+          { itemId: 'worn_sword', count: 1 },
+          { itemId: 'rusty_dagger', count: 1 },
+        ],
+      });
+      sim.lootCorpse(mob.id, a);
+      const aCount = sim.countItem('worn_sword', a) + sim.countItem('rusty_dagger', a);
+      const bCount = sim.countItem('worn_sword', b) + sim.countItem('rusty_dagger', b);
+      expect(aCount + bCount).toBe(2);
+      // Both drops must not land on the single looter: the cursor advances once
+      // per awarded item, so a single kill with two common drops still spreads.
+      expect(aCount).toBe(1);
+      expect(bCount).toBe(1);
+    });
+
+    it('declines round-robin with a single kill-time candidate; the looter gets the item', () => {
+      const { sim, a, b } = makeDuo();
+      teleport(sim, a, 0, 1);
+      // B was not a kill-time recipient (e.g. too far at the moment of the kill),
+      // so the eligible set for this corpse is just A.
+      const mob = deadCorpse(sim, a, [a], {
+        copper: 0,
+        items: [{ itemId: 'worn_sword', count: 1 }],
+      });
+      sim.lootCorpse(mob.id, a);
+      expect(sim.countItem('worn_sword', a)).toBe(1);
+      expect(sim.countItem('worn_sword', b)).toBe(0);
+    });
+
+    it('never round-robins a premium drop; it still opens a need/greed roll', () => {
+      const { sim, a, b } = makeDuo();
+      teleport(sim, a, 0, 1);
+      const mob = deadCorpse(sim, a, [a, b], {
+        copper: 0,
+        items: [{ itemId: 'greyjaw_hide_boots', count: 1 }],
+      });
+      sim.lootCorpse(mob.id, a);
+      // Not instantly awarded to anyone: it is a pending need/greed roll.
+      expect(sim.countItem('greyjaw_hide_boots', a)).toBe(0);
+      expect(sim.countItem('greyjaw_hide_boots', b)).toBe(0);
+      expect(sim.events.some((e) => e.type === 'lootRoll')).toBe(true);
+    });
+  });
+
+  describe('walk-by autoloot (autoLootForParty)', () => {
+    it('an eligible triggerer in range clears the corpse: fair-split copper plus round-robin common item', () => {
+      const { sim, a, b } = makeDuo();
+      teleport(sim, a, 0, 1);
+      const mob = deadCorpse(sim, a, [a, b], {
+        copper: 10,
+        items: [{ itemId: 'worn_sword', count: 1 }],
+      });
+      const aBefore = sim.meta(a)?.copper ?? 0;
+      const bBefore = sim.meta(b)?.copper ?? 0;
+      sim.autoLoot(mob.id, a);
+      const aGain = (sim.meta(a)?.copper ?? 0) - aBefore;
+      const bGain = (sim.meta(b)?.copper ?? 0) - bBefore;
+      // copper fair-splits across the two kill-time recipients, same as manual loot.
+      expect(aGain + bGain).toBe(10);
+      expect(Math.abs(aGain - bGain)).toBeLessThanOrEqual(1);
+      // the common item round-robins to exactly one recipient.
+      expect(sim.countItem('worn_sword', a) + sim.countItem('worn_sword', b)).toBe(1);
+      // the corpse is fully cleared by the delegated lootCorpse distribution.
+      // the emptied wolf corpse stays lootable through its
+      // unclaimed-harvest grace window instead of collapsing immediately.
+      expect(mob.lootable).toBe(true);
+      expect(mob.loot).toBeNull();
+      expect(sim.events.some((e) => e.type === 'error')).toBe(false);
+    });
+
+    it("a stranger's corpse yields no loot and the silent pass emits no error event", () => {
+      const { sim, a, b } = makeDuo();
+      const stranger = sim.addPlayer('rogue', 'Gimel');
+      teleport(sim, a, 0, 1);
+      teleport(sim, stranger, 0, 1);
+      const mob = deadCorpse(sim, a, [a, b], {
+        copper: 10,
+        items: [{ itemId: 'worn_sword', count: 1 }],
+      });
+      sim.autoLoot(mob.id, stranger);
+      expect(sim.meta(stranger)?.copper ?? 0).toBe(0);
+      expect(sim.countItem('worn_sword', stranger)).toBe(0);
+      expect(mob.lootable).toBe(true);
+      expect(mob.loot?.copper).toBe(10);
+      // the whole point of the walk-by pass: ineligibility never surfaces an error toast,
+      // unlike a manual lootCorpse attempt on the same corpse.
+      expect(sim.events.some((e) => e.type === 'error')).toBe(false);
+    });
+
+    it('an out-of-INTERACT_RANGE triggerer loots nothing, silently', () => {
+      const { sim, a, b } = makeDuo();
+      teleport(sim, a, 60, 60);
+      const mob = deadCorpse(sim, a, [a, b], {
+        copper: 10,
+        items: [{ itemId: 'worn_sword', count: 1 }],
+      });
+      expect(dist2d(mustEntity(sim, a).pos, mob.pos)).toBeGreaterThan(INTERACT_RANGE);
+      sim.autoLoot(mob.id, a);
+      expect(sim.meta(a)?.copper ?? 0).toBe(0);
+      expect(sim.countItem('worn_sword', a)).toBe(0);
+      expect(mob.lootable).toBe(true);
+      expect(sim.events.some((e) => e.type === 'error')).toBe(false);
+    });
+
+    it('a triggerer physically inside a raid instance loots nothing, silently; the same player back in the open world still loots as a control', () => {
+      const { sim, a, b } = makeDuo();
+      const origin = instanceOrigin(DUNGEONS.nythraxis_boss_arena.index, 0);
+      teleport(sim, a, origin.x, origin.z + 1);
+      const raidMob = deadCorpse(sim, a, [a, b], {
+        copper: 10,
+        items: [{ itemId: 'worn_sword', count: 1 }],
+      });
+      raidMob.pos = { x: origin.x, y: 0, z: origin.z };
+      sim.autoLoot(raidMob.id, a);
+      expect(sim.meta(a)?.copper ?? 0).toBe(0);
+      expect(sim.countItem('worn_sword', a)).toBe(0);
+      expect(raidMob.lootable).toBe(true);
+      expect(raidMob.loot?.copper).toBe(10);
+      expect(sim.events.some((e) => e.type === 'error')).toBe(false);
+
+      // control: same player, back in the open world, loots normally.
+      teleport(sim, a, 0, 1);
+      const openMob = deadCorpse(sim, a, [a, b], {
+        copper: 10,
+        items: [{ itemId: 'worn_sword', count: 1 }],
+      });
+      sim.autoLoot(openMob.id, a);
+      expect(sim.meta(a)?.copper ?? 0).toBeGreaterThan(0);
+      // Grace window: emptied but still owed its unclaimed harvest.
+      expect(openMob.lootable).toBe(true);
+      expect(openMob.loot).toBeNull();
+    });
+
+    it("does not auto-loot a stranger's corpse after it goes FFA, though a deliberate manual loot still can", () => {
+      const { sim, a } = makeDuo();
+      const stranger = sim.addPlayer('rogue', 'Gimel');
+      teleport(sim, a, 0, 1);
+      // A stranger (not in a's party) tapped this corpse, and its owner-lock has lapsed to FFA.
+      const mob = deadCorpse(sim, stranger, [stranger], {
+        copper: 10,
+        items: [{ itemId: 'worn_sword', count: 1 }],
+      });
+      mob.lootFfaTimer = 0; // FFA unlocked (owner-lock lapsed)
+      // Walk-by refuses even though the corpse is now free-for-all: auto-grabbing
+      // another player's aged-out loot reads as hostile. Silent, corpse untouched.
+      sim.autoLoot(mob.id, a);
+      expect(sim.meta(a)?.copper ?? 0).toBe(0);
+      expect(sim.countItem('worn_sword', a)).toBe(0);
+      expect(mob.lootable).toBe(true);
+      expect(sim.events.some((e) => e.type === 'error')).toBe(false);
+      // A deliberate manual loot on the same FFA corpse still works (manual honors FFA).
+      sim.lootCorpse(mob.id, a);
+      expect(sim.countItem('worn_sword', a)).toBe(1);
+      // Grace window: emptied but still owed its unclaimed harvest.
+      expect(mob.lootable).toBe(true);
+      expect(mob.loot).toBeNull();
+    });
   });
 });
 
@@ -652,6 +664,8 @@ describe('trading', () => {
     sim.meta(a)!.copper = 100;
     sim.meta(b)!.copper = 50;
     sim.addItem('baked_bread', 1, b);
+    const breadA = sim.countItem('baked_bread', a);
+    const breadB = sim.countItem('baked_bread', b);
 
     sim.tradeRequest(b, a);
     sim.tradeAccept(b);
@@ -664,10 +678,52 @@ describe('trading', () => {
     expect(sim.tradeFor(a)).toBe(null);
     expect(sim.countItem('wolf_fang', a)).toBe(1);
     expect(sim.countItem('wolf_fang', b)).toBe(2);
-    expect(sim.countItem('baked_bread', a)).toBe(1);
-    expect(sim.countItem('baked_bread', b)).toBe(0);
+    expect(sim.countItem('baked_bread', a)).toBe(breadA + 1);
+    expect(sim.countItem('baked_bread', b)).toBe(breadB - 1);
     expect(sim.meta(a)?.copper).toBe(100 - 30 + 10);
     expect(sim.meta(b)?.copper).toBe(50 - 10 + 30);
+  });
+
+  it('trades counted same-payload instanced stacks on the REAL Sim, merging on receive (12d QA)', () => {
+    // Every other instanced-trade pin drives the stub ctx in tests/trade.test.ts
+    // (a hand-copied removeItem walk); this one drives the real Sim end to end
+    // so stub drift can never hide a real-path regression: partial-stack legs
+    // both directions, BOTH sides offering the same payload in one confirm
+    // (merge-on-receive on both ends), and per-payload unit conservation.
+    const sim = makeWorld();
+    const a = sim.addPlayer('warrior', 'Aleph');
+    const b = sim.addPlayer('mage', 'Bet');
+    teleport(sim, a, 0, -40);
+    teleport(sim, b, 3, -40);
+    for (let i = 0; i < 4; i++) sim.addItemInstance('wolf_fang', { signer: 'Cyn' }, a);
+    for (let i = 0; i < 3; i++) sim.addItemInstance('wolf_fang', { signer: 'Cyn' }, b);
+    const fangsOf = (pid: number) =>
+      sim.meta(pid)!.inventory.filter((s) => s.itemId === 'wolf_fang');
+    expect(fangsOf(a)).toEqual([{ itemId: 'wolf_fang', count: 4, instance: { signer: 'Cyn' } }]);
+    expect(fangsOf(b)).toEqual([{ itemId: 'wolf_fang', count: 3, instance: { signer: 'Cyn' } }]);
+
+    sim.drainEvents();
+    sim.tradeRequest(b, a);
+    sim.tradeAccept(b);
+    sim.tradeSetOffer([{ itemId: 'wolf_fang', count: 2 }], 0, a); // partial stack A -> B
+    sim.tradeSetOffer([{ itemId: 'wolf_fang', count: 3 }], 0, b); // whole stack B -> A
+    sim.tradeConfirm(a);
+    sim.tradeConfirm(b);
+    expect(sim.tradeFor(a)).toBe(null);
+    // Merge-on-receive on both ends: one counted slot each, 7 units conserved.
+    expect(fangsOf(a)).toEqual([{ itemId: 'wolf_fang', count: 5, instance: { signer: 'Cyn' } }]);
+    expect(fangsOf(b)).toEqual([{ itemId: 'wolf_fang', count: 2, instance: { signer: 'Cyn' } }]);
+
+    // Second leg back: B returns its remainder; A reunites the full seven.
+    sim.tradeRequest(a, b);
+    sim.tradeAccept(a);
+    sim.tradeSetOffer([{ itemId: 'wolf_fang', count: 2 }], 0, b);
+    sim.tradeSetOffer([], 0, a);
+    sim.tradeConfirm(b);
+    sim.tradeConfirm(a);
+    expect(fangsOf(a)).toEqual([{ itemId: 'wolf_fang', count: 7, instance: { signer: 'Cyn' } }]);
+    expect(fangsOf(b)).toEqual([]);
+    expect(sim.drainEvents().some((e) => e.type === 'error')).toBe(false);
   });
 
   it('does not replace a pending trade request', () => {
@@ -907,7 +963,7 @@ describe('the new dungeons', () => {
     sim.leaveDungeon(a);
     expect(dist2d(ea.pos, { x: 45, y: 0, z: 515 })).toBeLessThan(10);
 
-    teleport(sim, a, 0, 876);
+    teleport(sim, a, 0, 858);
     sim.enterDungeon('gravewyrm_sanctum', a);
     expect(ea.pos.x).toBeGreaterThan(2000); // index-2 band
     const slot2 = sim.instanceSlotAt(ea.pos)!;
@@ -916,7 +972,7 @@ describe('the new dungeons', () => {
     expect(korzul).toBeTruthy();
     expect(korzul.level).toBe(20);
     sim.leaveDungeon(a);
-    expect(dist2d(ea.pos, { x: 0, y: 0, z: 880 })).toBeLessThan(10);
+    expect(dist2d(ea.pos, { x: 0, y: 0, z: 858 })).toBeLessThan(10);
   });
 
   it('Velkhar summons add waves at hp thresholds and Korgath enrages below 30%', () => {
@@ -955,5 +1011,105 @@ describe('the new dungeons', () => {
     korgath.hp = Math.floor(korgath.maxHp * 0.25);
     sim.tick();
     expect(korgath.enraged).toBe(true);
+  });
+});
+
+describe('dungeon difficulty slash command', () => {
+  it('routes /dungeon reset to the owned-instance reset', () => {
+    const sim = makeWorld();
+    const p = sim.addPlayer('warrior', 'Solo');
+    sim.enterDungeon('hollow_crypt', p);
+    sim.leaveDungeon(p);
+    sim.setDungeonDifficulty('heroic', p);
+
+    sim.drainEvents();
+    sim.chat('/dungeon reset', p);
+
+    expect(
+      (sim.drainEvents() as any[]).some(
+        (event) =>
+          event.type === 'error' &&
+          event.pid === p &&
+          event.text === 'All instances have been reset.',
+      ),
+    ).toBe(true);
+  });
+
+  it('routes the /dungeons and /instances reset aliases', () => {
+    const sim = makeWorld();
+    const p = sim.addPlayer('warrior', 'Aliases');
+    for (const cmd of ['/dungeons reset', '/instances reset']) {
+      sim.drainEvents();
+      sim.chat(cmd, p);
+      expect(
+        (sim.drainEvents() as any[]).some(
+          (event) =>
+            event.type === 'error' &&
+            event.pid === p &&
+            event.text === 'You have no instances to reset.',
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it('lets a leader switch normal and heroic without using dev commands', () => {
+    const sim = makeWorld();
+    const leader = sim.addPlayer('warrior', 'Lead');
+    const member = sim.addPlayer('mage', 'Mage');
+    sim.partyInvite(member, leader);
+    sim.partyAccept(member);
+
+    sim.drainEvents();
+    sim.chat('/dungeon heroic', member);
+    expect(sim.dungeonDifficulty(leader)).toBe('normal');
+    expect(
+      (sim.drainEvents() as any[]).some(
+        (e) => e.type === 'error' && e.pid === member && e.text === 'You are not the party leader.',
+      ),
+    ).toBe(true);
+
+    sim.chat('/dungeon heroic', leader);
+    expect(sim.dungeonDifficulty(member)).toBe('heroic');
+    expect(
+      (sim.drainEvents() as any[]).some(
+        (e) =>
+          e.type === 'error' && e.pid === leader && e.text === 'Dungeon difficulty set to Heroic.',
+      ),
+    ).toBe(true);
+
+    sim.chat('/dungeon normal', leader);
+    expect(sim.dungeonDifficulty(member)).toBe('normal');
+  });
+
+  it('routes the /instances and /dungeons aliases, case-insensitively', () => {
+    const sim = makeWorld();
+    const p = sim.addPlayer('warrior', 'Solo');
+
+    sim.chat('/instances heroic', p);
+    expect(sim.dungeonDifficulty(p)).toBe('heroic');
+    sim.chat('/dungeons normal', p);
+    expect(sim.dungeonDifficulty(p)).toBe('normal');
+    sim.chat('/DUNGEON HEROIC', p);
+    expect(sim.dungeonDifficulty(p)).toBe('heroic');
+  });
+
+  it('the /dungeon readout reports the current selection and how to change it', () => {
+    const sim = makeWorld();
+    const p = sim.addPlayer('warrior', 'Solo');
+
+    sim.drainEvents();
+    sim.chat('/dungeon', p);
+    let texts = (sim.drainEvents() as any[])
+      .filter((e) => e.type === 'error' && e.pid === p)
+      .map((e) => e.text);
+    expect(texts).toContain('Dungeon difficulty: Normal. Use /dungeon heroic to change it.');
+
+    sim.chat('/dungeon heroic', p);
+    sim.drainEvents();
+    sim.chat('/dungeon', p);
+    texts = (sim.drainEvents() as any[])
+      .filter((e) => e.type === 'error' && e.pid === p)
+      .map((e) => e.text);
+    expect(texts).toContain('Dungeon difficulty: Heroic. Use /dungeon normal to change it.');
   });
 });

@@ -1,42 +1,27 @@
-// Gathering proficiency bands: the shared 0/1/2 ladder over one profession's
-// proficiency counter. Two consumers read it: the gather-cast duration (a
-// higher band shaves the cast) and the fishing catch table (a higher band
-// shifts weight out of junk and into food fish).
-//
-// Pure leaf: no host state, no rng, directly Vitest-importable. Kept in its own
-// module (rather than inside fishing.ts, upstream's original home) because
-// `gathering.ts` needs it too and fishing.ts already depends on gathering.ts.
-//
-// ADAPTED, not ported verbatim. Upstream pins the thresholds at the literal
-// [0, 100, 200] and documents them as "the thirds of the gathering maxSkill",
-// which was true when every gathering profession capped at 300. Their caps
-// later dropped to 100 (mining/logging/herbalism) and 200 (fishing) without the
-// literals being re-derived, so on their live numbers a miner can never leave
-// band 0 and an angler reaches band 2 only at exactly the cap. We keep the
-// DOCUMENTED intent (thirds of the profession's own ceiling) instead of the
-// stale literals, which restores the ladder for all four professions and
-// reproduces upstream's original 300-cap boundaries exactly.
+// Gathering proficiency bands (Professions 2.0): the shared
+// 0/100/200 band ladder over a gathering profession's proficiency counter.
+// Extracted from fishing.ts (FISHING_BAND_THRESHOLDS/fishingBandFor, which now
+// delegate here) so gathering.ts can read a band for the gather-cast duration
+// without a back-import: fishing.ts already imports queueGatheringGrant FROM
+// gathering.ts, so importing fishing.ts from gathering.ts would cycle. Pure
+// leaf: no SimContext, no rng, Vitest-importable directly.
 
-/** Band boundaries as a fraction of the profession's own `maxSkill`. */
-export const PROFICIENCY_BAND_FRACTIONS = [0, 1 / 3, 2 / 3] as const;
+// Band boundaries: the minimum proficiency for each band, lined up with the
+// shipped 100-proficiency deed milestones: band 0 covers 0-99, band 1 covers
+// 100-199, band 2 covers 200+. The shipped caps are 100 for the land
+// professions and 200 for fishing (content/professions.ts maxSkill), so
+// today band 1 is fishing-only headroom and band 2 is reachable by nobody:
+// deliberate forward room for the V3 cap climb, not thirds of any live cap
+// (an older comment here claimed a 300 gathering maxSkill that never
+// shipped).
+// Exported so tests can pin the boundaries.
+export const PROFICIENCY_BAND_THRESHOLDS = [0, 100, 200] as const;
 
-/** The three minimum-proficiency boundaries for a profession capped at
- *  `maxSkill`. Floored to whole points so the boundary is a value a counter can
- *  actually land on: mining (100) bands at 0/33/66, fishing (200) at 0/66/133. */
-export function proficiencyBandThresholds(maxSkill: number): [number, number, number] {
-  return [
-    Math.floor(PROFICIENCY_BAND_FRACTIONS[0] * maxSkill),
-    Math.floor(PROFICIENCY_BAND_FRACTIONS[1] * maxSkill),
-    Math.floor(PROFICIENCY_BAND_FRACTIONS[2] * maxSkill),
-  ];
-}
-
-/** Which band a proficiency selects. Pure state (no rng), so it never perturbs
- *  a draw-order contract. A NaN proficiency fails both comparisons and falls to
- *  band 0, matching the proficiency-0 default. */
-export function proficiencyBandFor(proficiency: number, maxSkill: number): 0 | 1 | 2 {
-  const t = proficiencyBandThresholds(maxSkill);
-  if (proficiency >= t[2]) return 2;
-  if (proficiency >= t[1]) return 1;
+// Which band a given proficiency selects. Pure state (no rng), so it never
+// perturbs any draw-order contract. A NaN proficiency falls through both
+// comparisons to band 0, matching the proficiency-0 default.
+export function proficiencyBandFor(proficiency: number): 0 | 1 | 2 {
+  if (proficiency >= PROFICIENCY_BAND_THRESHOLDS[2]) return 2;
+  if (proficiency >= PROFICIENCY_BAND_THRESHOLDS[1]) return 1;
   return 0;
 }

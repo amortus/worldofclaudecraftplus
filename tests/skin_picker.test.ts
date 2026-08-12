@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { wireSkinPicker } from '../src/ui/skin_picker';
+import { wireSkinPicker } from '../src/ui/hud/cosmetics/skin_picker';
 
-// Hand-rolled fake DOM (jsdom is deliberately not a dependency). addEventListener
-// models the real contract the module relies on: multiple handlers per type, and
-// { signal } removal when the AbortController aborts. fire() runs every live
-// handler for a type; count() reports how many remain (so a test can prove stale
-// handlers were removed, not stacked).
+// Hand-rolled fake DOM (jsdom is deliberately not a dependency; see
+// tests/CLAUDE.md). addEventListener models the real contract the module relies
+// on: multiple handlers per type, and { signal } removal when the AbortController
+// aborts. fire() runs every live handler for a type; count() reports how many
+// remain (so a test can prove stale handlers were removed, not stacked).
 interface Listener {
   type: string;
   h: () => void;
@@ -68,7 +68,7 @@ function setup(count: number, selected: number) {
   return { row, swatches, onPreview, onRevert, onPick };
 }
 
-describe('wireSkinPicker (char-creator chroma preview)', () => {
+describe('wireSkinPicker (char-creator chroma preview, issue 1464)', () => {
   it('previews every swatch on hover, including the one adjacent to the selected swatch', () => {
     // The reported repro: outfit 2 (index 1) is selected, then the user hovers
     // outfit 1 (index 0, its left neighbour) and it must preview. The old

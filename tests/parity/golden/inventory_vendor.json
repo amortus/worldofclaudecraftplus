@@ -1,0 +1,2509 @@
+{
+  "scenario": "inventory_vendor",
+  "seed": 5150,
+  "sampleEvery": 20,
+  "ticks": 0,
+  "coverage": [
+    "buyItem: meta.copper - buyValue*stackSize + addItem stack at trader_wilkes (vendor proximity gate)",
+    "equipItem empty-slot equip + recalcPlayerStats",
+    "equipItem same-slot SWAP: old piece returned to bags via addItemSilent + recalc",
+    "unequipItem: piece back to bags, slot emptied, recalc",
+    "useItem food/drink (sit + eating/drinking slot), potion (heal + cooldown), elixir (applyAura)",
+    "discardItem: removeItem the discarded count",
+    "sellItem: vendorInRange gate + recordVendorBuyback + meta.copper payout",
+    "sellAllJunk: bulk gray sweep, per-stack buyback record, one summary line",
+    "buyBackItem: meta.copper spend + addItemSilent + onInventoryChangedForQuests"
+  ],
+  "draws": 0,
+  "drawDigest": "811c9dc5",
+  "frames": [
+    {
+      "tick": 0,
+      "time": 0,
+      "nextId": 963,
+      "state": "5bc471b0",
+      "events": "741638a5",
+      "rng": {
+        "draws": 0,
+        "digest": "811c9dc5"
+      },
+      "label": "init",
+      "players": [],
+      "entities": []
+    },
+    {
+      "tick": 0,
+      "time": 0,
+      "nextId": 964,
+      "state": "7916fd78",
+      "events": "741638a5",
+      "rng": {
+        "draws": 0,
+        "digest": "811c9dc5"
+      },
+      "label": "iv-setup",
+      "players": [
+        {
+          "activeLoadout": -1,
+          "archetype": {},
+          "arena2v2Rating": 1500,
+          "arenaRating": 1500,
+          "bags": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "bank": {},
+          "bgRating": 1500,
+          "cls": "warrior",
+          "companionUpgrades": {},
+          "copper": 1000,
+          "counters": {},
+          "craftSkills": {},
+          "deedStats": {
+            "counters": {},
+            "dungeonClears": {},
+            "itemsDiscovered": [
+              "baked_bread",
+              "eastbrook_buckler",
+              "recruit_tunic",
+              "worn_sword"
+            ]
+          },
+          "delveClears": {},
+          "delveDaily": {},
+          "entityId": 963,
+          "equipment": {
+            "chest": "recruit_tunic",
+            "mainhand": "worn_sword",
+            "offhand": "eastbrook_buckler"
+          },
+          "equipmentInstance": {},
+          "gatheringProficiency": {},
+          "heroicDaily": {},
+          "inventory": [
+            {
+              "count": 5,
+              "itemId": "baked_bread"
+            }
+          ],
+          "mailWelcomed": true,
+          "nodeHarvestReadyAt": {},
+          "recipesGrandfathered": true,
+          "reliquary": {
+            "counts": {},
+            "firstFind": {}
+          },
+          "talents": {
+            "rows": {}
+          },
+          "townFocus": {}
+        }
+      ],
+      "entities": [
+        {
+          "aiState": "idle",
+          "attackPower": 46,
+          "auras": [
+            {
+              "duration": 3600,
+              "id": "battle_stance",
+              "kind": "battle_stance",
+              "name": "Battle Stance",
+              "remaining": 3600,
+              "school": "physical",
+              "sourceId": 963
+            }
+          ],
+          "blockChance": 0.05,
+          "blockValue": 6,
+          "combatTimer": 99,
+          "comboUntil": -1,
+          "critChance": 0.06,
+          "detonateTimer": "Infinity",
+          "dodgeChance": 0.06,
+          "fallStartY": 1.5,
+          "fiveSecondRule": 99,
+          "hp": 100,
+          "id": 963,
+          "kind": "player",
+          "level": 1,
+          "lootFfaTimer": "Infinity",
+          "maxHp": 100,
+          "maxResource": 100,
+          "moveSpeed": 7,
+          "offhandItemId": "eastbrook_buckler",
+          "onGround": true,
+          "overpowerUntil": -1,
+          "petMode": "defensive",
+          "pos": {
+            "x": -5.125851,
+            "y": 1.5,
+            "z": 0.812357
+          },
+          "potionCooldownUntil": -1,
+          "resourceType": "rage",
+          "spawnPos": {
+            "x": 2,
+            "y": 1.5,
+            "z": -2
+          },
+          "spellPower": 5,
+          "stats": {
+            "agi": 20,
+            "armor": 144,
+            "int": 10,
+            "spi": 11,
+            "sta": 23,
+            "str": 23
+          },
+          "templateId": "warrior",
+          "weapon": {
+            "max": 5,
+            "min": 2,
+            "speed": 2
+          }
+        }
+      ]
+    },
+    {
+      "tick": 0,
+      "time": 0,
+      "nextId": 964,
+      "state": "66b7e04f",
+      "events": "a005f741",
+      "rng": {
+        "draws": 0,
+        "digest": "811c9dc5"
+      },
+      "label": "bought",
+      "players": [
+        {
+          "activeLoadout": -1,
+          "archetype": {},
+          "arena2v2Rating": 1500,
+          "arenaRating": 1500,
+          "bags": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "bank": {},
+          "bgRating": 1500,
+          "cls": "warrior",
+          "companionUpgrades": {},
+          "copper": 710,
+          "counters": {},
+          "craftSkills": {},
+          "deedStats": {
+            "counters": {},
+            "dungeonClears": {},
+            "itemsDiscovered": [
+              "baked_bread",
+              "eastbrook_buckler",
+              "minor_healing_potion",
+              "recruit_tunic",
+              "spring_water",
+              "worn_sword"
+            ]
+          },
+          "delveClears": {},
+          "delveDaily": {},
+          "entityId": 963,
+          "equipment": {
+            "chest": "recruit_tunic",
+            "mainhand": "worn_sword",
+            "offhand": "eastbrook_buckler"
+          },
+          "equipmentInstance": {},
+          "gatheringProficiency": {},
+          "heroicDaily": {},
+          "inventory": [
+            {
+              "count": 10,
+              "itemId": "baked_bread"
+            },
+            {
+              "count": 5,
+              "itemId": "spring_water"
+            },
+            {
+              "count": 1,
+              "itemId": "minor_healing_potion"
+            }
+          ],
+          "mailWelcomed": true,
+          "nodeHarvestReadyAt": {},
+          "recipesGrandfathered": true,
+          "reliquary": {
+            "counts": {},
+            "firstFind": {}
+          },
+          "talents": {
+            "rows": {}
+          },
+          "townFocus": {}
+        }
+      ],
+      "entities": [
+        {
+          "aiState": "idle",
+          "attackPower": 46,
+          "auras": [
+            {
+              "duration": 3600,
+              "id": "battle_stance",
+              "kind": "battle_stance",
+              "name": "Battle Stance",
+              "remaining": 3600,
+              "school": "physical",
+              "sourceId": 963
+            }
+          ],
+          "blockChance": 0.05,
+          "blockValue": 6,
+          "combatTimer": 99,
+          "comboUntil": -1,
+          "critChance": 0.06,
+          "detonateTimer": "Infinity",
+          "dodgeChance": 0.06,
+          "fallStartY": 1.5,
+          "fiveSecondRule": 99,
+          "hp": 100,
+          "id": 963,
+          "kind": "player",
+          "level": 1,
+          "lootFfaTimer": "Infinity",
+          "maxHp": 100,
+          "maxResource": 100,
+          "moveSpeed": 7,
+          "offhandItemId": "eastbrook_buckler",
+          "onGround": true,
+          "overpowerUntil": -1,
+          "petMode": "defensive",
+          "pos": {
+            "x": -5.125851,
+            "y": 1.5,
+            "z": 0.812357
+          },
+          "potionCooldownUntil": -1,
+          "resourceType": "rage",
+          "spawnPos": {
+            "x": 2,
+            "y": 1.5,
+            "z": -2
+          },
+          "spellPower": 5,
+          "stats": {
+            "agi": 20,
+            "armor": 144,
+            "int": 10,
+            "spi": 11,
+            "sta": 23,
+            "str": 23
+          },
+          "templateId": "warrior",
+          "weapon": {
+            "max": 5,
+            "min": 2,
+            "speed": 2
+          }
+        }
+      ]
+    },
+    {
+      "tick": 0,
+      "time": 0,
+      "nextId": 964,
+      "state": "46e93ffb",
+      "events": "f03ad83d",
+      "rng": {
+        "draws": 0,
+        "digest": "811c9dc5"
+      },
+      "label": "equipped",
+      "players": [
+        {
+          "activeLoadout": -1,
+          "archetype": {},
+          "arena2v2Rating": 1500,
+          "arenaRating": 1500,
+          "bags": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "bank": {},
+          "bgRating": 1500,
+          "cls": "warrior",
+          "companionUpgrades": {},
+          "copper": 710,
+          "counters": {},
+          "craftSkills": {},
+          "deedStats": {
+            "counters": {},
+            "dungeonClears": {},
+            "itemsDiscovered": [
+              "baked_bread",
+              "cryptbone_helm",
+              "eastbrook_buckler",
+              "minor_healing_potion",
+              "recruit_tunic",
+              "roadwardens_helm",
+              "spring_water",
+              "worn_sword"
+            ]
+          },
+          "delveClears": {},
+          "delveDaily": {},
+          "entityId": 963,
+          "equipment": {
+            "chest": "recruit_tunic",
+            "helmet": "cryptbone_helm",
+            "mainhand": "worn_sword",
+            "offhand": "eastbrook_buckler"
+          },
+          "equipmentInstance": {},
+          "gatheringProficiency": {},
+          "heroicDaily": {},
+          "inventory": [
+            {
+              "count": 10,
+              "itemId": "baked_bread"
+            },
+            {
+              "count": 5,
+              "itemId": "spring_water"
+            },
+            {
+              "count": 1,
+              "itemId": "minor_healing_potion"
+            },
+            {
+              "count": 1,
+              "itemId": "roadwardens_helm"
+            }
+          ],
+          "mailWelcomed": true,
+          "nodeHarvestReadyAt": {},
+          "recipesGrandfathered": true,
+          "reliquary": {
+            "counts": {
+              "cryptbone_helm": 1
+            },
+            "firstFind": {
+              "cryptbone_helm": {}
+            },
+            "recent": [
+              "cryptbone_helm"
+            ]
+          },
+          "talents": {
+            "rows": {}
+          },
+          "townFocus": {}
+        }
+      ],
+      "entities": [
+        {
+          "aiState": "idle",
+          "attackPower": 46,
+          "auras": [
+            {
+              "duration": 3600,
+              "id": "battle_stance",
+              "kind": "battle_stance",
+              "name": "Battle Stance",
+              "remaining": 3600,
+              "school": "physical",
+              "sourceId": 963
+            }
+          ],
+          "blockChance": 0.05,
+          "blockValue": 6,
+          "combatTimer": 99,
+          "comboUntil": -1,
+          "critChance": 0.06,
+          "detonateTimer": "Infinity",
+          "dodgeChance": 0.06,
+          "fallStartY": 1.5,
+          "fiveSecondRule": 99,
+          "hp": 130,
+          "id": 963,
+          "kind": "player",
+          "level": 1,
+          "lootFfaTimer": "Infinity",
+          "maxHp": 130,
+          "maxResource": 100,
+          "moveSpeed": 7,
+          "offhandItemId": "eastbrook_buckler",
+          "onGround": true,
+          "overpowerUntil": -1,
+          "petMode": "defensive",
+          "pos": {
+            "x": -5.125851,
+            "y": 1.5,
+            "z": 0.812357
+          },
+          "potionCooldownUntil": -1,
+          "resourceType": "rage",
+          "spawnPos": {
+            "x": 2,
+            "y": 1.5,
+            "z": -2
+          },
+          "spellPower": 5,
+          "stats": {
+            "agi": 20,
+            "armor": 192,
+            "int": 10,
+            "spi": 11,
+            "sta": 26,
+            "str": 23
+          },
+          "templateId": "warrior",
+          "weapon": {
+            "max": 5,
+            "min": 2,
+            "speed": 2
+          }
+        }
+      ]
+    },
+    {
+      "tick": 0,
+      "time": 0,
+      "nextId": 964,
+      "state": "4b520a6a",
+      "events": "67742213",
+      "rng": {
+        "draws": 0,
+        "digest": "811c9dc5"
+      },
+      "label": "equip-swapped",
+      "players": [
+        {
+          "activeLoadout": -1,
+          "archetype": {},
+          "arena2v2Rating": 1500,
+          "arenaRating": 1500,
+          "bags": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "bank": {},
+          "bgRating": 1500,
+          "cls": "warrior",
+          "companionUpgrades": {},
+          "copper": 710,
+          "counters": {},
+          "craftSkills": {},
+          "deedStats": {
+            "counters": {},
+            "dungeonClears": {},
+            "itemsDiscovered": [
+              "baked_bread",
+              "cryptbone_helm",
+              "eastbrook_buckler",
+              "minor_healing_potion",
+              "recruit_tunic",
+              "roadwardens_helm",
+              "spring_water",
+              "worn_sword"
+            ]
+          },
+          "delveClears": {},
+          "delveDaily": {},
+          "entityId": 963,
+          "equipment": {
+            "chest": "recruit_tunic",
+            "helmet": "roadwardens_helm",
+            "mainhand": "worn_sword",
+            "offhand": "eastbrook_buckler"
+          },
+          "equipmentInstance": {},
+          "gatheringProficiency": {},
+          "heroicDaily": {},
+          "inventory": [
+            {
+              "count": 10,
+              "itemId": "baked_bread"
+            },
+            {
+              "count": 5,
+              "itemId": "spring_water"
+            },
+            {
+              "count": 1,
+              "itemId": "minor_healing_potion"
+            },
+            {
+              "count": 1,
+              "itemId": "cryptbone_helm"
+            }
+          ],
+          "mailWelcomed": true,
+          "nodeHarvestReadyAt": {},
+          "recipesGrandfathered": true,
+          "reliquary": {
+            "counts": {
+              "cryptbone_helm": 1
+            },
+            "firstFind": {
+              "cryptbone_helm": {}
+            },
+            "recent": [
+              "cryptbone_helm"
+            ]
+          },
+          "talents": {
+            "rows": {}
+          },
+          "townFocus": {}
+        }
+      ],
+      "entities": [
+        {
+          "aiState": "idle",
+          "attackPower": 46,
+          "auras": [
+            {
+              "duration": 3600,
+              "id": "battle_stance",
+              "kind": "battle_stance",
+              "name": "Battle Stance",
+              "remaining": 3600,
+              "school": "physical",
+              "sourceId": 963
+            }
+          ],
+          "blockChance": 0.05,
+          "blockValue": 6,
+          "combatTimer": 99,
+          "comboUntil": -1,
+          "critChance": 0.06,
+          "detonateTimer": "Infinity",
+          "dodgeChance": 0.06,
+          "fallStartY": 1.5,
+          "fiveSecondRule": 99,
+          "hp": 120,
+          "id": 963,
+          "kind": "player",
+          "level": 1,
+          "lootFfaTimer": "Infinity",
+          "maxHp": 120,
+          "maxResource": 100,
+          "moveSpeed": 7,
+          "offhandItemId": "eastbrook_buckler",
+          "onGround": true,
+          "overpowerUntil": -1,
+          "petMode": "defensive",
+          "pos": {
+            "x": -5.125851,
+            "y": 1.5,
+            "z": 0.812357
+          },
+          "potionCooldownUntil": -1,
+          "resourceType": "rage",
+          "spawnPos": {
+            "x": 2,
+            "y": 1.5,
+            "z": -2
+          },
+          "spellPower": 5,
+          "stats": {
+            "agi": 20,
+            "armor": 189,
+            "int": 10,
+            "spi": 11,
+            "sta": 25,
+            "str": 23
+          },
+          "templateId": "warrior",
+          "weapon": {
+            "max": 5,
+            "min": 2,
+            "speed": 2
+          }
+        }
+      ]
+    },
+    {
+      "tick": 0,
+      "time": 0,
+      "nextId": 964,
+      "state": "c0247906",
+      "events": "5ae2a56a",
+      "rng": {
+        "draws": 0,
+        "digest": "811c9dc5"
+      },
+      "label": "unequipped",
+      "players": [
+        {
+          "activeLoadout": -1,
+          "archetype": {},
+          "arena2v2Rating": 1500,
+          "arenaRating": 1500,
+          "bags": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "bank": {},
+          "bgRating": 1500,
+          "cls": "warrior",
+          "companionUpgrades": {},
+          "copper": 710,
+          "counters": {},
+          "craftSkills": {},
+          "deedStats": {
+            "counters": {},
+            "dungeonClears": {},
+            "itemsDiscovered": [
+              "baked_bread",
+              "cryptbone_helm",
+              "eastbrook_buckler",
+              "minor_healing_potion",
+              "recruit_tunic",
+              "roadwardens_helm",
+              "spring_water",
+              "worn_sword"
+            ]
+          },
+          "delveClears": {},
+          "delveDaily": {},
+          "entityId": 963,
+          "equipment": {
+            "chest": "recruit_tunic",
+            "mainhand": "worn_sword",
+            "offhand": "eastbrook_buckler"
+          },
+          "equipmentInstance": {},
+          "gatheringProficiency": {},
+          "heroicDaily": {},
+          "inventory": [
+            {
+              "count": 10,
+              "itemId": "baked_bread"
+            },
+            {
+              "count": 5,
+              "itemId": "spring_water"
+            },
+            {
+              "count": 1,
+              "itemId": "minor_healing_potion"
+            },
+            {
+              "count": 1,
+              "itemId": "cryptbone_helm"
+            },
+            {
+              "count": 1,
+              "itemId": "roadwardens_helm"
+            }
+          ],
+          "mailWelcomed": true,
+          "nodeHarvestReadyAt": {},
+          "recipesGrandfathered": true,
+          "reliquary": {
+            "counts": {
+              "cryptbone_helm": 1
+            },
+            "firstFind": {
+              "cryptbone_helm": {}
+            },
+            "recent": [
+              "cryptbone_helm"
+            ]
+          },
+          "talents": {
+            "rows": {}
+          },
+          "townFocus": {}
+        }
+      ],
+      "entities": [
+        {
+          "aiState": "idle",
+          "attackPower": 46,
+          "auras": [
+            {
+              "duration": 3600,
+              "id": "battle_stance",
+              "kind": "battle_stance",
+              "name": "Battle Stance",
+              "remaining": 3600,
+              "school": "physical",
+              "sourceId": 963
+            }
+          ],
+          "blockChance": 0.05,
+          "blockValue": 6,
+          "combatTimer": 99,
+          "comboUntil": -1,
+          "critChance": 0.06,
+          "detonateTimer": "Infinity",
+          "dodgeChance": 0.06,
+          "fallStartY": 1.5,
+          "fiveSecondRule": 99,
+          "hp": 100,
+          "id": 963,
+          "kind": "player",
+          "level": 1,
+          "lootFfaTimer": "Infinity",
+          "maxHp": 100,
+          "maxResource": 100,
+          "moveSpeed": 7,
+          "offhandItemId": "eastbrook_buckler",
+          "onGround": true,
+          "overpowerUntil": -1,
+          "petMode": "defensive",
+          "pos": {
+            "x": -5.125851,
+            "y": 1.5,
+            "z": 0.812357
+          },
+          "potionCooldownUntil": -1,
+          "resourceType": "rage",
+          "spawnPos": {
+            "x": 2,
+            "y": 1.5,
+            "z": -2
+          },
+          "spellPower": 5,
+          "stats": {
+            "agi": 20,
+            "armor": 144,
+            "int": 10,
+            "spi": 11,
+            "sta": 23,
+            "str": 23
+          },
+          "templateId": "warrior",
+          "weapon": {
+            "max": 5,
+            "min": 2,
+            "speed": 2
+          }
+        }
+      ]
+    },
+    {
+      "tick": 0,
+      "time": 0,
+      "nextId": 964,
+      "state": "99b47b56",
+      "events": "6024a757",
+      "rng": {
+        "draws": 0,
+        "digest": "811c9dc5"
+      },
+      "label": "consumed",
+      "players": [
+        {
+          "activeLoadout": -1,
+          "archetype": {},
+          "arena2v2Rating": 1500,
+          "arenaRating": 1500,
+          "bags": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "bank": {},
+          "bgRating": 1500,
+          "cls": "warrior",
+          "companionUpgrades": {},
+          "copper": 710,
+          "counters": {},
+          "craftSkills": {},
+          "deedStats": {
+            "counters": {},
+            "dungeonClears": {},
+            "itemsDiscovered": [
+              "baked_bread",
+              "cryptbone_helm",
+              "eastbrook_buckler",
+              "minor_healing_potion",
+              "recruit_tunic",
+              "roadwardens_helm",
+              "spring_water",
+              "worn_sword"
+            ]
+          },
+          "delveClears": {},
+          "delveDaily": {},
+          "entityId": 963,
+          "equipment": {
+            "chest": "recruit_tunic",
+            "mainhand": "worn_sword",
+            "offhand": "eastbrook_buckler"
+          },
+          "equipmentInstance": {},
+          "gatheringProficiency": {},
+          "heroicDaily": {},
+          "inventory": [
+            {
+              "count": 9,
+              "itemId": "baked_bread"
+            },
+            {
+              "count": 4,
+              "itemId": "spring_water"
+            },
+            {
+              "count": 1,
+              "itemId": "minor_healing_potion"
+            },
+            {
+              "count": 1,
+              "itemId": "cryptbone_helm"
+            },
+            {
+              "count": 1,
+              "itemId": "roadwardens_helm"
+            }
+          ],
+          "mailWelcomed": true,
+          "nodeHarvestReadyAt": {},
+          "recipesGrandfathered": true,
+          "reliquary": {
+            "counts": {
+              "cryptbone_helm": 1
+            },
+            "firstFind": {
+              "cryptbone_helm": {}
+            },
+            "recent": [
+              "cryptbone_helm"
+            ]
+          },
+          "talents": {
+            "rows": {}
+          },
+          "townFocus": {}
+        }
+      ],
+      "entities": [
+        {
+          "aiState": "idle",
+          "attackPower": 46,
+          "auras": [
+            {
+              "duration": 3600,
+              "id": "battle_stance",
+              "kind": "battle_stance",
+              "name": "Battle Stance",
+              "remaining": 3600,
+              "school": "physical",
+              "sourceId": 963
+            }
+          ],
+          "blockChance": 0.05,
+          "blockValue": 6,
+          "combatTimer": 99,
+          "comboUntil": -1,
+          "critChance": 0.06,
+          "detonateTimer": "Infinity",
+          "dodgeChance": 0.06,
+          "drinking": {
+            "itemId": "spring_water",
+            "kind": "drink",
+            "manaPer2s": 8,
+            "remaining": 18
+          },
+          "eating": {
+            "hpPer2s": 7,
+            "itemId": "baked_bread",
+            "kind": "food",
+            "remaining": 18
+          },
+          "fallStartY": 1.5,
+          "fiveSecondRule": 99,
+          "hp": 100,
+          "id": 963,
+          "kind": "player",
+          "level": 1,
+          "lootFfaTimer": "Infinity",
+          "maxHp": 100,
+          "maxResource": 100,
+          "moveSpeed": 7,
+          "offhandItemId": "eastbrook_buckler",
+          "onGround": true,
+          "overpowerUntil": -1,
+          "petMode": "defensive",
+          "pos": {
+            "x": -5.125851,
+            "y": 1.5,
+            "z": 0.812357
+          },
+          "potionCooldownUntil": -1,
+          "resourceType": "rage",
+          "sitting": true,
+          "spawnPos": {
+            "x": 2,
+            "y": 1.5,
+            "z": -2
+          },
+          "spellPower": 5,
+          "stats": {
+            "agi": 20,
+            "armor": 144,
+            "int": 10,
+            "spi": 11,
+            "sta": 23,
+            "str": 23
+          },
+          "templateId": "warrior",
+          "weapon": {
+            "max": 5,
+            "min": 2,
+            "speed": 2
+          }
+        }
+      ]
+    },
+    {
+      "tick": 0,
+      "time": 0,
+      "nextId": 964,
+      "state": "076068ad",
+      "events": "bf90a36a",
+      "rng": {
+        "draws": 0,
+        "digest": "811c9dc5"
+      },
+      "label": "quaffed-potion",
+      "players": [
+        {
+          "activeLoadout": -1,
+          "archetype": {},
+          "arena2v2Rating": 1500,
+          "arenaRating": 1500,
+          "bags": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "bank": {},
+          "bgRating": 1500,
+          "cls": "warrior",
+          "companionUpgrades": {},
+          "copper": 710,
+          "counters": {},
+          "craftSkills": {},
+          "deedStats": {
+            "counters": {},
+            "dungeonClears": {},
+            "itemsDiscovered": [
+              "baked_bread",
+              "cryptbone_helm",
+              "eastbrook_buckler",
+              "minor_healing_potion",
+              "recruit_tunic",
+              "roadwardens_helm",
+              "spring_water",
+              "worn_sword"
+            ]
+          },
+          "delveClears": {},
+          "delveDaily": {},
+          "entityId": 963,
+          "equipment": {
+            "chest": "recruit_tunic",
+            "mainhand": "worn_sword",
+            "offhand": "eastbrook_buckler"
+          },
+          "equipmentInstance": {},
+          "gatheringProficiency": {},
+          "heroicDaily": {},
+          "inventory": [
+            {
+              "count": 9,
+              "itemId": "baked_bread"
+            },
+            {
+              "count": 4,
+              "itemId": "spring_water"
+            },
+            {
+              "count": 1,
+              "itemId": "cryptbone_helm"
+            },
+            {
+              "count": 1,
+              "itemId": "roadwardens_helm"
+            }
+          ],
+          "mailWelcomed": true,
+          "nodeHarvestReadyAt": {},
+          "recipesGrandfathered": true,
+          "reliquary": {
+            "counts": {
+              "cryptbone_helm": 1
+            },
+            "firstFind": {
+              "cryptbone_helm": {}
+            },
+            "recent": [
+              "cryptbone_helm"
+            ]
+          },
+          "talents": {
+            "rows": {}
+          },
+          "townFocus": {}
+        }
+      ],
+      "entities": [
+        {
+          "aiState": "idle",
+          "attackPower": 46,
+          "auras": [
+            {
+              "duration": 3600,
+              "id": "battle_stance",
+              "kind": "battle_stance",
+              "name": "Battle Stance",
+              "remaining": 3600,
+              "school": "physical",
+              "sourceId": 963
+            }
+          ],
+          "blockChance": 0.05,
+          "blockValue": 6,
+          "combatTimer": 99,
+          "comboUntil": -1,
+          "critChance": 0.06,
+          "detonateTimer": "Infinity",
+          "dodgeChance": 0.06,
+          "drinking": {
+            "itemId": "spring_water",
+            "kind": "drink",
+            "manaPer2s": 8,
+            "remaining": 18
+          },
+          "eating": {
+            "hpPer2s": 7,
+            "itemId": "baked_bread",
+            "kind": "food",
+            "remaining": 18
+          },
+          "fallStartY": 1.5,
+          "fiveSecondRule": 99,
+          "hp": 100,
+          "id": 963,
+          "kind": "player",
+          "level": 1,
+          "lootFfaTimer": "Infinity",
+          "maxHp": 100,
+          "maxResource": 100,
+          "moveSpeed": 7,
+          "offhandItemId": "eastbrook_buckler",
+          "onGround": true,
+          "overpowerUntil": -1,
+          "petMode": "defensive",
+          "pos": {
+            "x": -5.125851,
+            "y": 1.5,
+            "z": 0.812357
+          },
+          "potionCooldownUntil": 120,
+          "resourceType": "rage",
+          "sitting": true,
+          "spawnPos": {
+            "x": 2,
+            "y": 1.5,
+            "z": -2
+          },
+          "spellPower": 5,
+          "stats": {
+            "agi": 20,
+            "armor": 144,
+            "int": 10,
+            "spi": 11,
+            "sta": 23,
+            "str": 23
+          },
+          "templateId": "warrior",
+          "weapon": {
+            "max": 5,
+            "min": 2,
+            "speed": 2
+          }
+        }
+      ]
+    },
+    {
+      "tick": 0,
+      "time": 0,
+      "nextId": 964,
+      "state": "932cbbda",
+      "events": "cb1a432d",
+      "rng": {
+        "draws": 0,
+        "digest": "811c9dc5"
+      },
+      "label": "quaffed-elixir",
+      "players": [
+        {
+          "activeLoadout": -1,
+          "archetype": {},
+          "arena2v2Rating": 1500,
+          "arenaRating": 1500,
+          "bags": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "bank": {},
+          "bgRating": 1500,
+          "cls": "warrior",
+          "companionUpgrades": {},
+          "copper": 710,
+          "counters": {},
+          "craftSkills": {},
+          "deedStats": {
+            "counters": {},
+            "dungeonClears": {},
+            "itemsDiscovered": [
+              "baked_bread",
+              "cryptbone_helm",
+              "eastbrook_buckler",
+              "elixir_of_the_bear",
+              "minor_healing_potion",
+              "recruit_tunic",
+              "roadwardens_helm",
+              "spring_water",
+              "worn_sword"
+            ]
+          },
+          "delveClears": {},
+          "delveDaily": {},
+          "entityId": 963,
+          "equipment": {
+            "chest": "recruit_tunic",
+            "mainhand": "worn_sword",
+            "offhand": "eastbrook_buckler"
+          },
+          "equipmentInstance": {},
+          "gatheringProficiency": {},
+          "heroicDaily": {},
+          "inventory": [
+            {
+              "count": 9,
+              "itemId": "baked_bread"
+            },
+            {
+              "count": 4,
+              "itemId": "spring_water"
+            },
+            {
+              "count": 1,
+              "itemId": "cryptbone_helm"
+            },
+            {
+              "count": 1,
+              "itemId": "roadwardens_helm"
+            }
+          ],
+          "mailWelcomed": true,
+          "nodeHarvestReadyAt": {},
+          "recipesGrandfathered": true,
+          "reliquary": {
+            "counts": {
+              "cryptbone_helm": 1
+            },
+            "firstFind": {
+              "cryptbone_helm": {}
+            },
+            "recent": [
+              "cryptbone_helm"
+            ]
+          },
+          "talents": {
+            "rows": {}
+          },
+          "townFocus": {}
+        }
+      ],
+      "entities": [
+        {
+          "aiState": "idle",
+          "attackPower": 46,
+          "auras": [
+            {
+              "duration": 3600,
+              "id": "battle_stance",
+              "kind": "battle_stance",
+              "name": "Battle Stance",
+              "remaining": 3600,
+              "school": "physical",
+              "sourceId": 963
+            },
+            {
+              "duration": 900,
+              "id": "elixir_buff_sta",
+              "kind": "buff_sta",
+              "name": "Might of the Bear",
+              "remaining": 900,
+              "school": "nature",
+              "sourceId": 963,
+              "value": 12
+            }
+          ],
+          "blockChance": 0.05,
+          "blockValue": 6,
+          "combatTimer": 99,
+          "comboUntil": -1,
+          "critChance": 0.06,
+          "detonateTimer": "Infinity",
+          "dodgeChance": 0.06,
+          "drinking": {
+            "itemId": "spring_water",
+            "kind": "drink",
+            "manaPer2s": 8,
+            "remaining": 18
+          },
+          "eating": {
+            "hpPer2s": 7,
+            "itemId": "baked_bread",
+            "kind": "food",
+            "remaining": 18
+          },
+          "fallStartY": 1.5,
+          "fiveSecondRule": 99,
+          "hp": 220,
+          "id": 963,
+          "kind": "player",
+          "level": 1,
+          "lootFfaTimer": "Infinity",
+          "maxHp": 220,
+          "maxResource": 100,
+          "moveSpeed": 7,
+          "offhandItemId": "eastbrook_buckler",
+          "onGround": true,
+          "overpowerUntil": -1,
+          "petMode": "defensive",
+          "pos": {
+            "x": -5.125851,
+            "y": 1.5,
+            "z": 0.812357
+          },
+          "potionCooldownUntil": 120,
+          "resourceType": "rage",
+          "sitting": true,
+          "spawnPos": {
+            "x": 2,
+            "y": 1.5,
+            "z": -2
+          },
+          "spellPower": 5,
+          "stats": {
+            "agi": 20,
+            "armor": 144,
+            "int": 10,
+            "spi": 11,
+            "sta": 35,
+            "str": 23
+          },
+          "templateId": "warrior",
+          "weapon": {
+            "max": 5,
+            "min": 2,
+            "speed": 2
+          }
+        }
+      ]
+    },
+    {
+      "tick": 0,
+      "time": 0,
+      "nextId": 964,
+      "state": "7cd245f1",
+      "events": "ff257c49",
+      "rng": {
+        "draws": 0,
+        "digest": "811c9dc5"
+      },
+      "label": "quaffed-second-elixir",
+      "players": [
+        {
+          "activeLoadout": -1,
+          "archetype": {},
+          "arena2v2Rating": 1500,
+          "arenaRating": 1500,
+          "bags": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "bank": {},
+          "bgRating": 1500,
+          "cls": "warrior",
+          "companionUpgrades": {},
+          "copper": 710,
+          "counters": {},
+          "craftSkills": {},
+          "deedStats": {
+            "counters": {},
+            "dungeonClears": {},
+            "itemsDiscovered": [
+              "baked_bread",
+              "cryptbone_helm",
+              "eastbrook_buckler",
+              "elixir_of_the_bear",
+              "elixir_of_the_serpent",
+              "minor_healing_potion",
+              "recruit_tunic",
+              "roadwardens_helm",
+              "spring_water",
+              "worn_sword"
+            ],
+            "visited": [
+              "quality:rare"
+            ]
+          },
+          "delveClears": {},
+          "delveDaily": {},
+          "entityId": 963,
+          "equipment": {
+            "chest": "recruit_tunic",
+            "mainhand": "worn_sword",
+            "offhand": "eastbrook_buckler"
+          },
+          "equipmentInstance": {},
+          "gatheringProficiency": {},
+          "heroicDaily": {},
+          "inventory": [
+            {
+              "count": 9,
+              "itemId": "baked_bread"
+            },
+            {
+              "count": 4,
+              "itemId": "spring_water"
+            },
+            {
+              "count": 1,
+              "itemId": "cryptbone_helm"
+            },
+            {
+              "count": 1,
+              "itemId": "roadwardens_helm"
+            }
+          ],
+          "mailWelcomed": true,
+          "nodeHarvestReadyAt": {},
+          "recipesGrandfathered": true,
+          "reliquary": {
+            "counts": {
+              "cryptbone_helm": 1
+            },
+            "firstFind": {
+              "cryptbone_helm": {}
+            },
+            "recent": [
+              "cryptbone_helm"
+            ]
+          },
+          "talents": {
+            "rows": {}
+          },
+          "townFocus": {}
+        }
+      ],
+      "entities": [
+        {
+          "aiState": "idle",
+          "attackPower": 46,
+          "auras": [
+            {
+              "duration": 3600,
+              "id": "battle_stance",
+              "kind": "battle_stance",
+              "name": "Battle Stance",
+              "remaining": 3600,
+              "school": "physical",
+              "sourceId": 963
+            },
+            {
+              "duration": 900,
+              "id": "elixir_buff_sta",
+              "kind": "buff_sta",
+              "name": "Might of the Serpent",
+              "remaining": 900,
+              "school": "nature",
+              "sourceId": 963,
+              "value": 12
+            }
+          ],
+          "blockChance": 0.05,
+          "blockValue": 6,
+          "combatTimer": 99,
+          "comboUntil": -1,
+          "critChance": 0.06,
+          "detonateTimer": "Infinity",
+          "dodgeChance": 0.06,
+          "drinking": {
+            "itemId": "spring_water",
+            "kind": "drink",
+            "manaPer2s": 8,
+            "remaining": 18
+          },
+          "eating": {
+            "hpPer2s": 7,
+            "itemId": "baked_bread",
+            "kind": "food",
+            "remaining": 18
+          },
+          "fallStartY": 1.5,
+          "fiveSecondRule": 99,
+          "hp": 220,
+          "id": 963,
+          "kind": "player",
+          "level": 1,
+          "lootFfaTimer": "Infinity",
+          "maxHp": 220,
+          "maxResource": 100,
+          "moveSpeed": 7,
+          "offhandItemId": "eastbrook_buckler",
+          "onGround": true,
+          "overpowerUntil": -1,
+          "petMode": "defensive",
+          "pos": {
+            "x": -5.125851,
+            "y": 1.5,
+            "z": 0.812357
+          },
+          "potionCooldownUntil": 120,
+          "resourceType": "rage",
+          "sitting": true,
+          "spawnPos": {
+            "x": 2,
+            "y": 1.5,
+            "z": -2
+          },
+          "spellPower": 5,
+          "stats": {
+            "agi": 20,
+            "armor": 144,
+            "int": 10,
+            "spi": 11,
+            "sta": 35,
+            "str": 23
+          },
+          "templateId": "warrior",
+          "weapon": {
+            "max": 5,
+            "min": 2,
+            "speed": 2
+          }
+        }
+      ]
+    },
+    {
+      "tick": 0,
+      "time": 0,
+      "nextId": 964,
+      "state": "89b4c2fc",
+      "events": "cd1eb7e0",
+      "rng": {
+        "draws": 0,
+        "digest": "811c9dc5"
+      },
+      "label": "discarded",
+      "players": [
+        {
+          "activeLoadout": -1,
+          "archetype": {},
+          "arena2v2Rating": 1500,
+          "arenaRating": 1500,
+          "bags": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "bank": {},
+          "bgRating": 1500,
+          "cls": "warrior",
+          "companionUpgrades": {},
+          "copper": 710,
+          "counters": {},
+          "craftSkills": {},
+          "deedStats": {
+            "counters": {},
+            "dungeonClears": {},
+            "itemsDiscovered": [
+              "baked_bread",
+              "cryptbone_helm",
+              "eastbrook_buckler",
+              "elixir_of_the_bear",
+              "elixir_of_the_serpent",
+              "minor_healing_potion",
+              "recruit_tunic",
+              "roadwardens_helm",
+              "spring_water",
+              "wolf_fang",
+              "worn_sword"
+            ],
+            "visited": [
+              "quality:rare"
+            ]
+          },
+          "delveClears": {},
+          "delveDaily": {},
+          "entityId": 963,
+          "equipment": {
+            "chest": "recruit_tunic",
+            "mainhand": "worn_sword",
+            "offhand": "eastbrook_buckler"
+          },
+          "equipmentInstance": {},
+          "gatheringProficiency": {},
+          "heroicDaily": {},
+          "inventory": [
+            {
+              "count": 9,
+              "itemId": "baked_bread"
+            },
+            {
+              "count": 4,
+              "itemId": "spring_water"
+            },
+            {
+              "count": 1,
+              "itemId": "cryptbone_helm"
+            },
+            {
+              "count": 1,
+              "itemId": "roadwardens_helm"
+            },
+            {
+              "count": 2,
+              "itemId": "wolf_fang"
+            }
+          ],
+          "mailWelcomed": true,
+          "nodeHarvestReadyAt": {},
+          "recipesGrandfathered": true,
+          "reliquary": {
+            "counts": {
+              "cryptbone_helm": 1
+            },
+            "firstFind": {
+              "cryptbone_helm": {}
+            },
+            "recent": [
+              "cryptbone_helm"
+            ]
+          },
+          "talents": {
+            "rows": {}
+          },
+          "townFocus": {}
+        }
+      ],
+      "entities": [
+        {
+          "aiState": "idle",
+          "attackPower": 46,
+          "auras": [
+            {
+              "duration": 3600,
+              "id": "battle_stance",
+              "kind": "battle_stance",
+              "name": "Battle Stance",
+              "remaining": 3600,
+              "school": "physical",
+              "sourceId": 963
+            },
+            {
+              "duration": 900,
+              "id": "elixir_buff_sta",
+              "kind": "buff_sta",
+              "name": "Might of the Serpent",
+              "remaining": 900,
+              "school": "nature",
+              "sourceId": 963,
+              "value": 12
+            }
+          ],
+          "blockChance": 0.05,
+          "blockValue": 6,
+          "combatTimer": 99,
+          "comboUntil": -1,
+          "critChance": 0.06,
+          "detonateTimer": "Infinity",
+          "dodgeChance": 0.06,
+          "drinking": {
+            "itemId": "spring_water",
+            "kind": "drink",
+            "manaPer2s": 8,
+            "remaining": 18
+          },
+          "eating": {
+            "hpPer2s": 7,
+            "itemId": "baked_bread",
+            "kind": "food",
+            "remaining": 18
+          },
+          "fallStartY": 1.5,
+          "fiveSecondRule": 99,
+          "hp": 220,
+          "id": 963,
+          "kind": "player",
+          "level": 1,
+          "lootFfaTimer": "Infinity",
+          "maxHp": 220,
+          "maxResource": 100,
+          "moveSpeed": 7,
+          "offhandItemId": "eastbrook_buckler",
+          "onGround": true,
+          "overpowerUntil": -1,
+          "petMode": "defensive",
+          "pos": {
+            "x": -5.125851,
+            "y": 1.5,
+            "z": 0.812357
+          },
+          "potionCooldownUntil": 120,
+          "resourceType": "rage",
+          "sitting": true,
+          "spawnPos": {
+            "x": 2,
+            "y": 1.5,
+            "z": -2
+          },
+          "spellPower": 5,
+          "stats": {
+            "agi": 20,
+            "armor": 144,
+            "int": 10,
+            "spi": 11,
+            "sta": 35,
+            "str": 23
+          },
+          "templateId": "warrior",
+          "weapon": {
+            "max": 5,
+            "min": 2,
+            "speed": 2
+          }
+        }
+      ]
+    },
+    {
+      "tick": 0,
+      "time": 0,
+      "nextId": 964,
+      "state": "0db969e1",
+      "events": "c9308034",
+      "rng": {
+        "draws": 0,
+        "digest": "811c9dc5"
+      },
+      "label": "sold",
+      "players": [
+        {
+          "activeLoadout": -1,
+          "archetype": {},
+          "arena2v2Rating": 1500,
+          "arenaRating": 1500,
+          "bags": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "bank": {},
+          "bgRating": 1500,
+          "cls": "warrior",
+          "companionUpgrades": {},
+          "copper": 714,
+          "counters": {},
+          "craftSkills": {},
+          "deedStats": {
+            "counters": {},
+            "dungeonClears": {},
+            "itemsDiscovered": [
+              "baked_bread",
+              "cryptbone_helm",
+              "eastbrook_buckler",
+              "elixir_of_the_bear",
+              "elixir_of_the_serpent",
+              "minor_healing_potion",
+              "recruit_tunic",
+              "roadwardens_helm",
+              "spring_water",
+              "wolf_fang",
+              "worn_sword"
+            ],
+            "visited": [
+              "quality:rare"
+            ]
+          },
+          "delveClears": {},
+          "delveDaily": {},
+          "entityId": 963,
+          "equipment": {
+            "chest": "recruit_tunic",
+            "mainhand": "worn_sword",
+            "offhand": "eastbrook_buckler"
+          },
+          "equipmentInstance": {},
+          "gatheringProficiency": {},
+          "heroicDaily": {},
+          "inventory": [
+            {
+              "count": 9,
+              "itemId": "baked_bread"
+            },
+            {
+              "count": 4,
+              "itemId": "spring_water"
+            },
+            {
+              "count": 1,
+              "itemId": "cryptbone_helm"
+            },
+            {
+              "count": 1,
+              "itemId": "roadwardens_helm"
+            },
+            {
+              "count": 1,
+              "itemId": "wolf_fang"
+            }
+          ],
+          "mailWelcomed": true,
+          "nodeHarvestReadyAt": {},
+          "recipesGrandfathered": true,
+          "reliquary": {
+            "counts": {
+              "cryptbone_helm": 1
+            },
+            "firstFind": {
+              "cryptbone_helm": {}
+            },
+            "recent": [
+              "cryptbone_helm"
+            ]
+          },
+          "talents": {
+            "rows": {}
+          },
+          "townFocus": {},
+          "vendorBuyback": [
+            {
+              "count": 1,
+              "itemId": "wolf_fang"
+            }
+          ]
+        }
+      ],
+      "entities": [
+        {
+          "aiState": "idle",
+          "attackPower": 46,
+          "auras": [
+            {
+              "duration": 3600,
+              "id": "battle_stance",
+              "kind": "battle_stance",
+              "name": "Battle Stance",
+              "remaining": 3600,
+              "school": "physical",
+              "sourceId": 963
+            },
+            {
+              "duration": 900,
+              "id": "elixir_buff_sta",
+              "kind": "buff_sta",
+              "name": "Might of the Serpent",
+              "remaining": 900,
+              "school": "nature",
+              "sourceId": 963,
+              "value": 12
+            }
+          ],
+          "blockChance": 0.05,
+          "blockValue": 6,
+          "combatTimer": 99,
+          "comboUntil": -1,
+          "critChance": 0.06,
+          "detonateTimer": "Infinity",
+          "dodgeChance": 0.06,
+          "drinking": {
+            "itemId": "spring_water",
+            "kind": "drink",
+            "manaPer2s": 8,
+            "remaining": 18
+          },
+          "eating": {
+            "hpPer2s": 7,
+            "itemId": "baked_bread",
+            "kind": "food",
+            "remaining": 18
+          },
+          "fallStartY": 1.5,
+          "fiveSecondRule": 99,
+          "hp": 220,
+          "id": 963,
+          "kind": "player",
+          "level": 1,
+          "lootFfaTimer": "Infinity",
+          "maxHp": 220,
+          "maxResource": 100,
+          "moveSpeed": 7,
+          "offhandItemId": "eastbrook_buckler",
+          "onGround": true,
+          "overpowerUntil": -1,
+          "petMode": "defensive",
+          "pos": {
+            "x": -5.125851,
+            "y": 1.5,
+            "z": 0.812357
+          },
+          "potionCooldownUntil": 120,
+          "resourceType": "rage",
+          "sitting": true,
+          "spawnPos": {
+            "x": 2,
+            "y": 1.5,
+            "z": -2
+          },
+          "spellPower": 5,
+          "stats": {
+            "agi": 20,
+            "armor": 144,
+            "int": 10,
+            "spi": 11,
+            "sta": 35,
+            "str": 23
+          },
+          "templateId": "warrior",
+          "weapon": {
+            "max": 5,
+            "min": 2,
+            "speed": 2
+          }
+        }
+      ]
+    },
+    {
+      "tick": 0,
+      "time": 0,
+      "nextId": 964,
+      "state": "705fbd2c",
+      "events": "0dc07402",
+      "rng": {
+        "draws": 0,
+        "digest": "811c9dc5"
+      },
+      "label": "sold-junk",
+      "players": [
+        {
+          "activeLoadout": -1,
+          "archetype": {},
+          "arena2v2Rating": 1500,
+          "arenaRating": 1500,
+          "bags": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "bank": {},
+          "bgRating": 1500,
+          "cls": "warrior",
+          "companionUpgrades": {},
+          "copper": 720,
+          "counters": {},
+          "craftSkills": {},
+          "deedStats": {
+            "counters": {},
+            "dungeonClears": {},
+            "itemsDiscovered": [
+              "baked_bread",
+              "bandit_bandana",
+              "cryptbone_helm",
+              "eastbrook_buckler",
+              "elixir_of_the_bear",
+              "elixir_of_the_serpent",
+              "minor_healing_potion",
+              "recruit_tunic",
+              "roadwardens_helm",
+              "spring_water",
+              "wolf_fang",
+              "worn_sword"
+            ],
+            "visited": [
+              "quality:rare"
+            ]
+          },
+          "delveClears": {},
+          "delveDaily": {},
+          "entityId": 963,
+          "equipment": {
+            "chest": "recruit_tunic",
+            "mainhand": "worn_sword",
+            "offhand": "eastbrook_buckler"
+          },
+          "equipmentInstance": {},
+          "gatheringProficiency": {},
+          "heroicDaily": {},
+          "inventory": [
+            {
+              "count": 9,
+              "itemId": "baked_bread"
+            },
+            {
+              "count": 4,
+              "itemId": "spring_water"
+            },
+            {
+              "count": 1,
+              "itemId": "cryptbone_helm"
+            },
+            {
+              "count": 1,
+              "itemId": "roadwardens_helm"
+            },
+            {
+              "count": 1,
+              "itemId": "wolf_fang"
+            }
+          ],
+          "mailWelcomed": true,
+          "nodeHarvestReadyAt": {},
+          "recipesGrandfathered": true,
+          "reliquary": {
+            "counts": {
+              "cryptbone_helm": 1
+            },
+            "firstFind": {
+              "cryptbone_helm": {}
+            },
+            "recent": [
+              "cryptbone_helm"
+            ]
+          },
+          "talents": {
+            "rows": {}
+          },
+          "townFocus": {},
+          "vendorBuyback": [
+            {
+              "count": 1,
+              "itemId": "bandit_bandana"
+            },
+            {
+              "count": 1,
+              "itemId": "wolf_fang"
+            }
+          ]
+        }
+      ],
+      "entities": [
+        {
+          "aiState": "idle",
+          "attackPower": 46,
+          "auras": [
+            {
+              "duration": 3600,
+              "id": "battle_stance",
+              "kind": "battle_stance",
+              "name": "Battle Stance",
+              "remaining": 3600,
+              "school": "physical",
+              "sourceId": 963
+            },
+            {
+              "duration": 900,
+              "id": "elixir_buff_sta",
+              "kind": "buff_sta",
+              "name": "Might of the Serpent",
+              "remaining": 900,
+              "school": "nature",
+              "sourceId": 963,
+              "value": 12
+            }
+          ],
+          "blockChance": 0.05,
+          "blockValue": 6,
+          "combatTimer": 99,
+          "comboUntil": -1,
+          "critChance": 0.06,
+          "detonateTimer": "Infinity",
+          "dodgeChance": 0.06,
+          "drinking": {
+            "itemId": "spring_water",
+            "kind": "drink",
+            "manaPer2s": 8,
+            "remaining": 18
+          },
+          "eating": {
+            "hpPer2s": 7,
+            "itemId": "baked_bread",
+            "kind": "food",
+            "remaining": 18
+          },
+          "fallStartY": 1.5,
+          "fiveSecondRule": 99,
+          "hp": 220,
+          "id": 963,
+          "kind": "player",
+          "level": 1,
+          "lootFfaTimer": "Infinity",
+          "maxHp": 220,
+          "maxResource": 100,
+          "moveSpeed": 7,
+          "offhandItemId": "eastbrook_buckler",
+          "onGround": true,
+          "overpowerUntil": -1,
+          "petMode": "defensive",
+          "pos": {
+            "x": -5.125851,
+            "y": 1.5,
+            "z": 0.812357
+          },
+          "potionCooldownUntil": 120,
+          "resourceType": "rage",
+          "sitting": true,
+          "spawnPos": {
+            "x": 2,
+            "y": 1.5,
+            "z": -2
+          },
+          "spellPower": 5,
+          "stats": {
+            "agi": 20,
+            "armor": 144,
+            "int": 10,
+            "spi": 11,
+            "sta": 35,
+            "str": 23
+          },
+          "templateId": "warrior",
+          "weapon": {
+            "max": 5,
+            "min": 2,
+            "speed": 2
+          }
+        }
+      ]
+    },
+    {
+      "tick": 0,
+      "time": 0,
+      "nextId": 964,
+      "state": "a96d2d9f",
+      "events": "54f870b1",
+      "rng": {
+        "draws": 0,
+        "digest": "811c9dc5"
+      },
+      "label": "bought-back",
+      "players": [
+        {
+          "activeLoadout": -1,
+          "archetype": {},
+          "arena2v2Rating": 1500,
+          "arenaRating": 1500,
+          "bags": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "bank": {},
+          "bgRating": 1500,
+          "cls": "warrior",
+          "companionUpgrades": {},
+          "copper": 716,
+          "counters": {},
+          "craftSkills": {},
+          "deedStats": {
+            "counters": {},
+            "dungeonClears": {},
+            "itemsDiscovered": [
+              "baked_bread",
+              "bandit_bandana",
+              "cryptbone_helm",
+              "eastbrook_buckler",
+              "elixir_of_the_bear",
+              "elixir_of_the_serpent",
+              "minor_healing_potion",
+              "recruit_tunic",
+              "roadwardens_helm",
+              "spring_water",
+              "wolf_fang",
+              "worn_sword"
+            ],
+            "visited": [
+              "quality:rare"
+            ]
+          },
+          "delveClears": {},
+          "delveDaily": {},
+          "entityId": 963,
+          "equipment": {
+            "chest": "recruit_tunic",
+            "mainhand": "worn_sword",
+            "offhand": "eastbrook_buckler"
+          },
+          "equipmentInstance": {},
+          "gatheringProficiency": {},
+          "heroicDaily": {},
+          "inventory": [
+            {
+              "count": 9,
+              "itemId": "baked_bread"
+            },
+            {
+              "count": 4,
+              "itemId": "spring_water"
+            },
+            {
+              "count": 1,
+              "itemId": "cryptbone_helm"
+            },
+            {
+              "count": 1,
+              "itemId": "roadwardens_helm"
+            },
+            {
+              "count": 2,
+              "itemId": "wolf_fang"
+            }
+          ],
+          "mailWelcomed": true,
+          "nodeHarvestReadyAt": {},
+          "recipesGrandfathered": true,
+          "reliquary": {
+            "counts": {
+              "cryptbone_helm": 1
+            },
+            "firstFind": {
+              "cryptbone_helm": {}
+            },
+            "recent": [
+              "cryptbone_helm"
+            ]
+          },
+          "talents": {
+            "rows": {}
+          },
+          "townFocus": {},
+          "vendorBuyback": [
+            {
+              "count": 1,
+              "itemId": "bandit_bandana"
+            }
+          ]
+        }
+      ],
+      "entities": [
+        {
+          "aiState": "idle",
+          "attackPower": 46,
+          "auras": [
+            {
+              "duration": 3600,
+              "id": "battle_stance",
+              "kind": "battle_stance",
+              "name": "Battle Stance",
+              "remaining": 3600,
+              "school": "physical",
+              "sourceId": 963
+            },
+            {
+              "duration": 900,
+              "id": "elixir_buff_sta",
+              "kind": "buff_sta",
+              "name": "Might of the Serpent",
+              "remaining": 900,
+              "school": "nature",
+              "sourceId": 963,
+              "value": 12
+            }
+          ],
+          "blockChance": 0.05,
+          "blockValue": 6,
+          "combatTimer": 99,
+          "comboUntil": -1,
+          "critChance": 0.06,
+          "detonateTimer": "Infinity",
+          "dodgeChance": 0.06,
+          "drinking": {
+            "itemId": "spring_water",
+            "kind": "drink",
+            "manaPer2s": 8,
+            "remaining": 18
+          },
+          "eating": {
+            "hpPer2s": 7,
+            "itemId": "baked_bread",
+            "kind": "food",
+            "remaining": 18
+          },
+          "fallStartY": 1.5,
+          "fiveSecondRule": 99,
+          "hp": 220,
+          "id": 963,
+          "kind": "player",
+          "level": 1,
+          "lootFfaTimer": "Infinity",
+          "maxHp": 220,
+          "maxResource": 100,
+          "moveSpeed": 7,
+          "offhandItemId": "eastbrook_buckler",
+          "onGround": true,
+          "overpowerUntil": -1,
+          "petMode": "defensive",
+          "pos": {
+            "x": -5.125851,
+            "y": 1.5,
+            "z": 0.812357
+          },
+          "potionCooldownUntil": 120,
+          "resourceType": "rage",
+          "sitting": true,
+          "spawnPos": {
+            "x": 2,
+            "y": 1.5,
+            "z": -2
+          },
+          "spellPower": 5,
+          "stats": {
+            "agi": 20,
+            "armor": 144,
+            "int": 10,
+            "spi": 11,
+            "sta": 35,
+            "str": 23
+          },
+          "templateId": "warrior",
+          "weapon": {
+            "max": 5,
+            "min": 2,
+            "speed": 2
+          }
+        }
+      ]
+    },
+    {
+      "tick": 0,
+      "time": 0,
+      "nextId": 964,
+      "state": "a96d2d9f",
+      "events": "741638a5",
+      "rng": {
+        "draws": 0,
+        "digest": "811c9dc5"
+      },
+      "label": "final",
+      "players": [
+        {
+          "activeLoadout": -1,
+          "archetype": {},
+          "arena2v2Rating": 1500,
+          "arenaRating": 1500,
+          "bags": [
+            null,
+            null,
+            null,
+            null
+          ],
+          "bank": {},
+          "bgRating": 1500,
+          "cls": "warrior",
+          "companionUpgrades": {},
+          "copper": 716,
+          "counters": {},
+          "craftSkills": {},
+          "deedStats": {
+            "counters": {},
+            "dungeonClears": {},
+            "itemsDiscovered": [
+              "baked_bread",
+              "bandit_bandana",
+              "cryptbone_helm",
+              "eastbrook_buckler",
+              "elixir_of_the_bear",
+              "elixir_of_the_serpent",
+              "minor_healing_potion",
+              "recruit_tunic",
+              "roadwardens_helm",
+              "spring_water",
+              "wolf_fang",
+              "worn_sword"
+            ],
+            "visited": [
+              "quality:rare"
+            ]
+          },
+          "delveClears": {},
+          "delveDaily": {},
+          "entityId": 963,
+          "equipment": {
+            "chest": "recruit_tunic",
+            "mainhand": "worn_sword",
+            "offhand": "eastbrook_buckler"
+          },
+          "equipmentInstance": {},
+          "gatheringProficiency": {},
+          "heroicDaily": {},
+          "inventory": [
+            {
+              "count": 9,
+              "itemId": "baked_bread"
+            },
+            {
+              "count": 4,
+              "itemId": "spring_water"
+            },
+            {
+              "count": 1,
+              "itemId": "cryptbone_helm"
+            },
+            {
+              "count": 1,
+              "itemId": "roadwardens_helm"
+            },
+            {
+              "count": 2,
+              "itemId": "wolf_fang"
+            }
+          ],
+          "mailWelcomed": true,
+          "nodeHarvestReadyAt": {},
+          "recipesGrandfathered": true,
+          "reliquary": {
+            "counts": {
+              "cryptbone_helm": 1
+            },
+            "firstFind": {
+              "cryptbone_helm": {}
+            },
+            "recent": [
+              "cryptbone_helm"
+            ]
+          },
+          "talents": {
+            "rows": {}
+          },
+          "townFocus": {},
+          "vendorBuyback": [
+            {
+              "count": 1,
+              "itemId": "bandit_bandana"
+            }
+          ]
+        }
+      ],
+      "entities": [
+        {
+          "aiState": "idle",
+          "attackPower": 46,
+          "auras": [
+            {
+              "duration": 3600,
+              "id": "battle_stance",
+              "kind": "battle_stance",
+              "name": "Battle Stance",
+              "remaining": 3600,
+              "school": "physical",
+              "sourceId": 963
+            },
+            {
+              "duration": 900,
+              "id": "elixir_buff_sta",
+              "kind": "buff_sta",
+              "name": "Might of the Serpent",
+              "remaining": 900,
+              "school": "nature",
+              "sourceId": 963,
+              "value": 12
+            }
+          ],
+          "blockChance": 0.05,
+          "blockValue": 6,
+          "combatTimer": 99,
+          "comboUntil": -1,
+          "critChance": 0.06,
+          "detonateTimer": "Infinity",
+          "dodgeChance": 0.06,
+          "drinking": {
+            "itemId": "spring_water",
+            "kind": "drink",
+            "manaPer2s": 8,
+            "remaining": 18
+          },
+          "eating": {
+            "hpPer2s": 7,
+            "itemId": "baked_bread",
+            "kind": "food",
+            "remaining": 18
+          },
+          "fallStartY": 1.5,
+          "fiveSecondRule": 99,
+          "hp": 220,
+          "id": 963,
+          "kind": "player",
+          "level": 1,
+          "lootFfaTimer": "Infinity",
+          "maxHp": 220,
+          "maxResource": 100,
+          "moveSpeed": 7,
+          "offhandItemId": "eastbrook_buckler",
+          "onGround": true,
+          "overpowerUntil": -1,
+          "petMode": "defensive",
+          "pos": {
+            "x": -5.125851,
+            "y": 1.5,
+            "z": 0.812357
+          },
+          "potionCooldownUntil": 120,
+          "resourceType": "rage",
+          "sitting": true,
+          "spawnPos": {
+            "x": 2,
+            "y": 1.5,
+            "z": -2
+          },
+          "spellPower": 5,
+          "stats": {
+            "agi": 20,
+            "armor": 144,
+            "int": 10,
+            "spi": 11,
+            "sta": 35,
+            "str": 23
+          },
+          "templateId": "warrior",
+          "weapon": {
+            "max": 5,
+            "min": 2,
+            "speed": 2
+          }
+        }
+      ]
+    }
+  ]
+}

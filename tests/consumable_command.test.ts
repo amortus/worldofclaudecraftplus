@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Sim } from '../src/sim/sim';
-import { SimEvent } from '../src/sim/types';
+import type { SimEvent } from '../src/sim/types';
 
 function makeWorld() {
   return new Sim({ seed: 42, playerClass: 'mage', noPlayer: true });
@@ -32,10 +32,24 @@ describe('/consumable command', () => {
     const a = sim.addPlayer('mage', 'Aleph');
     sim.tick();
     const e = sim.entities.get(a)!;
-    e.eating = { itemId: 'baked_bread', kind: 'food', hpPer2s: 7, manaPer2s: 0, remaining: 12 };
-    e.drinking = { itemId: 'spring_water', kind: 'drink', hpPer2s: 0, manaPer2s: 8, remaining: 9 };
+    e.eating = {
+      itemId: 'baked_bread',
+      kind: 'food',
+      hpPer2s: 7,
+      manaPer2s: 0,
+      remaining: 12,
+      ticksElapsed: 0,
+    };
+    e.drinking = {
+      itemId: 'spring_water',
+      kind: 'drink',
+      hpPer2s: 0,
+      manaPer2s: 8,
+      remaining: 9,
+      ticksElapsed: 0,
+    };
     expect(readout(sim, '/consumable', a)).toBe(
-      'You are eating Freshly Baked Bread (+7 HP/2s, 12s left) and drinking Refreshing Spring Water (+8 mana/2s, 9s left).',
+      'You are eating Cottage Loaf (+7 HP/2s, 12s left) and drinking Cold Well Water (+8 mana/2s, 9s left).',
     );
   });
 
@@ -44,9 +58,16 @@ describe('/consumable command', () => {
     const a = sim.addPlayer('mage', 'Aleph');
     sim.tick();
     const e = sim.entities.get(a)!;
-    e.drinking = { itemId: 'spring_water', kind: 'drink', hpPer2s: 0, manaPer2s: 8, remaining: 5 };
+    e.drinking = {
+      itemId: 'spring_water',
+      kind: 'drink',
+      hpPer2s: 0,
+      manaPer2s: 8,
+      remaining: 5,
+      ticksElapsed: 0,
+    };
     expect(readout(sim, '/consumable', a)).toBe(
-      'You are drinking Refreshing Spring Water (+8 mana/2s, 5s left).',
+      'You are drinking Cold Well Water (+8 mana/2s, 5s left).',
     );
   });
 
@@ -55,8 +76,15 @@ describe('/consumable command', () => {
     const a = sim.addPlayer('mage', 'Aleph');
     sim.tick();
     const e = sim.entities.get(a)!;
-    e.eating = { itemId: 'baked_bread', kind: 'food', hpPer2s: 7, manaPer2s: 0, remaining: 0.3 };
-    expect(readout(sim, '/consumable', a)).toBe('You are eating Freshly Baked Bread (+7 HP/2s, 1s left).');
+    e.eating = {
+      itemId: 'baked_bread',
+      kind: 'food',
+      hpPer2s: 7,
+      manaPer2s: 0,
+      remaining: 0.3,
+      ticksElapsed: 0,
+    };
+    expect(readout(sim, '/consumable', a)).toBe('You are eating Cottage Loaf (+7 HP/2s, 1s left).');
   });
 
   it('responds to the /eat and /drink aliases', () => {

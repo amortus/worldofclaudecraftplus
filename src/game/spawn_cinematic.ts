@@ -2,11 +2,9 @@
 // across the field, high above the world, and glides in one long continuous
 // approach toward the character, sweeping gently around (a fraction of a turn,
 // not an orbit) until it lands exactly on the normal gameplay pose. main.ts
-// feeds elapsed seconds in and applies the returned pose to the RENDERER's
-// camera mirror each frame, leaving the player's own orbit state
-// (`input.camYaw/camPitch/camDist`) untouched so the hand-off cannot snap.
-//
-// tests/spawn_cinematic.test.ts locks the start / landing / continuity contract.
+// feeds elapsed seconds in and applies the returned pose to the input camera
+// each frame; tests/spawn_cinematic.test.ts locks the start/landing/continuity
+// contract.
 
 export interface CameraPose {
   yaw: number;
@@ -23,14 +21,10 @@ export interface SpawnCinematic {
 }
 
 export interface SpawnCinematicPolicyInput {
-  /** The caller asked for it at all (an entry path that can host a cinematic). */
   requested: boolean;
-  /** This character has already been shown it. */
   seen: boolean;
   playerLevel: number;
-  /** `prefers-reduced-motion: reduce` OR the in-game Reduce Motion setting. */
   reducedMotion: boolean;
-  native: boolean;
   platform: string;
   engine: string;
   constrainedMemory: boolean;
@@ -45,19 +39,16 @@ export interface SpawnCinematicPolicyDecision {
 }
 
 /**
- * Decide whether to run the first-spawn pan BEFORE any DOM or camera mutation.
+ * Decide whether to run the first-spawn pan before any DOM or camera mutation.
  *
- * Four gates, all of which must pass: the entry path asked for it, this
- * character has not seen it, the character is level 1, and the player has not
- * asked for reduced motion (our accessibility rule, and the reason the caller
- * ORs the OS media query with the in-game Reduce Motion setting).
- *
- * The fifth arm is a device carve-out. Native iOS WebKit has a strict
- * WebContent-process memory ceiling that does not scale with the phone's total
- * RAM. On Medium and above, the long camera sweep streams the crowded spawn view
- * while the hidden HUD is revealed at landing, and that combination can terminate
- * the process even after scene construction and prewarm succeeded. Low keeps the
- * cinematic, and ordinary gameplay stays at the player's chosen tier either way.
+ * Every iOS WebKit host (Mobile Safari, other iOS browsers, and the packaged
+ * native app alike: they share the engine and its WebContent-process memory
+ * ceiling, which does not scale with the phone's total RAM) is at risk here,
+ * not just the packaged app. On Medium and above, the long camera sweep
+ * streams the crowded spawn view while the hidden HUD is revealed at landing.
+ * Retained device diagnostics show that combination can terminate the process
+ * even after scene construction and prewarm succeeded. Low keeps the
+ * cinematic, and ordinary gameplay remains at the player's chosen tier.
  */
 export function decideSpawnCinematic(
   input: SpawnCinematicPolicyInput,
@@ -66,7 +57,6 @@ export function decideSpawnCinematic(
     return { play: false, reason: 'ineligible' };
   }
   if (
-    input.native &&
     input.platform === 'ios' &&
     input.engine === 'webkit' &&
     input.constrainedMemory &&
@@ -77,24 +67,9 @@ export function decideSpawnCinematic(
   return { play: true, reason: 'eligible' };
 }
 
-/**
- * OS family from a user-agent string, for the carve-out above. Kept here as a
- * pure function so the whole policy is testable without a DOM: the repo's only
- * other OS classifier is private to `perf_reporter.ts`, and duplicating three
- * substrings beats exporting a telemetry internal into gameplay code.
- */
-export function platformFromUserAgent(ua: string): string {
-  const s = ua.toLowerCase();
-  if (s.includes('iphone') || s.includes('ipad') || s.includes('ipod')) return 'ios';
-  if (s.includes('android')) return 'android';
-  return 'other';
-}
-
-// startDist is deliberately beyond the wheel-zoom range (3..22, see
-// Input.zoomBy): the opening is an establishing shot of the world around the
-// spawn, not a zoom level the player could have reached. The renderer clamps the
-// camera above terrain and pulls it in around geometry, so the long path can
-// never dip underground. startPitch stays inside the look clamp (-0.4..1.35).
+// startDist is deliberately beyond the wheel-zoom range (3..22): the opening
+// is an establishing shot of the world around the spawn. The renderer clamps
+// the camera above terrain, so the long path can never dip underground.
 export function spawnCinematicFor(end: CameraPose): SpawnCinematic {
   return { durationSec: 9, turns: 0.3, startDist: 55, startPitch: 1.0, end };
 }

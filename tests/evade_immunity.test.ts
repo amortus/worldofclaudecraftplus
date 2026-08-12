@@ -3,9 +3,11 @@
 // resets, otherwise a player can chip it down — or kill it outright — for a
 // risk-free kill, which also breaks the classic reset contract.
 import { describe, expect, it } from 'vitest';
+import { dealDamage } from '../src/sim/combat/damage';
 import { Sim } from '../src/sim/sim';
-import { dist2d } from '../src/sim/types';
 import type { Entity } from '../src/sim/types';
+import { dist2d } from '../src/sim/types';
+import { WORLD_SEED } from '../src/sim/world_seed';
 
 function makeSim() {
   return new Sim({ seed: 42, playerClass: 'warrior', autoEquip: true });
@@ -17,7 +19,10 @@ function nearestMob(sim: Sim): Entity {
   for (const e of sim.entities.values()) {
     if (e.kind !== 'mob' || e.dead || e.ownerId !== null) continue;
     const d = dist2d(sim.player.pos, e.pos);
-    if (d < bestD) { bestD = d; best = e; }
+    if (d < bestD) {
+      bestD = d;
+      best = e;
+    }
   }
   return best!;
 }
@@ -68,6 +73,107 @@ describe('evading mobs are immune while resetting', () => {
     expect(wolf.hp).toBe(4900);
     expect(wolf.threat.get(sim.playerId)).toBeCloseTo(100, 5);
   });
+
+  it('does not make an owned pet immune if stale evade state leaks onto it', () => {
+    const sim = new Sim({ seed: 42, playerClass: 'warrior', noPlayer: true, autoEquip: true });
+    const attackerId = sim.addPlayer('warrior', 'Attacker');
+    const ownerId = sim.addPlayer('hunter', 'Owner');
+    const attacker = sim.entities.get(attackerId);
+    if (!attacker) throw new Error('missing attacker');
+    const pet = nearestMob(sim);
+    pet.ownerId = ownerId;
+    pet.hostile = false;
+    pet.aiState = 'evade';
+    pet.maxHp = 5000;
+    pet.hp = 5000;
+
+    hit(sim, attacker, pet, 1000);
+
+    expect(pet.hp).toBe(4000);
+    expect(pet.dead).toBe(false);
+  });
+});
+
+// The immunity must not be silent: a direct attack against an evading mob
+// reports an 'evade' damage result (amount 0) so the client floats the word
+// and logs the line, exactly like miss/dodge/parry results. DoT and reflect
+// ticks (direct === false) stay silent so a dotted evader does not spam one
+// event per tick.
+describe('attacks against an evading mob report an Evade result', () => {
+  it('emits exactly one zero-amount evade damage event for a direct hit', () => {
+    const sim = makeSim();
+    const wolf = nearestMob(sim);
+    wolf.maxHp = 5000;
+    wolf.hp = 5000;
+    wolf.aiState = 'evade';
+    sim.drainEvents();
+
+    dealDamage(sim.ctx, sim.player, wolf, 1000, false, 'physical', 'Heroic Strike', 'hit');
+
+    const events = sim.drainEvents().filter((e) => e.type === 'damage');
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      type: 'damage',
+      sourceId: sim.player.id,
+      targetId: wolf.id,
+      amount: 0,
+      crit: false,
+      school: 'physical',
+      ability: 'Heroic Strike',
+      kind: 'evade',
+    });
+    expect(wolf.hp).toBe(5000);
+  });
+
+  it('stays silent for non-direct damage (DoT and reflect ticks)', () => {
+    const sim = makeSim();
+    const wolf = nearestMob(sim);
+    wolf.maxHp = 5000;
+    wolf.hp = 5000;
+    wolf.aiState = 'evade';
+    sim.drainEvents();
+
+    dealDamage(
+      sim.ctx,
+      sim.player,
+      wolf,
+      1000,
+      false,
+      'shadow',
+      'Corruption',
+      'hit',
+      false,
+      undefined,
+      false,
+    );
+
+    expect(sim.drainEvents().filter((e) => e.type === 'damage')).toHaveLength(0);
+    expect(wolf.hp).toBe(5000);
+  });
+
+  it('does not report evade for an owned pet with stale evade state (the hit lands)', () => {
+    const sim = new Sim({ seed: 42, playerClass: 'warrior', noPlayer: true, autoEquip: true });
+    const attackerId = sim.addPlayer('warrior', 'Attacker');
+    const ownerId = sim.addPlayer('hunter', 'Owner');
+    const attacker = sim.entities.get(attackerId);
+    if (!attacker) throw new Error('missing attacker');
+    const pet = nearestMob(sim);
+    pet.ownerId = ownerId;
+    pet.hostile = false;
+    pet.aiState = 'evade';
+    pet.maxHp = 5000;
+    pet.hp = 5000;
+    sim.drainEvents();
+
+    dealDamage(sim.ctx, attacker, pet, 1000, false, 'physical', null, 'hit');
+
+    const events = sim.drainEvents().filter((e) => e.type === 'damage');
+    expect(events.some((e) => e.type === 'damage' && e.kind === 'evade')).toBe(false);
+    expect(events.some((e) => e.type === 'damage' && e.kind === 'hit' && e.amount === 1000)).toBe(
+      true,
+    );
+    expect(pet.hp).toBe(4000);
+  });
 });
 
 // An evading mob walks a STRAIGHT line home with no pathfinding, and resolvePosition
@@ -78,7 +184,6 @@ describe('evading mobs are immune while resetting', () => {
 // pinned on their own camp props and blocked progression. Once stalled, the mob
 // phases through the blocker just far enough to clear it, then walks home and resets.
 describe('an evading mob that cannot path home recovers instead of getting stuck', () => {
-  const WORLD_SEED = 20061; // the live world seed
   const CAMP_TENT = { x: -3, z: 505, y: 0 }; // the prop the summoners pin against
 
   // the summoner that spawns closest to the camp tent — the one players see stuck
@@ -98,7 +203,8 @@ describe('an evading mob that cannot path home recovers instead of getting stuck
     const home = { ...mob.spawnPos };
     // place it on the far side of the tent from its spawn, so the straight line home
     // runs through the tent collider — exactly how a kited summoner ends up stuck.
-    const dx = CAMP_TENT.x - home.x, dz = CAMP_TENT.z - home.z;
+    const dx = CAMP_TENT.x - home.x,
+      dz = CAMP_TENT.z - home.z;
     const len = Math.hypot(dx, dz) || 1;
     mob.maxHp = 200;
     mob.hp = 50;
@@ -120,9 +226,13 @@ describe('an evading mob that cannot path home recovers instead of getting stuck
 
     // it must free itself (phase past the tent, walk home) and reset to a clean idle
     let reset = false;
-    for (let i = 0; i < 300; i++) { // 15s, comfortably past the stall timeout + walk
+    for (let i = 0; i < 300; i++) {
+      // 15s, comfortably past the stall timeout + walk
       sim.tick();
-      if (sim.entities.get(mob.id)!.aiState === 'idle') { reset = true; break; }
+      if (sim.entities.get(mob.id)!.aiState === 'idle') {
+        reset = true;
+        break;
+      }
     }
     expect(reset).toBe(true);
     expect(dist2d(mob.pos, home)).toBeLessThan(0.5); // back at its spawn
@@ -135,12 +245,17 @@ describe('an evading mob that cannot path home recovers instead of getting stuck
     sim.player.pos = { x: 9999, z: 9999, y: 0 };
 
     const home = { ...mob.spawnPos };
-    const dx = CAMP_TENT.x - home.x, dz = CAMP_TENT.z - home.z;
+    const dx = CAMP_TENT.x - home.x,
+      dz = CAMP_TENT.z - home.z;
     const len = Math.hypot(dx, dz) || 1;
-    mob.maxHp = 200; mob.hp = 50; mob.auras = [];
+    mob.maxHp = 200;
+    mob.hp = 50;
+    mob.auras = [];
     mob.pos = { x: CAMP_TENT.x + (dx / len) * 2.5, z: CAMP_TENT.z + (dz / len) * 2.5, y: 0 };
     mob.prevPos = { ...mob.pos };
-    mob.evadeStall = 0; mob.aiState = 'evade'; mob.threat.clear();
+    mob.evadeStall = 0;
+    mob.aiState = 'evade';
+    mob.threat.clear();
 
     // tick until it has left the tent's collision radius (proof it moved, not jumped)
     let maxStepSeen = 0;
@@ -171,7 +286,10 @@ describe('an evading mob that cannot path home recovers instead of getting stuck
     let reset = false;
     for (let i = 0; i < 200; i++) {
       sim.tick();
-      if (sim.entities.get(mob.id)!.aiState === 'idle') { reset = true; break; }
+      if (sim.entities.get(mob.id)!.aiState === 'idle') {
+        reset = true;
+        break;
+      }
     }
     expect(reset).toBe(true);
     // it walked home under its own power (no snap needed): well within ~20yd of spawn

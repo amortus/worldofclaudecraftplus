@@ -1,12 +1,21 @@
 // Boss-summoned add spawning (Sim.spawnBossAdds): adds anchor where they
-// ERUPT and aggro the boss's victim with a seeded leash anchor.
+// ERUPT, aggro the boss's victim with a seeded leash anchor, and (on heroic)
+// swing at the tuning table's softer addDamageMultiplier instead of the
+// dungeon-wide damageMultiplier.
 //
 // Regression: adds used to inherit the BOSS's original spawnPos as their leash
 // home, so a boss kited past the leash radius hatched adds that were instantly
 // past their own leash: the first engaged tick flipped them to evade with a
-// wiped hate table and they never swung at anyone.
+// wiped hate table and they never swung at anyone (reported on Grand
+// Necromancer Velkhar, Korzul's sanctum, and Thunzharr's stormlings).
 
 import { describe, expect, it } from 'vitest';
+import {
+  HEROIC_DUNGEON_TUNING,
+  NORMAL_DUNGEON_TUNING,
+} from '../src/sim/content/dungeon_difficulty';
+import { MOBS } from '../src/sim/data';
+import { enterDungeon } from '../src/sim/instances/dungeons';
 import { Sim } from '../src/sim/sim';
 import type { Entity } from '../src/sim/types';
 
@@ -23,12 +32,11 @@ function teleport(sim: AnySim, e: AnyEntity, x: number, z: number): void {
   sim.rebucket(e);
 }
 
-function claimedSanctum(sim: AnySim): any {
-  const inst = (sim.instances as any[]).find(
-    (i) => i.dungeonId === 'gravewyrm_sanctum' && i.partyKey !== null,
+function claimedSanctum(sim: AnySim, difficulty: string): any {
+  return (sim.instances as any[]).find(
+    (i) =>
+      i.dungeonId === 'gravewyrm_sanctum' && i.difficulty === difficulty && i.partyKey !== null,
   );
-  if (!inst) throw new Error('missing claimed gravewyrm_sanctum instance');
-  return inst;
 }
 
 function velkharIn(sim: AnySim, inst: any): AnyEntity {
@@ -52,7 +60,7 @@ function bonewalkerAdds(sim: AnySim): AnyEntity[] {
 function fireFirstWave(sim: AnySim, boss: AnyEntity, pid: number): AnyEntity[] {
   const p = sim.entities.get(pid) as AnyEntity;
   teleport(sim, p, boss.pos.x + 6, boss.pos.z);
-  p.maxHp = p.hp = 1000000;
+  p.maxHp = p.hp = 1_000_000;
   sim.dealDamage(p, boss, 10, false, 'physical', 'Chip', 'hit', true);
   boss.hp = Math.floor(boss.maxHp * 0.6);
   sim.tick();
@@ -63,11 +71,12 @@ describe('boss adds anchor where they erupt', () => {
   it('adds hatched from a KITED boss engage instead of leashing home instantly', () => {
     const sim = makeSim();
     const pid = sim.addPlayer('warrior', 'Kiter');
-    sim.enterDungeon('gravewyrm_sanctum', pid);
-    const inst = claimedSanctum(sim);
+    enterDungeon(sim.ctx, 'gravewyrm_sanctum', pid);
+    const inst = claimedSanctum(sim, 'normal');
     const boss = velkharIn(sim, inst);
 
-    // Kite Velkhar ~94yd from his spawn: past even the dungeon leash radius (70).
+    // Kite Velkhar from his dais (z 114) to the sanctum entrance, ~94yd from
+    // his spawn: past even the dungeon leash radius (70).
     const kited = { x: boss.spawnPos.x, z: boss.spawnPos.z - 94 };
     teleport(sim, boss, kited.x, kited.z);
     const adds = fireFirstWave(sim, boss, pid);
@@ -91,14 +100,74 @@ describe('boss adds anchor where they erupt', () => {
   it('adds hatched at the boss home behave as before: engaged on the victim', () => {
     const sim = makeSim();
     const pid = sim.addPlayer('warrior', 'Tank');
-    sim.enterDungeon('gravewyrm_sanctum', pid);
-    const boss = velkharIn(sim, claimedSanctum(sim));
+    enterDungeon(sim.ctx, 'gravewyrm_sanctum', pid);
+    const boss = velkharIn(sim, claimedSanctum(sim, 'normal'));
     const adds = fireFirstWave(sim, boss, pid);
     expect(adds).toHaveLength(3);
     for (const add of adds) {
       expect(add.aggroTargetId).toBe(pid);
       expect(add.inCombat).toBe(true);
       expect(add.aiState === 'chase' || add.aiState === 'attack').toBe(true);
+    }
+  });
+});
+
+describe('heroic boss adds swing at addDamageMultiplier', () => {
+  it("Velkhar's heroic bonewalkers use the softer add multiplier, the boss the full one", () => {
+    const sim = makeSim(123);
+    const pid = sim.addPlayer('warrior', 'Hero');
+    sim.setDungeonDifficulty('heroic', pid);
+    enterDungeon(sim.ctx, 'gravewyrm_sanctum', pid);
+    const boss = velkharIn(sim, claimedSanctum(sim, 'heroic'));
+    const adds = fireFirstWave(sim, boss, pid);
+    expect(adds).toHaveLength(3);
+
+    // Recompute the expected weapon from the RAW template and the tuning
+    // record, mirroring createMob's formulas (bonewalkers are not elite).
+    const tuning = HEROIC_DUNGEON_TUNING.gravewyrm_sanctum;
+    const tmpl = MOBS.raised_bonewalker;
+    const addDmg =
+      tmpl.dmgBase * tuning.addDamageMultiplier +
+      tmpl.dmgPerLevel * tuning.addDamageMultiplier * (tuning.level - 1);
+    for (const add of adds) {
+      expect(add.level).toBe(tuning.level);
+      expect(add.weapon.min).toBe(Math.round(addDmg * 0.8));
+      expect(add.weapon.max).toBe(Math.round(addDmg * 1.25));
+      // Fire-time mechanic scaling rides the add multiplier too.
+      expect(add.mechanicDamageMult).toBe(tuning.addDamageMultiplier);
+    }
+    // The summoner himself carries the Sanctum boss override (see
+    // damageMultiplierByMob), not the trash-wide multiplier.
+    expect(boss.mechanicDamageMult).toBe(tuning.damageMultiplierByMob?.grand_necromancer_velkhar);
+    // Summoned adds are wave pressure, not extra bosses: halved to the 250
+    // floor in 2026-07, then 40% softer again in v0.30 (the 150 floor), so
+    // their multiplier sits well BELOW the trash-wide one despite the
+    // missing 1.5x elite swing multiplier.
+    expect(tuning.addDamageMultiplier).toBeLessThan(tuning.damageMultiplier);
+  });
+
+  it('normal-difficulty adds use the normal per-mob retune, not the heroic add multiplier', () => {
+    const sim = makeSim(321);
+    const pid = sim.addPlayer('warrior', 'Normie');
+    enterDungeon(sim.ctx, 'gravewyrm_sanctum', pid);
+    const boss = velkharIn(sim, claimedSanctum(sim, 'normal'));
+    const adds = fireFirstWave(sim, boss, pid);
+    expect(adds).toHaveLength(3);
+
+    // Normal Sanctum carries its own per-mob retune (fresh-group floors,
+    // see NORMAL_DUNGEON_TUNING): bonewalkers swing at 3.75x base (the 50
+    // add floor since the v0.30 fresh-group retune) and keep their rolled
+    // level, distinct from the heroic addDamageMultiplier path.
+    const normalMult =
+      NORMAL_DUNGEON_TUNING.gravewyrm_sanctum.damageMultiplierByMob.raised_bonewalker;
+    expect(normalMult).toBe(3.75);
+    const tmpl = MOBS.raised_bonewalker;
+    const addDmg = (tmpl.dmgBase + tmpl.dmgPerLevel * (tmpl.minLevel - 1)) * normalMult;
+    for (const add of adds) {
+      expect(add.level).toBe(tmpl.minLevel);
+      expect(add.weapon.min).toBe(Math.round(addDmg * 0.8));
+      expect(add.weapon.max).toBe(Math.round(addDmg * 1.25));
+      expect(add.mechanicDamageMult).toBe(normalMult);
     }
   });
 });

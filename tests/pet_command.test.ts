@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Sim } from '../src/sim/sim';
-import { SimEvent, Entity } from '../src/sim/types';
+import type { Entity, SimEvent } from '../src/sim/types';
 
 function makeWorld() {
   return new Sim({ seed: 42, playerClass: 'hunter', noPlayer: true });
@@ -37,21 +37,42 @@ describe('/pet command', () => {
     expect(sim.petOf(pid)).toBeNull();
   });
 
-  it('restores a saved warlock demon without spawning a default imp', () => {
+  // Warlock demons are NOT persisted across logout: classic warlocks re-summon
+  // their demon (paying the cost + 180s cooldown) on login instead of getting it
+  // back for free, which would let a relog launder the summon cooldown. The demon
+  // snapshot is dropped to null at the serializeCharacter boundary, so a reload
+  // spawns no demon and forces a fresh summon.
+  it('does not persist a summoned warlock demon across a save/reload', () => {
     const first = makeClassWorld('warlock');
     const pid = first.addPlayer('warlock', 'Wick');
     first.setPlayerLevel(20, pid);
     first.castAbility('summon_voidwalker', pid);
     for (let i = 0; i < 20 * 6; i++) first.tick();
+    expect(first.petOf(pid)?.templateId).toBe('gloomshade');
     const saved = first.serializeCharacter(pid)!;
-    expect(saved.pet?.templateId).toBe('voidwalker');
+    expect(saved.pet).toBeNull();
 
     const restored = makeClassWorld('warlock');
     const restoredPid = restored.addPlayer('warlock', 'Wick', { state: saved });
-    const pets = [...restored.entities.values()].filter((e) => e.kind === 'mob' && e.ownerId === restoredPid);
+    const pets = [...restored.entities.values()].filter(
+      (e) => e.kind === 'mob' && e.ownerId === restoredPid,
+    );
 
-    expect(pets).toHaveLength(1);
-    expect(pets[0].templateId).toBe('voidwalker');
+    expect(pets).toHaveLength(0);
+    expect(restored.petOf(restoredPid)).toBeNull();
+  });
+
+  it('still persists a non-demon (hunter beast) pet across a save/reload', () => {
+    const first = makeWorld();
+    const pid = first.addPlayer('hunter', 'Tamer');
+    const pet = givePet(first, pid);
+    const templateId = pet.templateId;
+    const saved = first.serializeCharacter(pid)!;
+    expect(saved.pet?.templateId).toBe(templateId);
+
+    const restored = new Sim({ seed: 42, playerClass: 'hunter', noPlayer: true });
+    const restoredPid = restored.addPlayer('hunter', 'Tamer', { state: saved });
+    expect(restored.petOf(restoredPid)?.templateId).toBe(templateId);
   });
 
   it('does not spawn non-warlocks with a default pet', () => {
@@ -65,6 +86,17 @@ describe('/pet command', () => {
     const sim = makeWorld();
     const a = sim.addPlayer('hunter', 'Aleph');
     const pet = givePet(sim, a);
+    // The pet is adopted straight out of a spawn camp; move owner + pet onto empty
+    // ground so its former campmates do not proximity-aggro and chip its HP before the
+    // readout (a full-health pet is the point of this case).
+    const owner = sim.entities.get(a)!;
+    owner.pos = { x: 5000, y: owner.pos.y, z: 5000 };
+    owner.prevPos = { ...owner.pos };
+    pet.pos = { x: 5001, y: pet.pos.y, z: 5000 };
+    pet.prevPos = { ...pet.pos };
+    pet.hp = pet.maxHp;
+    (sim as unknown as { rebucket(e: Entity): void }).rebucket(owner);
+    (sim as unknown as { rebucket(e: Entity): void }).rebucket(pet);
     sim.tick();
 
     sim.chat('/pet', a);
@@ -82,11 +114,23 @@ describe('/pet command', () => {
     const sim = makeWorld();
     const a = sim.addPlayer('hunter', 'Aleph');
     const pet = givePet(sim, a);
-    pet.hp = Math.round(pet.maxHp * 0.5);
+    // givePet adopts a wild mob directly rather than going through completeTame, so
+    // the pet arrives without the owner's inherited share (pet/pet_scaling.ts). Tick
+    // once to let that settle before pinning a ratio: the first application grows the
+    // pool AND hands the pet the new headroom, which would otherwise move the
+    // percentage out from under this assertion. A real tame is already scaled.
+    sim.tick();
+    // Pin an exact pool so the ratio is unambiguous. The inherited share leaves an odd
+    // pool where no integer HP reads as exactly 50%, and the readout's rounding is
+    // what this test is actually about. Re-deriving is a no-op once the share has
+    // settled (the delta is zero), so maxHp stays put through the tick below.
+    pet.maxHp = 100;
+    pet.hp = 50;
     sim.tick();
 
     sim.chat('/pet', a);
     const text = errorText(sim.tick())!;
+    expect(text).toContain('HP 50/100');
     expect(text).toContain('(50%)');
   });
 

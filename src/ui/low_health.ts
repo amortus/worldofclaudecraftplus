@@ -1,7 +1,9 @@
 // Pure derivation of the low-health screen vignette — a pulsing red full-screen
-// glow that fades in as the player nears death (classic WoW's "FullScreenGlow").
+// glow that fades in as the player nears death (the classic full-screen low-health glow).
 // Kept DOM-free so the intensity curve can be unit-tested directly; the HUD just
 // applies the returned values to a fixed overlay element each frame.
+
+import { clamp01 } from './clamp';
 
 // Below this HP fraction the vignette begins to show; at full HP it is hidden.
 export const LOW_HEALTH_THRESHOLD = 0.35;
@@ -28,11 +30,7 @@ export function lowHealthVignette(hp: number, maxHp: number): LowHealthVignette 
 
   // t: 0 at the threshold, 1 at 0 HP.
   const t = clamp01((LOW_HEALTH_THRESHOLD - frac) / LOW_HEALTH_THRESHOLD);
-  const opacity = Math.pow(t, 0.8) * MAX_OPACITY;
+  const opacity = t ** 0.8 * MAX_OPACITY;
   const pulseHz = PULSE_HZ_MIN + (PULSE_HZ_MAX - PULSE_HZ_MIN) * t;
   return { active: true, opacity, pulseSeconds: 1 / pulseHz };
-}
-
-function clamp01(v: number): number {
-  return Math.max(0, Math.min(1, v));
 }

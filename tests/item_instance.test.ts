@@ -1,414 +1,593 @@
+// #1165: the additive per-instance item payload (signer/charges/rolled/boundTo)
+// on InvSlot. Covers the round-trip through save/load, the bag display view-core
+// not crashing on an instanced slot, and instanced items staying inert (never
+// listed) on the World Market. Professions 2.0 adds the masterwork
+// marker (rolled.masterwork plus baked bonus stats): the cases in the second
+// describe pin the additive JSONB back-compat (legacy rolled.quality payloads
+// keep loading and equipping unchanged) and the masterwork payload round-trip.
+
 import { describe, expect, it } from 'vitest';
-import {
-  addToSlots,
-  canStack,
-  cloneInstanceMap,
-  cloneInvSlot,
-  cloneInvSlots,
-  findStackTarget,
-  isInstanced,
-  mintItemInstance,
-  parseInstanceMap,
-  parseInvSlot,
-  parseInvSlots,
-  parseItemInstance,
-  removeFromSlots,
-} from '../src/sim/item_instance';
-import { Rng } from '../src/sim/rng';
-import { type CharacterState, Sim } from '../src/sim/sim';
-import type { InvSlot, ItemInstance } from '../src/sim/types';
+import { stackSizeOf } from '../src/sim/bags';
+import { ITEMS } from '../src/sim/data';
+import { isEnchantedInstance } from '../src/sim/professions/enchanting';
+import { Sim } from '../src/sim/sim';
+import { cloneItemInstancePayload, type Entity, type ItemInstancePayload } from '../src/sim/types';
+import { groundHeight } from '../src/sim/world';
+import { buildBagGrid } from '../src/ui/bags_view';
 
-const makeSim = (cls = 'warrior', seed = 42) =>
-  new Sim({ seed, playerClass: cls as never, autoEquip: false });
-
-const signed = (signer = 'Ambrose'): ItemInstance => ({ signer, signerId: 7 });
-
-// Two ordinary stackable junk items; nothing about them is special.
-const STACKABLE = 'linen_scrap';
-const OTHER = 'spider_leg';
-
-const bagOf = (sim: Sim, pid: number): InvSlot[] => (sim as any).players.get(pid).inventory;
-
-// A save exactly as a build with no per-item identity wrote it: bare
-// { itemId, count } slots, no `instance` key anywhere, no `equipmentInstances`.
-function legacySave(sim: Sim, pid: number): CharacterState {
-  const state = sim.serializeCharacter(pid);
-  if (!state) throw new Error('no state');
-  return JSON.parse(JSON.stringify(state)) as CharacterState;
+function makeWorld() {
+  return new Sim({ seed: 42, playerClass: 'warrior', noPlayer: true });
 }
 
-describe('item_instance: stacking', () => {
-  it('plain stacks merge exactly as before', () => {
-    const slots: InvSlot[] = [];
-    addToSlots(slots, 'linen', 5);
-    addToSlots(slots, 'linen', 3);
-    expect(slots).toEqual([{ itemId: 'linen', count: 8 }]);
-    expect(isInstanced(slots[0])).toBe(false);
-  });
-
-  it('an instanced item never stacks, not even with an identical instance', () => {
-    const slots: InvSlot[] = [];
-    addToSlots(slots, 'blade', 1, signed());
-    addToSlots(slots, 'blade', 1, signed());
-    expect(slots).toHaveLength(2);
-    expect(canStack(slots[0], 'blade', signed())).toBe(false);
-    // ...and not with a plain copy in either direction.
-    addToSlots(slots, 'blade', 1);
-    expect(slots).toHaveLength(3);
-    expect(canStack(slots[0], 'blade', undefined)).toBe(false);
-    expect(canStack(slots[2], 'blade', signed())).toBe(false);
-    expect(canStack(slots[2], 'blade', undefined)).toBe(true);
-  });
-
-  it('a plain add never merges into an instanced slot even when it sits first', () => {
-    const slots: InvSlot[] = [{ itemId: 'blade', count: 1, instance: signed() }];
-    addToSlots(slots, 'blade', 2);
-    expect(findStackTarget(slots, 'blade')).toBe(1);
-    expect(slots[0]).toEqual({ itemId: 'blade', count: 1, instance: signed() });
-    expect(slots[1]).toEqual({ itemId: 'blade', count: 2 });
-  });
-
-  it('removal consumes plain copies before instanced ones and hands the instance back', () => {
-    const slots: InvSlot[] = [
-      { itemId: 'blade', count: 1, instance: signed() },
-      { itemId: 'blade', count: 2 },
-    ];
-    const first = removeFromSlots(slots, 'blade', 2);
-    expect(first).toEqual({ removed: 2, instances: [] });
-    expect(slots).toEqual([{ itemId: 'blade', count: 1, instance: signed() }]);
-
-    const second = removeFromSlots(slots, 'blade', 1);
-    expect(second.removed).toBe(1);
-    expect(second.instances).toEqual([signed()]);
-    expect(slots).toEqual([]);
-  });
-
-  it('removal is a no-op past what the bags hold', () => {
-    const slots: InvSlot[] = [{ itemId: 'linen', count: 2 }];
-    expect(removeFromSlots(slots, 'linen', 5)).toEqual({ removed: 2, instances: [] });
-    expect(removeFromSlots(slots, 'linen', 1)).toEqual({ removed: 0, instances: [] });
-    expect(slots).toEqual([]);
-  });
-});
-
-describe('item_instance: cloning', () => {
-  it('deep-clones nested payload maps so a copy cannot mutate the original', () => {
-    const slot: InvSlot = {
-      itemId: 'blade',
-      count: 1,
-      instance: {
-        signer: 'A',
-        charges: { zap: 3 },
-        rolled: { masterwork: true, stats: { str: 4 } },
-      },
-    };
-    const copy = cloneInvSlot(slot);
-    expect(copy).toEqual(slot);
-    copy.instance!.charges!.zap = 0;
-    copy.instance!.rolled!.stats!.str = 99;
-    expect(slot.instance?.charges?.zap).toBe(3);
-    expect(slot.instance?.rolled?.stats?.str).toBe(4);
-  });
-
-  it('cloneInstanceMap omits an empty map entirely', () => {
-    expect(cloneInstanceMap({})).toBeUndefined();
-    const map = cloneInstanceMap({ mainhand: signed() });
-    expect(map).toEqual({ mainhand: signed() });
-  });
-});
-
-describe('item_instance: back-compat parsing', () => {
-  it('degrades every malformed instance to a plain stack instead of throwing', () => {
-    for (const bad of [null, undefined, 0, 7, '', 'nope', true, [], [1, 2], {}, { signer: 42 }]) {
-      expect(parseItemInstance(bad)).toBeUndefined();
+function standAtMerchant(sim: Sim, pid: number) {
+  let merchant: Entity | undefined;
+  for (const e of sim.entities.values()) {
+    if (e.templateId === 'the_merchant') {
+      merchant = e;
+      break;
     }
-    // A slot whose whole payload is junk simply loads as a plain stack.
-    expect(parseInvSlot({ itemId: 'blade', count: 2, instance: 'garbage' })).toEqual({
-      itemId: 'blade',
-      count: 2,
+  }
+  if (!merchant) throw new Error('the Merchant was not spawned');
+  const e = sim.entities.get(pid)!;
+  e.pos.x = merchant.pos.x;
+  e.pos.z = merchant.pos.z;
+  e.pos.y = groundHeight(e.pos.x, e.pos.z, sim.cfg.seed);
+  e.prevPos = { ...e.pos };
+}
+
+describe('item-instance payload (#1165)', () => {
+  it('an instanced item survives a save/load round-trip', () => {
+    const sim = new Sim({ seed: 42, playerClass: 'warrior', autoEquip: false });
+    sim.addItemInstance(
+      'apprentice_staff',
+      {
+        signer: 'Aldric',
+        charges: { fireball: 3 },
+        rolled: { quality: 'rare' },
+        boundTo: sim.playerId,
+      },
+      sim.playerId,
+    );
+
+    const state = sim.serializeCharacter(sim.playerId)!;
+    const saved = state.inventory.find((s) => s.itemId === 'apprentice_staff');
+    expect(saved?.instance).toEqual({
+      signer: 'Aldric',
+      charges: { fireball: 3 },
+      rolled: { quality: 'rare' },
+      boundTo: sim.playerId,
+    });
+
+    const sim2 = new Sim({ seed: 42, playerClass: 'warrior', autoEquip: false });
+    const pid2 = sim2.addPlayer('warrior', 'Reloaded', { state });
+    const loaded = sim2.meta(pid2)?.inventory.find((s) => s.itemId === 'apprentice_staff');
+    expect(loaded?.count).toBe(1);
+    expect(loaded?.instance).toEqual({
+      signer: 'Aldric',
+      charges: { fireball: 3 },
+      rolled: { quality: 'rare' },
+      boundTo: sim.playerId,
     });
   });
 
-  it('drops only the fields whose types are wrong, keeping the rest of the payload', () => {
-    const parsed = parseItemInstance({
-      signer: 'Ambrose',
-      signerId: 'not-a-number',
-      enchant: 7,
-      boundTo: 12,
-      charges: { zap: 3, bad: 'x' },
-      rolled: { quality: 'rare', masterwork: 'yes', stats: { str: 4, agi: null } },
-    });
-    expect(parsed).toEqual({
-      signer: 'Ambrose',
-      boundTo: 12,
-      charges: { zap: 3 },
-      rolled: { quality: 'rare', stats: { str: 4 } },
-    });
+  it('mutating a serialized snapshot does not alias the live instance payload (charges/rolled.stats)', () => {
+    const sim = new Sim({ seed: 42, playerClass: 'warrior', autoEquip: false });
+    sim.addItemInstance(
+      'apprentice_staff',
+      { signer: 'Aldric', charges: { fireball: 3 }, rolled: { stats: { spellPower: 5 } } },
+      sim.playerId,
+    );
+
+    const state = sim.serializeCharacter(sim.playerId)!;
+    const saved = state.inventory.find((s) => s.itemId === 'apprentice_staff')!;
+    // decrementing the saved snapshot's charge/stat must not mutate the live slot
+    saved.instance!.charges!.fireball = 0;
+    saved.instance!.rolled!.stats!.spellPower = 0;
+
+    const live = sim.meta(sim.playerId)?.inventory.find((s) => s.itemId === 'apprentice_staff');
+    expect(live?.instance?.charges?.fireball).toBe(3);
+    expect(live?.instance?.rolled?.stats?.spellPower).toBe(5);
+
+    const sim2 = new Sim({ seed: 42, playerClass: 'warrior', autoEquip: false });
+    const pid2 = sim2.addPlayer('warrior', 'Reloaded', { state });
+    // mutating the loaded copy must not reach back into the (already-mutated) saved state
+    const loaded = sim2.meta(pid2)?.inventory.find((s) => s.itemId === 'apprentice_staff');
+    loaded!.instance!.charges!.fireball = 1;
+    expect(saved.instance?.charges?.fireball).toBe(0);
   });
 
-  it('preserves fields a newer build wrote, so an old build round-trips them', () => {
-    const parsed = parseItemInstance({ signer: 'A', rift: { tier: 3, gems: ['x'] } });
-    expect(parsed).toEqual({ signer: 'A', rift: { tier: 3, gems: ['x'] } });
+  it('an ordinary fungible stack round-trips unaffected (no instance field)', () => {
+    const sim = new Sim({ seed: 42, playerClass: 'warrior', autoEquip: false });
+    sim.addItem('wolf_fang', 3, sim.playerId);
+
+    const state = sim.serializeCharacter(sim.playerId)!;
+    const saved = state.inventory.find((s) => s.itemId === 'wolf_fang');
+    expect(saved).toEqual({ itemId: 'wolf_fang', count: 3 });
+    expect(saved && 'instance' in saved).toBe(false);
   });
 
-  it('refuses prototype-polluting keys and non-JSON values', () => {
-    const raw = JSON.parse('{"signer":"A","__proto__":{"polluted":true},"fn":null}');
-    const parsed = parseItemInstance(raw) as Record<string, unknown>;
-    expect(parsed.signer).toBe('A');
-    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
-    expect(parseItemInstance({ signer: 'A', bad: Number.NaN })).toEqual({ signer: 'A' });
+  it('addItem never merges a plain grant into an existing instanced slot', () => {
+    const sim = new Sim({ seed: 42, playerClass: 'warrior', autoEquip: false });
+    sim.addItemInstance('apprentice_staff', { signer: 'Aldric' }, sim.playerId);
+    sim.addItem('apprentice_staff', 1, sim.playerId);
+
+    const slots = sim.meta(sim.playerId)!.inventory.filter((s) => s.itemId === 'apprentice_staff');
+    expect(slots.length).toBe(2);
+    expect(slots.some((s) => s.instance?.signer === 'Aldric' && s.count === 1)).toBe(true);
+    expect(slots.some((s) => !s.instance && s.count === 1)).toBe(true);
   });
 
-  it('never throws on a hostile bag and keeps every restorable slot', () => {
-    const bag = parseInvSlots([
-      { itemId: 'linen', count: 3 },
-      null,
-      'nope',
-      { count: 5 },
-      { itemId: '', count: 1 },
-      { itemId: 'blade', count: Number.NaN },
-      { itemId: 'ore', count: 2, craftedRecipeId: 'r_ore', slot: 4 },
-    ]);
-    expect(bag).toEqual([
-      { itemId: 'linen', count: 3 },
-      { itemId: 'blade', count: 1 },
-      { itemId: 'ore', count: 2, craftedRecipeId: 'r_ore', slot: 4 },
-    ]);
-    expect(parseInvSlots('not an array')).toEqual([]);
-    expect(parseInvSlots(undefined)).toEqual([]);
+  it('a batched multi-unit grant emits one xN loot line and lands units as usual', () => {
+    const sim = new Sim({ seed: 42, playerClass: 'warrior', autoEquip: false });
+    sim.drainEvents();
+    sim.addItemInstance('wolf_fang', { signer: 'Aldric' }, sim.playerId, 3);
+
+    const loot = sim
+      .drainEvents()
+      .filter((e) => e.type === 'loot')
+      .map((e) => (e as unknown as { text: string }).text);
+    expect(loot).toEqual(['You receive: Cracked Wolf Fang x3.']);
+    const slots = sim.meta(sim.playerId)!.inventory.filter((s) => s.itemId === 'wolf_fang');
+    expect(slots).toHaveLength(1);
+    expect(slots[0].count).toBe(3);
+    expect(slots[0].instance?.signer).toBe('Aldric');
   });
 
-  it('parses an equipped-instance map and skips unusable entries', () => {
-    expect(parseInstanceMap({ mainhand: signed(), chest: 5, legs: {} })).toEqual({
-      mainhand: signed(),
-    });
-    expect(parseInstanceMap(null)).toEqual({});
+  it('a zero-count grant is a full no-op: no slot, no loot line', () => {
+    const sim = new Sim({ seed: 42, playerClass: 'warrior', autoEquip: false });
+    sim.drainEvents();
+    sim.addItemInstance('wolf_fang', { signer: 'Aldric' }, sim.playerId, 0);
+
+    expect(sim.drainEvents().filter((e) => e.type === 'loot')).toHaveLength(0);
+    expect(sim.meta(sim.playerId)!.inventory.some((s) => s.itemId === 'wolf_fang')).toBe(false);
   });
 
-  it('leaves a legacy bag byte-identical', () => {
-    const legacy = [
-      { itemId: 'linen', count: 4 },
-      { itemId: 'blade', count: 1 },
-    ];
-    expect(JSON.stringify(parseInvSlots(legacy))).toBe(JSON.stringify(legacy));
+  it('a batch forced across slots never shares one mutable payload object', () => {
+    // charges payloads are one-per-slot by the merge carve-out, so a count-2
+    // grant must mint two slots holding DISTINCT payload objects: charges
+    // mutate in place, and a shared reference would drain both copies.
+    const sim = new Sim({ seed: 42, playerClass: 'warrior', autoEquip: false });
+    sim.addItemInstance(
+      'apprentice_staff',
+      { signer: 'Aldric', charges: { zap: 2 } },
+      sim.playerId,
+      2,
+    );
+
+    const slots = sim.meta(sim.playerId)!.inventory.filter((s) => s.itemId === 'apprentice_staff');
+    expect(slots).toHaveLength(2);
+    expect(slots[0].instance).toEqual(slots[1].instance);
+    expect(slots[0].instance).not.toBe(slots[1].instance);
+  });
+
+  it('the bag display view-core renders an instanced slot without crashing', () => {
+    const model = buildBagGrid(
+      [
+        { itemId: 'wolf_fang', count: 2 },
+        { itemId: 'apprentice_staff', count: 1, instance: { signer: 'Aldric', boundTo: 7 } },
+      ],
+      (itemId: string) => ITEMS[itemId],
+      { category: 'all', sort: 'name', search: '' },
+    );
+    expect(model.state).toBe('items');
+    expect(model.visible.length).toBe(2);
+    const instanced = model.visible.find((s) => s.itemId === 'apprentice_staff');
+    expect(instanced?.instance?.signer).toBe('Aldric');
+  });
+
+  it('an instanced item is inert on the World Market: listing it is rejected', () => {
+    const sim = makeWorld();
+    const seller = sim.addPlayer('warrior', 'Seller');
+    standAtMerchant(sim, seller);
+    sim.addItemInstance('apprentice_staff', { signer: 'Aldric' }, seller);
+
+    sim.marketList('apprentice_staff', 1, 100, seller);
+
+    const errors = sim.events.filter((e) => e.type === 'error');
+    expect(errors.length).toBeGreaterThan(0);
+    expect(sim.marketListings.some((l) => l.itemId === 'apprentice_staff')).toBe(false);
+    // the instanced copy is untouched, still in the seller's bag
+    expect(
+      sim.meta(seller)?.inventory.some((s) => s.itemId === 'apprentice_staff' && s.instance),
+    ).toBe(true);
+  });
+
+  it('a fungible stack still lists normally alongside an unrelated instanced copy', () => {
+    const sim = makeWorld();
+    const seller = sim.addPlayer('warrior', 'Seller');
+    standAtMerchant(sim, seller);
+    sim.addItem('apprentice_staff', 1, seller);
+    sim.addItemInstance('apprentice_staff', { signer: 'Aldric' }, seller);
+
+    sim.marketList('apprentice_staff', 1, 100, seller);
+
+    expect(sim.marketListings.some((l) => l.itemId === 'apprentice_staff')).toBe(true);
+    // the instanced copy was never touched by the escrow
+    expect(
+      sim.meta(seller)?.inventory.some((s) => s.itemId === 'apprentice_staff' && s.instance),
+    ).toBe(true);
+  });
+
+  it('trade preserves an instanced copy instead of flattening its payload', () => {
+    const sim = makeWorld();
+    const seller = sim.addPlayer('warrior', 'Seller');
+    const buyer = sim.addPlayer('mage', 'Buyer');
+    // A signed (but unbound) copy: boundTo is the Maker's Bond trade LOCK
+    // (social/trade.ts isTradeLocked), so a payload carrying it can never be
+    // offered; the flatten guard rides an ordinary signed payload instead.
+    sim.addItemInstance('apprentice_staff', { signer: 'Aldric' }, seller);
+
+    sim.tradeRequest(buyer, seller);
+    sim.tradeAccept(buyer);
+    sim.tradeSetOffer([{ itemId: 'apprentice_staff', count: 1 }], 0, seller);
+    sim.tradeConfirm(seller);
+    sim.tradeConfirm(buyer);
+
+    expect(sim.countItem('apprentice_staff', buyer)).toBe(1);
+    expect(
+      sim
+        .meta(buyer)
+        ?.inventory.some(
+          (slot) => slot.itemId === 'apprentice_staff' && slot.instance?.signer === 'Aldric',
+        ),
+    ).toBe(true);
+    expect(sim.meta(seller)?.inventory.some((slot) => slot.itemId === 'apprentice_staff')).toBe(
+      false,
+    );
+  });
+
+  it('trade moves a plain copy without touching a same-id instanced copy', () => {
+    const sim = makeWorld();
+    const seller = sim.addPlayer('warrior', 'Seller');
+    const buyer = sim.addPlayer('mage', 'Buyer');
+    sim.addItem('apprentice_staff', 1, seller);
+    sim.addItemInstance('apprentice_staff', { signer: 'Aldric', boundTo: seller }, seller);
+
+    sim.tradeRequest(buyer, seller);
+    sim.tradeAccept(buyer);
+    sim.tradeSetOffer([{ itemId: 'apprentice_staff', count: 1 }], 0, seller);
+    sim.tradeConfirm(seller);
+    sim.tradeConfirm(buyer);
+
+    expect(sim.countItem('apprentice_staff', buyer)).toBe(1);
+    expect(
+      sim
+        .meta(seller)
+        ?.inventory.some(
+          (slot) => slot.itemId === 'apprentice_staff' && slot.instance?.signer === 'Aldric',
+        ),
+    ).toBe(true);
   });
 });
 
-describe('item_instance: minting', () => {
-  it('is reproducible from a fixed seed', () => {
-    const mint = (seed: number) => {
-      const rng = new Rng(seed);
-      return [0, 1, 2, 3, 4, 5].map(() =>
-        mintItemInstance(rng, {
-          signer: 'Ambrose',
-          signerId: 7,
-          craftedRecipeId: 'r_blade',
-          masterworkChance: 0.5,
-          masterworkStats: { str: 4 },
-        }),
-      );
+describe('masterwork and legacy instance payloads (Professions 2.0 back-compat)', () => {
+  it('a legacy rolled.quality payload still loads, clones without aliasing, and equips unchanged', () => {
+    const sim = new Sim({ seed: 42, playerClass: 'warrior', autoEquip: false });
+    // The current model retired NEW rolled.quality writes; a persisted legacy
+    // payload (a legacy signed craft) must keep loading exactly as saved.
+    sim.addItemInstance('cryptbone_greaves', { rolled: { quality: 'rare' } }, sim.playerId);
+
+    const state = sim.serializeCharacter(sim.playerId)!;
+    const saved = state.inventory.find((s) => s.itemId === 'cryptbone_greaves')!;
+    expect(saved.instance).toEqual({ rolled: { quality: 'rare' } });
+
+    const sim2 = new Sim({ seed: 42, playerClass: 'warrior', autoEquip: false });
+    const pid2 = sim2.addPlayer('warrior', 'Reloaded', { state });
+    const loaded = sim2.meta(pid2)?.inventory.find((s) => s.itemId === 'cryptbone_greaves');
+    expect(loaded?.instance).toEqual({ rolled: { quality: 'rare' } });
+
+    // Non-aliasing: mutating the snapshot's rolled record reaches neither the
+    // live payload nor the loaded copy.
+    saved.instance!.rolled!.quality = 'legendary';
+    expect(
+      sim.meta(sim.playerId)?.inventory.find((s) => s.itemId === 'cryptbone_greaves')?.instance
+        ?.rolled?.quality,
+    ).toBe('rare');
+    expect(loaded?.instance?.rolled?.quality).toBe('rare');
+
+    // Equips unchanged: the legacy quality is inert metadata. The instance
+    // rides into the worn slot intact, and the stat delta is exactly the def's
+    // own line (cryptbone_greaves: armor 48, sta 2), identical to a plain copy.
+    const before = { ...sim.entities.get(sim.playerId)!.stats };
+    sim.equipItem('cryptbone_greaves', sim.playerId);
+    const meta = sim.meta(sim.playerId)!;
+    expect(meta.equipment.legs).toBe('cryptbone_greaves');
+    expect(meta.equipmentInstance?.legs).toEqual({ rolled: { quality: 'rare' } });
+    const after = sim.entities.get(sim.playerId)!.stats;
+    expect(after.armor - before.armor).toBe(48);
+    expect(after.sta - before.sta).toBe(2);
+
+    const plain = new Sim({ seed: 42, playerClass: 'warrior', autoEquip: false });
+    plain.addItem('cryptbone_greaves', 1, plain.playerId);
+    plain.equipItem('cryptbone_greaves', plain.playerId);
+    expect(sim.entities.get(sim.playerId)!.stats).toEqual(
+      plain.entities.get(plain.playerId)!.stats,
+    );
+  });
+
+  it('a masterwork payload round-trips save/load with non-aliasing', () => {
+    const sim = new Sim({ seed: 42, playerClass: 'warrior', autoEquip: false });
+    sim.addItemInstance(
+      'apprentice_staff',
+      { signer: 'Aldric', rolled: { masterwork: true, stats: { int: 2, spi: 1 } } },
+      sim.playerId,
+    );
+
+    const state = sim.serializeCharacter(sim.playerId)!;
+    const saved = state.inventory.find((s) => s.itemId === 'apprentice_staff')!;
+    expect(saved.instance).toEqual({
+      signer: 'Aldric',
+      rolled: { masterwork: true, stats: { int: 2, spi: 1 } },
+    });
+
+    const sim2 = new Sim({ seed: 42, playerClass: 'warrior', autoEquip: false });
+    const pid2 = sim2.addPlayer('warrior', 'Reloaded', { state });
+    const loaded = sim2.meta(pid2)?.inventory.find((s) => s.itemId === 'apprentice_staff');
+    expect(loaded?.instance).toEqual({
+      signer: 'Aldric',
+      rolled: { masterwork: true, stats: { int: 2, spi: 1 } },
+    });
+
+    // Non-aliasing: stripping the snapshot's masterwork marker or zeroing its
+    // baked stats reaches neither the live payload nor the loaded copy.
+    saved.instance!.rolled!.masterwork = false;
+    saved.instance!.rolled!.stats!.int = 0;
+    const live = sim.meta(sim.playerId)?.inventory.find((s) => s.itemId === 'apprentice_staff');
+    expect(live?.instance?.rolled?.masterwork).toBe(true);
+    expect(live?.instance?.rolled?.stats?.int).toBe(2);
+    expect(loaded?.instance?.rolled?.masterwork).toBe(true);
+    expect(loaded?.instance?.rolled?.stats?.int).toBe(2);
+  });
+
+  it('cloneItemInstancePayload deep-clones the masterwork marker alongside its stats', () => {
+    const src: ItemInstancePayload = {
+      signer: 'Aldric',
+      rolled: { masterwork: true, stats: { int: 2, spi: 1 } },
     };
-    expect(mint(1234)).toEqual(mint(1234));
-    // The proc is a real roll, not a constant: over six draws it lands both ways.
-    const rolls = mint(1234).map((i) => i?.rolled?.masterwork === true);
-    expect(rolls).toContain(true);
-    expect(rolls).toContain(false);
+    const clone = cloneItemInstancePayload(src);
+    expect(clone).toEqual(src);
+    expect(clone.rolled).not.toBe(src.rolled);
+    expect(clone.rolled?.stats).not.toBe(src.rolled?.stats);
+    clone.rolled!.masterwork = false;
+    clone.rolled!.stats!.int = 99;
+    expect(src.rolled?.masterwork).toBe(true);
+    expect(src.rolled?.stats?.int).toBe(2);
   });
 
-  it('draws exactly one number whenever a proc is on the table', () => {
-    const withMint = new Rng(99);
-    mintItemInstance(withMint, { signer: 'A', masterworkChance: 0 });
-    const plain = new Rng(99);
-    plain.next();
-    expect(withMint.next()).toBe(plain.next());
-  });
+  it('a combined legacy quality + stats + masterwork payload survives save/load intact', () => {
+    const sim = new Sim({ seed: 42, playerClass: 'warrior', autoEquip: false });
+    sim.addItemInstance(
+      'apprentice_staff',
+      {
+        signer: 'Aldric',
+        rolled: { quality: 'rare', stats: { spellPower: 5 }, masterwork: true },
+        boundTo: sim.playerId,
+      },
+      sim.playerId,
+    );
 
-  it('draws nothing when no proc is requested, and mints nothing from nothing', () => {
-    const rng = new Rng(5);
-    const untouched = new Rng(5);
-    expect(mintItemInstance(rng, { signer: 'A' })).toEqual({ signer: 'A' });
-    expect(rng.next()).toBe(untouched.next());
-    expect(mintItemInstance(new Rng(5), {})).toBeUndefined();
-  });
-
-  it('bakes the signature, enchant and bonus roll a profession needs', () => {
-    const instance = mintItemInstance(new Rng(1), {
-      signer: 'Ambrose',
-      signerId: 7,
-      craftedRecipeId: 'r_blade',
-      enchant: 'ench_sharp',
-      boundTo: 7,
-      quality: 'rare',
-      masterworkChance: 1,
-      masterworkStats: { str: 4 },
+    const state = sim.serializeCharacter(sim.playerId)!;
+    const saved = state.inventory.find((s) => s.itemId === 'apprentice_staff');
+    expect(saved?.instance).toEqual({
+      signer: 'Aldric',
+      rolled: { quality: 'rare', stats: { spellPower: 5 }, masterwork: true },
+      boundTo: sim.playerId,
     });
-    expect(instance).toEqual({
-      signer: 'Ambrose',
-      signerId: 7,
-      craftedRecipeId: 'r_blade',
-      enchant: 'ench_sharp',
-      boundTo: 7,
-      rolled: { quality: 'rare', masterwork: true, stats: { str: 4 } },
+
+    const sim2 = new Sim({ seed: 42, playerClass: 'warrior', autoEquip: false });
+    const pid2 = sim2.addPlayer('warrior', 'Reloaded', { state });
+    expect(
+      sim2.meta(pid2)?.inventory.find((s) => s.itemId === 'apprentice_staff')?.instance,
+    ).toEqual({
+      signer: 'Aldric',
+      rolled: { quality: 'rare', stats: { spellPower: 5 }, masterwork: true },
+      boundTo: sim.playerId,
     });
+  });
+
+  it('the top-level enchant marker survives save/load intact and keeps the copy enchant-guarded', () => {
+    const sim = new Sim({ seed: 42, playerClass: 'warrior', autoEquip: false });
+    // The exact current shape of an enchanted masterwork copy: signer plus
+    // rolled.masterwork plus baked stats plus the authoritative top-level
+    // enchant id (types.ts ItemInstancePayload.enchant). If persistence dropped
+    // the marker, isEnchantedInstance would fall through to the masterwork arm
+    // (NOT enchanted) and a reloaded copy could be enchanted twice.
+    sim.addItemInstance(
+      'apprentice_staff',
+      {
+        signer: 'Aldric',
+        enchant: 'enchant_weapon_might',
+        rolled: { masterwork: true, stats: { int: 2, spi: 1 } },
+      },
+      sim.playerId,
+    );
+
+    const state = sim.serializeCharacter(sim.playerId)!;
+    const saved = state.inventory.find((s) => s.itemId === 'apprentice_staff')!;
+    expect(saved.instance?.enchant).toBe('enchant_weapon_might');
+
+    const sim2 = new Sim({ seed: 42, playerClass: 'warrior', autoEquip: false });
+    const pid2 = sim2.addPlayer('warrior', 'Reloaded', { state });
+    const loaded = sim2.meta(pid2)?.inventory.find((s) => s.itemId === 'apprentice_staff');
+    expect(loaded?.instance).toEqual({
+      signer: 'Aldric',
+      enchant: 'enchant_weapon_might',
+      rolled: { masterwork: true, stats: { int: 2, spi: 1 } },
+    });
+    // The reloaded copy still reads as already enchanted, so the double-enchant
+    // guard holds across a save/load cycle.
+    expect(isEnchantedInstance(loaded!.instance!)).toBe(true);
+    // And the payload cloner carries the marker alongside signer and rolled.
+    const clone = cloneItemInstancePayload(loaded!.instance!);
+    expect(clone.enchant).toBe('enchant_weapon_might');
   });
 });
 
-describe('item_instance: sim inventory', () => {
-  it('an instanced add opens its own slot and never joins a stack', () => {
+describe('identical-payload stacking (Professions 2.0)', () => {
+  const makeSim = () => new Sim({ seed: 42, playerClass: 'warrior', autoEquip: false });
+
+  it('two same-signer grants merge into ONE slot at count 2; a third keeps merging', () => {
     const sim = makeSim();
-    const pid = sim.player.id;
-    sim.addItem(STACKABLE, 2, pid);
-    sim.addItem(STACKABLE, 1, pid, signed());
-    sim.addItem(STACKABLE, 1, pid, signed());
-    sim.addItem(STACKABLE, 3, pid);
-    const rows = sim.inventory.filter((s) => s.itemId === STACKABLE);
-    expect(rows.map((s) => s.count)).toEqual([5, 1, 1]);
-    expect(rows.filter(isInstanced)).toHaveLength(2);
-    expect(sim.countItem(STACKABLE, pid)).toBe(7);
+    sim.addItemInstance('wolf_fang', { signer: 'Ana' }, sim.playerId);
+    sim.addItemInstance('wolf_fang', { signer: 'Ana' }, sim.playerId);
+    let slots = sim.meta(sim.playerId)!.inventory.filter((s) => s.itemId === 'wolf_fang');
+    expect(slots).toHaveLength(1);
+    expect(slots[0].count).toBe(2);
+    expect(slots[0].instance).toEqual({ signer: 'Ana' });
+    sim.addItemInstance('wolf_fang', { signer: 'Ana' }, sim.playerId);
+    slots = sim.meta(sim.playerId)!.inventory.filter((s) => s.itemId === 'wolf_fang');
+    expect(slots).toHaveLength(1);
+    expect(slots[0].count).toBe(3);
   });
 
-  it('spending a stack eats the plain copies first', () => {
+  it('a signer mismatch and plain-vs-signed both keep their own slots', () => {
     const sim = makeSim();
-    const pid = sim.player.id;
-    sim.addItem(STACKABLE, 1, pid, signed());
-    sim.addItem(STACKABLE, 2, pid);
-    sim.removeItem(STACKABLE, 2, pid);
-    const rows = sim.inventory.filter((s) => s.itemId === STACKABLE);
-    expect(rows).toHaveLength(1);
-    expect(rows[0].instance).toEqual(signed());
+    sim.addItemInstance('wolf_fang', { signer: 'Ana' }, sim.playerId);
+    sim.addItemInstance('wolf_fang', { signer: 'Bru' }, sim.playerId);
+    sim.addItem('wolf_fang', 1, sim.playerId);
+    const slots = sim.meta(sim.playerId)!.inventory.filter((s) => s.itemId === 'wolf_fang');
+    expect(slots).toHaveLength(3);
+    expect(slots.every((s) => s.count === 1)).toBe(true);
   });
 
-  it('carries identity through equip and back out on unequip', () => {
+  it('an enchanted or bound copy never merges with a merely-signed stack', () => {
     const sim = makeSim();
-    const pid = sim.player.id;
-    const meta = (sim as any).players.get(pid);
-    const worn = meta.equipment.mainhand as string;
-    sim.addItem(worn, 1, pid, signed('Smith'));
-    sim.equipItem(worn, pid);
-    expect(meta.equipmentInstances.mainhand).toEqual(signed('Smith'));
-    sim.unequipItem('mainhand', pid);
-    expect(meta.equipmentInstances.mainhand).toBeUndefined();
-    const rows = sim.inventory.filter((s) => s.itemId === worn);
-    expect(rows.filter(isInstanced).map((s) => s.instance)).toEqual([signed('Smith')]);
-  });
-});
-
-describe('item_instance: persistence', () => {
-  it('an old save with no instances loads and re-saves identically', () => {
-    const a = makeSim();
-    a.addItem(STACKABLE, 4, a.player.id);
-    a.addItem(OTHER, 2, a.player.id);
-    const old = legacySave(a, a.player.id);
-    expect(JSON.stringify(old)).not.toContain('instance');
-
-    const b = new Sim({ seed: 42, playerClass: 'warrior', noPlayer: true });
-    const pid = b.addPlayer('warrior', 'Ambrose', { state: old });
-    const again = legacySave(b, pid);
-    expect(again).toEqual(old);
-    expect('equipmentInstances' in again).toBe(false);
+    sim.addItemInstance('wolf_fang', { signer: 'Ana' }, sim.playerId);
+    sim.addItemInstance(
+      'wolf_fang',
+      { signer: 'Ana', enchant: 'enchant_weapon_might' },
+      sim.playerId,
+    );
+    sim.addItemInstance('wolf_fang', { signer: 'Ana', boundTo: 7 }, sim.playerId);
+    const slots = sim.meta(sim.playerId)!.inventory.filter((s) => s.itemId === 'wolf_fang');
+    expect(slots).toHaveLength(3);
+    expect(slots.every((s) => s.count === 1)).toBe(true);
   });
 
-  it('round-trips an instanced slot through save and load', () => {
-    const a = makeSim();
-    const instance: ItemInstance = {
-      signer: 'Ambrose',
-      signerId: 7,
-      craftedRecipeId: 'r_blade',
-      enchant: 'ench_sharp',
-      rolled: { masterwork: true, stats: { str: 4 } },
-      charges: { zap: 2 },
-    };
-    a.addItem(STACKABLE, 1, a.player.id, instance);
-    a.addItem(STACKABLE, 3, a.player.id);
-    const saved = legacySave(a, a.player.id);
-
-    const b = new Sim({ seed: 42, playerClass: 'warrior', noPlayer: true });
-    const pid = b.addPlayer('warrior', 'Ambrose', { state: saved });
-    const rows = bagOf(b, pid).filter((s) => s.itemId === STACKABLE);
-    expect(rows.map((s) => s.count)).toEqual([1, 3]);
-    expect(rows.find(isInstanced)?.instance).toEqual(instance);
-    // Loaded payloads are copies, never aliases of the saved state.
-    expect(rows.find(isInstanced)?.instance).not.toBe(instance);
-    expect(legacySave(b, pid).inventory).toEqual(saved.inventory);
+  it('the stack cap holds AT the boundary: the 20th copy merges, the 21st takes a new slot', () => {
+    const sim = makeSim();
+    expect(stackSizeOf(ITEMS.wolf_fang)).toBe(20);
+    for (let i = 0; i < 20; i++) sim.addItemInstance('wolf_fang', { signer: 'Ana' }, sim.playerId);
+    let slots = sim.meta(sim.playerId)!.inventory.filter((s) => s.itemId === 'wolf_fang');
+    expect(slots).toHaveLength(1);
+    expect(slots[0].count).toBe(20);
+    sim.addItemInstance('wolf_fang', { signer: 'Ana' }, sim.playerId);
+    slots = sim.meta(sim.playerId)!.inventory.filter((s) => s.itemId === 'wolf_fang');
+    expect(slots).toHaveLength(2);
+    expect(slots.map((s) => s.count).sort((a, b) => a - b)).toEqual([1, 20]);
   });
 
-  it('round-trips an equipped instance and omits the field when there is none', () => {
-    const a = makeSim();
-    const meta = (a as any).players.get(a.player.id);
-    const worn = meta.equipment.mainhand as string;
-    a.addItem(worn, 1, a.player.id, signed('Smith'));
-    a.equipItem(worn, a.player.id);
-    const saved = legacySave(a, a.player.id);
-    expect(saved.equipmentInstances).toEqual({ mainhand: signed('Smith') });
-
-    const b = new Sim({ seed: 42, playerClass: 'warrior', noPlayer: true });
-    const pid = b.addPlayer('warrior', 'Ambrose', { state: saved });
-    expect(legacySave(b, pid).equipmentInstances).toEqual({ mainhand: signed('Smith') });
-    b.unequipItem('mainhand', pid);
-    expect('equipmentInstances' in legacySave(b, pid)).toBe(false);
+  it('an UNSTACKED kind (weapon, stackSize 1) never merges even with byte-equal payloads', () => {
+    const sim = makeSim();
+    expect(stackSizeOf(ITEMS.apprentice_staff)).toBe(1);
+    sim.addItemInstance('apprentice_staff', { signer: 'Ana' }, sim.playerId);
+    sim.addItemInstance('apprentice_staff', { signer: 'Ana' }, sim.playerId);
+    const slots = sim.meta(sim.playerId)!.inventory.filter((s) => s.itemId === 'apprentice_staff');
+    expect(slots).toHaveLength(2);
+    expect(slots.every((s) => s.count === 1)).toBe(true);
   });
 
-  it('loads a save whose instance payloads are corrupt instead of throwing', () => {
-    const a = makeSim();
-    a.addItem(STACKABLE, 4, a.player.id);
-    const saved = legacySave(a, a.player.id) as CharacterState & Record<string, unknown>;
-    const bag = saved.inventory as unknown[];
-    bag.push({ itemId: OTHER, count: 1, instance: 'corrupt' });
-    bag.push({ itemId: OTHER, count: 1, instance: { signer: 99 } });
-    bag.push({ itemId: OTHER, count: 1, instance: [] });
-    bag.push(null);
-    bag.push({ count: 3 });
-    saved.equipmentInstances = { mainhand: 'garbage' } as never;
+  it('byte-equal charge-bearing payloads stay one-per-slot (mergeability guard)', () => {
+    const sim = makeSim();
+    sim.addItemInstance('wolf_fang', { signer: 'Ana', charges: { zap: 3 } }, sim.playerId);
+    sim.addItemInstance('wolf_fang', { signer: 'Ana', charges: { zap: 3 } }, sim.playerId);
+    const slots = sim.meta(sim.playerId)!.inventory.filter((s) => s.itemId === 'wolf_fang');
+    expect(slots).toHaveLength(2);
+    expect(slots.every((s) => s.count === 1)).toBe(true);
+  });
 
-    const b = new Sim({ seed: 42, playerClass: 'warrior', noPlayer: true });
-    let pid = -1;
-    expect(() => {
-      pid = b.addPlayer('warrior', 'Ambrose', { state: saved });
-    }).not.toThrow();
-    const rows = bagOf(b, pid).filter((s) => s.itemId === OTHER);
-    // Each corrupt payload degraded to a plain stack. Loading never re-merges
-    // rows (it preserves the persisted bag layout), so they stay three slots and
-    // simply behave as ordinary items from here on.
-    expect(rows).toEqual([
-      { itemId: OTHER, count: 1 },
-      { itemId: OTHER, count: 1 },
-      { itemId: OTHER, count: 1 },
+  it('removeItem across a counted instanced stack returns one payload per unit', () => {
+    const sim = makeSim();
+    for (let i = 0; i < 3; i++) sim.addItemInstance('wolf_fang', { signer: 'Ana' }, sim.playerId);
+    const consumed = sim.removeItem('wolf_fang', 3, sim.playerId);
+    expect(consumed).toHaveLength(3);
+    for (const inst of consumed) expect(inst).toEqual({ signer: 'Ana' });
+    expect(sim.meta(sim.playerId)!.inventory.some((s) => s.itemId === 'wolf_fang')).toBe(false);
+  });
+
+  it('removeItem partial take returns a clone: the surviving stack payload is never aliased', () => {
+    // The removeEnchantableItem sibling below covers the live enchant mutator;
+    // this is the removeItem arm of the same clone-on-survival contract (the
+    // coverage audit's defensive-symmetry ask).
+    const sim = makeSim();
+    for (let i = 0; i < 3; i++) sim.addItemInstance('wolf_fang', { signer: 'Ana' }, sim.playerId);
+    const [consumed] = sim.removeItem('wolf_fang', 1, sim.playerId);
+    expect(consumed).toEqual({ signer: 'Ana' });
+    consumed.signer = 'Mallory';
+    const survivor = sim.meta(sim.playerId)!.inventory.find((s) => s.itemId === 'wolf_fang')!;
+    expect(survivor.count).toBe(2);
+    expect(survivor.instance).toEqual({ signer: 'Ana' });
+  });
+
+  it('a partially-consumed stack returns deep clones: mutating them never reaches the survivor', () => {
+    const sim = makeSim();
+    // A masterwork payload: enchant-ELIGIBLE (isEnchantedInstance is false for
+    // the masterwork arm), unlike bare rolled.stats which reads as a legacy
+    // enchant and would be skipped by removeEnchantableItem entirely.
+    const payload = { signer: 'Ana', rolled: { masterwork: true, stats: { str: 1 } } };
+    sim.addItemInstance('wolf_fang', { ...payload, rolled: { ...payload.rolled } }, sim.playerId);
+    sim.addItemInstance('wolf_fang', { ...payload, rolled: { ...payload.rolled } }, sim.playerId);
+    const [consumed] = sim.removeEnchantableItem('wolf_fang', 1, sim.playerId);
+    expect(consumed).toEqual({
+      instance: { signer: 'Ana', rolled: { masterwork: true, stats: { str: 1 } } },
+      craftedRecipeId: undefined,
+    });
+    // The enchant path mutates the payload it gets back; the surviving stack's
+    // shared payload must stay untouched.
+    consumed.instance!.enchant = 'enchant_weapon_might';
+    consumed.instance!.rolled!.stats!.str = 99;
+    const survivor = sim.meta(sim.playerId)!.inventory.find((s) => s.itemId === 'wolf_fang')!;
+    expect(survivor.count).toBe(1);
+    expect(survivor.instance).toEqual({
+      signer: 'Ana',
+      rolled: { masterwork: true, stats: { str: 1 } },
+    });
+  });
+
+  it('a count-3 signed stack round-trips serializeCharacter as one slot', () => {
+    const sim = makeSim();
+    for (let i = 0; i < 3; i++) sim.addItemInstance('wolf_fang', { signer: 'Ana' }, sim.playerId);
+    const state = sim.serializeCharacter(sim.playerId)!;
+    const saved = state.inventory.filter((s) => s.itemId === 'wolf_fang');
+    expect(saved).toHaveLength(1);
+    expect(saved[0]).toEqual({ itemId: 'wolf_fang', count: 3, instance: { signer: 'Ana' } });
+
+    const sim2 = new Sim({ seed: 42, playerClass: 'warrior', autoEquip: false });
+    const pid2 = sim2.addPlayer('warrior', 'Reloaded', { state });
+    const loaded = sim2.meta(pid2)!.inventory.filter((s) => s.itemId === 'wolf_fang');
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0].count).toBe(3);
+    expect(loaded[0].instance).toEqual({ signer: 'Ana' });
+  });
+
+  it('addPlayer clamps a tampered counted instanced slot with the same rule as the bank arm', () => {
+    const sim = makeSim();
+    sim.addItemInstance('wolf_fang', { signer: 'Ana' }, sim.playerId);
+    const state = JSON.parse(JSON.stringify(sim.serializeCharacter(sim.playerId)!));
+    const signed = state.inventory.find(
+      (s: { itemId: string; instance?: unknown }) => s.itemId === 'wolf_fang' && s.instance,
+    );
+    signed.count = 999; // hand-edited past the merge-legal cap
+    state.inventory.push({
+      itemId: 'wolf_fang',
+      count: 4, // a counted stack shares ONE payload: a charge count over 1 would mint copies
+      instance: { signer: 'Ana', charges: { zap: 2 } },
+    });
+    state.inventory.push({
+      itemId: 'unknown_id_xyz', // a removed def: dormant recoverable data, never destroyed
+      count: 30,
+      instance: { signer: 'Old' },
+    });
+
+    const sim2 = new Sim({ seed: 42, playerClass: 'warrior', autoEquip: false });
+    const pid2 = sim2.addPlayer('warrior', 'Tampered', { state });
+    const inv = sim2.meta(pid2)!.inventory;
+    const counts = (pred: (s: (typeof inv)[number]) => boolean) =>
+      inv.filter(pred).map((s) => s.count);
+    expect(counts((s) => s.itemId === 'wolf_fang' && !!s.instance && !s.instance.charges)).toEqual([
+      stackSizeOf(ITEMS.wolf_fang),
     ]);
-    expect(b.countItem(OTHER, pid)).toBe(3);
-    expect(b.countItem(STACKABLE, pid)).toBe(4);
-    const out = legacySave(b, pid);
-    expect('equipmentInstances' in out).toBe(false);
-    expect(JSON.stringify(out.inventory)).not.toContain('corrupt');
-  });
-
-  it('mints reproducibly from a fixed world seed', () => {
-    const run = () => {
-      const sim = makeSim('warrior', 20061);
-      const pid = sim.player.id;
-      const rng = (sim as any).rng as Rng;
-      for (let i = 0; i < 4; i++) {
-        const instance = mintItemInstance(rng, {
-          signer: 'Ambrose',
-          signerId: pid,
-          craftedRecipeId: 'r_blade',
-          masterworkChance: 0.5,
-          masterworkStats: { str: 4 },
-        });
-        sim.addItem(STACKABLE, 1, pid, instance);
-      }
-      return JSON.stringify(sim.serializeCharacter(pid)?.inventory);
-    };
-    expect(run()).toBe(run());
-  });
-});
-
-describe('item_instance: bags stay a plain array', () => {
-  it('cloneInvSlots preserves order and shape', () => {
-    const slots: InvSlot[] = [
-      { itemId: 'linen', count: 2 },
-      { itemId: 'blade', count: 1, instance: signed() },
-    ];
-    expect(cloneInvSlots(slots)).toEqual(slots);
-    expect(cloneInvSlots(slots)[1].instance).not.toBe(slots[1].instance);
+    expect(counts((s) => s.itemId === 'wolf_fang' && !!s.instance?.charges)).toEqual([1]);
+    expect(counts((s) => s.itemId === 'unknown_id_xyz')).toEqual([30]);
   });
 });

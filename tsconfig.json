@@ -11,10 +11,9 @@
     "esModuleInterop": true,
     "isolatedModules": true,
     "types": ["vite/client", "node"],
-    "baseUrl": ".",
     "paths": {
       "#bot-detector": ["./private/bot_detector/src/index.ts", "./server/bot_detector/stub.ts"]
     }
   },
-  "include": ["src", "headless", "tests", "server", "private"]
+  "include": ["src", "headless", "tests", "server", "private", "bot"]
 }

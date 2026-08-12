@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const moderation = vi.hoisted(() => ({
   recordInGameAction: vi.fn(async () => {}),
@@ -10,11 +10,13 @@ const moderation = vi.hoisted(() => ({
 vi.mock('../server/db', () => ({
   pool: { query: vi.fn(async () => ({ rows: [] })) },
   saveCharacterState: vi.fn(async () => {}),
+  // leave() flushes character + market in one call; without this export the
+  // leave save throws and sits out the full real-timer retry backoff (3.75s).
+  saveCharacterAndMarketState: vi.fn(async () => {}),
   openPlaySession: vi.fn(async () => 1),
+  touchCharacterLogin: vi.fn(async () => {}),
   closePlaySession: vi.fn(async () => {}),
   insertChatLogs: vi.fn(async () => {}),
-  loadMarketState: vi.fn(async () => null),
-  saveMarketState: vi.fn(async () => {}),
   walletForAccount: vi.fn(async () => null),
   markAccountQuestComplete: vi.fn(async () => ({
     completedQuestIds: [],
@@ -28,12 +30,40 @@ vi.mock('../server/db', () => ({
     completedQuestIds: [],
     mechChromaIds: [],
   })),
+  // Character load leases: leave() releases and the autosave loop heartbeats, so
+  // these must exist on the mock or those paths throw on the undefined export.
+  acquireCharacterLease: vi.fn(async () => true),
+  releaseCharacterLease: vi.fn(async () => {}),
+  heartbeatCharacterLeases: vi.fn(async () => {}),
+  releaseAllCharacterLeases: vi.fn(async () => {}),
 }));
 
 vi.mock('../server/moderation_db', () => moderation);
 
 import { saveCharacterState } from '../server/db';
 import { type ClientSession, GameServer } from '../server/game';
+import { BUILTIN_WORLD, setActiveWorldContent } from '../src/sim/data';
+import { isInJailCage, JAIL_GATE, JAIL_VISITOR_POS, jailGateTeleport } from '../src/sim/jail';
+import { ARENA_MIN_LEVEL } from '../src/sim/social/arena';
+
+// Moderation acts on player sessions and the fixed jail cage; ambient camps,
+// world npcs and quest objects never take part, and every test here boots one
+// or more full GameServers, so strip them via the active-world seam
+// (GameServer takes no world option; same subsystem-world pattern as
+// tests/dot_final_tick.test.ts, seam precedent in tests/mob_locomotion.test.ts).
+// The stowed-pet test restores a pet from the static forest_wolf MOB template,
+// which is data, not world content.
+setActiveWorldContent({
+  ...BUILTIN_WORLD,
+  camps: [],
+  npcs: {},
+  groundObjects: [],
+});
+afterAll(() => setActiveWorldContent(null));
+
+// In-game moderation now requires explicit permissions at join (no is_admin ->
+// all-permissions fallback). These operators exercise both act and spectate.
+const MOD_PERMS = ['moderation.act', 'moderation.spectate'] as const;
 
 type FakeWs = {
   readyState: number;
@@ -50,11 +80,13 @@ type TestFrame = {
     nm: string;
     ack: number;
     party: { members: { pid: number; x: number; z: number }[] };
+    tal?: { alloc: { spec: string | null; rows: Record<number, string> } };
   };
 };
 
 type GameServerInternals = {
   broadcastSnapshots(): void;
+  enforceJailStates(): void;
   routeEvents(events: ReturnType<GameServer['sim']['tick']>): void;
 };
 
@@ -95,13 +127,24 @@ function eventTexts(ws: FakeWs): string[] {
     .filter((text): text is string => typeof text === 'string');
 }
 
+// Only 'log' events land in the chat log; 'error' events are a fading toast.
+// The prisoner notices must ride the durable log path, so assert through this.
+function logEventTexts(ws: FakeWs): string[] {
+  return frames(ws)
+    .filter((frame) => frame.t === 'events')
+    .flatMap((frame) => frame.list ?? [])
+    .filter((event: { type?: string; text?: string }) => event.type === 'log')
+    .map((event: { type?: string; text?: string }) => event.text)
+    .filter((text): text is string => typeof text === 'string');
+}
+
 function command(server: GameServer, session: ClientSession, text: string): void {
   server.handleMessage(session, JSON.stringify({ t: 'cmd', cmd: 'chat', text }));
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(saveCharacterState).mockResolvedValue(undefined);
+  vi.mocked(saveCharacterState).mockResolvedValue(true);
 });
 
 describe('in-game moderation actions', () => {
@@ -112,6 +155,7 @@ describe('in-game moderation actions', () => {
     const moderator = joined(
       kickServer.join(moderatorWs, 1, 101, 'Moderator', 'warrior', null, false, {
         isAdmin: true,
+        adminPermissions: MOD_PERMS,
       }),
     );
     const target = joined(kickServer.join(targetWs, 2, 102, 'Trouble Maker', 'rogue', null));
@@ -134,6 +178,7 @@ describe('in-game moderation actions', () => {
     const killer = joined(
       killServer.join(killerWs, 3, 103, 'Killer', 'mage', null, false, {
         isAdmin: true,
+        adminPermissions: MOD_PERMS,
       }),
     );
     const victim = joined(killServer.join(victimWs, 4, 104, 'Victim', 'priest', null));
@@ -157,6 +202,7 @@ describe('in-game moderation actions', () => {
     const moderator = joined(
       server.join(moderatorWs, 10, 110, 'Moderator', 'warrior', null, false, {
         isAdmin: true,
+        adminPermissions: MOD_PERMS,
       }),
     );
     const target = joined(server.join(targetWs, 20, 120, 'Target', 'rogue', null));
@@ -189,6 +235,7 @@ describe('in-game moderation actions', () => {
     const banModerator = joined(
       banServer.join(banModeratorWs, 50, 150, 'BanMod', 'warrior', null, false, {
         isAdmin: true,
+        adminPermissions: MOD_PERMS,
       }),
     );
     joined(banServer.join(banTargetWs, 60, 160, 'Repeat', 'rogue', null));
@@ -210,6 +257,7 @@ describe('in-game moderation actions', () => {
     const renameModerator = joined(
       renameServer.join(renameModeratorWs, 30, 130, 'RenameMod', 'warrior', null, false, {
         isAdmin: true,
+        adminPermissions: MOD_PERMS,
       }),
     );
     joined(renameServer.join(renameTargetWs, 40, 140, 'Badname', 'rogue', null));
@@ -229,7 +277,10 @@ describe('in-game moderation actions', () => {
     const adminWs = fakeWs();
     const player = joined(server.join(playerWs, 1, 101, 'Player', 'warrior', null));
     const admin = joined(
-      server.join(adminWs, 2, 102, 'Admin', 'mage', null, false, { isAdmin: true }),
+      server.join(adminWs, 2, 102, 'Admin', 'mage', null, false, {
+        isAdmin: true,
+        adminPermissions: MOD_PERMS,
+      }),
     );
     command(server, player, '/kick "Admin" forbidden');
     expect(adminWs.close).not.toHaveBeenCalled();
@@ -246,6 +297,7 @@ describe('in-game moderation actions', () => {
     joined(
       server.join(otherAdminWs, 3, 103, 'Otheradmin', 'priest', null, false, {
         isAdmin: true,
+        adminPermissions: MOD_PERMS,
       }),
     );
     command(server, admin, '/kick "Otheradmin" forbidden');
@@ -254,10 +306,332 @@ describe('in-game moderation actions', () => {
     expect(otherAdminWs.close).not.toHaveBeenCalled();
     expect(moderation.recordInGameAction).not.toHaveBeenCalled();
   });
+
+  it('jails, persists, respawns, reconnects, and unjails online players', async () => {
+    const server = new GameServer();
+    const moderatorWs = fakeWs();
+    const targetWs = fakeWs();
+    const moderator = joined(
+      server.join(moderatorWs, 10, 110, 'Jailer', 'warrior', null, false, {
+        isAdmin: true,
+        adminPermissions: MOD_PERMS,
+      }),
+    );
+    const target = joined(server.join(targetWs, 20, 120, 'Cellmate', 'rogue', null));
+    const original = { ...entity(server, target.pid).pos };
+
+    command(server, moderator, '/jail "Cellmate" 120');
+    await vi.waitFor(() =>
+      expect(moderation.recordInGameAction).toHaveBeenCalledWith({
+        action: 'jail',
+        accountId: 20,
+        adminAccountId: 10,
+        reason: 'Jailed by in-game moderator command (2 hours)',
+      }),
+    );
+
+    expect(target.jailed?.returnPos).toEqual({ x: original.x, z: original.z });
+    expect(isInJailCage(entity(server, target.pid).pos)).toBe(true);
+    expect(eventTexts(moderatorWs)).toContain('Jailed Cellmate for 2 hours.');
+    expect(logEventTexts(targetWs)).toContain('A moderator has moved you to jail for 2 hours.');
+
+    server.sim.dealDamage(
+      null,
+      entity(server, target.pid),
+      entity(server, target.pid).maxHp + 1,
+      false,
+      'physical',
+      null,
+      'hit',
+      true,
+    );
+    expect(entity(server, target.pid).dead).toBe(true);
+    internals(server).enforceJailStates();
+    expect(entity(server, target.pid).dead).toBe(false);
+    expect(isInJailCage(entity(server, target.pid).pos)).toBe(true);
+
+    await server.saveCharacter(target);
+    const saved = vi
+      .mocked(saveCharacterState)
+      .mock.calls.find(([characterId]) => characterId === target.characterId)?.[2];
+    expect(saved?.jail?.returnPos).toEqual({ x: original.x, z: original.z });
+    expect(saved?.dead).toBe(false);
+    expect(saved?.ghost).toBe(false);
+    expect(saved?.corpsePos).toBeNull();
+    expect(isInJailCage({ x: saved?.pos.x ?? 0, z: saved?.pos.z ?? 0 })).toBe(true);
+    if (!saved) throw new Error('jailed state was not saved');
+
+    const relogServer = new GameServer();
+    const relogged = joined(relogServer.join(fakeWs(), 20, 120, 'Cellmate', 'rogue', saved));
+    expect(relogged.jailed?.returnPos).toEqual({ x: original.x, z: original.z });
+    expect(isInJailCage(entity(relogServer, relogged.pid).pos)).toBe(true);
+
+    command(server, moderator, '/unjail "Cellmate"');
+    await vi.waitFor(() =>
+      expect(moderation.recordInGameAction).toHaveBeenCalledWith({
+        action: 'unjail',
+        accountId: 20,
+        adminAccountId: 10,
+        reason: 'Released by in-game moderator command',
+      }),
+    );
+    expect(target.jailed).toBeNull();
+    expect(entity(server, target.pid).pos.x).toBeCloseTo(original.x);
+    expect(entity(server, target.pid).pos.z).toBeCloseTo(original.z);
+    expect(eventTexts(moderatorWs)).toContain('Released Cellmate from jail.');
+    expect(logEventTexts(targetWs)).toContain('A moderator has released you from jail.');
+  });
+
+  it('lets moderators visit jail and restores the visit position', () => {
+    const server = new GameServer();
+    const moderatorWs = fakeWs();
+    const moderator = joined(
+      server.join(moderatorWs, 30, 130, 'Visitor', 'mage', null, false, {
+        isAdmin: true,
+        adminPermissions: MOD_PERMS,
+      }),
+    );
+    const original = { ...entity(server, moderator.pid).pos };
+
+    command(server, moderator, '/jail');
+    expect(moderator.jailVisit?.savedPos).toEqual(original);
+    expect(entity(server, moderator.pid).pos.x).toBeCloseTo(JAIL_VISITOR_POS.x);
+    expect(entity(server, moderator.pid).pos.z).toBeCloseTo(JAIL_VISITOR_POS.z);
+    expect(eventTexts(moderatorWs)).toContain('Moved to jail visitor area.');
+
+    command(server, moderator, '/unjail');
+    expect(moderator.jailVisit).toBeNull();
+    expect(entity(server, moderator.pid).pos.x).toBeCloseTo(original.x);
+    expect(entity(server, moderator.pid).pos.z).toBeCloseTo(original.z);
+    expect(eventTexts(moderatorWs)).toContain('Returned from jail visitor area.');
+
+    command(server, moderator, '/jail');
+    entity(server, moderator.pid).dead = true;
+    internals(server).enforceJailStates();
+    expect(moderator.jailVisit).toBeNull();
+    expect(entity(server, moderator.pid).dead).toBe(false);
+    expect(entity(server, moderator.pid).pos.x).toBeCloseTo(original.x);
+    expect(entity(server, moderator.pid).pos.z).toBeCloseTo(original.z);
+  });
+
+  it('teleports moderators through the cage gate and blocks everyone else', () => {
+    // Pure trigger math: inside the gate box it lands on the far side, past
+    // the trigger depth; outside the box it does nothing.
+    expect(jailGateTeleport({ x: JAIL_GATE.x + 0.9, z: JAIL_GATE.z })).toEqual({
+      x: JAIL_GATE.x - 2.6,
+      z: JAIL_GATE.z,
+    });
+    expect(jailGateTeleport({ x: JAIL_GATE.x - 0.9, z: JAIL_GATE.z })).toEqual({
+      x: JAIL_GATE.x + 2.6,
+      z: JAIL_GATE.z,
+    });
+    expect(jailGateTeleport({ x: JAIL_GATE.x + 0.9, z: JAIL_GATE.z + 2 })).toBeNull();
+    expect(jailGateTeleport({ x: JAIL_GATE.x + 2, z: JAIL_GATE.z })).toBeNull();
+
+    const server = new GameServer();
+    const moderator = joined(
+      server.join(fakeWs(), 40, 140, 'Gatekeeper', 'warrior', null, false, {
+        isAdmin: true,
+        adminPermissions: MOD_PERMS,
+      }),
+    );
+    const bystander = joined(server.join(fakeWs(), 41, 141, 'Bystander', 'rogue', null));
+
+    // A moderator pressed into the gate from the visitor side lands in the cage.
+    const moderatorEntity = entity(server, moderator.pid);
+    moderatorEntity.pos.x = JAIL_GATE.x + 0.9;
+    moderatorEntity.pos.z = JAIL_GATE.z;
+    internals(server).enforceJailStates();
+    expect(entity(server, moderator.pid).pos.x).toBeCloseTo(JAIL_GATE.x - 2.6);
+    expect(isInJailCage(entity(server, moderator.pid).pos)).toBe(true);
+
+    // And back out from the inside.
+    internals(server).enforceJailStates();
+    expect(entity(server, moderator.pid).pos.x).toBeCloseTo(JAIL_GATE.x - 2.6);
+    entity(server, moderator.pid).pos.x = JAIL_GATE.x - 0.9;
+    entity(server, moderator.pid).pos.z = JAIL_GATE.z;
+    internals(server).enforceJailStates();
+    expect(entity(server, moderator.pid).pos.x).toBeCloseTo(JAIL_GATE.x + 2.6);
+    expect(isInJailCage(entity(server, moderator.pid).pos)).toBe(false);
+
+    // A non-moderator standing in the trigger never moves.
+    const bystanderEntity = entity(server, bystander.pid);
+    bystanderEntity.pos.x = JAIL_GATE.x + 0.9;
+    bystanderEntity.pos.z = JAIL_GATE.z;
+    internals(server).enforceJailStates();
+    expect(entity(server, bystander.pid).pos.x).toBeCloseTo(JAIL_GATE.x + 0.9);
+
+    // A jailed session never passes, even with moderator permissions, and it
+    // is not teleported anywhere either: pressing into the gate (or hugging
+    // any cage wall, inside the wall line at JAIL_CAGE_HALF minus the
+    // collision standoff) just does nothing.
+    const jailedModerator = joined(
+      server.join(fakeWs(), 42, 142, 'Jailedmod', 'mage', null, false, {
+        isAdmin: true,
+        adminPermissions: MOD_PERMS,
+      }),
+    );
+    jailedModerator.jailed = { returnPos: { x: 0, z: 0 }, returnFacing: 0 };
+    const jailedEntity = entity(server, jailedModerator.pid);
+    jailedEntity.pos.x = JAIL_GATE.x - 0.9;
+    jailedEntity.pos.z = JAIL_GATE.z;
+    internals(server).enforceJailStates();
+    expect(entity(server, jailedModerator.pid).pos.x).toBeCloseTo(JAIL_GATE.x - 0.9);
+    expect(entity(server, jailedModerator.pid).pos.z).toBeCloseTo(JAIL_GATE.z);
+
+    // A genuine escape (beyond the wall line) still snaps back to the cell.
+    jailedEntity.pos.x = JAIL_GATE.x + 1.5;
+    internals(server).enforceJailStates();
+    expect(isInJailCage(entity(server, jailedModerator.pid).pos)).toBe(true);
+    expect(entity(server, jailedModerator.pid).pos.x).not.toBeCloseTo(JAIL_GATE.x + 1.5);
+  });
+
+  it('blocks jailed players from queueing into instanced content', async () => {
+    const server = new GameServer();
+    const moderator = joined(
+      server.join(fakeWs(), 50, 150, 'Jailer', 'warrior', null, false, {
+        isAdmin: true,
+        adminPermissions: MOD_PERMS,
+      }),
+    );
+    const inmateWs = fakeWs();
+    const inmate = joined(server.join(inmateWs, 51, 151, 'Inmate', 'rogue', null));
+    server.sim.setPlayerLevel(ARENA_MIN_LEVEL, inmate.pid);
+
+    // Queued when the jail lands: the queue is drained on the spot.
+    server.handleMessage(inmate, JSON.stringify({ t: 'cmd', cmd: 'arena_queue', format: '1v1' }));
+    expect(server.sim.arenaQueue1v1).toContain(inmate.pid);
+    command(server, moderator, '/jail "Inmate" 60');
+    await vi.waitFor(() => expect(inmate.jailed).not.toBeNull());
+    expect(server.sim.arenaQueue1v1).not.toContain(inmate.pid);
+
+    // Queueing anew while jailed is refused with a notice, in every format.
+    for (const format of ['1v1', '2v2', 'fiesta', 'yumi3', 'yumi5']) {
+      server.handleMessage(inmate, JSON.stringify({ t: 'cmd', cmd: 'arena_queue', format }));
+    }
+    server.handleMessage(
+      inmate,
+      JSON.stringify({
+        t: 'cmd',
+        cmd: 'vcup_queue',
+        bracket: 'open',
+        nation: 'vale',
+        role: 'striker',
+      }),
+    );
+    server.handleMessage(
+      inmate,
+      JSON.stringify({ t: 'cmd', cmd: 'vcup_practice', bracket: 'open' }),
+    );
+    expect(server.sim.arenaQueue1v1).not.toContain(inmate.pid);
+    expect(
+      server.sim.arenaQueue2v2.some((u: { pids: number[] }) => u.pids.includes(inmate.pid)),
+    ).toBe(false);
+    expect(eventTexts(inmateWs)).toContain('You cannot do that while jailed.');
+
+    // Released: the same command works again.
+    command(server, moderator, '/unjail "Inmate"');
+    await vi.waitFor(() => expect(inmate.jailed).toBeNull());
+    server.handleMessage(inmate, JSON.stringify({ t: 'cmd', cmd: 'arena_queue', format: '1v1' }));
+    expect(server.sim.arenaQueue1v1).toContain(inmate.pid);
+  });
+
+  it('serves timed sentences and releases them automatically', async () => {
+    const server = new GameServer();
+    const moderatorWs = fakeWs();
+    const targetWs = fakeWs();
+    const moderator = joined(
+      server.join(moderatorWs, 80, 180, 'Sentencer', 'warrior', null, false, {
+        isAdmin: true,
+        adminPermissions: MOD_PERMS,
+      }),
+    );
+    const target = joined(server.join(targetWs, 81, 181, 'Doingtime', 'rogue', null));
+    const original = { ...entity(server, target.pid).pos };
+
+    const before = Date.now();
+    command(server, moderator, '/jail "Doingtime" 10');
+    await vi.waitFor(() => expect(target.jailed).not.toBeNull());
+    expect(target.jailed?.until).toBeGreaterThanOrEqual(before + 10 * 60_000);
+    expect(target.jailed?.until).toBeLessThanOrEqual(Date.now() + 10 * 60_000);
+    expect(isInJailCage(entity(server, target.pid).pos)).toBe(true);
+    expect(logEventTexts(targetWs)).toContain('A moderator has moved you to jail for 10 minutes.');
+    expect(eventTexts(moderatorWs)).toContain('Jailed Doingtime for 10 minutes.');
+
+    // The sentence is still running: enforcement keeps them in the cage.
+    internals(server).enforceJailStates();
+    expect(target.jailed).not.toBeNull();
+
+    // Sentence served: released back to the pre-jail position, prisoner flag
+    // (the brawl hostility) cleared, with the dedicated notice.
+    if (!target.jailed) throw new Error('expected a jailed session');
+    target.jailed.until = Date.now() - 1;
+    internals(server).enforceJailStates();
+    expect(target.jailed).toBeNull();
+    expect(entity(server, target.pid).pos.x).toBeCloseTo(original.x);
+    expect(entity(server, target.pid).pos.z).toBeCloseTo(original.z);
+    expect(entity(server, target.pid).jailed).toBe(false);
+    expect(logEventTexts(targetWs)).toContain('Your jail sentence has ended.');
+
+    // Jailing without a sentence length is no longer a thing: usage notice,
+    // nobody moves.
+    command(server, moderator, '/jail "Doingtime"');
+    expect(target.jailed).toBeNull();
+    expect(eventTexts(moderatorWs)).toContain('Usage: /jail ["<name>" <minutes> [reason]]');
+  });
+
+  it('lets jailed players brawl with each other but never touch a moderator', async () => {
+    const server = new GameServer();
+    const moderator = joined(
+      server.join(fakeWs(), 70, 170, 'Warden', 'warrior', null, false, {
+        isAdmin: true,
+        adminPermissions: MOD_PERMS,
+      }),
+    );
+    const brawlerA = joined(server.join(fakeWs(), 71, 171, 'Brawlerone', 'rogue', null));
+    const brawlerB = joined(server.join(fakeWs(), 72, 172, 'Brawlertwo', 'mage', null));
+    const entityA = entity(server, brawlerA.pid);
+    const entityB = entity(server, brawlerB.pid);
+
+    // Free players are never hostile to each other.
+    expect(server.sim.isHostileTo(entityA, entityB)).toBe(false);
+
+    // One prisoner alone still cannot fight a free player, in either direction.
+    command(server, moderator, '/jail "Brawlerone" 60');
+    await vi.waitFor(() => expect(brawlerA.jailed).not.toBeNull());
+    expect(server.sim.isHostileTo(entityA, entityB)).toBe(false);
+    expect(server.sim.isHostileTo(entityB, entityA)).toBe(false);
+
+    // Two prisoners are mutually hostile: the jail brawl is on.
+    command(server, moderator, '/jail "Brawlertwo" 60');
+    await vi.waitFor(() => expect(brawlerB.jailed).not.toBeNull());
+    expect(server.sim.isHostileTo(entityA, entityB)).toBe(true);
+    expect(server.sim.isHostileTo(entityB, entityA)).toBe(true);
+
+    // A visiting moderator is not a valid target, and even a forced damage
+    // call bounces off GM invulnerability. The other direction is open: the
+    // visiting warden (GM) may strike prisoners.
+    command(server, moderator, '/jail');
+    const moderatorEntity = entity(server, moderator.pid);
+    expect(server.sim.isHostileTo(entityA, moderatorEntity)).toBe(false);
+    expect(server.sim.isHostileTo(moderatorEntity, entityA)).toBe(true);
+    const hpBefore = moderatorEntity.hp;
+    server.sim.dealDamage(entityA, moderatorEntity, 500, false, 'physical', null, 'hit', true);
+    expect(moderatorEntity.hp).toBe(hpBefore);
+
+    // Release one: the brawl pairing dissolves immediately, and the freed
+    // player is no longer a warden target either.
+    command(server, moderator, '/unjail "Brawlerone"');
+    await vi.waitFor(() => expect(brawlerA.jailed).toBeNull());
+    expect(server.sim.isHostileTo(entityA, entityB)).toBe(false);
+    expect(server.sim.isHostileTo(entityB, entityA)).toBe(false);
+    expect(server.sim.isHostileTo(moderatorEntity, entityA)).toBe(false);
+    expect(server.sim.isHostileTo(moderatorEntity, entityB)).toBe(true);
+  });
 });
 
 describe('moderator spectate integration', () => {
-  it('re-scopes snapshots and events, gates gameplay, and restores the moderator', () => {
+  it('re-scopes snapshots and events, gates gameplay, and restores the moderator', async () => {
     const server = new GameServer();
     const moderatorWs = fakeWs();
     const suspectWs = fakeWs();
@@ -265,6 +639,7 @@ describe('moderator spectate integration', () => {
     const moderator = joined(
       server.join(moderatorWs, 1, 101, 'Watcher', 'mage', null, false, {
         isAdmin: true,
+        adminPermissions: MOD_PERMS,
       }),
     );
     const suspect = joined(server.join(suspectWs, 2, 102, 'Suspect', 'rogue', null));
@@ -278,6 +653,10 @@ describe('moderator spectate integration', () => {
     server.sim.partyAccept(suspect.pid);
 
     command(server, moderator, '/spectate "Suspect"');
+    // The audit write (recordInGameAction) is awaited before the live effect
+    // applies, mirroring kick/kill/jail/unjail: the mocked audit resolves on
+    // the next microtask, so wait for it rather than asserting synchronously.
+    await vi.waitFor(() => expect(moderator.spectating).not.toBeNull());
 
     expect(moderator.spectating?.characterId).toBe(suspect.characterId);
     expect(moderatorEntity.pos.x).toBe(-10_000);
@@ -334,17 +713,18 @@ describe('moderator spectate integration', () => {
     expect(eventTexts(moderatorWs)).toContain('Local chat is unavailable while spectating.');
 
     command(server, moderator, '/unspectate');
-    expect(moderator.spectating).toBeNull();
+    await vi.waitFor(() => expect(moderator.spectating).toBeNull());
     expect(moderatorEntity.pos).toEqual(originalPos);
     expect(!!moderatorEntity.gm).toBe(originalGm);
     expect(frames(moderatorWs)).toContainEqual({ t: 'spectate', name: null });
   });
 
-  it('switches targets without moving the saved return point', () => {
+  it('switches targets without moving the saved return point', async () => {
     const server = new GameServer();
     const moderator = joined(
       server.join(fakeWs(), 1, 101, 'Watcher', 'mage', null, false, {
         isAdmin: true,
+        adminPermissions: MOD_PERMS,
       }),
     );
     joined(server.join(fakeWs(), 2, 102, 'First', 'rogue', null));
@@ -352,13 +732,16 @@ describe('moderator spectate integration', () => {
     const original = { ...entity(server, moderator.pid).pos };
 
     command(server, moderator, '/spectate First');
+    await vi.waitFor(() => expect(moderator.spectating).not.toBeNull());
     if (!moderator.spectating) throw new Error('spectate did not start');
     const saved = { ...moderator.spectating.savedPos };
     command(server, moderator, '/spectate Second');
+    await vi.waitFor(() => expect(moderator.spectating?.characterId).toBe(second.characterId));
 
     expect(moderator.spectating?.characterId).toBe(second.characterId);
     expect(moderator.spectating?.savedPos).toEqual(saved);
     command(server, moderator, '/unspectate');
+    await vi.waitFor(() => expect(moderator.spectating).toBeNull());
     expect(server.sim.entities.get(moderator.pid)?.pos).toEqual(original);
   });
 
@@ -368,6 +751,7 @@ describe('moderator spectate integration', () => {
     const moderator = joined(
       server.join(moderatorWs, 1, 101, 'Watcher', 'mage', null, false, {
         isAdmin: true,
+        adminPermissions: MOD_PERMS,
       }),
     );
     const suspect = joined(server.join(fakeWs(), 2, 102, 'Goneplayer', 'rogue', null));
@@ -408,6 +792,7 @@ describe('moderator spectate integration', () => {
     const moderator = joined(
       server.join(fakeWs(), 1, 101, 'Petwatcher', 'hunter', state, false, {
         isAdmin: true,
+        adminPermissions: MOD_PERMS,
       }),
     );
     joined(server.join(fakeWs(), 2, 102, 'Pettarget', 'warrior', null));
@@ -415,7 +800,7 @@ describe('moderator spectate integration', () => {
     expect(server.sim.petOf(moderator.pid, true)?.name).toBe('Tracker');
 
     command(server, moderator, '/spectate Pettarget');
-    expect(server.sim.petOf(moderator.pid, true)).toBeNull();
+    await vi.waitFor(() => expect(server.sim.petOf(moderator.pid, true)).toBeNull());
     await server.saveCharacter(moderator);
 
     const saved = vi
@@ -426,6 +811,147 @@ describe('moderator spectate integration', () => {
     expect(server.sim.entities.get(moderator.pid)?.pos.x).toBe(-10_000);
 
     command(server, moderator, '/unspectate');
-    expect(server.sim.petOf(moderator.pid, true)?.name).toBe('Tracker');
+    await vi.waitFor(() => expect(server.sim.petOf(moderator.pid, true)?.name).toBe('Tracker'));
+  });
+
+  // Regression for the /spectate talent-reset bug: the heavy self block
+  // (tal/inv/equip/...) is gated on meta.wireRev vs session.lastWireRev, a
+  // comparison keyed to whichever entity's meta is currently being wired.
+  // Neither talent allocation bumps wireRev here (both start at the sim
+  // default, 0), so without forcing selfHeavyDirty on enter/exit, the
+  // moderator's own 'tal' field silently fails to resend after /unspectate
+  // and the client stays mirrored on the spectated target's talents.
+  it('resends the moderator own talents (not the spectated target) after /unspectate', async () => {
+    const server = new GameServer();
+    const moderatorWs = fakeWs();
+    const moderator = joined(
+      server.join(moderatorWs, 1, 101, 'Watcher', 'mage', null, false, {
+        isAdmin: true,
+        adminPermissions: MOD_PERMS,
+      }),
+    );
+    const suspect = joined(server.join(fakeWs(), 2, 102, 'Suspect', 'mage', null));
+    const moderatorMeta = server.sim.meta(moderator.pid);
+    const suspectMeta = server.sim.meta(suspect.pid);
+    if (!moderatorMeta || !suspectMeta) throw new Error('meta missing');
+    moderatorMeta.talents = { spec: 'arcane', rows: { 5: 'arc_r5_arcane_focus' } };
+    suspectMeta.talents = { spec: 'fire', rows: { 5: 'fir_r5_imp_fireball' } };
+
+    // first snapshot as self establishes session.lastWireRev at the
+    // moderator's own (unbumped) wireRev.
+    internals(server).broadcastSnapshots();
+
+    command(server, moderator, '/spectate Suspect');
+    await vi.waitFor(() => expect(moderator.spectating).not.toBeNull());
+    moderatorWs.send.mockClear();
+    internals(server).broadcastSnapshots();
+    const spectateSnap = frames(moderatorWs).find((frame) => frame.t === 'snap');
+    expect(spectateSnap?.self?.tal?.alloc).toEqual(suspectMeta.talents);
+
+    command(server, moderator, '/unspectate');
+    await vi.waitFor(() => expect(moderator.spectating).toBeNull());
+    moderatorWs.send.mockClear();
+    internals(server).broadcastSnapshots();
+    const restoredSnap = frames(moderatorWs).find((frame) => frame.t === 'snap');
+    if (!restoredSnap?.self) throw new Error('restored snapshot missing');
+    expect(restoredSnap.self.tal?.alloc).toEqual(moderatorMeta.talents);
+  });
+});
+
+describe('server-side teleports end a live profession session', () => {
+  it('/jail cancels a running fishing session at the teleport', async () => {
+    const server = new GameServer();
+    const moderatorWs = fakeWs();
+    const targetWs = fakeWs();
+    const moderator = joined(
+      server.join(moderatorWs, 70, 170, 'Moderator', 'warrior', null, false, {
+        isAdmin: true,
+        adminPermissions: MOD_PERMS,
+      }),
+    );
+    const target = joined(server.join(targetWs, 71, 171, 'Angler', 'rogue', null));
+    // A live session by direct assignment (the parity-drive precedent): the
+    // point under test is the jail teleport's teardown, not the cast start.
+    const angler = entity(server, target.pid);
+    angler.castingAbility = 'fishing';
+    angler.castTotal = 15;
+    angler.castRemaining = 15;
+    angler.fishBiteAtTick = server.sim.tickCount + 100;
+    angler.fishCastZoneId = 'eastbrook_vale';
+
+    command(server, moderator, '/jail "Angler" 5 fishing in court');
+
+    await vi.waitFor(() => expect(isInJailCage(entity(server, target.pid).pos)).toBe(true));
+    expect(angler.castingAbility).toBeNull();
+    expect(angler.fishBiteAtTick).toBe(0);
+    expect(angler.fishReelDeadlineTick).toBe(0);
+    expect(angler.fishCastZoneId).toBe('');
+  });
+
+  function assignSession(server: GameServer, pid: number) {
+    const e = entity(server, pid);
+    e.castingAbility = 'fishing';
+    e.castTotal = 15;
+    e.castRemaining = 15;
+    e.fishBiteAtTick = server.sim.tickCount + 100;
+    e.fishCastZoneId = 'eastbrook_vale';
+    return e;
+  }
+
+  function expectEnded(e: ReturnType<typeof assignSession>) {
+    expect(e.castingAbility).toBeNull();
+    expect(e.fishBiteAtTick).toBe(0);
+    expect(e.fishReelDeadlineTick).toBe(0);
+    expect(e.fishCastZoneId).toBe('');
+  }
+
+  it('spectate entry and exit both cancel the moderator own session', async () => {
+    // The moderator is the displaced entity here: /spectate teleports THEM to
+    // limbo and /unspectate teleports them back, so a session of their own
+    // must end at both moves.
+    const server = new GameServer();
+    const moderatorWs = fakeWs();
+    const targetWs = fakeWs();
+    const moderator = joined(
+      server.join(moderatorWs, 72, 172, 'Watcher', 'warrior', null, false, {
+        isAdmin: true,
+        adminPermissions: MOD_PERMS,
+      }),
+    );
+    joined(server.join(targetWs, 73, 173, 'Suspect', 'rogue', null));
+
+    const modEntity = assignSession(server, moderator.pid);
+    command(server, moderator, '/spectate "Suspect"');
+    await vi.waitFor(() =>
+      expect(frames(moderatorWs)).toContainEqual({ t: 'spectate', name: 'Suspect' }),
+    );
+    expectEnded(modEntity);
+
+    assignSession(server, moderator.pid);
+    command(server, moderator, '/unspectate');
+    await vi.waitFor(() =>
+      expect(frames(moderatorWs)).toContainEqual({ t: 'spectate', name: null }),
+    );
+    expectEnded(modEntity);
+  });
+
+  it('the dev_teleport wire arm cancels a session (dev only)', () => {
+    const saved = process.env.ALLOW_DEV_COMMANDS;
+    process.env.ALLOW_DEV_COMMANDS = '1';
+    try {
+      const server = new GameServer();
+      const ws = fakeWs();
+      const session = joined(server.join(ws, 74, 174, 'Tester', 'warrior', null));
+      const e = assignSession(server, session.pid);
+      server.handleMessage(
+        session,
+        JSON.stringify({ t: 'cmd', cmd: 'dev_teleport', x: 50, z: 50 }),
+      );
+      expectEnded(e);
+      expect(e.pos.x).toBeCloseTo(50, 1);
+    } finally {
+      if (saved === undefined) delete process.env.ALLOW_DEV_COMMANDS;
+      else process.env.ALLOW_DEV_COMMANDS = saved;
+    }
   });
 });

@@ -1,6 +1,33 @@
-import { CLASSES, ITEMS, QUESTS, QUEST_ORDER, WORLD_MAX_X, WORLD_MAX_Z, WORLD_MIN_Z } from './data';
-import { Sim } from './sim';
-import { Entity, GCD, angleTo, dist2d, normAngle, xpForLevel, MAX_LEVEL } from './types';
+import { AFFLICTION_DOOM_MAX, doomValue } from './combat/affliction';
+import { ruinAmount } from './combat/destruction';
+import { soulFragmentCount } from './combat/necromancy';
+import {
+  dominionCompositionMaskForOwner,
+  dominionSummonBlockFromMask,
+  dominionTemplateForAbility,
+} from './combat/necromancy_dominion';
+import { canUseForbiddenReflection } from './combat/warlock_talents';
+import { noticeboardDefByEntityId } from './content/noticeboards';
+import { CLASSES, ITEMS, QUEST_ORDER, QUESTS, WORLD_MAX_X, WORLD_MAX_Z, WORLD_MIN_Z } from './data';
+import {
+  ASCENSION_CHARGES,
+  ASCENSION_DURATION,
+  canActivateDivineAscension,
+  hasDevotion,
+  MAX_DEVOTION,
+} from './paladin_devotion';
+import type { Sim } from './sim';
+import {
+  angleTo,
+  dist2d,
+  type Entity,
+  GCD,
+  INTERACT_RANGE,
+  MAX_LEVEL,
+  normAngle,
+  questObjectiveRequired,
+  xpForLevel,
+} from './types';
 
 // ---------------------------------------------------------------------------
 // Discrete action space for RL agents.
@@ -14,42 +41,72 @@ import { Entity, GCD, angleTo, dist2d, normAngle, xpForLevel, MAX_LEVEL } from '
 const ABILITY_SLOTS = Math.max(...Object.values(CLASSES).map((c) => c.abilities.length));
 
 export const ACTIONS = [
-  'noop',          // 0
-  'forward',       // 1
-  'back',          // 2
-  'turn_left',     // 3
-  'turn_right',    // 4
-  'strafe_left',   // 5
-  'strafe_right',  // 6
-  'jump',          // 7  (forward+jump)
-  'target_nearest',// 8
-  'attack',        // 9  start auto-attack on current target
+  'noop', // 0
+  'forward', // 1
+  'back', // 2
+  'turn_left', // 3
+  'turn_right', // 4
+  'strafe_left', // 5
+  'strafe_right', // 6
+  'jump', // 7  (forward+jump)
+  'target_nearest', // 8
+  'attack', // 9  start auto-attack on current target
   // abilities index the learned list in learn order: ability_1 .. ability_N
   ...Array.from({ length: ABILITY_SLOTS }, (_, i) => `ability_${i + 1}`),
-  'interact',      // loot corpse / pick up object / talk to quest npc
-  'stop',          // stop moving + stop attacking
-  'eat_drink',     // consume best food (or water for mana classes) from bags
+  'interact', // loot corpse / pick up object / talk to quest npc
+  'stop', // stop moving + stop attacking
+  'eat_drink', // consume best food (or water for mana classes) from bags
 ] as const;
 
 export const NUM_ACTIONS = ACTIONS.length;
 
 export function applyAction(sim: Sim, action: number): void {
   const inp = sim.moveInput;
-  inp.forward = false; inp.back = false; inp.turnLeft = false; inp.turnRight = false;
-  inp.strafeLeft = false; inp.strafeRight = false; inp.jump = false;
+  inp.forward = false;
+  inp.back = false;
+  inp.turnLeft = false;
+  inp.turnRight = false;
+  inp.strafeLeft = false;
+  inp.strafeRight = false;
+  inp.jump = false;
   const name = ACTIONS[action] ?? 'noop';
   switch (name) {
-    case 'forward': inp.forward = true; break;
-    case 'back': inp.back = true; break;
-    case 'turn_left': inp.turnLeft = true; inp.forward = true; break;
-    case 'turn_right': inp.turnRight = true; inp.forward = true; break;
-    case 'strafe_left': inp.strafeLeft = true; break;
-    case 'strafe_right': inp.strafeRight = true; break;
-    case 'jump': inp.jump = true; inp.forward = true; break;
-    case 'target_nearest': sim.targetNearestEnemy(); break;
-    case 'attack': sim.startAutoAttack(); break;
-    case 'interact': sim.interact(); break;
-    case 'stop': sim.stopAutoAttack(); break;
+    case 'forward':
+      inp.forward = true;
+      break;
+    case 'back':
+      inp.back = true;
+      break;
+    case 'turn_left':
+      inp.turnLeft = true;
+      inp.forward = true;
+      break;
+    case 'turn_right':
+      inp.turnRight = true;
+      inp.forward = true;
+      break;
+    case 'strafe_left':
+      inp.strafeLeft = true;
+      break;
+    case 'strafe_right':
+      inp.strafeRight = true;
+      break;
+    case 'jump':
+      inp.jump = true;
+      inp.forward = true;
+      break;
+    case 'target_nearest':
+      sim.targetNearestEnemy();
+      break;
+    case 'attack':
+      sim.startAutoAttack();
+      break;
+    case 'interact':
+      sim.interact();
+      break;
+    case 'stop':
+      sim.stopAutoAttack();
+      break;
     case 'eat_drink': {
       const p = sim.player;
       const wantMana = p.resourceType === 'mana' && p.resource < p.maxResource * 0.5;
@@ -57,25 +114,34 @@ export function applyAction(sim: Sim, action: number): void {
       for (const s of sim.inventory) {
         const def = ITEMS[s.itemId];
         if (!def) continue;
-        if (wantMana && def.kind === 'drink') { sim.useItem(s.itemId); break; }
-        if (wantHp && def.kind === 'food') { sim.useItem(s.itemId); break; }
+        if (wantMana && def.kind === 'drink') {
+          sim.useItem(s.itemId);
+          break;
+        }
+        if (wantHp && def.kind === 'food') {
+          sim.useItem(s.itemId);
+          break;
+        }
       }
       break;
     }
-    case 'noop': break;
+    case 'noop':
+      break;
     default: {
       if (name.startsWith('ability_')) {
         sim.castAbilityBySlot(parseInt(name.slice(8), 10) - 1);
       }
     }
   }
-  // The death loop, collapsed for the RL env: any action releases the spirit, and
-  // any action taken as a ghost accepts the Spirit Healer at the graveyard the
-  // release just placed the agent on. Without the second half an agent that died
-  // would stay a ghost forever and the episode would never recover. Below level 10
-  // the sickness is waived, which is where training lives.
-  if (sim.player.ghost) sim.resurrectAtSpiritHealer();
-  else if (sim.player.dead) sim.releaseSpirit();
+  // If the player is dead, any action releases the spirit and resurrects at the
+  // graveyard's Spirit Healer. An RL bot has no corpse-run policy, so the in-place
+  // Spirit Healer resurrect (with Resurrection Sickness at level 10+) is what keeps
+  // the episode going; without the resurrect the bot would be stuck a permanent ghost
+  // (releaseSpirit now raises a ghost rather than instantly respawning).
+  if (sim.player.dead) {
+    sim.releaseSpirit();
+    sim.resurrectAtSpiritHealer();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -85,7 +151,7 @@ export function applyAction(sim: Sim, action: number): void {
 const NEARBY_MOBS = 5;
 
 export function obsSize(): number {
-  return 16 + ABILITY_SLOTS * 2 + 9 + NEARBY_MOBS * 6 + 5 + QUEST_ORDER.length * 2;
+  return 16 + ABILITY_SLOTS * 2 + 9 + NEARBY_MOBS * 6 + 5 + QUEST_ORDER.length * 2 + 3;
 }
 
 export function encodeObs(sim: Sim): number[] {
@@ -97,14 +163,10 @@ export function encodeObs(sim: Sim): number[] {
   obs.push(p.resource / Math.max(1, p.maxResource));
   obs.push(p.level / MAX_LEVEL);
   obs.push(p.level >= MAX_LEVEL ? 1 : sim.xp / xpForLevel(p.level));
-  // x is normalized by the world's HALF WIDTH, which the grid keeps symmetric
-  // about x = 0 (data.ts WORLD_MAX_X). Adding a column ring therefore RESCALES
-  // this feature rather than adding one: WORLD_MAX_X went 180 -> 540 with the
-  // first east/west columns, so the same world x now reads a third as large.
-  // The observation SIZE is unchanged, but a policy trained before the widening
-  // sees a different input distribution here and must be retrained or refit.
   obs.push(clamp(p.pos.x / WORLD_MAX_X, -1, 1));
-  obs.push(clamp((p.pos.z - (WORLD_MIN_Z + WORLD_MAX_Z) / 2) / ((WORLD_MAX_Z - WORLD_MIN_Z) / 2), -1, 1));
+  obs.push(
+    clamp((p.pos.z - (WORLD_MIN_Z + WORLD_MAX_Z) / 2) / ((WORLD_MAX_Z - WORLD_MIN_Z) / 2), -1, 1),
+  );
   obs.push(Math.sin(p.facing));
   obs.push(Math.cos(p.facing));
   obs.push(p.gcdRemaining / GCD);
@@ -112,22 +174,76 @@ export function encodeObs(sim: Sim): number[] {
   obs.push(p.dead ? 1 : 0);
   obs.push(p.inCombat ? 1 : 0);
   obs.push(p.autoAttack ? 1 : 0);
-  obs.push(p.comboPoints / 5);
+  const destructionRuin = sim.talentSpec === 'destruction' ? ruinAmount(p) : 0;
+  const specializationResource =
+    sim.talentSpec === 'affliction'
+      ? doomValue(p) / AFFLICTION_DOOM_MAX
+      : sim.talentSpec === 'demonology'
+        ? soulFragmentCount(p) / 5
+        : sim.talentSpec === 'destruction'
+          ? destructionRuin / 5
+          : p.comboPoints / 5;
+  obs.push(specializationResource);
   obs.push(p.sitting || p.eating || p.drinking ? 1 : 0);
   obs.push(sim.time > p.overpowerUntil ? 0 : 1); // dodge proc available
 
   // --- abilities (10 x 2 = 20) ---
+  const selectedTarget = p.targetId !== null ? (sim.entities.get(p.targetId) ?? null) : null;
+  let dominionComposition: number | null = null;
   for (let i = 0; i < ABILITY_SLOTS; i++) {
     const known = sim.known[i];
-    if (!known) { obs.push(0, 0); continue; }
-    const cd = p.cooldowns.get(known.def.id) ?? 0;
-    const ready = cd <= 0 && p.resource >= known.cost && (known.def.offGcd || p.gcdRemaining <= 0);
+    if (!known) {
+      obs.push(0, 0);
+      continue;
+    }
+    const cd = canUseForbiddenReflection(p, known.def.id)
+      ? 0
+      : (p.cooldowns.get(known.def.id) ?? 0);
+    const requiredAuraReady =
+      !known.def.requiresAuraKind ||
+      p.auras.some(
+        (aura) =>
+          aura.kind === known.def.requiresAuraKind &&
+          (aura.stacks ?? 1) >= (known.def.requiresAuraStacks ?? 1),
+      );
+    const requiresPrimaryEye =
+      known.def.id === 'sentence' ||
+      known.def.id === 'coven' ||
+      known.def.id === 'possess_evil_eye' ||
+      known.def.id === 'hour_of_judgment';
+    const afflictionEyeReady =
+      !requiresPrimaryEye ||
+      !!selectedTarget?.auras.some(
+        (aura) => aura.sourceId === p.id && aura.kind === 'affliction_eye',
+      );
+    const dominionTemplateId = dominionTemplateForAbility(known.def.id);
+    let dominionReady = true;
+    if (dominionTemplateId !== null) {
+      if (dominionComposition === null) {
+        dominionComposition = dominionCompositionMaskForOwner(sim.entities.values(), p.id);
+      }
+      dominionReady = dominionSummonBlockFromMask(dominionComposition, dominionTemplateId) === null;
+    }
+    const devotionReady =
+      known.def.id === 'divine_ascension'
+        ? canActivateDivineAscension(p)
+        : !known.def.devotionCost || hasDevotion(p, known.def.devotionCost);
+    const ready =
+      cd <= 0 &&
+      devotionReady &&
+      p.resource >= known.cost &&
+      destructionRuin >= (known.def.ruinCost ?? 0) &&
+      soulFragmentCount(p) >= (known.def.soulFragmentCost ?? 0) &&
+      requiredAuraReady &&
+      afflictionEyeReady &&
+      dominionReady &&
+      (known.def.offGcd || p.gcdRemaining <= 0);
     obs.push(ready ? 1 : 0);
     obs.push(known.def.cooldown > 0 ? cd / known.def.cooldown : 0);
   }
 
   // --- target (9) ---
-  const target = p.targetId !== null ? sim.entities.get(p.targetId) : null;
+  const target = selectedTarget;
   if (target && (!target.dead || target.lootable)) {
     const d = dist2d(p.pos, target.pos);
     const rel = normAngle(angleTo(p.pos, target.pos) - p.facing);
@@ -170,20 +286,46 @@ export function encodeObs(sim: Sim): number[] {
     }
   }
 
-  // --- nearest interactable (5): corpse, ground object, or quest npc ---
-  let best: { e: Entity; d: number; type: number } | null = null;
-  for (const e of sim.entities.values()) {
-    let type = 0;
-    if (e.kind === 'mob' && e.lootable) type = 0.33;
-    else if (e.kind === 'object' && e.lootable) type = 0.66;
-    else if (e.kind === 'npc') type = 1;
-    else continue;
-    const d = dist2d(p.pos, e.pos);
-    if (d < 60 && (!best || d < best.d)) best = { e, d, type };
-  }
+  // --- proximity interactable (5): corpse, ground object, or quest npc ---
+  // Match the no-target Sim.interact path: only advertise entities the interact
+  // action can select now, and preserve its corpse, object, then quest-NPC priority.
+  // Noticeboards own a narrower authored radius; ordinary objects keep the shared
+  // five-yard interaction range.
+  type Interactable = { e: Entity; d2: number; type: number };
+  let bestCorpse: Interactable | null = null;
+  let bestCorpseD2 = INTERACT_RANGE * INTERACT_RANGE;
+  let bestObject: Interactable | null = null;
+  let bestObjectD2 = INTERACT_RANGE * INTERACT_RANGE;
+  let bestQuestEntity: Interactable | null = null;
+  let bestQuestEntityD2 = INTERACT_RANGE * INTERACT_RANGE;
+  sim.grid.forEachInRadius(p.pos.x, p.pos.z, INTERACT_RANGE, (e, d2) => {
+    if (e.kind === 'mob' && e.lootable && d2 < bestCorpseD2) {
+      bestCorpse = { e, d2, type: 0.33 };
+      bestCorpseD2 = d2;
+    }
+    if (e.kind === 'object' && e.lootable && d2 < bestObjectD2) {
+      const noticeboardDef = noticeboardDefByEntityId(sim.noticeboardDefinitions, e.id);
+      if (!noticeboardDef || d2 <= noticeboardDef.interactionRadius ** 2) {
+        bestObject = { e, d2, type: 0.66 };
+        bestObjectD2 = d2;
+      }
+    }
+    const questEntity =
+      e.kind === 'npc' || (e.kind === 'mob' && !e.hostile && !e.dead && e.questIds.length > 0);
+    if (questEntity && d2 < bestQuestEntityD2) {
+      bestQuestEntity = { e, d2, type: 1 };
+      bestQuestEntityD2 = d2;
+    }
+  });
+  // Re-read through wider types: TypeScript cannot see the closure assignments above.
+  const best =
+    (bestCorpse as Interactable | null) ??
+    (bestObject as Interactable | null) ??
+    (bestQuestEntity as Interactable | null);
   if (best) {
+    const d = Math.sqrt(best.d2);
     const rel = normAngle(angleTo(p.pos, best.e.pos) - p.facing);
-    obs.push(1, clamp(best.d / 40, 0, 1.5), Math.sin(rel), Math.cos(rel), best.type);
+    obs.push(1, clamp(d / 40, 0, 1.5), Math.sin(rel), Math.cos(rel), best.type);
   } else {
     obs.push(0, 1.5, 0, 0, 0);
   }
@@ -195,13 +337,25 @@ export function encodeObs(sim: Sim): number[] {
     const qp = sim.questLog.get(qid);
     if (qp) {
       const quest = QUESTS[qid];
-      let total = 0, have = 0;
-      quest.objectives.forEach((obj, i) => { total += obj.count; have += Math.min(qp.counts[i], obj.count); });
+      let total = 0,
+        have = 0;
+      quest.objectives.forEach((_objective, i) => {
+        const required = questObjectiveRequired(quest, qp, i);
+        total += required;
+        have += Math.min(qp.counts[i], required);
+      });
       obs.push(total > 0 ? have / total : 0);
     } else {
       obs.push(state === 'done' ? 1 : 0);
     }
   }
+
+  // --- Paladin class resource (3), appended to preserve every existing index ---
+  // Non-Paladins emit zeros so the cross-class observation shape stays fixed.
+  const devotion = p.paladinDevotion;
+  obs.push(devotion ? devotion.value / MAX_DEVOTION : 0);
+  obs.push(devotion ? devotion.ascensionCharges / ASCENSION_CHARGES : 0);
+  obs.push(devotion ? devotion.ascensionRemaining / ASCENSION_DURATION : 0);
 
   return obs;
 }

@@ -5,15 +5,17 @@ vi.mock('../server/db', () => ({
   pool: { query: vi.fn(async () => ({ rows: [] })) },
   saveCharacterState: vi.fn(async () => {}),
   openPlaySession: vi.fn(async () => 1),
+  touchCharacterLogin: vi.fn(async () => {}),
   closePlaySession: vi.fn(async () => {}),
   insertChatLogs: vi.fn(async () => {}),
   markAccountQuestComplete: vi.fn(async () => ({ completedQuestIds: [], mechChromaIds: [] })),
   grantAccountMechChroma: vi.fn(async () => ({ completedQuestIds: [], mechChromaIds: [] })),
 }));
 
-import { GameServer, ClientSession } from '../server/game';
-import { ClientWorld } from '../src/net/online';
+import { type ClientSession, GameServer } from '../server/game';
+import type { ClientWorld } from '../src/net/online';
 import type { Entity } from '../src/sim/types';
+import { bareClient } from './helpers/bare_client';
 
 interface FakeClient {
   sent: any[];
@@ -83,33 +85,6 @@ function inKeep(snap: any, id: number): boolean {
 function besideViewer(viewer: Entity, d: number): { x: number; z: number } {
   const dx = viewer.pos.x > 0 ? -d : d;
   return { x: viewer.pos.x + dx, z: viewer.pos.z };
-}
-
-// A ClientWorld without the WebSocket plumbing, to drive applySnapshot directly.
-function bareClient(pid: number): ClientWorld {
-  const c: any = Object.create(ClientWorld.prototype);
-  c.cfg = { seed: 20061, playerClass: 'warrior' };
-  c.entities = new Map();
-  c.missingSince = new Map(); // despawn-grace bookkeeping (set by the real field initializer)
-  c.playerId = pid;
-  c.moveInput = {};
-  c.inventory = [];
-  c.equipment = {};
-  c.copper = 0;
-  c.xp = 0;
-  c.known = [];
-  c.questLog = new Map();
-  c.questsDone = new Set();
-  c.partyInfo = null;
-  c.tradeInfo = null;
-  c.duelInfo = null;
-  c.lastSnapAt = 0;
-  c.snapInterval = 50;
-  c.pendingFacingDelta = 0;
-  c.connected = true;
-  c.eventQueue = [];
-  c.mouselookFacing = null;
-  return c;
 }
 
 describe('crowd interest management', () => {
@@ -289,7 +264,9 @@ describe('crowd interest management', () => {
         broadcast(server);
         if (entRecord(lastSnap(viewerFc.sent), subject.pid)) updates++;
       }
-      expect(updates, `entities starve at +${extraTicks} ticks/broadcast`).toBeGreaterThanOrEqual(7);
+      expect(updates, `entities starve at +${extraTicks} ticks/broadcast`).toBeGreaterThanOrEqual(
+        7,
+      );
     }
   });
 
@@ -391,14 +368,20 @@ describe('crowd interest management', () => {
     placeAt(server, rogue.pid, v.pos.x + 30, v.pos.z);
     server.sim.duelRequest(rogue.pid, viewer.pid);
     server.sim.duelAccept(rogue.pid);
-    for (let i = 0; i < 20 * 5 && server.sim.duelFor(viewer.pid)?.state !== 'active'; i++) server.sim.tick();
+    for (let i = 0; i < 20 * 5 && server.sim.duelFor(viewer.pid)?.state !== 'active'; i++)
+      server.sim.tick();
     server.sim.castAbility('stealth', rogue.pid);
 
     viewerFc.sent.length = 0;
     step(server);
     const snap = lastSnap(viewerFc.sent);
 
-    expect(server.sim.isHostileTo(server.sim.entities.get(viewer.pid)!, server.sim.entities.get(rogue.pid)!)).toBe(true);
+    expect(
+      server.sim.isHostileTo(
+        server.sim.entities.get(viewer.pid)!,
+        server.sim.entities.get(rogue.pid)!,
+      ),
+    ).toBe(true);
     expect(entRecord(snap, rogue.pid)).toBeNull();
     expect(inKeep(snap, rogue.pid)).toBe(false);
   });
@@ -412,14 +395,20 @@ describe('crowd interest management', () => {
     placeAt(server, rogue.pid, v.pos.x + 6, v.pos.z);
     server.sim.duelRequest(rogue.pid, viewer.pid);
     server.sim.duelAccept(rogue.pid);
-    for (let i = 0; i < 20 * 5 && server.sim.duelFor(viewer.pid)?.state !== 'active'; i++) server.sim.tick();
+    for (let i = 0; i < 20 * 5 && server.sim.duelFor(viewer.pid)?.state !== 'active'; i++)
+      server.sim.tick();
     server.sim.castAbility('stealth', rogue.pid);
 
     viewerFc.sent.length = 0;
     step(server);
     const snap = lastSnap(viewerFc.sent);
 
-    expect(server.sim.isHostileTo(server.sim.entities.get(viewer.pid)!, server.sim.entities.get(rogue.pid)!)).toBe(true);
+    expect(
+      server.sim.isHostileTo(
+        server.sim.entities.get(viewer.pid)!,
+        server.sim.entities.get(rogue.pid)!,
+      ),
+    ).toBe(true);
     expect(entRecord(snap, rogue.pid)).toBeNull();
     expect(inKeep(snap, rogue.pid)).toBe(false);
   });
@@ -493,7 +482,12 @@ describe('client crowd protocol', () => {
     apply();
     expect(client.entities.has(subject.pid)).toBe(true);
 
-    placeAt(server, subject.pid, server.sim.entities.get(viewer.pid)!.pos.x, server.sim.entities.get(viewer.pid)!.pos.z + 150);
+    placeAt(
+      server,
+      subject.pid,
+      server.sim.entities.get(viewer.pid)!.pos.x,
+      server.sim.entities.get(viewer.pid)!.pos.z + 150,
+    );
     viewerFc.sent.length = 0;
     step(server);
     apply();
@@ -514,7 +508,8 @@ describe('client crowd protocol', () => {
 
     server.sim.duelRequest(rogue.pid, viewer.pid);
     server.sim.duelAccept(rogue.pid);
-    for (let i = 0; i < 20 * 5 && server.sim.duelFor(viewer.pid)?.state !== 'active'; i++) server.sim.tick();
+    for (let i = 0; i < 20 * 5 && server.sim.duelFor(viewer.pid)?.state !== 'active'; i++)
+      server.sim.tick();
     server.sim.castAbility('stealth', rogue.pid);
 
     viewerFc.sent.length = 0;

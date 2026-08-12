@@ -61,18 +61,11 @@ describe('removed Eastbrook Vale quest content', () => {
     }
   });
 
-  it('gates Mogger Must Fall on an outdoor trail quest, not on the crypt chain', () => {
-    // The retirement re-pointed q_mogger at q_gravecallers_trail, the tail of the
-    // five-player Hollow Crypt chain, which put the zone's signature outdoor rare
-    // behind a dungeon a small group could not run. q_moggers_trail restores an
-    // outdoor prerequisite, and it hangs off the Marshal's own chain.
+  it('keeps Mogger Must Fall after the trail and the Paladin Tome detour', () => {
     expect(QUESTS.q_mogger).toBeTruthy();
-    expect(QUESTS.q_mogger.requiresQuest).toBe('q_moggers_trail');
-    expect(QUESTS.q_moggers_trail.requiresQuest).toBe('q_ringleader');
-    expect(QUEST_ORDER[QUEST_ORDER.indexOf('q_moggers_trail') + 1]).toBe('q_mogger');
-    // The retired id itself never comes back: reviving it would mark a scrubbed
-    // legacy save as having already finished the replacement.
-    expect(QUESTS.q_mogger_tracks).toBeUndefined();
+    expect(QUESTS.q_mogger.requiresQuest).toBe('q_gravecallers_trail');
+    expect(QUEST_ORDER[QUEST_ORDER.indexOf('q_gravecallers_trail') + 1]).toBe('q_divine_tome');
+    expect(QUEST_ORDER[QUEST_ORDER.indexOf('q_divine_tome') + 1]).toBe('q_mogger');
   });
 
   it('scrubs removed quests and objective items while preserving reward items', () => {

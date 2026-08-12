@@ -1,12 +1,21 @@
 import { describe, expect, it } from 'vitest';
+import { ABILITIES, abilitiesKnownAt, CLASSES } from '../src/sim/content/classes';
 import { Sim } from '../src/sim/sim';
-import { AuraKind, dist2d } from '../src/sim/types';
-import { ABILITIES, CLASSES, abilitiesKnownAt } from '../src/sim/content/classes';
+import { type AuraKind, dist2d } from '../src/sim/types';
 import { groundHeight, WATER_LEVEL } from '../src/sim/world';
+import { placePlayerInOpenField } from './helpers/open_field';
 
 const NEW_DRUID = [
-  'travel_form', 'enrage', 'bash', 'faerie_fire', 'hibernate',
-  'dash', 'pounce', 'insect_swarm', 'tigers_fury', 'rip',
+  'travel_form',
+  'enrage',
+  'bash',
+  'faerie_fire',
+  'hibernate',
+  'dash',
+  'pounce',
+  'insect_swarm',
+  'tigers_fury',
+  'rip',
 ] as const;
 
 function makeWorld() {
@@ -41,12 +50,22 @@ function horizontalTravel(sim: Sim, pid: number, ticks: number): number {
 }
 
 function findDeepWater(seed: number): { x: number; z: number } {
-  for (let z = -50; z <= 950; z += 5) {
-    for (let x = -170; x <= 170; x += 5) {
-      if (groundHeight(x, z, seed) < WATER_LEVEL - 1.25) return { x, z };
-    }
+  // A lake CENTRE, not an edge: the whole ~6yd neighbourhood sits well below the
+  // swim line, so a 20-tick forward swim stays submerged the whole way. An edge
+  // spot lets the mover swim out into the shallows mid-run, which skews the swim
+  // ratio (this matters now that the grid world reshaped where the lakes fall).
+  // Eastbrook's Mirror Lake centre: a large open deep pool, clear of town
+  // structures, so a 20-tick swim run stays submerged and collider-free the whole
+  // way (a general deepest-first scan can land in a cluttered or narrow spot that
+  // stalls the run against a wall). The fixture seed is fixed, so this is stable;
+  // the guard fires loudly if a future world change moves the lake.
+  const spot = { x: -100, z: 70 };
+  // (the no-stuck shore grading floats every carved bed ~0.9yd shallower, so
+  // the guard bites at 2yd: still far past the 0.8yd swim line for the run)
+  if (groundHeight(spot.x, spot.z, seed) >= WATER_LEVEL - 2) {
+    throw new Error('test fixture deep-water spot is no longer deep water; pick a new lake centre');
   }
-  throw new Error('test fixture needs a deep-water coordinate');
+  return spot;
 }
 
 // Push a shapeshift toggle aura directly (forms use the 3600s sentinel).
@@ -54,7 +73,13 @@ function giveForm(sim: Sim, pid: number, kind: AuraKind, name: string) {
   const e = sim.entities.get(pid)!;
   e.auras.push({
     id: name.toLowerCase().replace(/\s+/g, '_'),
-    name, kind, remaining: 3600, duration: 3600, value: 1, sourceId: pid, school: 'physical',
+    name,
+    kind,
+    remaining: 3600,
+    duration: 3600,
+    value: 1,
+    sourceId: pid,
+    school: 'physical',
   });
 }
 
@@ -83,9 +108,17 @@ describe('druid spell pack — definitions', () => {
 });
 
 describe('druid spell pack — level gating', () => {
-  it('teaches nothing new before level 16 and everything by 20', () => {
+  it('gates each pack spell at its learn level and teaches everything by 20', () => {
+    // The choice-row unlock guard moved travel_form (11), bash (8), and rip (14)
+    // earlier so the rows that modify them are live at unlock; the rest of the
+    // pack still lands 16 to 20.
     const known15 = abilitiesKnownAt('druid', 15).map((k) => k.def.id);
-    for (const id of NEW_DRUID) expect(known15).not.toContain(id);
+    const stillLate = NEW_DRUID.filter((id) => !['travel_form', 'bash', 'rip'].includes(id));
+    for (const id of stillLate) expect(known15).not.toContain(id);
+    for (const id of NEW_DRUID) {
+      const before = abilitiesKnownAt('druid', ABILITIES[id].learnLevel - 1).map((k) => k.def.id);
+      expect(before, `${id} known too early`).not.toContain(id);
+    }
 
     const known20 = abilitiesKnownAt('druid', 20).map((k) => k.def.id);
     for (const id of NEW_DRUID) expect(known20).toContain(id);
@@ -144,14 +177,27 @@ describe('druid spell pack — casting applies effects', () => {
     const distanceOver = (withForm: boolean): number => {
       const sim = makeWorld();
       const a = sim.addPlayer('druid', 'Strider');
+      // Measure the speed ratio on empty ground: the starting town is
+      // furnished now, so a run from spawn measures a collision, not a speed.
+      placePlayerInOpenField(sim, a);
       const e = sim.entities.get(a)!;
       sim.setPlayerLevel(20, a);
       e.resource = 100;
-      if (withForm) { sim.castAbility('travel_form', a); sim.tick(); }
+      if (withForm) {
+        sim.castAbility('travel_form', a);
+        sim.tick();
+      }
       const meta = (sim as any).players.get(a);
       meta.moveInput = {
-        forward: true, back: false, turnLeft: false, turnRight: false,
-        strafeLeft: false, strafeRight: false, jump: false,
+        forward: true,
+        back: false,
+        turnLeft: false,
+        turnRight: false,
+        strafeLeft: false,
+        strafeRight: false,
+        jump: false,
+        dive: false,
+        surface: false,
       };
       const start = { x: e.pos.x, z: e.pos.z };
       for (let i = 0; i < 60; i++) sim.tick();
@@ -162,6 +208,47 @@ describe('druid spell pack — casting applies effects', () => {
     expect(base).toBeGreaterThan(0);
     // +40% speed: should cover about 1.4x the ground (allow slack for terrain).
     expect(travel / base).toBeCloseTo(1.4, 1);
+  });
+
+  it('Prowl actually moves the druid at half speed in Wolf Form', () => {
+    const distanceOver = (withProwl: boolean): number => {
+      const sim = makeWorld();
+      const pid = sim.addPlayer('druid', withProwl ? 'Prowler' : 'Runner');
+      // Same reason as Travel Form above: measure on empty ground.
+      placePlayerInOpenField(sim, pid);
+      const e = sim.entities.get(pid)!;
+      sim.setPlayerLevel(20, pid);
+      e.resource = e.maxResource;
+      sim.castAbility('cat_form', pid);
+      sim.tick();
+      advanceTicks(sim, 40);
+      if (withProwl) {
+        e.resource = e.maxResource;
+        sim.castAbility('prowl', pid);
+        sim.tick();
+        expect(e.auras.some((a) => a.id === 'prowl' && a.kind === 'stealth')).toBe(true);
+      }
+      const meta = (sim as any).players.get(pid);
+      meta.moveInput = {
+        forward: true,
+        back: false,
+        turnLeft: false,
+        turnRight: false,
+        strafeLeft: false,
+        strafeRight: false,
+        jump: false,
+        dive: false,
+        surface: false,
+      };
+      const start = { x: e.pos.x, z: e.pos.z };
+      for (let i = 0; i < 60; i++) sim.tick();
+      return Math.hypot(e.pos.x - start.x, e.pos.z - start.z);
+    };
+
+    const base = distanceOver(false);
+    const prowl = distanceOver(true);
+    expect(base).toBeGreaterThan(0);
+    expect(prowl / base).toBeCloseTo(0.5, 1);
   });
 
   it('Travel Form toggles off cleanly, removing the form and the speed', () => {
@@ -189,7 +276,10 @@ describe('druid spell pack — casting applies effects', () => {
     e.inCombat = true; // mid-fight
     sim.castAbility('travel_form', a);
     sim.tick();
-    expect(e.auras.some((au) => au.kind === 'form_travel'), 'travel_form should shift even in combat').toBe(true);
+    expect(
+      e.auras.some((au) => au.kind === 'form_travel'),
+      'travel_form should shift even in combat',
+    ).toBe(true);
   });
 
   it('Travel Form moves the druid 40% faster than normal forward movement', () => {
@@ -218,6 +308,7 @@ describe('druid spell pack — casting applies effects', () => {
     const normalFollower = normal.addPlayer('druid', 'Follower');
     placeOnGround(normal, normalLeader, 0, 90);
     placeOnGround(normal, normalFollower, 0, 40);
+    normal.setPlayerLevel(20, normalFollower);
     normal.chat('/follow Leader', normalFollower);
     normal.tick();
 
@@ -285,7 +376,7 @@ describe('druid spell pack — casting applies effects', () => {
     sim.castAbility('prowl', pid);
     sim.tick();
     expect(e.auras.some((a) => a.id === 'prowl' && a.kind === 'stealth')).toBe(true);
-    expect((sim as any).moveSpeedMult(e)).toBeCloseTo(0.7);
+    expect((sim as any).moveSpeedMult(e)).toBeCloseTo(0.5);
     advanceTicks(sim, 40);
 
     e.resource = e.maxResource;

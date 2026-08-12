@@ -8,7 +8,7 @@ import { DEFAULT_RAID_RESET_TIME_ZONE, isSupportedTimeZone } from './raid_reset'
 // value, so two processes with different REALM_NAME share a DB yet form fully
 // isolated worlds. Defaults to a single realm for local dev / single-shard prod.
 
-export const DEFAULT_REALM_NAME = 'Tupanor';
+export const DEFAULT_REALM_NAME = 'Claudemoon';
 
 export function resolveRealm(rawName: string | undefined): string {
   const raw = (rawName ?? '').trim();
@@ -35,8 +35,8 @@ export const REALM_TYPE: RealmType = resolveRealmType(process.env.REALM_TYPE);
 
 // The civil time zone whose 3 AM daily reset ends this realm's raid lockouts (a fixed
 // reset, classic-style). Each realm process sets REALM_RESET_TZ to its own IANA zone
-// (e.g. "America/Sao_Paulo" for a Brazilian realm), so a realm resets on its local
-// server time rather than a single global boundary; defaults to US Eastern.
+// (e.g. "Europe/Paris" for an EU realm), so a realm resets on its local server time
+// rather than a single global boundary; defaults to US Eastern (the launch region).
 // Requires a full-ICU Node: an unresolvable configured zone falls back to the default,
 // and if the runtime cannot resolve even the default we fail fast at boot rather than
 // crash on the first boss kill.
@@ -74,7 +74,7 @@ export function resolvePublicOrigin(rawOrigin: string | undefined): string {
 export interface RealmEntry {
   name: string;
   // origin a client should connect to for this realm (e.g.
-  // "https://ironforge.example.com"); '' means "same origin as this page",
+  // "https://highwatch.example.com"); '' means "same origin as this page",
   // used for the single-realm default
   url: string;
   type: RealmType;
@@ -83,7 +83,7 @@ export interface RealmEntry {
 // The realm directory drives the client's classic-MMO-style realm-list screen.
 // Configure it with REALMS as a comma-separated list of `Name=https://host=Type`
 // entries (Type optional, defaults Normal), e.g.
-//   REALMS="Claudemoon=https://claudemoon.example.com=Normal,Ironforge=https://ironforge.example.com=PvP"
+//   REALMS="Claudemoon=https://claudemoon.example.com=Normal,Highwatch=https://highwatch.example.com=PvP"
 // Every realm process shares the same DATABASE_URL and serves the same
 // directory, so a client on any of them can discover and switch to the others.
 // Unset → a single same-origin realm (this process), i.e. no cross-realm UI.
@@ -122,9 +122,18 @@ export const REALM_ORIGINS: ReadonlySet<string> = new Set(
 // client-side. Mutating and owner-scoped routes are NOT here — they keep the
 // narrow realm/native allowlist (cookieless bearer auth) in main.ts's maybeCors.
 const PUBLIC_CORS_PREFIXES = ['/api/public/', '/avatar/'];
+// Two more public read surfaces from the map editor: the public map browse and
+// the content-addressed GLB byte GET. Matched exactly (not by prefix) so the
+// owner-scoped /api/maps and /api/assets/mine routes keep the narrow allowlist.
+const PUBLIC_CORS_EXACT_PATHS = new Set(['/api/maps/public']);
+const PUBLIC_ASSET_GLB_PATH = /^\/api\/assets\/[a-f0-9]{64}\.glb$/;
 
 export function isPublicCorsPath(path: string): boolean {
-  return PUBLIC_CORS_PREFIXES.some((prefix) => path.startsWith(prefix));
+  return (
+    PUBLIC_CORS_PREFIXES.some((prefix) => path.startsWith(prefix)) ||
+    PUBLIC_CORS_EXACT_PATHS.has(path) ||
+    PUBLIC_ASSET_GLB_PATH.test(path)
+  );
 }
 
 export function publicOriginForRealm(realm: string, directory: readonly RealmEntry[]): string {

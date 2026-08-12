@@ -1,5 +1,14 @@
 import { createHash } from 'node:crypto';
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
@@ -9,13 +18,26 @@ const generatedPath = path.join(root, 'src/render/assets/manifest.generated.ts')
 
 const MEDIA_ROOTS = ['models', 'textures', 'env', 'vfx'];
 const HASH_LEN = 12;
+// Per-directory CLAUDE.md docs live alongside the assets under public/models/<category>/;
+// exclude them (and anything else non-media) so the manifest never ships internal docs.
+const MEDIA_EXTENSIONS = new Set([
+  '.glb',
+  '.fbx',
+  '.hdr',
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.webp',
+  '.ktx2',
+]);
 
 function walk(dir) {
   const out = [];
   for (const ent of readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, ent.name);
     if (ent.isDirectory()) out.push(...walk(p));
-    else if (ent.isFile()) out.push(p);
+    else if (ent.isFile() && MEDIA_EXTENSIONS.has(path.extname(ent.name).toLowerCase()))
+      out.push(p);
   }
   return out;
 }
@@ -53,7 +75,9 @@ function generate() {
       '',
     ].join('\n'),
   );
-  console.log(`generated ${path.relative(root, generatedPath)} (${Object.keys(entries).length} media assets)`);
+  console.log(
+    `generated ${path.relative(root, generatedPath)} (${Object.keys(entries).length} media assets)`,
+  );
 }
 
 function emit() {
@@ -66,36 +90,84 @@ function emit() {
     mkdirSync(path.dirname(dest), { recursive: true });
     copyFileSync(src, dest);
   }
-  console.log(`emitted ${Object.keys(entries).length} hashed media assets to ${path.relative(root, mediaDir)}`);
+  console.log(
+    `emitted ${Object.keys(entries).length} hashed media assets to ${path.relative(root, mediaDir)}`,
+  );
 }
 
-// Vite copies public/ into dist/ verbatim, and emit() then writes a SECOND,
-// content-hashed copy of every media file under dist/media/. Both shipped, so the
-// bundle carried each model, texture, HDRI and vfx sheet twice (about 76 MiB of exact
-// duplication, proven by matching md5s). In a production build `assetUrl` resolves
-// every one of these through the manifest, so the unhashed originals are dead weight
-// there; they exist for `npm run dev`, which serves public/ directly and never reads
-// dist/. Pruning is safe precisely because manifestEntries() walks the SAME four roots
-// it emits: every file we delete provably has a hashed counterpart the runtime uses.
+/**
+ * Decide which hashed-media ORIGINALS a bundle can drop.
+ *
+ * `emit` COPIES public/<logical> to dist/media/<name>.<hash><ext> and leaves the
+ * source in place, while vite separately copies all of public/ into dist/. A web
+ * deploy does not care (a CDN only transfers what is requested), but the native
+ * shells package the whole of dist/ into the app, and the OTA publisher zips it,
+ * so both carried every models/textures/env/vfx asset TWICE. That is what pushed
+ * the Play base module past its 500 MB compressed download ceiling.
+ *
+ * Production runtime resolves these through assetUrl() (src/render/assets/media.ts),
+ * which returns MEDIA_ASSETS[logical] and only falls back to the original path for a
+ * logical path that is NOT in the manifest. Every path this plan drops therefore has
+ * a hashed copy that the app asks for instead, and anything outside the manifest is
+ * never considered here.
+ *
+ * Pure so tests/media_duplicate_prune.test.ts can prove the teeth (including the
+ * refusal below) without a build; `hashedCopyExists` is the injected fs probe.
+ */
+export function planMediaDuplicatePrune(entries, hashedCopyExists) {
+  const drop = [];
+  const kept = [];
+  for (const logical of Object.keys(entries).sort()) {
+    const hashed = entries[logical];
+    // Never delete the only copy: no hashed twin on disk means emit did not run
+    // (or ran against different content), so the original is still load-bearing.
+    if (hashedCopyExists(hashed)) drop.push(logical);
+    else kept.push({ logical, hashed });
+  }
+  return { drop, kept };
+}
+
 function prune() {
   const entries = manifestEntries();
+  const total = Object.keys(entries).length;
+  if (total === 0) {
+    console.log('media prune: manifest is empty, nothing to prune');
+    return;
+  }
+  const { drop, kept } = planMediaDuplicatePrune(entries, (url) =>
+    existsSync(path.join(distDir, url.replace(/^\//, ''))),
+  );
+  // A wholesale miss means this ran before `emit`, i.e. a build-order bug. Fail
+  // loudly rather than shipping the duplicates again in silence.
+  if (drop.length === 0) {
+    throw new Error(
+      `media prune: none of the ${total} hashed copies exist under dist/media; ` +
+        'run `node scripts/build_media_manifest.mjs emit` first',
+    );
+  }
   let bytes = 0;
   let removed = 0;
-  for (const logical of Object.keys(entries)) {
+  for (const logical of drop) {
     const original = path.join(distDir, logical);
+    // Idempotent: a second run finds the originals already gone.
     if (!existsSync(original)) continue;
     bytes += statSync(original).size;
-    rmSync(original);
+    rmSync(original, { force: true });
     removed++;
   }
-  // Leave no empty directory skeletons behind.
-  for (const rootName of MEDIA_ROOTS) {
-    const dir = path.join(distDir, rootName);
-    if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });
-  }
   console.log(
-    `pruned ${removed} unhashed media duplicates from dist (${(bytes / 1048576).toFixed(1)} MiB freed)`,
+    `media prune: dropped ${removed} duplicated originals from dist ` +
+      `(${(bytes / 1048576).toFixed(1)} MB uncompressed; ${drop.length} hashed copies kept)`,
   );
+  if (kept.length > 0) {
+    console.warn(
+      `media prune: kept ${kept.length} original(s) with no hashed copy on disk: ` +
+        kept
+          .slice(0, 5)
+          .map((k) => k.logical)
+          .join(', '),
+    );
+  }
 }
 
 const cmd = process.argv[2] ?? 'generate';

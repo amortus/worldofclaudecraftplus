@@ -8,11 +8,11 @@ const makeSim = () => new Sim({ seed: SEED, playerClass: 'warrior' });
 
 // No SHIPPED mob carries `dread` anymore: the Gravecaller Summoner lost its "Wail
 // of the Grave" fear-on-hit in the OP-crowd-control nerf. The fear-on-hit ENGINE
-// path (the dread arm of the mob swing affix cascade) still exists and must stay
-// covered, so we register a synthetic carrier into the shared MOBS table for the
-// life of this file: a copy of an existing humanoid stripped of its other affixes,
-// with a dread proc pinned to 1 so a connecting swing always fears. Restored in
-// afterAll so other suites see the unmodified table.
+// path (runMobSwingAffixes' dread arm) still exists and must stay covered, so we
+// register a synthetic carrier into the shared MOBS table for the life of this
+// file: a copy of an existing humanoid stripped of its other affixes, with a
+// dread proc pinned to 1 so a connecting swing always fears. Restored in afterAll
+// so other suites see the unmodified table.
 const DREAD_CARRIER_ID = 'test_dread_carrier';
 beforeAll(() => {
   MOBS[DREAD_CARRIER_ID] = {
@@ -66,6 +66,35 @@ describe('Dread fear-on-hit affix', () => {
     expect(p.auras.some((a) => a.id === 'fear_incap')).toBe(true);
     // updateFearMovement returns true while the fear is active and no root holds.
     expect((sim as any).updateFearMovement(p)).toBe(true);
+    const fear = p.auras.find((a) => a.id === 'fear_incap')!;
+    fear.unbreakableControl = true;
+    expect((sim as any).updateFearMovement(p)).toBe(true);
+  });
+
+  it('unbreakable encounter control freezes an already-feared player', () => {
+    const sim = makeSim();
+    const p = sim.entities.get(sim.playerId)!;
+    p.maxHp = 100000;
+    p.hp = 100000;
+    const mob = createMob(900604, dreadCarrier(), 12, { x: 0, y: 0, z: 0 });
+    for (let i = 0; i < 60 && !p.auras.some((a) => a.id === 'fear_incap'); i++) {
+      p.hp = p.maxHp;
+      (sim as any).mobSwing(mob, p);
+    }
+    expect(p.auras.some((a) => a.id === 'fear_incap')).toBe(true);
+    p.auras.push({
+      id: 'scripted_stun',
+      name: 'Scripted Stun',
+      kind: 'stun',
+      remaining: 10,
+      duration: 10,
+      value: 0,
+      sourceId: mob.id,
+      school: 'shadow',
+      unbreakableControl: true,
+    });
+
+    expect((sim as any).updateFearMovement(p)).toBe(false);
   });
 
   it('a friendly pet swing (hostile=false) never fears the party', () => {

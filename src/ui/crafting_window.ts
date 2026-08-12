@@ -1,448 +1,652 @@
-// Thin DOM consumer for the Crafting window (smithing, woodcraft, alchemy,
-// enchanting).
+// Thin DOM consumer for the crafting window (issue #1127).
 //
 // The consumer half of the pure-core + thin-consumer split: it paints
-// #crafting-window from the structured CraftingWindowView (crafting_ui_view.ts)
-// and owns no game state at all. Every number it shows arrived already decided;
-// its only jobs are markup, localization through `t()`, and the keyboard/ARIA
-// contract.
+// #crafting-window from the structured CraftingView (crafting_view.ts) and
+// wires the craft/close actions. It owns no state; cross-window orchestration
+// stays in Hud (open<Window>/close<Window>), same as vendor_window.ts. The
+// craft tab strip is painted from the pure craftingTabs/resolveSelectedCraft
+// helpers (crafting_view.ts); the selected craft lives with the HUD (the
+// commission opt-in precedent) so it survives staleness repaints.
 //
-// It creates its own panel element and stylesheet on first open rather than
-// reading one out of index.html, so composing it is a single call from Hud and
-// nothing in the shared HTML has to change (the same shape wave 1's Skills panel
-// and Book of Deeds use).
-//
-// ACCESSIBILITY (src/ui/CLAUDE.md): the panel is a labelled dialog, the craft
-// tabs are a real `role="tablist"` with `aria-selected` + a roving tabindex
-// (Arrow/Home/End through the shared `rovingTarget` core), every skill bar is a
-// real `role="progressbar"` with min/now/max plus a spoken `aria-valuetext`,
-// every recipe's mastery state is SPELLED OUT beside its colour, a disabled
-// Craft button states its reason in text (never colour alone) and is wired to it
-// with `aria-describedby`, Escape closes, focus lands on the panel on open and
-// returns to the opener on close, and every control clears the 40x40 tap floor.
+// Craft Cast System Phase 2: duration chip, craft-button state machine, and
+// the in-window cast strip. While the crafting window is open the strip is
+// the SINGLE progress surface for a craft cast (the HUD suppresses the
+// overlay #castbar for CRAFT_CAST_ID only; closing the window hands the cast
+// back to the overlay bar, so a cast is never invisible). The strip's
+// per-frame fill/label/timer/aria writes ride a CastBarPainter instance the
+// HUD rebuilds after each full paint (PainterHost elided writers, the
+// family reuse rule); this painter only builds the strip DOM and paints the
+// cold batch label on the full-paint path. Progress always tracks real
+// entity cast fields (never a client-side outcome timer).
+// Phase 3: qty stepper, Create / Create All, batch remaining on the strip.
+// Announcements ride the static #crafting-live region via deps.announce (a
+// region inside the rebuilt subtree is wiped by the same task that writes
+// it, so assistive tech never sees the text).
 
+import type { StationType } from '../sim/professions/stations';
+import { craftNameText } from './char_window';
 import {
-  buildCraftingWindowView,
-  type CraftingProfessionId,
-  type CraftingWindowView,
-  type CraftProfessionRow,
-  type CraftRecipeDef,
-  type CraftRecipeRow,
-  type PlayerCraftSkill,
-} from './crafting_ui_view';
-import { craftProfessionDescription, craftProfessionName } from './crafting_labels';
+  type CraftButtonState,
+  type CraftCastSessionView,
+  clampCraftQty,
+  craftBatchIndicatorVisible,
+  craftButtonBusy,
+  craftButtonEnabled,
+  craftButtonState,
+  IDLE_CRAFT_CAST_SESSION,
+  maxCraftsFromReagents,
+} from './craft_cast_view';
+import {
+  type CraftDifficulty,
+  type CraftingView,
+  type CraftLearnHint,
+  craftingTabs,
+  resolveSelectedCraft,
+} from './crafting_view';
+import { markDialogRoot } from './dialog_root';
+import { itemDisplayName, tEntity } from './entity_i18n';
 import { esc } from './esc';
-import { formatNumber, t } from './i18n';
-import { masteryLabel } from './profession_labels';
-import { rovingTarget } from './roving_index';
+import { captureFocusKey, restoreFirstEnabled } from './focus_restore';
+import { formatNumber, type TranslationKey, t } from './i18n';
+import { QUALITY_COLOR } from './icons';
+import type { PainterHostPresentation } from './painter_host';
+import { professionImageUrl } from './profession_art';
+import { renderProfessionIdentityCard } from './profession_identity_card';
+import type { ProfessionIdentityModel } from './profession_identity_view';
+import { qualityGlowShadow } from './quality_glow';
 import { svgIcon } from './ui_icons';
-import type { InvSlot } from '../sim/types';
 
-const PANEL_ID = 'crafting-window';
-const STYLE_ID = 'crafting-window-style';
-const TABPANEL_ID = 'crafting-window-panel';
+// Duration chip and aria: up to two decimals when non-integer (1.75s),
+// whole seconds otherwise.
+const DURATION_FRACTION_DIGITS = 2;
 
-/**
- * Hud-supplied glue. Everything is a callback so this module never learns which
- * world it is looking at: Hud reads the live craft skills / recipes / bag off
- * `IWorld` and hands them over, exactly as `renderVendorWindow` takes its rows.
- */
-export interface CraftingWindowDeps {
-  /** The rows `IWorld.craftingSkills()` returns for the local player. */
-  skills(): readonly PlayerCraftSkill[];
-  /** Every recipe, in authored order (`CRAFT_RECIPES`). */
-  recipes(): readonly CraftRecipeDef[];
-  /** The live bag. */
-  inventory(): readonly InvSlot[];
-  /** Craft one recipe. The world re-runs every gate; this is a request. */
-  onCraft(recipeId: string): void;
-  /** Open the enchanting surfaces. The enchanting craft has no recipe list of
-   *  its own: its bench is the Apply Enchant / Disenchant flow. */
-  onOpenEnchanting?(): void;
-  /** Hud's shared item-name painter, so a recipe row names its output exactly
-   *  as a bag slot does. */
-  itemName(itemId: string): string;
-  /** Hud's shared item-quality colour for an item id. */
-  itemColor?(itemId: string): string;
-  /** Hud's tooltip painters, so hovering a recipe shows the real item tooltip. */
-  attachTooltip?(el: HTMLElement, html: () => string): void;
-  itemTooltipHtml?(itemId: string): string;
-  /** Called when the panel closes, so Hud can drop its own open flag. */
-  onClose?(): void;
+// Skill-gain difficulty labels, the classic four-color recipe intuition
+// orange = full gains, yellow = reduced, green = minimal,
+// gray = none. The tints live in CSS (`.crafting-difficulty[data-difficulty]`
+// over the --color-craft-* tokens in tokens.css), keyed by the data attribute
+// painted here. A tint is only ever a HINT: the adjacent difficulty LABEL and
+// the aria text carry the same information, and both are identical on every
+// graphics preset/tier (docs/design/graphics-settings-fairness.md).
+const DIFFICULTY_LABEL_KEY: Record<CraftDifficulty, TranslationKey> = {
+  full: 'hudChrome.crafting.difficultyFull',
+  reduced: 'hudChrome.crafting.difficultyReduced',
+  minimal: 'hudChrome.crafting.difficultyMinimal',
+  none: 'hudChrome.crafting.difficultyNone',
+} as const;
+
+// Station display names (Professions 2.0): StationType id -> the
+// localized station name, same id-to-key table shape as craftNameText
+// (char_window.ts) so the deny toast (hud.ts) and the window rows below
+// never drift. Full literal keys on purpose (the key scanner reads them).
+const STATION_NAME_KEY: Record<StationType, TranslationKey> = {
+  forge: 'hudChrome.crafting.stationName.forge',
+  kitchens: 'hudChrome.crafting.stationName.kitchens',
+  apothecary: 'hudChrome.crafting.stationName.apothecary',
+  tannery: 'hudChrome.crafting.stationName.tannery',
+  loom: 'hudChrome.crafting.stationName.loom',
+  toolworks: 'hudChrome.crafting.stationName.toolworks',
+};
+
+/** The localized display name of one station type. */
+export function stationNameText(type: StationType): string {
+  return t(STATION_NAME_KEY[type]);
 }
 
-let deps: CraftingWindowDeps | null = null;
-let opener: HTMLElement | null = null;
-let selected: CraftingProfessionId | null = null;
-
-function num(value: number): string {
-  return formatNumber(value, { maximumFractionDigits: 0 });
+export interface CraftingWindowDeps extends PainterHostPresentation {
+  hideTooltip(): void;
+  /** Start a craft (or batch) for `recipeId` with the given count (clamped in sim). */
+  onCraft(recipeId: string, count: number): void;
+  onClose(): void;
+  /** Opens the commission order board (issue #1298), the crafting window's
+   *  one entry point to it: a header button beside the close button. */
+  onOpenOrders(): void;
+  /** Commission opt-in state (Professions 2.0), held by the HUD so
+   *  it survives the window's staleness repaints: whether `recipeId` is
+   *  currently opted in, and the toggle callback the per-row checkbox fires.
+   *  The painter renders the control only on commissionEligible rows. */
+  commissionChecked(recipeId: string): boolean;
+  onToggleCommission(recipeId: string, on: boolean): void;
+  /** Per-recipe qty stepper value (HUD-held so repaints keep the pick). */
+  craftQty(recipeId: string): number;
+  onCraftQty(recipeId: string, qty: number): void;
+  /** Write one polite line into the static #crafting-live region (HUD-owned;
+   *  a live region inside this rebuilt subtree would be wiped by the same
+   *  task that writes it, so assistive tech never announces it). */
+  announce(text: string): void;
+  /** The craft tab the player last picked (null before any pick), held by the
+   *  HUD like the commission set above; the painter resolves it against the
+   *  live tab list (resolveSelectedCraft) so a stale pick falls back safely. */
+  selectedCraft(): string | null;
+  onSelectCraft(professionId: string): void;
 }
 
-function percentText(fraction: number): string {
-  return formatNumber(fraction, { style: 'percent', maximumFractionDigits: 1 });
-}
-
-function ensureStyles(): void {
-  if (document.getElementById(STYLE_ID)) return;
-  const style = document.createElement('style');
-  style.id = STYLE_ID;
-  // width:100% + max-width (never a viewport unit) so padding can never push the
-  // panel past the screen edge; the body scrolls instead of the page.
-  style.textContent = `
-  #${PANEL_ID} {
-    /* No transform centring: Hud's managed-window layer positions every
-       .window.panel by writing style.left/top in pixels, and a translate would
-       double-offset the panel the moment a player drags it. */
-    position: fixed; left: 0; top: 0;
-    width: calc(100% - 24px); max-width: 460px; max-height: 84vh;
-    padding: 10px 12px 12px; display: none; flex-direction: column;
-    z-index: 45; font-family: var(--ui-font);
-  }
-  #${PANEL_ID}[data-open="1"] { display: flex; }
-  #${PANEL_ID} .cw-intro { color: #998d6a; font-size: 12px; margin: 0 0 8px; }
-  #${PANEL_ID} .cw-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
-  #${PANEL_ID} .cw-tab {
-    min-height: 40px; min-width: 40px; flex: 1 1 auto; padding: 6px 10px;
-    border: 1px solid #3b2e19; border-radius: 4px; background: #12100b;
-    color: #b8ab8b; font-family: var(--title-font); font-size: 13px; cursor: pointer;
-  }
-  #${PANEL_ID} .cw-tab[aria-selected="true"] { color: var(--gold); border-color: var(--gold-dim); background: #1d1710; }
-  #${PANEL_ID} .cw-body { overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
-  #${PANEL_ID} .cw-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-  #${PANEL_ID} .cw-name { font-family: var(--title-font); color: var(--gold); font-size: 14px; }
-  #${PANEL_ID} .cw-value { color: #e7d8b6; font-size: 13px; font-variant-numeric: tabular-nums; }
-  #${PANEL_ID} .cw-capped { color: #7fdc4f; font-size: 12px; }
-  #${PANEL_ID} .cw-bar {
-    position: relative; height: 12px; margin: 6px 0 5px; border-radius: 3px;
-    background: #05050a; border: 1px solid #3b2e19; overflow: hidden;
-  }
-  #${PANEL_ID} .cw-fill { height: 100%; background: linear-gradient(180deg, #d9a441, #8a5f18); }
-  #${PANEL_ID} .cw-desc { color: #b8ab8b; font-size: 12px; margin: 0 0 8px; }
-  #${PANEL_ID} .cw-card {
-    border: 1px solid #3b2e19; border-radius: 6px; background: #0e0c08cc;
-    padding: 8px 9px; margin-bottom: 8px;
-  }
-  #${PANEL_ID} .cw-title { font-family: var(--title-font); font-size: 13px; }
-  #${PANEL_ID} .cw-mastery { font-size: 11px; }
-  #${PANEL_ID} .cw-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; color: #998d6a; font-size: 12px; margin-top: 3px; }
-  #${PANEL_ID} .cw-meta b { color: #e7d8b6; font-weight: 500; }
-  #${PANEL_ID} .cw-reagents { list-style: none; margin: 6px 0 0; padding: 0; }
-  #${PANEL_ID} .cw-reagent {
-    display: flex; justify-content: space-between; gap: 10px;
-    font-size: 12px; color: #d5c19a; padding: 2px 0;
-  }
-  #${PANEL_ID} .cw-reagent.short { color: #ff8f85; }
-  #${PANEL_ID} .cw-count { font-variant-numeric: tabular-nums; }
-  #${PANEL_ID} .cw-actions { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-  #${PANEL_ID} .cw-craft { min-height: 40px; min-width: 96px; }
-  #${PANEL_ID} .cw-reason { color: #ff8f85; font-size: 12px; flex: 1 1 140px; }
-  #${PANEL_ID} .cw-empty { color: #998d6a; font-size: 13px; padding: 10px 2px; }
-  #${PANEL_ID} .cw-bench { margin-top: 8px; }
-  #${PANEL_ID} .cw-bench .btn { min-height: 40px; }
-  #${PANEL_ID} .x-btn { min-width: 40px; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; }
-  #${PANEL_ID} :focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
-  /* Landscape phone: the panel is taller than the screen is, so give the list
-     back the chrome padding and let it own nearly the whole height. */
-  @media (max-height: 500px) {
-    #${PANEL_ID} { max-height: 94vh; padding: 6px 8px 8px; }
-    #${PANEL_ID} .cw-tab { padding: 6px 8px; font-size: 12px; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    #${PANEL_ID}, #${PANEL_ID} * { transition: none !important; animation: none !important; }
-  }`;
-  document.head.appendChild(style);
-}
-
-function currentView(d: CraftingWindowDeps): CraftingWindowView {
-  return buildCraftingWindowView({
-    skills: d.skills(),
-    recipes: d.recipes(),
-    inventory: d.inventory(),
-    activeProfessionId: selected ?? undefined,
+/** Format a cast duration for the row chip (localized number + s unit key). */
+function durationChipText(durationSec: number): string {
+  const whole = Number.isInteger(durationSec);
+  return t('hudChrome.crafting.durationChip', {
+    seconds: formatNumber(durationSec, {
+      maximumFractionDigits: whole ? 0 : DURATION_FRACTION_DIGITS,
+    }),
   });
 }
 
-function reagentHtml(row: CraftRecipeRow, d: CraftingWindowDeps): string {
-  return row.reagents
-    .map((reagent) => {
-      const label = t('hudChrome.crafting.reagentCount', {
-        held: num(reagent.held),
-        required: num(reagent.required),
-      });
-      const aria = reagent.met
-        ? t('hudChrome.crafting.reagentAriaMet', {
-            item: d.itemName(reagent.itemId),
-            held: num(reagent.held),
-            required: num(reagent.required),
-          })
-        : t('hudChrome.crafting.reagentAriaShort', {
-            item: d.itemName(reagent.itemId),
-            held: num(reagent.held),
-            required: num(reagent.required),
-            short: num(reagent.short),
-          });
-      return (
-        `<li class="cw-reagent${reagent.met ? '' : ' short'}" aria-label="${esc(aria)}">` +
-        `<span>${esc(d.itemName(reagent.itemId))}</span>` +
-        `<span class="cw-count">${esc(label)}</span></li>`
-      );
-    })
-    .join('');
-}
+/** Paint the crafting panel from a prepared view. `learnHints` maps a
+ *  craft id to the station + master where the viewer can learn recipes they have
+ *  not learned; the selected craft renders its "learnable at a master" hint iff
+ *  its craft is present. `session` is the live craft-cast state (idle when
+ *  no craft cast is running). */
+export function renderCraftingWindow(
+  el: HTMLElement,
+  view: CraftingView,
+  deps: CraftingWindowDeps,
+  identity?: ProfessionIdentityModel,
+  learnHints: ReadonlyMap<string, CraftLearnHint> = new Map(),
+  session: CraftCastSessionView = IDLE_CRAFT_CAST_SESSION,
+  // The recipe whose cast JUST ended, for the focus degrade ladder: a repaint
+  // on the cast-end edge hides the strip the player may be standing on, and
+  // this names the row button focus should land back on.
+  focusReturnRecipeId = '',
+): void {
+  deps.hideTooltip();
+  // A standalone trapping window (the train/professions shape), not the
+  // vendor's docked bags pairing: announce it as a labeled dialog for the
+  // focus contract (src/ui/CLAUDE.md).
+  markDialogRoot(el, { label: t('hudChrome.crafting.title') });
+  const focusKey = captureFocusKey(el);
+  const scrollTop = el.querySelector('.crafting-body')?.scrollTop ?? 0;
+  // The tab strip is its own horizontal scroller on mobile (hud.mobile.css
+  // `.crafting-tabs { overflow-x: auto }`) and is rebuilt with everything
+  // else, so carry its offset across too: a repaint the player did not ask
+  // for must not scroll the craft they are reading off the screen.
+  const tabScrollLeft = el.querySelector('.crafting-tabs')?.scrollLeft ?? 0;
+  // The identity card's capped skill list (264px, components.css) is the
+  // window's third scroll region and rebuilds with the rest, so carry its
+  // offset AND its focus across: a single craft repaints this window three
+  // times (optimistic, craftResult, the slow-band skill signature), and
+  // without the carry each one yanks a scrolled reader back to row one and
+  // drops keyboard focus to body. On mobile the CARD is the one scroller
+  // (hud.mobile.css lifts the list cap), so its offset carries too.
+  const oldSkillList = el.querySelector('.profession-skill-list');
+  const skillListScrollTop = oldSkillList?.scrollTop ?? 0;
+  const skillListHadFocus = oldSkillList !== null && document.activeElement === oldSkillList;
+  const cardScrollTop = el.querySelector('.profession-identity-card')?.scrollTop ?? 0;
+  el.innerHTML = `<div class="panel-title"><span>${esc(t('hudChrome.crafting.title'))}</span><button type="button" class="crafting-orders-btn" data-open-orders data-skip-open-focus data-focus-key="orders" aria-label="${esc(t('hudChrome.commissionBoard.openButtonAria'))}">${esc(t('hudChrome.commissionBoard.openButton'))}</button><button type="button" class="x-btn" data-close data-focus-key="close" aria-label="${esc(t('hudChrome.crafting.close'))}">${svgIcon('close')}</button></div>`;
+  el.querySelector('[data-open-orders]')?.addEventListener('click', () => deps.onOpenOrders());
 
-function recipeHtml(row: CraftRecipeRow, d: CraftingWindowDeps): string {
-  const name = d.itemName(row.resultItemId);
-  const color = d.itemColor?.(row.resultItemId) ?? '#e7d8b6';
-  const title = row.resultCount > 1
-    ? t('hudChrome.crafting.recipeTitleBatch', { item: name, count: num(row.resultCount) })
-    : name;
-  const reasonId = `${PANEL_ID}-reason-${row.recipeId}`;
-  const reason = row.craftable
-    ? ''
-    : `<span class="cw-reason" id="${esc(reasonId)}">${esc(
-        t('hudChrome.crafting.deny.needMore', {
-          item: d.itemName(row.shortItemIds[0] ?? ''),
+  if (identity) renderProfessionIdentityCard(el, identity);
+
+  if (view.recipes.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'vendor-empty';
+    empty.textContent = t('hudChrome.crafting.empty');
+    el.appendChild(empty);
+  }
+
+  // Group rows by profession (#1701): a flat list of 13+ recipes is unscannable.
+  // recipes.ts is NOT strictly contiguous per craft (COMBO_RECIPES revisit a
+  // craft that already appeared earlier in the array, interleaving with other
+  // crafts in between), so this groups by professionId rather than by
+  // run-length. The groups drive the tab strip (craftingTabs preserves the
+  // same order-of-first-appearance the old stacked sections used); only the
+  // SELECTED craft's rows paint below the strip.
+  const sections = new Map<string, (typeof view.recipes)[number][]>();
+  for (const row of view.recipes) {
+    const rows = sections.get(row.professionId);
+    if (rows) rows.push(row);
+    else sections.set(row.professionId, [row]);
+  }
+
+  const tabs = craftingTabs(view);
+  const selected = resolveSelectedCraft(tabs, deps.selectedCraft());
+  if (tabs.length > 0) {
+    const strip = document.createElement('div');
+    strip.className = 'crafting-tabs';
+    for (const tab of tabs) {
+      const name = craftNameText(tab.professionId);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `crafting-tab${tab.professionId === selected ? ' sel' : ''}`;
+      btn.setAttribute('aria-pressed', tab.professionId === selected ? 'true' : 'false');
+      btn.dataset.craft = tab.professionId;
+      const art = professionImageUrl(`prof_${tab.professionId}`);
+      btn.innerHTML = `${art ? `<img class="crafting-tab-icon" src="${esc(art)}" alt="" draggable="false">` : ''}<span class="crafting-tab-label">${esc(name)}</span><span class="crafting-tab-count">${formatNumber(tab.recipeCount, { maximumFractionDigits: 0 })}</span>`;
+      btn.addEventListener('click', () => {
+        if (tab.professionId !== selected) deps.onSelectCraft(tab.professionId);
+      });
+      strip.appendChild(btn);
+    }
+    el.appendChild(strip);
+    strip.scrollLeft = tabScrollLeft;
+  }
+
+  // In-window cast strip: a header band ABOVE the scrollable body (a strip
+  // inside the scroller could scroll the live cast out of view), the SINGLE
+  // craft-cast progress surface while this window is open. Structure follows
+  // the DESIGN.md 10.5 progress-bar grammar: dark inset track, gold hardcast
+  // fill, parchment label centered in the bar, tabular timer right, batch
+  // chip beside the track. display:none at rest; the HUD's CastBarPainter
+  // instance owns show/hide + fill/label/timer/aria-valuenow per frame, and
+  // this full paint owns only the COLD batch label. tabindex -1 so the focus
+  // ladder can park keyboard focus here while every row control is disabled
+  // mid-cast (programmatic focus only, never in the Tab cycle).
+  const progress = document.createElement('div');
+  progress.className = 'crafting-cast-progress';
+  progress.setAttribute('role', 'progressbar');
+  progress.setAttribute('aria-label', t('hudChrome.crafting.progressAria'));
+  progress.setAttribute('aria-valuemin', '0');
+  progress.setAttribute('aria-valuemax', '100');
+  progress.tabIndex = -1;
+  progress.dataset.focusKey = 'cast-strip';
+  progress.innerHTML =
+    `<div class="crafting-cast-progress-track"><div class="crafting-cast-progress-fill"></div><span class="crafting-cast-progress-label"></span><span class="crafting-cast-progress-timer"></span></div>` +
+    `<span class="crafting-cast-progress-batch"></span>`;
+  // Rendered SYNCHRONOUSLY when a cast is live: the focus ladder below may
+  // pick the strip, and focus() on a display:none element is a no-op in a
+  // real browser (focus would fall to body and the Tab trap would let go).
+  // The HUD's CastBarPainter writes the same 'flex' a moment later through
+  // the elided writers; this inline write is the build-time precondition.
+  if (session.active) progress.style.display = 'flex';
+  el.appendChild(progress);
+  const batchEl = progress.querySelector<HTMLElement>('.crafting-cast-progress-batch');
+  if (batchEl) {
+    if (craftBatchIndicatorVisible(session)) {
+      batchEl.hidden = false;
+      batchEl.textContent = t('hudChrome.crafting.batchRemaining', {
+        remaining: formatNumber(session.batchRemaining, { maximumFractionDigits: 0 }),
+        total: formatNumber(session.batchTotal, { maximumFractionDigits: 0 }),
+      });
+      batchEl.setAttribute(
+        'aria-label',
+        t('hudChrome.crafting.batchRemainingAria', {
+          remaining: formatNumber(session.batchRemaining, { maximumFractionDigits: 0 }),
+          total: formatNumber(session.batchTotal, { maximumFractionDigits: 0 }),
         }),
-      )}</span>`;
-  // The mastery state is SPELLED OUT next to its colour: colour alone fails both
-  // the contrast-independent requirement and touch (no hover title).
-  const mastery =
-    `<span class="cw-mastery" style="color:${esc(row.masteryColor)}">` +
-    `${esc(masteryLabel(row.mastery))}</span>`;
-  return (
-    `<article class="cw-card" data-recipe="${esc(row.recipeId)}">` +
-    `<div class="cw-head"><span class="cw-title" style="color:${esc(color)}">${esc(title)}</span>${mastery}</div>` +
-    `<div class="cw-meta">` +
-    `<span>${esc(t('hudChrome.crafting.itemLevel', { level: num(row.level) }))}</span>` +
-    `<span>${esc(t('hudChrome.crafting.masterworkChance', { chance: percentText(row.masterworkChance) }))}</span>` +
-    (row.teaches
-      ? `<span>${esc(t('hudChrome.crafting.teaches'))}</span>`
-      : `<span>${esc(t('hudChrome.crafting.teachesNothing'))}</span>`) +
-    `</div>` +
-    `<ul class="cw-reagents" aria-label="${esc(t('hudChrome.crafting.reagentsHeading'))}">${reagentHtml(row, d)}</ul>` +
-    `<div class="cw-actions">` +
-    `<button type="button" class="btn cw-craft" data-craft="${esc(row.recipeId)}"` +
-    (row.craftable ? '' : ` disabled aria-describedby="${esc(reasonId)}"`) +
-    ` aria-label="${esc(t('hudChrome.crafting.craftAria', { item: name }))}">${esc(t('hudChrome.crafting.craft'))}</button>` +
-    reason +
-    `</div>` +
-    `</article>`
-  );
-}
-
-function professionHtml(row: CraftProfessionRow, d: CraftingWindowDeps): string {
-  const name = craftProfessionName(row.professionId);
-  const valueText = t('hudChrome.crafting.skillValue', {
-    skill: num(row.skill),
-    max: num(row.maxSkill),
-  });
-  const barLabel = row.capped
-    ? t('hudChrome.crafting.cappedAria', { profession: name, max: num(row.maxSkill) })
-    : t('hudChrome.crafting.skillAria', {
-        profession: name,
-        skill: num(row.skill),
-        max: num(row.maxSkill),
-      });
-  const next =
-    row.pointsToNextTier === null
-      ? ''
-      : `<span>${esc(t('hudChrome.crafting.toNextTier', { points: num(row.pointsToNextTier) }))}</span>`;
-  const list = row.recipes.length
-    ? row.recipes.map((recipe) => recipeHtml(recipe, d)).join('')
-    : `<p class="cw-empty">${esc(t('hudChrome.crafting.noRecipes'))}</p>` +
-      (row.professionId === 'enchanting'
-        ? `<div class="cw-bench"><button type="button" class="btn" data-open-enchanting>${esc(t('hudChrome.crafting.openEnchanting'))}</button></div>`
-        : '');
-  return (
-    `<div class="cw-head"><span class="cw-name">${esc(name)}</span>` +
-    `<span class="cw-value">${esc(valueText)}${row.capped ? ` <span class="cw-capped">${esc(t('hudChrome.crafting.capped'))}</span>` : ''}</span></div>` +
-    `<div class="cw-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${row.maxSkill}" aria-valuenow="${row.skill}" aria-valuetext="${esc(barLabel)}" aria-label="${esc(name)}">` +
-    `<div class="cw-fill" style="width:${row.percent}%"></div></div>` +
-    `<div class="cw-meta">` +
-    `<span>${esc(t('hudChrome.crafting.craftableNow', { count: num(row.craftableCount) }))}</span>` +
-    next +
-    `</div>` +
-    `<p class="cw-desc">${esc(craftProfessionDescription(row.professionId))}</p>` +
-    list
-  );
-}
-
-function tabsHtml(view: CraftingWindowView): string {
-  return view.professions
-    .map((row) => {
-      const on = row.professionId === view.active;
-      const label = craftProfessionName(row.professionId);
-      const aria = t('hudChrome.crafting.tabAria', {
-        profession: label,
-        skill: num(row.skill),
-        max: num(row.maxSkill),
-      });
-      return (
-        `<button type="button" class="cw-tab" role="tab" data-craft-tab="${esc(row.professionId)}"` +
-        ` id="${PANEL_ID}-tab-${esc(row.professionId)}" aria-controls="${TABPANEL_ID}"` +
-        ` aria-selected="${on ? 'true' : 'false'}" tabindex="${on ? '0' : '-1'}"` +
-        ` aria-label="${esc(aria)}">${esc(label)}</button>`
       );
-    })
-    .join('');
-}
-
-function paint(el: HTMLElement, view: CraftingWindowView, d: CraftingWindowDeps): void {
-  const active = view.professions.find((row) => row.professionId === view.active);
-  el.innerHTML =
-    `<div class="panel-title"><span id="${PANEL_ID}-title">${esc(t('hudChrome.crafting.panelTitle'))}</span>` +
-    `<button type="button" class="x-btn" data-close aria-label="${esc(t('hudChrome.crafting.close'))}">${svgIcon('close')}</button></div>` +
-    `<p class="cw-intro">${esc(t('hudChrome.crafting.subheading'))}</p>` +
-    `<p class="cw-intro">${esc(t('hudChrome.crafting.totals', { skill: num(view.totalSkill), max: num(view.totalMaxSkill), craftable: num(view.totalCraftable) }))}</p>` +
-    `<div class="cw-tabs" role="tablist" aria-label="${esc(t('hudChrome.crafting.tablistLabel'))}">${tabsHtml(view)}</div>` +
-    `<div class="cw-body" id="${TABPANEL_ID}" role="tabpanel" tabindex="0" aria-labelledby="${PANEL_ID}-tab-${esc(view.active)}">` +
-    (active ? professionHtml(active, d) : `<p class="cw-empty">${esc(t('hudChrome.crafting.empty'))}</p>`) +
-    `</div>`;
-
-  el.querySelector('[data-close]')?.addEventListener('click', () => closeCraftingWindow());
-  el.querySelector('[data-open-enchanting]')?.addEventListener('click', () => {
-    d.onOpenEnchanting?.();
-  });
-
-  const tabs = [...el.querySelectorAll<HTMLButtonElement>('.cw-tab')];
-  tabs.forEach((tab, index) => {
-    tab.addEventListener('click', () =>
-      selectProfession(tab.dataset.craftTab as CraftingProfessionId),
-    );
-    tab.addEventListener('keydown', (ev) => {
-      const next = rovingTarget(ev.key, index, tabs.length, 'horizontal');
-      if (next === null) return;
-      ev.preventDefault();
-      const target = tabs[next];
-      target.focus();
-      selectProfession(target.dataset.craftTab as CraftingProfessionId);
-    });
-  });
-
-  for (const button of el.querySelectorAll<HTMLButtonElement>('[data-craft]')) {
-    button.addEventListener('click', () => {
-      const recipeId = button.dataset.craft;
-      if (!recipeId || button.disabled) return;
-      d.onCraft(recipeId);
-      // The bag changed, so every reagent row and every button state did too.
-      renderCraftingWindow();
-    });
-  }
-
-  if (d.attachTooltip && d.itemTooltipHtml) {
-    const paintTooltip = d.itemTooltipHtml;
-    for (const card of el.querySelectorAll<HTMLElement>('.cw-card')) {
-      const recipeId = card.dataset.recipe;
-      const row = active?.recipes.find((r) => r.recipeId === recipeId);
-      if (!row) continue;
-      d.attachTooltip(card, () => paintTooltip(row.resultItemId));
+    } else {
+      batchEl.hidden = true;
     }
   }
-}
 
-function selectProfession(professionId: CraftingProfessionId | undefined): void {
-  if (!professionId || professionId === selected) return;
-  selected = professionId;
-  renderCraftingWindow();
-}
+  const body = document.createElement('div');
+  body.className = 'crafting-body';
+  el.appendChild(body);
 
-/**
- * True only when the panel is BOTH marked open and actually visible. Hud's
- * `closeAll` (Escape) closes the topmost `.window.panel` by writing an inline
- * `display: none`, which our own flag would otherwise never see, leaving the
- * toggle one press out of phase.
- */
-function panelVisible(el: HTMLElement | null): el is HTMLElement {
-  return !!el && el.dataset.open === '1' && el.style.display !== 'none';
-}
-
-/** First-open centring, in the pixel units Hud's drag layer also writes.
- *  Skipped once the player has dragged the panel somewhere they prefer. */
-function centerPanel(el: HTMLElement): void {
-  if (el.dataset.windowMoved === '1') return;
-  const rect = el.getBoundingClientRect();
-  el.style.left = `${Math.max(8, Math.round((window.innerWidth - rect.width) / 2))}px`;
-  el.style.top = `${Math.max(8, Math.round((window.innerHeight - rect.height) / 2))}px`;
-}
-
-function ensurePanel(): HTMLElement {
-  const existing = document.getElementById(PANEL_ID);
-  if (existing) return existing;
-  ensureStyles();
-  const el = document.createElement('div');
-  el.id = PANEL_ID;
-  el.className = 'panel window';
-  el.setAttribute('role', 'dialog');
-  // Explicitly NON-modal: the game keeps running behind an open panel and Tab is
-  // meant to leave it, so declaring aria-modal="false" is honest where a bare
-  // role="dialog" would imply a focus trap that does not exist.
-  el.setAttribute('aria-modal', 'false');
-  el.setAttribute('aria-labelledby', `${PANEL_ID}-title`);
-  el.tabIndex = -1;
-  el.addEventListener('keydown', (ev) => {
-    if (ev.key === 'Escape') {
-      ev.stopPropagation();
-      closeCraftingWindow();
+  const rows = selected !== null ? (sections.get(selected) ?? []) : [];
+  if (selected !== null) {
+    const sectionName = craftNameText(selected);
+    const sectionImageUrl = professionImageUrl(`prof_${selected}`);
+    const section = document.createElement('div');
+    section.className = 'vendor-section-title crafting-section-title';
+    section.setAttribute('role', 'heading');
+    section.setAttribute('aria-level', '3');
+    if (sectionImageUrl) {
+      const icon = document.createElement('img');
+      icon.className = 'crafting-section-icon';
+      icon.src = sectionImageUrl;
+      icon.alt = '';
+      icon.draggable = false;
+      section.appendChild(icon);
     }
-  });
-  (document.getElementById('ui') ?? document.body).appendChild(el);
-  return el;
+    const sectionLabel = document.createElement('span');
+    sectionLabel.textContent = sectionName;
+    section.appendChild(sectionLabel);
+    body.appendChild(section);
+
+    // The "learnable at a master" hint: shown once under the craft header
+    // when the viewer has unlearned trainer recipes for this craft, naming the
+    // resident master (entity i18n) and their station. Informational text (no
+    // tap target), identical on every graphics preset (never tier-gated).
+    const learnHint = learnHints.get(selected);
+    if (learnHint) {
+      const hint = document.createElement('div');
+      hint.className = 'crafting-learn-hint';
+      hint.textContent = t('hudChrome.crafting.learnMoreAtStation', {
+        master: tEntity({ kind: 'npc', id: learnHint.masterNpcId, field: 'name' }),
+        station: stationNameText(learnHint.stationType),
+        craft: craftNameText(selected),
+      });
+      body.appendChild(hint);
+    }
+
+    for (const row of rows) {
+      const item = document.createElement('div');
+      item.className = 'vendor-item crafting-recipe-item';
+      const resultName = row.result ? itemDisplayName(row.result) : row.resultItemId;
+      // The fine-substitution suffix (the UX pass): stated in words on both
+      // the visible line and the aria fold, never color alone.
+      const fineSubText = (count: number): string =>
+        count > 0
+          ? ` ${t('hudChrome.crafting.reagentFineSub', {
+              count: formatNumber(count, { maximumFractionDigits: 0 }),
+            })}`
+          : '';
+      const reagentLines = row.reagents
+        .map(
+          (r) =>
+            t('hudChrome.crafting.reagentLine', {
+              name: r.item ? itemDisplayName(r.item) : r.itemId,
+              have: formatNumber(r.have, { maximumFractionDigits: 0 }),
+              required: formatNumber(r.required, { maximumFractionDigits: 0 }),
+            }) + fineSubText(r.fineSubstituted),
+        )
+        .join(', ');
+      // The inline reagent list marks each unsatisfied reagent (a class the
+      // CSS tints): redundant with the have/required counts the text already
+      // carries, so the color is a hint, never the only signal (fairness).
+      const reagentHtml = row.reagents
+        .map(
+          (r) =>
+            `<span class="crafting-reagent${r.satisfied ? '' : ' unsat'}">${esc(
+              t('hudChrome.crafting.reagentLine', {
+                name: r.item ? itemDisplayName(r.item) : r.itemId,
+                have: formatNumber(r.have, { maximumFractionDigits: 0 }),
+                required: formatNumber(r.required, { maximumFractionDigits: 0 }),
+              }),
+            )}${
+              r.fineSubstituted > 0
+                ? `<span class="crafting-fine-sub">${esc(fineSubText(r.fineSubstituted))}</span>`
+                : ''
+            }</span>`,
+        )
+        .join(', ');
+      const comboLine = row.comboRequirement
+        ? t('hudChrome.crafting.comboRequires', {
+            craftA: craftNameText(row.comboRequirement.craftA),
+            craftB: craftNameText(row.comboRequirement.craftB),
+            tier: formatNumber(row.comboRequirement.minTier, { maximumFractionDigits: 0 }),
+          })
+        : '';
+      // tier_unmet names ONLY the under-tier craft(s) (the acceptance
+      // criterion: the player can tell WHICH craft to raise from the row
+      // alone); the localized names join like the reagent list above. The
+      // param-less comboTierUnmet stays the defensive fallback for an
+      // eligibility result that names no craft.
+      const comboStatus = row.comboRequirement
+        ? row.comboRequirement.reason === 'tier_unmet' &&
+          row.comboRequirement.unmetCrafts.length > 0
+          ? t('hudChrome.crafting.comboTierUnmetNamed', {
+              crafts: row.comboRequirement.unmetCrafts.map((c) => craftNameText(c)).join(', '),
+              tier: formatNumber(row.comboRequirement.minTier, { maximumFractionDigits: 0 }),
+            })
+          : t(
+              row.comboRequirement.reason === null
+                ? 'hudChrome.crafting.comboMet'
+                : row.comboRequirement.reason === 'syncing'
+                  ? 'hudChrome.crafting.comboSyncing'
+                  : row.comboRequirement.reason === 'not_attuned'
+                    ? 'hudChrome.crafting.comboNotAttuned'
+                    : row.comboRequirement.reason === 'wrong_pair'
+                      ? 'hudChrome.crafting.comboWrongPair'
+                      : 'hudChrome.crafting.comboTierUnmet',
+            )
+        : '';
+      const comboAccessible = comboLine ? `. ${comboLine} ${comboStatus}` : '';
+
+      // Legibility: the skill-req line, the skill-gain difficulty
+      // label, and the hub-station badge. All three are actionable info, so
+      // each is TEXT (tint is a redundant hint), folded into the aria name,
+      // and identical on every graphics preset/tier.
+      const skillLine = t('hudChrome.crafting.skillReqLine', {
+        craft: craftNameText(row.professionId),
+        skill: formatNumber(row.skillReq, { maximumFractionDigits: 0 }),
+      });
+      const difficultyLabel = t(DIFFICULTY_LABEL_KEY[row.difficulty]);
+      const stationLabel = row.station ? t('hudChrome.crafting.stationBadge') : '';
+      const stationOutOfRange =
+        row.station && !row.station.inRange
+          ? t('hudChrome.crafting.stationOutOfRangeNamed', {
+              station: stationNameText(row.station.type),
+            })
+          : '';
+      const stationAccessible = row.station
+        ? `. ${stationLabel}${stationOutOfRange ? `. ${stationOutOfRange}` : ''}`
+        : '';
+
+      // The result icon sits in a fixed socket whose glow derives from the
+      // item's quality color (the showcase paperdoll idiom, quality_glow.ts);
+      // the icon img keeps its own .q-* quality border class.
+      const icon = row.result ? deps.itemIcon(row.result) : '';
+      const glow = row.result?.quality ? qualityGlowShadow(QUALITY_COLOR[row.result.quality]) : '';
+      const socket = `<span class="crafting-recipe-socket"${glow ? ` style="box-shadow:${glow}"` : ''}>${icon}</span>`;
+      const btnState: CraftButtonState = craftButtonState(row, session);
+      const canCraft = craftButtonEnabled(btnState);
+      const castingActive = session.active;
+      const matsFit = maxCraftsFromReagents(row.reagents);
+      const qty = clampCraftQty(deps.craftQty(row.recipeId), matsFit);
+      const durationText = durationChipText(row.durationSec);
+      const craftBtn = document.createElement('button');
+      craftBtn.type = 'button';
+      craftBtn.className = `vendor-item crafting-recipe-btn${btnState === 'casting' ? ' casting' : ''}`;
+      craftBtn.disabled = !canCraft;
+      craftBtn.dataset.focusKey = `craft:${row.recipeId}`;
+      if (craftButtonBusy(btnState)) craftBtn.setAttribute('aria-busy', 'true');
+      else craftBtn.removeAttribute('aria-busy');
+      // Folds the reagent requirements into the accessible name (not just the hover
+      // tooltip, which keyboard, screen-reader, and mobile no-hover users never reach).
+      // Duration is actionable pace info (fairness): always in the name, never color-only.
+      craftBtn.setAttribute(
+        'aria-label',
+        `${t('hudChrome.crafting.resultAria', { name: resultName })}. ${t('hudChrome.crafting.durationAria', { seconds: formatNumber(row.durationSec, { maximumFractionDigits: DURATION_FRACTION_DIGITS }) })}. ${t('hudChrome.crafting.reagentsNeeded')} ${reagentLines}. ${skillLine}. ${difficultyLabel}${stationAccessible}${comboAccessible}`,
+      );
+      const resultCountSuffix =
+        row.resultCount > 1
+          ? ` x${formatNumber(row.resultCount, { maximumFractionDigits: 0 })}`
+          : '';
+      // The reagent line is shown inline (not only on hover/aria, #1701): a
+      // player can see at a glance which reagents and counts a recipe needs, and
+      // the :disabled opacity (components.css .vendor-item:disabled) makes an
+      // unaffordable recipe visually distinct without hovering.
+      const stationBadgeHtml = row.station
+        ? `<span class="crafting-station-badge${row.station.inRange ? '' : ' out-of-range'}">${esc(stationLabel)}</span>`
+        : '';
+      const chipLabel =
+        btnState === 'casting' ? t('hudChrome.crafting.crafting') : t('hudChrome.crafting.create');
+      craftBtn.innerHTML = `${socket}<span class="vi-name"><span class="crafting-recipe-name">${esc(resultName)}${esc(resultCountSuffix)}</span><span class="vi-sub crafting-reagent-line">${esc(t('hudChrome.crafting.reagentsNeeded'))} ${reagentHtml}</span><span class="vi-sub crafting-skill-line">${esc(skillLine)} <span class="crafting-difficulty" data-difficulty="${esc(row.difficulty)}">${esc(difficultyLabel)}</span>${stationBadgeHtml} <span class="crafting-duration-chip">${esc(durationText)}</span></span></span><span class="vi-price crafting-craft-chip">${esc(chipLabel)}</span>`;
+      craftBtn.addEventListener('click', () => {
+        if (canCraft) deps.onCraft(row.recipeId, qty);
+      });
+      deps.attachTooltip(
+        craftBtn,
+        () =>
+          `<div class="tt-profession-header">${sectionImageUrl ? `<img src="${esc(sectionImageUrl)}" alt="" draggable="false">` : ''}<span>${esc(sectionName)}</span></div>${row.result ? deps.itemTooltip(row.result) : ''}<div class="tt-sub">${esc(t('hudChrome.crafting.reagentsNeeded'))} ${esc(reagentLines)}</div><div class="tt-sub">${esc(skillLine)} ${esc(difficultyLabel)}</div><div class="tt-sub">${esc(t('hudChrome.crafting.durationAria', { seconds: formatNumber(row.durationSec, { maximumFractionDigits: DURATION_FRACTION_DIGITS }) }))}</div>${row.station ? `<div class="tt-sub">${esc(stationLabel)}${stationOutOfRange ? ` ${esc(stationOutOfRange)}` : ''}</div>` : ''}${comboLine ? `<div class="tt-sub">${esc(comboLine)} ${esc(comboStatus)}</div>` : ''}`,
+      );
+      item.appendChild(craftBtn);
+
+      // Phase 3 batch controls: qty stepper + Create All. Disabled while any
+      // craft cast is running so the player cannot change mid-batch qty.
+      const batchRow = document.createElement('div');
+      batchRow.className = 'crafting-batch-row';
+      const qtyGroup = document.createElement('div');
+      qtyGroup.className = 'crafting-qty-row';
+      qtyGroup.setAttribute('role', 'group');
+      qtyGroup.setAttribute('aria-label', t('hudChrome.crafting.qtyRowAria'));
+      const qtyCount = formatNumber(qty, { maximumFractionDigits: 0 });
+      // A bare span exposes no accessible name, so the CURRENT value rides
+      // the two buttons' labels instead ({count} param), and every change is
+      // echoed through the polite live region below: the pragmatic fold the
+      // a11y review chose over a composite spinbutton widget.
+      const decBtn = document.createElement('button');
+      decBtn.type = 'button';
+      decBtn.className = 'crafting-qty-btn';
+      decBtn.dataset.focusKey = `qty-dec:${row.recipeId}`;
+      decBtn.textContent = '-';
+      decBtn.setAttribute(
+        'aria-label',
+        t('hudChrome.crafting.qtyDecreaseAria', { count: qtyCount }),
+      );
+      decBtn.disabled = castingActive || qty <= 1;
+      decBtn.addEventListener('click', () => {
+        if (castingActive) return;
+        const next = clampCraftQty(qty - 1, matsFit);
+        deps.announce(
+          t('hudChrome.crafting.qtyValueAria', {
+            count: formatNumber(next, { maximumFractionDigits: 0 }),
+          }),
+        );
+        deps.onCraftQty(row.recipeId, next);
+      });
+      const qtyValue = document.createElement('span');
+      qtyValue.className = 'crafting-qty-value';
+      qtyValue.textContent = qtyCount;
+      qtyValue.setAttribute('aria-hidden', 'true');
+      const incBtn = document.createElement('button');
+      incBtn.type = 'button';
+      incBtn.className = 'crafting-qty-btn';
+      incBtn.dataset.focusKey = `qty-inc:${row.recipeId}`;
+      incBtn.textContent = '+';
+      incBtn.setAttribute(
+        'aria-label',
+        t('hudChrome.crafting.qtyIncreaseAria', { count: qtyCount }),
+      );
+      // Ceiling is min(50, mats-fit); when mats-fit is 0 the stepper still shows 1.
+      const maxQty = clampCraftQty(matsFit > 0 ? matsFit : 1, matsFit > 0 ? matsFit : 1);
+      incBtn.disabled = castingActive || qty >= maxQty;
+      incBtn.addEventListener('click', () => {
+        if (castingActive) return;
+        const next = clampCraftQty(qty + 1, matsFit);
+        deps.announce(
+          t('hudChrome.crafting.qtyValueAria', {
+            count: formatNumber(next, { maximumFractionDigits: 0 }),
+          }),
+        );
+        deps.onCraftQty(row.recipeId, next);
+      });
+      qtyGroup.appendChild(decBtn);
+      qtyGroup.appendChild(qtyValue);
+      qtyGroup.appendChild(incBtn);
+      batchRow.appendChild(qtyGroup);
+      const createAllBtn = document.createElement('button');
+      createAllBtn.type = 'button';
+      createAllBtn.className = 'crafting-create-all-btn';
+      createAllBtn.dataset.focusKey = `create-all:${row.recipeId}`;
+      createAllBtn.textContent = t('hudChrome.crafting.createAll');
+      createAllBtn.setAttribute('aria-label', t('hudChrome.crafting.createAllAria'));
+      createAllBtn.disabled = !canCraft || matsFit < 1;
+      createAllBtn.addEventListener('click', () => {
+        if (!canCraft || matsFit < 1) return;
+        const all = clampCraftQty(matsFit, matsFit);
+        deps.onCraftQty(row.recipeId, all);
+        deps.onCraft(row.recipeId, all);
+      });
+      batchRow.appendChild(createAllBtn);
+      item.appendChild(batchRow);
+      // Commission opt-in (the Maker's Bond): a per-recipe pill toggle-chip
+      // in the card's chip language, right-aligned in the card footer so it
+      // stacks under the gold Craft chip as one action column. Rendered ONLY
+      // for the ruled-in equipment output kinds (crafting_view.ts
+      // commissionEligible, the sim's own predicate). An aria-pressed toggle
+      // button: the accessible name stays the commission label and the state
+      // rides the toggle semantics. Armed state lives with the HUD
+      // (deps.commissionChecked) so a staleness repaint never unticks it;
+      // the click handler mirrors the flip locally instead of repainting.
+      if (row.commissionEligible) {
+        const commissionRow = document.createElement('div');
+        commissionRow.className = 'crafting-commission-row';
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'crafting-commission-chip';
+        chip.setAttribute('aria-pressed', deps.commissionChecked(row.recipeId) ? 'true' : 'false');
+        chip.innerHTML = `<span class="crafting-commission-pip" aria-hidden="true"></span>${esc(t('hudChrome.crafting.commissionToggle'))}`;
+        chip.addEventListener('click', () => {
+          const next = chip.getAttribute('aria-pressed') !== 'true';
+          deps.onToggleCommission(row.recipeId, next);
+          chip.setAttribute('aria-pressed', next ? 'true' : 'false');
+        });
+        deps.attachTooltip(
+          chip,
+          () => `<div class="tt-sub">${esc(t('hudChrome.crafting.commissionToggleHint'))}</div>`,
+        );
+        commissionRow.appendChild(chip);
+        item.appendChild(commissionRow);
+      }
+      if (comboLine) {
+        // Keep the reason outside the disabled button's whole-element opacity so
+        // unattuned/wrong-pair/tier guidance retains readable contrast.
+        const comboNote = document.createElement('div');
+        comboNote.className = 'crafting-combo-requirement';
+        comboNote.setAttribute('aria-hidden', 'true');
+        comboNote.textContent = `${comboLine} ${comboStatus}`;
+        item.appendChild(comboNote);
+      }
+      if (stationOutOfRange) {
+        // Same pattern as the combo note above: a station-disabled Craft button
+        // must never read as a bare disabled button, so the reason sits
+        // adjacent, outside the button's :disabled opacity. aria-hidden because
+        // the button's aria-label already carries the same sentence.
+        const stationNote = document.createElement('div');
+        stationNote.className = 'crafting-combo-requirement crafting-station-requirement';
+        stationNote.setAttribute('aria-hidden', 'true');
+        stationNote.textContent = stationOutOfRange;
+        item.appendChild(stationNote);
+      }
+      body.appendChild(item);
+    }
+  }
+
+  el.querySelector('[data-close]')?.addEventListener('click', () => deps.onClose());
+  el.style.display = 'flex';
+  body.scrollTop = scrollTop;
+  // After display:flex like body.scrollTop above: a display:none subtree has
+  // no scroll extent, so an earlier write would clamp to 0.
+  const newSkillList = el.querySelector<HTMLElement>('.profession-skill-list');
+  if (newSkillList) {
+    newSkillList.scrollTop = skillListScrollTop;
+    if (skillListHadFocus) newSkillList.focus();
+  }
+  const newCard = el.querySelector<HTMLElement>('.profession-identity-card');
+  if (newCard) newCard.scrollTop = cardScrollTop;
+  // Focus across rebuild, with the per-window degrade ladder (#2528 shape):
+  // 1. the same control (skipped by restoreFirstEnabled when the rebuild
+  //    disabled it, which is every row control while a cast runs);
+  // 2. the ACTIVE cast strip (tabindex -1), so Enter on Create never lands
+  //    on Close and closes the window with the next keypress;
+  // 3. the row button of the cast that just ended (focusReturnRecipeId),
+  //    handing focus back where the player started;
+  // 4. the orders button, then Close, the calm last resorts.
+  if (focusKey !== null) {
+    const keyed = [...el.querySelectorAll<HTMLElement>('[data-focus-key]')];
+    const exact = keyed.find((node) => node.dataset.focusKey === focusKey) ?? null;
+    const stripCandidate = session.active ? progress : null;
+    const returnRow = focusReturnRecipeId
+      ? (keyed.find((node) => node.dataset.focusKey === `craft:${focusReturnRecipeId}`) ?? null)
+      : null;
+    restoreFirstEnabled([
+      exact === progress && !session.active ? null : exact,
+      stripCandidate,
+      returnRow,
+      el.querySelector<HTMLElement>('[data-open-orders]'),
+      el.querySelector<HTMLElement>('[data-close]'),
+    ]);
+  }
+  // Announce craft start only on the idle-to-active edge (re-announcing on
+  // every full paint would spam "Crafting {name}" on bag/reagent-driven
+  // rebuilds mid-cast). Complete and cancel lines come from the HUD event
+  // arms. When no display name resolves, say nothing: a raw internal id read
+  // aloud is worse than silence.
+  const prevSig = el.dataset.craftLiveStartSig ?? '';
+  const nextSig = session.active ? `start:${session.recipeId}` : '';
+  if (session.active && nextSig !== prevSig) {
+    const activeRow = view.recipes.find((r) => r.recipeId === session.recipeId);
+    const name = activeRow?.result ? itemDisplayName(activeRow.result) : '';
+    if (name) deps.announce(t('hudChrome.crafting.announceStart', { name }));
+  }
+  el.dataset.craftLiveStartSig = nextSig;
 }
 
-/**
- * Repaint from live world state. Safe to call while the panel is open.
- *
- * A repaint replaces the whole subtree, so the focused tab (if any) is restored
- * by id afterwards: without it, a craft would silently drop a keyboard user's
- * focus to the document body.
- */
-export function renderCraftingWindow(): void {
-  if (!deps) return;
-  const el = document.getElementById(PANEL_ID);
-  if (!panelVisible(el)) return;
-  const active = document.activeElement;
-  const focusedTab = active instanceof HTMLElement ? active.dataset.craftTab : undefined;
-  paint(el, currentView(deps), deps);
-  if (focusedTab) document.getElementById(`${PANEL_ID}-tab-${focusedTab}`)?.focus();
-}
-
-export function isCraftingWindowOpen(): boolean {
-  return panelVisible(document.getElementById(PANEL_ID));
-}
-
-/** Open (or repaint) the Crafting window. */
-export function openCraftingWindow(next: CraftingWindowDeps): void {
-  deps = next;
-  const el = ensurePanel();
-  const active = document.activeElement;
-  if (!panelVisible(el) && active instanceof HTMLElement && active !== el) opener = active;
-  // Clear any inline `display: none` Hud's closeAll wrote, so the stylesheet's
-  // own `[data-open="1"]` rule takes over again.
-  el.style.removeProperty('display');
-  el.dataset.open = '1';
-  // Always open on the first craft: the selection is session view state, and a
-  // stale tab carried across a character switch is confusing, not helpful.
-  selected = null;
-  paint(el, currentView(deps), deps);
-  centerPanel(el);
-  el.focus();
-}
-
-export function closeCraftingWindow(): void {
-  const el = document.getElementById(PANEL_ID);
-  if (!panelVisible(el)) return;
-  delete el.dataset.open;
-  el.style.removeProperty('display');
-  el.innerHTML = '';
-  const back = opener;
-  opener = null;
-  if (back?.isConnected) back.focus();
-  deps?.onClose?.();
-}
-
-/** The one call a keybind or a micro-button needs. */
-export function toggleCraftingWindow(next: CraftingWindowDeps): void {
-  if (isCraftingWindowOpen()) closeCraftingWindow();
-  else openCraftingWindow(next);
+/** The cast strip's element set for the HUD's per-frame CastBarPainter
+ *  instance (bar / fill / label / timer, the CastBarElements shape), re-read
+ *  after every full paint because the rebuild replaces the nodes. Null when
+ *  the window has never painted. The painter owns show/hide (display flex /
+ *  none), fill width, the label (the recipe's display name), the timer, and
+ *  aria-valuenow, all through the PainterHost elided writers; the batch chip
+ *  is painted cold by renderCraftingWindow. */
+export function craftCastStripElements(
+  el: HTMLElement,
+): { bar: HTMLElement; fill: HTMLElement; label: HTMLElement; timer: HTMLElement } | null {
+  const bar = el.querySelector<HTMLElement>('.crafting-cast-progress');
+  const fill = el.querySelector<HTMLElement>('.crafting-cast-progress-fill');
+  const label = el.querySelector<HTMLElement>('.crafting-cast-progress-label');
+  const timer = el.querySelector<HTMLElement>('.crafting-cast-progress-timer');
+  if (!bar || !fill || !label || !timer) return null;
+  return { bar, fill, label, timer };
 }

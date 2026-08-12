@@ -1,25 +1,43 @@
 import * as fs from 'node:fs';
+import { tmpdir } from 'node:os';
 import * as path from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { resolveReportTarget } from '../server/report_target';
 import { DICT as adminDICT, classLabel, setAdminLanguage } from '../src/admin/i18n';
-import { ABILITIES } from '../src/sim/data';
+import { DELVE_MOBS } from '../src/sim/content/delves/mobs';
+import { ABILITIES, ITEMS } from '../src/sim/data';
+import { Sim } from '../src/sim/sim';
+import type { SimEvent } from '../src/sim/types';
+import { auraDisplayNameForHud } from '../src/ui/aura_display_name';
+import { itemDisplayName } from '../src/ui/entity_i18n';
+import { Hud } from '../src/ui/hud';
 import {
+  cs_CZ,
+  da_DK,
   de_DE,
   en,
   en_CA,
   ensureLocaleLoaded,
   es,
   es_ES,
+  formatMoney as formatLocalizedMoney,
+  formatNumber,
   fr_CA,
   fr_FR,
+  id_ID,
   it_IT,
   ja_JP,
   ko_KR,
+  nl_NL,
+  pl_PL,
   pt_BR,
   ru_RU,
   setLanguage,
   supportedLanguages,
+  sv_SE,
+  t,
+  tr_TR,
+  vi_VN,
   zh_CN,
   zh_TW,
 } from '../src/ui/i18n';
@@ -30,6 +48,7 @@ import {
   renderTalentManifestEntry,
   talentTranslationManifest,
 } from '../src/ui/talent_i18n';
+import { tsFilesUnder } from './helpers/ts_files_under';
 
 // Lazy locale flip: the non-en game locales are no longer statically resident. Every
 // describe below setLanguage(non-en)s and reads synchronously through t() / localizeSimText /
@@ -55,6 +74,14 @@ const locales: Record<string, any> = {
   ja_JP,
   pt_BR,
   ru_RU,
+  cs_CZ,
+  nl_NL,
+  pl_PL,
+  id_ID,
+  tr_TR,
+  sv_SE,
+  vi_VN,
+  da_DK,
 };
 const ph = (s: string) =>
   [...String(s).matchAll(/\{([A-Za-z0-9_]+)\}/g)]
@@ -462,7 +489,7 @@ describe('S1: sim event-text pipeline is localized in every locale', () => {
     'Talents updated.',
     'Talents reset.',
     'You cannot equip that.',
-    'Equipped Worn Shortsword.',
+    'Equipped Pitted Shortsword.',
     'You quaff Minor Healing Potion.',
     'No fish are biting.',
     'You sit down to eat.',
@@ -486,12 +513,13 @@ describe('S1: sim event-text pipeline is localized in every locale', () => {
     'You have prestiged! Prestige Rank 2.',
     'You dismiss Forest Wolf.',
     'Forest Wolf is now your loyal companion.',
+    'Rex could not be restored and has been lost.',
     'Forest Wolf dies.',
     'Forest Wolf becomes enraged!',
     'Forest Wolf calls for aid!',
     'Discarded Linen Scrap.',
     'Discarded Linen Scrap x3.',
-    'Aki wins Worn Shortsword (87)',
+    'Aki wins Pitted Shortsword (87)',
     'Aki leaves the party.',
     'Aki has left the party.',
     'Aki has been removed from the party.',
@@ -515,7 +543,7 @@ describe('S1: sim event-text pipeline is localized in every locale', () => {
 
   it('localizes embedded item and mob names inside sim text', () => {
     setLanguage('de_DE');
-    expect(localizeSimText('Equipped Worn Shortsword.')).not.toContain('Worn Shortsword');
+    expect(localizeSimText('Equipped Pitted Shortsword.')).not.toContain('Pitted Shortsword');
     expect(localizeSimText('Forest Wolf dies.')).not.toContain('Forest Wolf');
     setLanguage('en');
   });
@@ -525,6 +553,83 @@ describe('S1: sim event-text pipeline is localized in every locale', () => {
     expect(localizeSimAuraName('Tamed')).not.toBeNull();
     expect(localizeSimAuraName('Tamed')).not.toBe('Tamed');
     expect(localizeSimAuraName('not-an-aura')).toBeNull();
+    setLanguage('en');
+  });
+
+  it('resolves every player-visible Warlock resource, ability, and row aura name', () => {
+    setLanguage('zh_CN');
+    for (const name of [
+      'Condemnation',
+      'Soul Fragments',
+      'Umbral Anchor',
+      'Fate Threads',
+      'Possess the Evil Eye',
+      'Hour of Judgment',
+      'Coven',
+      'Sacrilegious March',
+      'Sanguine Covenant',
+      'Leaden Hex',
+      'Shadow Credit',
+      'Hexstorm',
+      'Forbidden Reflection',
+    ]) {
+      expect(localizeSimAuraName(name), `no Warlock aura matcher row for '${name}'`).not.toBeNull();
+    }
+    expect(localizeSimAuraName('Shadow Credit')).not.toBe('Shadow Credit');
+    expect(auraDisplayNameForHud('Fate Threads', '命运之针')).toBe('命运丝线');
+    setLanguage('en');
+  });
+
+  it('every delve mob aura-emitting proc name resolves through the aura matcher', () => {
+    // These five template fields all push a named, player-visible aura (a channel
+    // line, a player debuff, or a target-frame buff). A name with no matcher row
+    // renders raw English in every non-English locale: the exact Litany Pulse /
+    // Web Snare / Silt Hide / Frenzy drift class, which occurred four ways in one
+    // delve. Scan the content records so a rename on either side reddens this.
+    setLanguage('zh_CN');
+    const names: string[] = [];
+    for (const tmpl of Object.values(DELVE_MOBS)) {
+      for (const proc of [
+        tmpl.mendAlly,
+        tmpl.chillOnHit,
+        tmpl.stoneskin,
+        tmpl.wardAllies,
+        tmpl.frenzyOnHit,
+      ]) {
+        if (proc?.name) names.push(proc.name);
+      }
+    }
+    // Pin the scan itself: if a field is renamed in the template type, the scan
+    // silently goes blind without these.
+    expect(names).toContain('Litany Pulse');
+    expect(names).toContain('Web Snare');
+    expect(names).toContain('Silt Hide');
+    expect(names).toContain('Feeding Frenzy');
+    for (const name of names) {
+      expect(localizeSimAuraName(name), `no aura matcher row for '${name}'`).not.toBeNull();
+    }
+    // De-aliasing: Silt Hide and Silt Ward are distinct auras with distinct keys.
+    expect(localizeSimAuraName('Silt Hide')).not.toBe(localizeSimAuraName('Silt Ward'));
+    setLanguage('en');
+  });
+
+  it('helper-returned pet error strings resolve through the matcher (the S3 scanner cannot see them)', () => {
+    // noPetError (src/sim/pet/pet_commands.ts) builds its string inside a ternary,
+    // and the delve arm 'Pets are not allowed inside the delves.' is a literal in
+    // the HELPER, never a direct ctx.error(...) argument. The S3 emit scanner only
+    // enumerates literals at the emit call site, so it is structurally blind to
+    // these: pin them here explicitly so a future delve pet-error added the same
+    // way still needs a matcher row.
+    setLanguage('es');
+    for (const emitted of [
+      'You have no pet.',
+      'You have no living pet.',
+      'You have no living demon.',
+      'Pets are not allowed inside the delves.',
+      'Your Umbral Anchor is out of range.',
+    ]) {
+      expect(localizeSimText(emitted), `no sim matcher row for '${emitted}'`).not.toBe(emitted);
+    }
     setLanguage('en');
   });
 });
@@ -618,9 +723,10 @@ describe("R2: bug-report errors map to the server's exact emitted bytes", () => 
       expect(serverSrc.includes(`'${e}'`), `server no longer emits "${e}"`).toBe(true);
     }
 
-    const hudSrc = fs.readFileSync(path.resolve(process.cwd(), 'src/ui/hud.ts'), 'utf8');
+    // localizeBugReportError moved to the options window painter.
+    const hudSrc = fs.readFileSync(path.resolve(process.cwd(), 'src/ui/options_window.ts'), 'utf8');
     const fnStart = hudSrc.indexOf('localizeBugReportError(err: unknown)');
-    expect(fnStart, 'localizeBugReportError not found in hud.ts').toBeGreaterThan(-1);
+    expect(fnStart, 'localizeBugReportError not found in options_window.ts').toBeGreaterThan(-1);
     const start = hudSrc.indexOf('keyByMessage: Record<string, TranslationKey> = {', fnStart);
     const body = hudSrc.slice(start, hudSrc.indexOf('};', start));
     const keys = new Set(
@@ -635,6 +741,61 @@ describe("R2: bug-report errors map to the server's exact emitted bytes", () => 
         `bug error "${err}" is not a localizeBugReportError key (would fall to hudChrome.bugReport.failed)`,
       ).toBe(true);
     }
+  });
+});
+
+// --- R3: the flood-kick reason maps byte-exact to its matcher arm. Same drift
+// class as R1/R2, for the limiter kick lane: kickSession sends { t: 'error',
+// error }, a shape the S3 emit scanner is structurally blind to, so the
+// server-literal-to-matcher lockstep is source-pinned here instead. Block and
+// full-line comments are stripped before matching so a commented-out arm
+// cannot satisfy a pin; a trailing comment cannot fake one either, since every
+// pin needs the live code portion of its line. ---
+describe("R3: the flood-kick reason maps to the client matcher's exact bytes", () => {
+  const stripComments = (src: string) =>
+    src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+
+  it('binds the server kick literal to its userFacingApiError arm and every kick site', () => {
+    const limiterSrc = stripComments(
+      fs.readFileSync(path.resolve(process.cwd(), 'server/msg_rate_limit.ts'), 'utf8'),
+    );
+    const exported = limiterSrc.match(/export const MSG_RATE_KICK_REASON = '([^']+)';/);
+    expect(exported, 'MSG_RATE_KICK_REASON export not found in msg_rate_limit.ts').not.toBeNull();
+    // The wire bytes themselves, pinned against a disagreeing literal (the
+    // ws_auth byte-exact model): a deliberate reword is a wire-contract change
+    // and must update this pin, the matcher arm, and the frame pins together.
+    expect(exported?.[1]).toBe('message rate exceeded');
+
+    // All five flood kick arms (the pre-parse gate in handleMessage, the
+    // post-parse lane path in consumeLane, the list-read guard path in
+    // consumeListRead per the phase 06 maintainer ruling, the guild-bank
+    // op guard path in consumeGuildBankOp per the Guild Bank Phase 3 QA
+    // database ruling, and the cosmetic-set guard path in consumeCosmeticOp
+    // per the Reliquary border security review) pass the CONSTANT, never an
+    // inline literal, with the grep-ability 'message flood' leaveReason label;
+    // the anti-bot kick keeps its deliberately vague literal pair,
+    // byte-untouched. The exact count keeps this pin selective: a NEW kick
+    // site must consciously join it.
+    const gameSrc = stripComments(
+      fs.readFileSync(path.resolve(process.cwd(), 'server/game.ts'), 'utf8'),
+    );
+    const kickArms = gameSrc.match(
+      /kickSession\(session, MSG_RATE_KICK_REASON, 'message flood'\)/g,
+    );
+    expect(kickArms, 'all five flood kick arms must pass MSG_RATE_KICK_REASON').toHaveLength(5);
+    expect(gameSrc).toContain("kickSession(session, 'rejected by server', 'disconnected')");
+
+    // The matcher arm recognizes the same bytes and returns the loading key. A
+    // reword on either side alone breaks this equality, which is exactly the
+    // raw-English leak this guard exists to catch.
+    const matcherSrc = stripComments(
+      fs.readFileSync(path.resolve(process.cwd(), 'src/ui/api_error_i18n.ts'), 'utf8'),
+    );
+    const arm = matcherSrc.match(
+      /if \(normalized === '([^']+)'\)\s*return t\('loading\.messageRateExceeded'\);/,
+    );
+    expect(arm, 'userFacingApiError arm for the flood-kick reason not found').not.toBeNull();
+    expect(arm?.[1]).toBe(exported?.[1]);
   });
 });
 
@@ -681,7 +842,7 @@ function scanEmitCandidates(simSrc: string, serverSrc: string): Cand[] {
   // patterns below miss.
   const cond = '[^?,{}\\n]*?';
   const unq = (s: string) => s.slice(1, -1);
-  // --- src/sim/sim.ts emits ---
+  // --- src/sim/sim.ts (+ extracted sim modules, which emit via ctx.*) emits ---
   const e1 = new RegExp(`emit\\(\\{[^}]*?type:\\s*'(log|loot)'[^}]*?text:\\s*${lit}`, 'gs');
   for (const m of simSrc.matchAll(e1)) cands.push({ type: m[1] as Cand['type'], tmpl: unq(m[2]) });
   const e2 = new RegExp(`emit\\(\\{[^}]*?text:\\s*${lit}[^}]*?type:\\s*'(log|loot)'`, 'gs');
@@ -695,17 +856,22 @@ function scanEmitCandidates(simSrc: string, serverSrc: string): Cand[] {
     cands.push({ type: m[1] as Cand['type'], tmpl: unq(m[2]) });
     cands.push({ type: m[1] as Cand['type'], tmpl: unq(m[3]) });
   }
-  const er = new RegExp(`this\\.error\\([^,]+,\\s*${lit}\\s*\\)`, 'g');
+  // `this.error` on Sim, `this.ctx.error` from class modules (A1+ social/*.ts), and
+  // bare `ctx.error` from free-function modules (G1a progression/talents.ts, I1
+  // instances/dungeons.ts, C4a combat/casting_lifecycle.ts, P1b pet/pet_commands.ts) are
+  // the same player-facing error sink. `(?:this|ctx)\.error` matches all three (it catches
+  // this.ctx.error via the trailing ctx.error).
+  const er = new RegExp(`(?:this|ctx)\\.error\\([^,]+,\\s*${lit}\\s*\\)`, 'g');
   for (const m of simSrc.matchAll(er)) cands.push({ type: 'error', tmpl: unq(m[1]) });
-  // Variable-routed sim emits: this.notice(pid, '<lit>') (emits 'log') and
-  // this.stopFollow(p, '<lit>') (arg2 routes through this.error) — blind spots.
+  // Variable-routed sim emits: this/ctx.notice(pid, '<lit>') (emits 'log') and
+  // this/ctx.stopFollow(p, '<lit>') (arg2 routes through error) — blind spots.
   // The first-arg class excludes ),(,newline so a single-arg call (e.g.
   // `this.stopFollow(p);`) cannot span into the NEXT call's literal.
-  const nr = new RegExp(`this\\.(?:notice|stopFollow)\\([^,()\\n]+,\\s*${lit}`, 'g');
+  const nr = new RegExp(`(?:this|ctx)\\.(?:notice|stopFollow)\\([^,()\\n]+,\\s*${lit}`, 'g');
   for (const m of simSrc.matchAll(nr)) cands.push({ type: 'log', tmpl: unq(m[1]) });
   // Ternary args to error/notice/stopFollow (both branches).
   const ert = new RegExp(
-    `this\\.(?:error|notice|stopFollow)\\([^,()\\n]+,\\s*${cond}\\?\\s*${lit}\\s*:\\s*${lit}`,
+    `(?:this|ctx)\\.(?:error|notice|stopFollow)\\([^,()\\n]+,\\s*${cond}\\?\\s*${lit}\\s*:\\s*${lit}`,
     'g',
   );
   for (const m of simSrc.matchAll(ert)) {
@@ -732,10 +898,8 @@ function scanEmitCandidates(simSrc: string, serverSrc: string): Cand[] {
   }
   const s2 = new RegExp(`sendChatNotice\\([^,]+,\\s*${lit}`, 'g');
   for (const m of serverSrc.matchAll(s2)) cands.push({ type: 'error', tmpl: unq(m[1]) });
-  // sendSystemNotice emits a gold type:'log' system line (localizeSystemText arm),
-  // so scan it too or a future moderation confirmation could ship raw English.
-  const s2b = new RegExp(`sendSystemNotice\\([^,]+,\\s*${lit}`, 'g');
-  for (const m of serverSrc.matchAll(s2b)) cands.push({ type: 'log', tmpl: unq(m[1]) });
+  const s3 = new RegExp(`sendSystemNotice\\([^,]+,\\s*${lit}`, 'g');
+  for (const m of serverSrc.matchAll(s3)) cands.push({ type: 'log', tmpl: unq(m[1]) });
   const seen = new Set<string>();
   return cands.filter((c) => {
     const k = `${c.type} ${c.tmpl}`;
@@ -752,7 +916,279 @@ function scanEmitCandidates(simSrc: string, serverSrc: string): Cand[] {
 // hud.ts source) + the real localizeServerText/localizeSimText fallbacks. ---
 describe('S3: every sim.ts emit is recognized (drift guard)', () => {
   const hudSrc = fs.readFileSync(path.resolve(process.cwd(), 'src/ui/hud.ts'), 'utf8');
-  const simSrc = fs.readFileSync(path.resolve(process.cwd(), 'src/sim/sim.ts'), 'utf8');
+  // Extraction sessions moved player-facing emits out of sim.ts into sibling sim
+  // modules: C1 -> src/sim/combat/damage.ts (the frenzy proc + pet "<name> dies."
+  // line), C4a -> src/sim/combat/casting_lifecycle.ts (the cast guards in castAbility/
+  // applyChannelTick: "You are stunned!", "Out of range.", etc., emitted via ctx.error),
+  // C4b -> src/sim/combat/effect_dispatch.ts (the runEffects per-effect dispatch switch:
+  // "You have no active Seal.", "Not enough health.", the pet messages, via ctx.error),
+  // C5 -> src/sim/combat/auto_attack.ts (the "Auto Shot"/"Wand" swing labels + the
+  // "Invalid attack target." error),
+  // A1+ -> src/sim/social/*.ts (the party machine, later duel/arena/fiesta/
+  // markers, and G2's player-trade toasts + chat /join /leave notices; the social/*
+  // glob below picks all of them up), G1a -> src/sim/progression/talents.ts (talent validation toasts),
+  // G1b -> src/sim/progression/xp.ts (the "You have prestiged!" gold log emit),
+  // M2 -> src/sim/mob/locomotion.ts (the boss "unleashes" lines), M3 ->
+  // src/sim/mob/mob_swing.ts (the knockback "unleashes" line), M4 ->
+  // src/sim/mob/lifecycle.ts (the death-throes "begins to swell" / "flies into a frenzy" /
+  // corpse "bursts in a cloud of" lines), P1b -> src/sim/pet/pet_commands.ts (the pet
+  // command/lifecycle toasts: abandon/feed/summon/heal/rename, via this.ctx.* / ctx.*),
+  // I1 -> src/sim/instances/dungeons.ts (raid-door
+  // seals, lockout, "instances busy"), I2a -> src/sim/delves/runs.ts (delve enter/clear/
+  // advance/reward/grave-rite, interact guards, run-failed), I2b ->
+  // src/sim/delves/lockpick_controller.ts (lockpick engage/abort guards, jam errors,
+  // "the chest is empty", the "lock jams" log), L2 -> src/sim/market.ts (the World Market
+  // list/buy/cancel/collect guards + the "Listed"/"Bought"/"Reclaimed"/"You collect" loot
+  // lines + the expiry log), L1 -> src/sim/loot/loot_roll.ts (the loot-distribution
+  // emits "You loot ...", "Everyone passed on ...", "<name> wins ..."). They emit via this.ctx.* / bare ctx.*
+  // through SimContext. Scan ALL of them alongside sim.ts so every language-agnostic sim
+  // emit stays under the drift guard; they are re-localized client-side by the same
+  // matchers. When a slice moves emit literals out of the monolith, append its path here.
+  // The one automatic input in a hand-curated list, and so the one whose
+  // disappearance nobody would catch by reading a diff. It walks to any depth
+  // (#2489): the single-level read this replaces would have dropped every emit
+  // in a src/sim/social subdirectory the day one appeared, leaving this guard
+  // green over a quietly smaller corpus. Takes a root rather than closing over
+  // socialDir, so the recursion case at the end of this file drives the exact
+  // producer the corpus uses, not a restatement of it.
+  const socialDir = path.resolve(process.cwd(), 'src/sim/social');
+  const socialSourceUnder = (root: string): string =>
+    tsFilesUnder(root)
+      .map(({ full }) => fs.readFileSync(full, 'utf8'))
+      .join('\n');
+  // No existsSync fallback to ''. That arm made a MOVED or renamed
+  // src/sim/social scan NOTHING with this guard still green, which is the same
+  // silence #2489 is about wearing a different hat; a directory that is gone
+  // now throws where a reader can see it.
+  const socialFiles = tsFilesUnder(socialDir);
+  const socialSrc = socialSourceUnder(socialDir);
+  const simSrc = [
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/sim.ts'), 'utf8'),
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/combat/damage.ts'), 'utf8'),
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/combat/casting_lifecycle.ts'), 'utf8'),
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/combat/effect_dispatch.ts'), 'utf8'),
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/combat/auto_attack.ts'), 'utf8'),
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/progression/talents.ts'), 'utf8'),
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/progression/xp.ts'), 'utf8'),
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/mob/mob_swing.ts'), 'utf8'),
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/mob/lifecycle.ts'), 'utf8'),
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/pet/pet_commands.ts'), 'utf8'),
+    // The arena-shaped-match pet round trip: its one emit is the same
+    // "<name> returns to your side." line Revive Pet uses, so it is matched by
+    // the existing rule; scanning keeps any future literal here under the guard.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/pet/pet_match_return.ts'), 'utf8'),
+    // The shared pet round trip both that match path and the owner-resurrection
+    // path (src/sim/pet/pet_owner_revive.ts, which emits nothing of its own) call:
+    // the two "<name> returns to your side." arms now live here.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/pet/pet_return.ts'), 'utf8'),
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/instances/dungeons.ts'), 'utf8'),
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/instances/heroic_vendor.ts'), 'utf8'),
+    // Overworld portal transitions (the Veiled Hollow cave). The live flavor
+    // lines are data-routed (PortalDef enterText/leaveText, matched by the
+    // sim_i18n EXACT map via log.veilEnter/log.veilLeave); scanning the module
+    // keeps any FUTURE literal emit added here under the drift guard.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/portals.ts'), 'utf8'),
+    // Swim fatigue (the Hollow's open-sea turn-back): the warning literal is
+    // variable-routed via FATIGUE_WARNING but matched by the sim_i18n EXACT
+    // map (log.seaFatigue); scanning keeps future literal emits guarded.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/fatigue.ts'), 'utf8'),
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/delves/runs.ts'), 'utf8'),
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/delves/lockpick_controller.ts'), 'utf8'),
+    // DL1: Drowned Litany boss/rite/rooms emit surfaces.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/delves/drowned_litany_boss.ts'), 'utf8'),
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/delves/drowned_litany_rite.ts'), 'utf8'),
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/delves/drowned_litany_rooms.ts'), 'utf8'),
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/market.ts'), 'utf8'),
+    // Card Duel minigame (Card Master NPC): the queue/match log + error emits.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/social/card_duel.ts'), 'utf8'),
+    // W2: the inventory/vendor command bodies (equip/use/discard + buy/sell/buyback).
+    // The "Discarded"/"Equipped"/"Unequipped"/"You sit down to eat|drink"/"You quaff"/
+    // "Sold ... for"/"Bought back ... for" emit literals are byte-identical after the
+    // move, so their hud/sim_i18n matchers are unchanged; scan them here so they stay
+    // under the drift guard now that they live outside sim.ts.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/items.ts'), 'utf8'),
+    // L1: the loot-distribution layer's player-facing loot emits ("You loot ...",
+    // "Everyone passed on ...", "<name> wins ...").
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/loot/loot_roll.ts'), 'utf8'),
+    // T1: player target selectors + raid-marker store (the setMarker error literal,
+    // byte-identical after the move so its matcher is unchanged).
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/targeting.ts'), 'utf8'),
+    // N1: the Nythraxis raid encounter (crypt-quest "ritual circle is silent" error +
+    // the "<name> awakens!" summon log; the boss yells are variable-routed chat, not
+    // scanned). Literals are byte-identical after the move so their matchers are unchanged.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/encounters/nythraxis.ts'), 'utf8'),
+    // H1 (#1141): the interaction command bodies (corpse harvest + loot/pickup). The two
+    // corpse-harvest deny strings ("That corpse has nothing to harvest." / "This corpse
+    // has already been harvested.") have their ONLY emitter occurrences here; the file's
+    // OTHER emits (too-far, bags-full, dead, no-permission) are byte-identical to
+    // literals in already-scanned files, so only a rewording of THIS file's sites was
+    // invisible to the guard before this entry.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/interaction.ts'), 'utf8'),
+    // #1121: per-player node harvest command denials (dead gate, unknown node,
+    // range, respawn timer, bag-full pre-check).
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/professions/gathering.ts'), 'utf8'),
+    // Procedural Rifts: the run lifecycle's player-facing emits (enter/descend/
+    // exit, pylons, "all rifts unstable"), the forge/lockpick result lines, and
+    // the portal announcements, re-localized via the sim.rift.* rules.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/rift/runs.ts'), 'utf8'),
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/rift/progression.ts'), 'utf8'),
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/rift/rift_lockpick.ts'), 'utf8'),
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/rift/portals.ts'), 'utf8'),
+    // Mob locomotion: the deathZoneCast/deathZoneStrike driver emits def.detonateText
+    // at zone expiry (type:'log', telegraph:true). These are the only player-facing
+    // emits in this file; re-localized via the sim.rift.detonate* rules.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/mob/locomotion.ts'), 'utf8'),
+    // Professions 2.0: the fishing command bodies moved out of sim.ts.
+    // Three literals have their ONLY emitter occurrences here ("No fish are
+    // biting.", "A rare catch! Something gleams on your line.", "You need to
+    // face fishable water."); they are byte-identical after the move so their
+    // matchers are unchanged, but a rewording of THIS file's sites was
+    // invisible to the guard before this entry. The file's other emits
+    // (bags-full, dead/in-combat/swimming/busy) are byte-identical to literals
+    // in already-scanned files.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/professions/fishing.ts'), 'utf8'),
+    // Professions 2.0: the one-time mastery reset module. It emits
+    // no inline player text itself today (the notice is an authored letter in
+    // content/letters.ts, localized by letterId through entity i18n), but
+    // every new sim module joins the scan list in the same change so any
+    // future emit added here lands under the drift guard from day one.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/professions/mastery_reset.ts'), 'utf8'),
+    // Professions 2.0: the typed disenchant-secondary mapper. It emits
+    // no player text itself (a pure def -> material-id mapping consumed by
+    // enchanting.ts), but every new sim module joins the scan list in the same
+    // change so any future emit added here lands under the drift guard from
+    // day one.
+    fs.readFileSync(
+      path.resolve(process.cwd(), 'src/sim/professions/disenchant_reagents.ts'),
+      'utf8',
+    ),
+    // Professions 2.0: the identical-payload stack-merge predicate.
+    // It emits no player text itself (pure stacking bookkeeping consumed by
+    // bags/bank/trade/sim), but every new sim module joins the scan list in
+    // the same change so any future emit added here lands under the drift
+    // guard from day one.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/item_instance_merge.ts'), 'utf8'),
+    // Phase 16: the load-side item-instance payload bound. Its only string is
+    // a dev-channel console.warn (never matched), but every new sim module
+    // joins the scan list in the same change so any future emit added here
+    // lands under the drift guard from day one.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/item_instance_load.ts'), 'utf8'),
+    // Professions 2.0: the force-rename instance-signer sweep. It
+    // emits no player text itself (pure signer bookkeeping the rename handler
+    // consumes), but every new sim module joins the scan list in the same
+    // change so any future emit added here lands under the drift guard from
+    // day one.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/character_rename.ts'), 'utf8'),
+    // Professions 2.0: the ticks-based cadence primitive. Pure timing
+    // helpers (no SimContext, no emits), but every new sim module joins the scan
+    // list in the same change so any future emit lands under the drift guard.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/professions/cadence.ts'), 'utf8'),
+    // Craft Cast System: the pure content-band duration table (no SimContext,
+    // no emits), but every new sim module joins the scan list in the same
+    // change so any future emit lands under the drift guard from day one.
+    fs.readFileSync(
+      path.resolve(process.cwd(), 'src/sim/professions/craft_cast_duration.ts'),
+      'utf8',
+    ),
+    // Professions 2.0: the shared displacement session teardown. It emits no
+    // player text itself (it delegates to ctx.cancelCast, whose castStop is
+    // text-free), but it takes a SimContext so ctx.error is one line away, and
+    // every new sim module joins the scan list in the same change.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/professions/session_teardown.ts'), 'utf8'),
+    // Professions 2.0: the per-pair quested-hobby record (the tier_mail
+    // shape). It emits no player text itself, but every new sim module joins
+    // the scan list in the same change.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/professions/hobby_memory.ts'), 'utf8'),
+    // Professions 2.0: the tier-crossing master mail sweep. It emits no
+    // inline player text (the congratulation is an authored letter in
+    // content/letters.ts, localized by letterId through entity i18n), but every
+    // new sim module joins the scan list in the same change.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/professions/tier_mail.ts'), 'utf8'),
+    // Professions 2.0: the trend-nudge / first-tier-tutorial sweep. It
+    // emits only TEXT-FREE personal events (profTrendNudge/profTierTutorial); the
+    // client renders the localized lines. Scanned so any future inline emit lands
+    // under the drift guard from day one.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/professions/prof_nudges.ts'), 'utf8'),
+    // Professions 2.0: the attunement celebration events. Emits only
+    // TEXT-FREE personal + zone events (attuned/attunedZone); the client renders
+    // the localized lines. Scanned so any future inline emit lands under the guard.
+    fs.readFileSync(
+      path.resolve(process.cwd(), 'src/sim/professions/attunement_events.ts'),
+      'utf8',
+    ),
+    // Professions 2.0: Commissions and the Maker's Bond (the
+    // commission eligibility rule, the unbind fee ladder, and the unbind
+    // service resolver). It emits only the TEXT-FREE personal unbindResult
+    // event (via the Sim facade); the client renders the localized lines.
+    // Scanned so any future inline emit lands under the drift guard from day
+    // one.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/professions/commission.ts'), 'utf8'),
+    // Commission order board (issue #1298): the open/cancel/accept/deliver
+    // resolvers. It emits no player text itself (the Sim facade in sim.ts
+    // owns the single text-free commissionOrderResult emit, the unbindItem
+    // precedent), but every new sim module joins the scan list in the same
+    // change so any future emit added here lands under the drift guard from
+    // day one.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/professions/commission_order.ts'), 'utf8'),
+    // #2033 (PR 2039): the quest command bodies (accept/share/abandon/turn-in guards +
+    // the accepted/abandoned/completed logs). The two profession-choice denials
+    // ("That profession choice is not available." / "... no longer available.") have
+    // their ONLY emitter occurrences here; the file's other emits are byte-identical
+    // to literals the hud quest matchers already recognize, so a rewording of THIS
+    // file's sites was invisible to the guard before this entry.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/quests/quest_commands.ts'), 'utf8'),
+    // Bank system: the pooled bank deposit/withdraw/buy-slots command bodies
+    // emit the quest-item/full/afford/max-slots refusals + the purchase notice.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/bank.ts'), 'utf8'),
+    // Guild Bank: the officer-plus shared treasury + item store op bodies emit
+    // the rank/full/treasury-cap/short/carry-cap/afford/max-slots refusals plus
+    // the four money/item success notices (sim_i18n error.guildBank* /
+    // log.guildBank* rows); too-far, quest-item, no-guild, and "Not enough
+    // money." reuse literals already matched from other scanned files, but the
+    // ONLY emitter occurrences of the new strings live here.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/guild_bank.ts'), 'utf8'),
+    // Riding lesson: the mount_train_begin guard refusals and the driver's
+    // notices (level/range/quest/in-progress/success/left-yard literals).
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/mounts_training.ts'), 'utf8'),
+    // Mounts: the toggleMount/selectMount guard refusals and the ridingTrained
+    // error (RIDING_UNTRAINED_MSG) that the riding-skill gate emits.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/mounts.ts'), 'utf8'),
+    // Mount race: the 'Too far away.' start refusal. It localizes today only
+    // because the literal is byte-identical to an already-scanned emit; being
+    // in the corpus makes a reword fail HERE instead of shipping English.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/mount_race.ts'), 'utf8'),
+    // Unstuck and escorts: no free-text emit today (unstuck refusals are the
+    // structured blocked event; escort lines ride quest text), scanned so a
+    // first literal added to either lands inside the gate, per this file's
+    // new-sim-module convention.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/unstuck.ts'), 'utf8'),
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/escort.ts'), 'utf8'),
+    // Heroic anti-kite mob charge: the "unleashes" announce line (the mechanic
+    // name doubles as the mob_charge_stun debuff, localized via AURA_NAME_KEY's
+    // 'Charge' row like the other boss mechanics).
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/mob/charge.ts'), 'utf8'),
+    // Dragonkin brood: the counter-stun "unleashes" announce line (same shape as charge.ts
+    // above, resolved by the sim_i18n log.bossUnleashes RULE). Scanned so any FUTURE literal
+    // emit added to this module lands under the drift guard from day one.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/mob/dragonkin_brood.ts'), 'utf8'),
+    socialSrc,
+    // Whole-directory sweep (the phase 18 whole-branch review): EVERY
+    // src/sim/professions module is scanned, the same directory-glob treatment
+    // src/sim/social gets above, so a new module there (or a first emit added
+    // to one that predates this line: tool_effect_actions, fishing_zones,
+    // material_grades) sits under the drift guard from day one with no
+    // explicit entry. The per-file entries above are kept for their history
+    // notes; re-scanning a file only repeats a candidate, it cannot hide one.
+    socialSourceUnder(path.resolve(process.cwd(), 'src/sim/professions')),
+    // Quest-item presence probe (SimContext-holding, text-free today): the
+    // fourth module the whole-branch parity audit found outside the corpus.
+    fs.readFileSync(path.resolve(process.cwd(), 'src/sim/quests/quest_item_presence.ts'), 'utf8'),
+    // Whole-directory sweep for src/sim/interactions (the firebottle hut module
+    // and any interaction module that lands beside it), the same directory-glob
+    // treatment src/sim/social and src/sim/professions get above, so a new
+    // emit there sits under the drift guard from day one.
+    socialSourceUnder(path.resolve(process.cwd(), 'src/sim/interactions')),
+  ].join('\n');
   // Hardened S3: also scan the authoritative server's player-facing emits. The
   // server (server/game.ts) is language-agnostic like the sim and re-localized
   // client-side by localizeServerText; previously the guard read only sim.ts, so
@@ -816,7 +1252,7 @@ describe('S3: every sim.ts emit is recognized (drift guard)', () => {
     if (tern) return tern[1] || tern[2];
     if (/\?[^:]*:/.test(expr)) return '';
     if (
-      /rank|level|count|players|roll|prestige|amount|seconds|percent|\bN\b|MAX_|FIRST_|threshold|number|\.length|Math|round|parseInt|\*\s*100|suggested/i.test(
+      /rank|level|count|players|roll|prestige|amount|seconds|percent|\bN\b|MAX_|FIRST_|threshold|number|\.length|Math|round|parseInt|\*\s*100|suggested|FEE_GOLD/i.test(
         expr,
       )
     )
@@ -895,7 +1331,7 @@ describe('S3: every sim.ts emit is recognized (drift guard)', () => {
   it('s3_registered: every sim.ts emit maps to a registered key/RULE (PR tier)', () => {
     setLanguage('en');
     const cands = candidateStrings();
-    expect(cands.length, 'sanity: should enumerate many emit sites').toBeGreaterThan(80);
+    expect(cands.length, 'sanity: should enumerate many emit sites').toBeGreaterThan(400);
     const leaks: string[] = [];
     for (const { type, s } of cands) {
       if (!recognized(type, s)) leaks.push(`(${type}) ${JSON.stringify(s)}`);
@@ -904,14 +1340,125 @@ describe('S3: every sim.ts emit is recognized (drift guard)', () => {
     expect(leaks, 'unregistered sim emit strings (add a key/RULE to sim_i18n.ts)').toEqual([]);
   });
 
-  // RELEASE TIER: the same coverage across all 14 locales, and where a real matcher
+  // BUG #12 regression: the trade-accept-race deny path ('That player is already
+  // trading.', emitted from src/sim/social/trade.ts's tradeAccept when a second
+  // invitee accepts a stale invite while the inviter is already trading someone
+  // else) was miscategorized into the V07_SLASH allowlist, a backstop meant for
+  // undated slash-command diagnostics, not trade errors. That let it bypass
+  // candidateStrings() (and so s3_registered above) despite carrying no real
+  // hud.errors key, unlike its sibling 'A trade is already in progress.'. Drive
+  // the real race through the real Sim to prove the exact string still ships,
+  // then check it against the same exact-map extraction s3_registered itself
+  // uses, so this fails for the true reason (no key), not a stand-in.
+  it('the real trade-accept-race deny text has its own hud.errors key, not a V07_SLASH leak', () => {
+    const sim = new Sim({ seed: 42, playerClass: 'warrior', noPlayer: true });
+    const a = sim.addPlayer('warrior', 'Anna');
+    const b = sim.addPlayer('mage', 'Bert');
+    const c = sim.addPlayer('warrior', 'Cara');
+    sim.tradeRequest(b, a);
+    sim.tradeRequest(c, a);
+    sim.tradeAccept(b);
+    sim.events.length = 0;
+    sim.tradeAccept(c);
+    const err = sim.events.find(
+      (e): e is Extract<SimEvent, { type: 'error' }> => e.type === 'error',
+    );
+    expect(err?.text).toBe('That player is already trading.');
+
+    expect(
+      arms.localizeErrorText.exact.has('That player is already trading.'),
+      'That player is already trading. must be a real hud.errors EXACT key, matching its sibling A trade is already in progress.',
+    ).toBe(true);
+    expect(
+      ALLOW_V07_SLASH.has('That player is already trading.'),
+      'That player is already trading. must not be parked in the V07_SLASH slash-command backstop allowlist',
+    ).toBe(false);
+  });
+
+  it('the src/sim/social glob still reaches its modules and feeds the corpus', () => {
+    // These bind the GLOB, where the floor above binds the total. Measured, so
+    // the difference is on the record: the corpus is 428 with the glob and 290
+    // without it, so the 400 floor does now catch a glob that empties
+    // completely (the 80 it replaced did not, which is what let this input be
+    // the quiet one). What the floor still cannot localize is a PARTIAL loss,
+    // and it cannot say which input went missing; these can, and they are the
+    // input a subdirectory or a rename would empty.
+    expect(
+      socialFiles.map((f) => f.file),
+      'the src/sim/social walk reaches every module in the directory',
+    ).toEqual([
+      'arena.ts',
+      'away.ts',
+      'battleground.ts',
+      'battleground_backfill.ts',
+      'battleground_outcomes.ts',
+      'battleground_party.ts',
+      'battleground_proposal.ts',
+      'card_duel.ts',
+      'card_duel_queue.ts',
+      'chat.ts',
+      'chat_readouts.ts',
+      'duel.ts',
+      'dungeon_finder.ts',
+      'fiesta.ts',
+      'fiesta_bots.ts',
+      'party.ts',
+      'ready_check.ts',
+      'trade.ts',
+      'vale_cup.ts',
+      'vale_cup_bots.ts',
+      'yumi.ts',
+    ]);
+    expect(
+      scanEmitCandidates(socialSrc, '').length,
+      'the social glob still contributes its emits to the S3 corpus',
+    ).toBeGreaterThan(220);
+  });
+
+  it('the corpus reads the tree through the shared walker, with no flat reader beside it', () => {
+    // The sibling of the pins in steam_routes / mobile_window_coverage /
+    // professions_silent_loot, and the same reasoning: src/sim/social is flat,
+    // so a second producer for socialSrc built on its own flat read would join
+    // the identical text to the corpus today and nothing here would notice.
+    const own = fs
+      .readFileSync(path.resolve(process.cwd(), 'tests/localization_fixes.test.ts'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/(^|[^:])\/\/.*$/gm, '$1');
+    // Both needles assembled from halves so neither matches its own line.
+    expect(own.split(`readdir${'Sync('}`).length - 1).toBe(0);
+    expect(own).toContain(`helpers/ts_files${'_under'}`);
+  });
+
+  it('the social glob descends, so an emit in a SUBDIRECTORY is scanned too (#2489)', () => {
+    // src/sim/social is flat today, so no assertion over the real tree can tell
+    // a recursive read from the single-level one it replaces. Drive the real
+    // producer over a fixture tree and hand its output to the real scanner: a
+    // nested emit has to arrive as a candidate, or the day social grows a
+    // folder its player text leaves the drift guard unnoticed.
+    const fixture = fs.mkdtempSync(path.join(tmpdir(), 'woc-social-scan-'));
+    try {
+      fs.mkdirSync(path.join(fixture, 'cards', 'deeper'), { recursive: true });
+      fs.writeFileSync(
+        path.join(fixture, 'cards', 'deeper', 'nested_emit.ts'),
+        "export function f(ctx: Ctx, pid: number) {\n  ctx.error(pid, 'Fixture nested social emit.');\n}\n",
+      );
+      fs.writeFileSync(path.join(fixture, 'notes.md'), "ctx.error(pid, 'Not source.');\n");
+      const found = scanEmitCandidates(socialSourceUnder(fixture), '').map((c) => c.tmpl);
+      expect(found).toContain('Fixture nested social emit.');
+      expect(found).not.toContain('Not source.');
+    } finally {
+      fs.rmSync(fixture, { recursive: true, force: true });
+    }
+  });
+
+  // RELEASE TIER: the same coverage across all 21 locales, and where a real matcher
   // resolves the string, its localized form is not raw English in any translated
   // locale (no silently-shipped English).
   it.runIf(RELEASE_TIER)(
-    's3_localized: every emit is recognized in all 14 locales and not left English where a matcher resolves it',
+    's3_localized: every emit is recognized in all 21 locales and not left English where a matcher resolves it',
     () => {
       const cands = candidateStrings();
-      expect(cands.length, 'sanity: should enumerate many emit sites').toBeGreaterThan(80);
+      expect(cands.length, 'sanity: should enumerate many emit sites').toBeGreaterThan(400);
       const leaks: string[] = [];
       for (const lang of supportedLanguages) {
         setLanguage(lang);
@@ -934,7 +1481,7 @@ describe('S3: every sim.ts emit is recognized (drift guard)', () => {
 
 // Regression for the S3 hardening: prove the scanner ENUMERATES each emit form it was
 // hardened to cover, by feeding it synthetic source. If a future refactor drops one of
-// the regexes (s1/s1t/s2/nr/ert/e3), the matching assertion bites - so the drift guard
+// the regexes (s1/s1t/s2/s3/nr/ert/e3), the matching assertion bites - so the drift guard
 // cannot silently lose coverage of a whole emit shape.
 describe('S3 scanner enumerates each hardened emit form (regression)', () => {
   const synthSim = [
@@ -942,6 +1489,8 @@ describe('S3 scanner enumerates each hardened emit form (regression)', () => {
     "this.emit({ text: 'SYNTH_SIM_LOOT', type: 'loot' });", // e2 (text-before-type)
     "this.emit({ type: 'log', text: c ? 'SYNTH_SIM_TERN_A' : 'SYNTH_SIM_TERN_B' });", // e3
     "this.error(p.id, 'SYNTH_SIM_ERR');", // er
+    "this.ctx.emit({ type: 'log', text: 'SYNTH_CTX_LOG' });", // e1 (ctx form, A1+ extracted modules)
+    "this.ctx.error(p.id, 'SYNTH_CTX_ERR');", // er (ctx form)
     "this.notice(p.id, 'SYNTH_NOTICE');", // nr (notice)
     "this.stopFollow(p, 'SYNTH_STOPFOLLOW');", // nr (stopFollow)
     "this.error(p.id, flag ? 'SYNTH_ERR_TERN_A' : 'SYNTH_ERR_TERN_B');", // ert
@@ -954,7 +1503,7 @@ describe('S3 scanner enumerates each hardened emit form (regression)', () => {
     "this.send({ type: 'error', text: 'SYNTH_SERVER_INLINE' });", // s1
     "this.send({ type: 'log', text: flag ? 'SYNTH_SRV_TERN_A' : 'SYNTH_SRV_TERN_B' });", // s1t
     "sendChatNotice(session, 'SYNTH_CHATNOTICE');", // s2
-    "this.sendSystemNotice(session, 'SYNTH_SYSNOTICE');", // s2b
+    "sendSystemNotice(session, 'SYNTH_SYSNOTICE');", // s3
   ].join('\n');
 
   // [label, expected type, expected tmpl] - every entry must be enumerated.
@@ -964,6 +1513,8 @@ describe('S3 scanner enumerates each hardened emit form (regression)', () => {
     ['sim emit ternary text, branch A (e3)', 'log', 'SYNTH_SIM_TERN_A'],
     ['sim emit ternary text, branch B (e3)', 'log', 'SYNTH_SIM_TERN_B'],
     ['sim this.error literal (er)', 'error', 'SYNTH_SIM_ERR'],
+    ['extracted-module this.ctx.emit log (e1 ctx)', 'log', 'SYNTH_CTX_LOG'],
+    ['extracted-module this.ctx.error literal (er ctx)', 'error', 'SYNTH_CTX_ERR'],
     ['sim this.notice literal (nr)', 'log', 'SYNTH_NOTICE'],
     ['sim this.stopFollow literal (nr)', 'log', 'SYNTH_STOPFOLLOW'],
     ['sim this.error ternary, branch A (ert)', 'error', 'SYNTH_ERR_TERN_A'],
@@ -973,7 +1524,7 @@ describe('S3 scanner enumerates each hardened emit form (regression)', () => {
     ['server ternary text, branch A (s1t)', 'log', 'SYNTH_SRV_TERN_A'],
     ['server ternary text, branch B (s1t)', 'log', 'SYNTH_SRV_TERN_B'],
     ['server sendChatNotice (s2)', 'error', 'SYNTH_CHATNOTICE'],
-    ['server sendSystemNotice (s2b)', 'log', 'SYNTH_SYSNOTICE'],
+    ['server sendSystemNotice (s3)', 'log', 'SYNTH_SYSNOTICE'],
   ];
 
   it('every hardened emit form is enumerated by scanEmitCandidates()', () => {
@@ -1024,5 +1575,132 @@ describe('server restart-countdown announcements are localized (broadcastSystem 
       }
     }
     setLanguage('en');
+  });
+});
+
+// --- S3 meta-guard: the scan LIST itself. PR 2039 closed the quest_commands
+// blind spot by adding src/sim/quests/quest_commands.ts to the simSrc scan
+// list above; the profession-choice denial strings have their only emitter
+// occurrences there, so dropping the entry silently reopens the blind spot
+// while the gate stays green. This reads THIS test file's own source and fails
+// if the entry ever leaves the list. The marker strings are concatenated at
+// runtime so this guard can never match its own source instead of the list. ---
+describe('S3 meta-guard: quest_commands.ts stays on the simSrc scan list', () => {
+  it('keeps src/sim/quests/quest_commands.ts in the S3 scan list', () => {
+    const self = fs.readFileSync(
+      path.resolve(process.cwd(), 'tests/localization_fixes.test.ts'),
+      'utf8',
+    );
+    const listStart = self.indexOf(['const simSrc', '= ['].join(' '));
+    expect(listStart, 'the simSrc scan-list declaration should exist').toBeGreaterThan(-1);
+    const listEnd = self.indexOf([']', 'join'].join('.'), listStart);
+    expect(listEnd, 'the simSrc scan list should close with a join').toBeGreaterThan(listStart);
+    const listBlock = self.slice(listStart, listEnd);
+    const entry = ['src/sim/quests', 'quest_commands.ts'].join('/');
+    expect(
+      listBlock.includes(`'${entry}'`),
+      `${entry} must stay in the S3 simSrc scan list (the PR 2039 blind-spot fix)`,
+    ).toBe(true);
+  });
+});
+
+// --- Elixir aura names must round-trip the AURA_NAME_KEY reverse map. The
+// aura string is authored twice (the item def's elixir.aura and the sim_i18n
+// map row); a rename that touches only one side silently un-localizes the
+// buff-bar aura for every non-English player, with no other gate noticing. ---
+describe('elixir aura names stay wired to the sim aura matcher', () => {
+  it('every authored elixir aura resolves through localizeSimAuraName', async () => {
+    const { ITEMS } = await import('../src/sim/data');
+    const auras = Object.values(ITEMS)
+      .map((item) => (item as { elixir?: { aura?: string } }).elixir?.aura)
+      .filter((aura): aura is string => typeof aura === 'string');
+    expect(auras.length).toBeGreaterThanOrEqual(4);
+    setLanguage('en');
+    for (const aura of auras) {
+      // Identity round-trip, not just non-null: the EN DICT value must equal
+      // the item def's aura string, or the matcher resolves a stale name.
+      expect(localizeSimAuraName(aura), `aura "${aura}" out of sync with AURA_NAME_KEY`).toBe(aura);
+    }
+  });
+
+  it('the renamed Vipersear Vigor aura localizes on every non-Latin surface', async () => {
+    const expected: Record<string, string> = {
+      zh_CN: '蝰灼之力',
+      zh_TW: '蝰灼之力',
+      ko_KR: '살무사 작열의 활력',
+      ja_JP: '蝮灼の活力',
+      ru_RU: 'Мощь Гадючьего Жара',
+    };
+    try {
+      for (const [locale, value] of Object.entries(expected)) {
+        await ensureLocaleLoaded(locale as Parameters<typeof ensureLocaleLoaded>[0]);
+        setLanguage(locale as Parameters<typeof setLanguage>[0]);
+        expect(localizeSimAuraName('Vipersear Vigor'), locale).toBe(value);
+      }
+    } finally {
+      setLanguage('en');
+    }
+  });
+
+  it('the pre-rename aura string keeps a legacy alias for the deploy window', () => {
+    setLanguage('en');
+    expect(localizeSimAuraName('Venomfire Vigor')).toBe('Vipersear Vigor');
+  });
+});
+
+// --- Vendor-sell log line: the "Sold <item>[ xN] for <money>." arm in
+// Hud.localizeLootText must localize the item name whether or not the sim
+// appended the " xN" stack suffix. A greedy single capture feeds "Copper Ore
+// x2" whole into the exact-name lookup, which only matches bare item names:
+// the lookup misses and the raw English name (plus the sim's bare "xN"
+// spelling) leaks into an otherwise-localized sentence. Exercised via a bare
+// Hud prototype (the weapon_type_tooltip / hud_confirm_gates precedent)
+// since localizeLootText is private and reads no instance state here.
+describe('vendor sell log line localizes the item name for both a single item and a sold stack', () => {
+  interface LootTextHarness {
+    localizeLootText(text: string): string;
+  }
+  const harness = (): LootTextHarness => Object.create(Hud.prototype) as unknown as LootTextHarness;
+
+  it('localizes a single-item sale (no xN suffix) in every locale', () => {
+    try {
+      for (const lang of supportedLanguages) {
+        setLanguage(lang);
+        const expected = t('hud.logs.soldItem', {
+          item: itemDisplayName(ITEMS.copper_ore),
+          money: formatLocalizedMoney(4),
+        });
+        const out = harness().localizeLootText('Sold Copper Ore for 4c.');
+        expect(out, lang).toBe(expected);
+      }
+    } finally {
+      setLanguage('en');
+    }
+  });
+
+  it('localizes a STACKED sale (quantity > 1) in every locale instead of leaking raw English', () => {
+    try {
+      for (const lang of supportedLanguages) {
+        setLanguage(lang);
+        const expectedItem = `${itemDisplayName(ITEMS.copper_ore)} ${t('itemUi.bags.stackCount', {
+          count: formatNumber(2, { maximumFractionDigits: 0 }),
+        })}`;
+        const expected = t('hud.logs.soldItem', {
+          item: expectedItem,
+          money: formatLocalizedMoney(8),
+        });
+        const out = harness().localizeLootText('Sold Copper Ore x2 for 8c.');
+        expect(out, lang).toBe(expected);
+        // The regression this guards: the item name (and the sim's bare "xN"
+        // spelling) must never survive verbatim inside an otherwise-localized
+        // sentence.
+        if (lang !== 'en' && lang !== 'en_CA') {
+          expect(out, lang).not.toContain('Copper Ore x2');
+          expect(out, lang).not.toBe('Sold Copper Ore x2 for 8c.');
+        }
+      }
+    } finally {
+      setLanguage('en');
+    }
   });
 });

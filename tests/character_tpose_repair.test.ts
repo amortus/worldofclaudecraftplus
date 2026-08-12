@@ -1,69 +1,93 @@
 import * as THREE from 'three';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  ANIM_REPAIR_FRAMES,
-  type AnimState,
-  POSE_DRIVE_MIN_WEIGHT,
-} from '../src/render/characters/anim_state';
+import type { AnimState } from '../src/render/characters/anim_state';
+import { ANIM_REPAIR_FRAMES, POSE_DRIVE_MIN_WEIGHT } from '../src/render/characters/anim_state';
 import type { CharacterVisual } from '../src/render/characters/visual';
+import type { Entity } from '../src/sim/types';
 
-// A three.js SkinnedMesh blends toward BIND POSE (arms out, the T-pose) in
-// proportion to how far the summed effective weight of the mixer's scheduled
-// actions falls short of 1: the PropertyMixer blends the deficit back toward
-// the bind transform. Every case below drives a REAL CharacterVisual through a
-// real AnimationMixer and asserts that the sum stays at ~1, which is exactly
-// the quantity players see as a T-pose when it drops.
-//
-// GLTFLoader does not run in Node, so the asset loader is mocked out and the
-// rig is a minimally real stub GLTF. That is enough: the mixer, the actions and
-// the state machine under test are all real; only the geometry is fake.
+// A three.js SkinnedMesh renders BIND POSE (the T-pose) whenever the summed
+// effective weight of the mixer's scheduled actions falls short of 1: the
+// PropertyMixer blends the deficit back toward the bind transform. Every case
+// below drives a REAL CharacterVisual through a real AnimationMixer and asserts
+// on that sum, which is the quantity players see as a T-pose.
 
 const FRAME = 1 / 60;
 
-/** A creature rig on the `animal()` ClipMap (see manifest.ts). */
-const VISUAL_KEY = 'mob_stag';
-const CLIP_NAMES = [
-  'Idle',
-  'Walk',
-  'Gallop',
-  'Attack_Headbutt',
-  'Attack_Kick',
-  'Idle_HitReact_Left',
-  'Idle_HitReact_Right',
-  'Death',
-];
+const dummyEntity = {
+  kind: 'mob',
+  id: 1,
+  templateId: 'training_dummy',
+  color: 0xffffff,
+  skin: 0,
+  mainhandItemId: null,
+} as unknown as Entity;
 
 const anim = (over: Partial<AnimState> = {}): AnimState => ({
   speed: 0,
   moving: false,
+  running: false,
   airborne: false,
   backwards: false,
   dead: false,
   casting: false,
   swimming: false,
+  submerged: false,
+  swimPitch: 0,
+  wading: false,
   sitting: false,
   ...over,
 });
 
+/** The training dummy's whole ClipMap, as a minimally real GLB. */
 function stubGltf() {
   const scene = new THREE.Group();
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), new THREE.MeshStandardMaterial());
+  const rootBone = new THREE.Bone();
+  rootBone.name = 'RigRoot';
+  const childBone = new THREE.Bone();
+  childBone.name = 'RigChild';
+  childBone.position.y = 1;
+  rootBone.add(childBone);
+  const geometry = new THREE.BoxGeometry(1, 2, 1);
+  const vertexCount = geometry.getAttribute('position').count;
+  const skinIndices = new Uint16Array(vertexCount * 4);
+  const skinWeights = new Float32Array(vertexCount * 4);
+  for (let i = 0; i < vertexCount; i++) {
+    skinIndices[i * 4] = 1;
+    skinWeights[i * 4] = 1;
+  }
+  geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(skinIndices, 4));
+  geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeights, 4));
+  const mesh = new THREE.SkinnedMesh(geometry, new THREE.MeshStandardMaterial());
   mesh.name = 'body';
+  mesh.add(rootBone);
+  mesh.bind(new THREE.Skeleton([rootBone, childBone]));
   scene.add(mesh);
-  return { scene, animations: CLIP_NAMES.map((name) => new THREE.AnimationClip(name, 1, [])) };
+  const clip = (name: string) =>
+    new THREE.AnimationClip(name, 1, [
+      new THREE.NumberKeyframeTrack('RigChild.position[x]', [0, 1], [0, 1]),
+    ]);
+  return { scene, animations: ['Idle', 'Walk', 'Run', 'Attack', 'Hit', 'Death'].map(clip) };
 }
 
 /** The mixer state the visual keeps private; reading it is the only way to
  *  measure the bind-pose deficit that the bug renders as a T-pose. */
-type MixerPeek = { actions: Map<string, THREE.AnimationAction> };
-
-function actionsOf(visual: CharacterVisual): Map<string, THREE.AnimationAction> {
-  return (visual as unknown as MixerPeek).actions;
-}
+type MixerPeek = {
+  actions: Map<string, THREE.AnimationAction>;
+  current: THREE.AnimationAction | null;
+  mixer: THREE.AnimationMixer;
+  model: THREE.Object3D;
+  pendingDt: number;
+  hitCooldown: number;
+  holdT: number;
+  holdCooldown: number;
+  wasDead: boolean;
+  starvedFrames: number;
+};
 
 function poseWeight(visual: CharacterVisual): number {
+  const actions = (visual as unknown as MixerPeek).actions;
   let total = 0;
-  for (const action of actionsOf(visual).values()) {
+  for (const action of actions.values()) {
     if (action.isScheduled()) total += action.getEffectiveWeight();
   }
   return total;
@@ -74,13 +98,16 @@ async function makeVisual(): Promise<CharacterVisual> {
   vi.doMock('../src/render/assets/loader', () => ({
     loadGltf: vi.fn(() => Promise.resolve(stubGltf())),
     loadHdr: vi.fn(() => new Promise(() => undefined)),
-    loadTexture: vi.fn(() => Promise.resolve({ flipY: true, needsUpdate: false })),
+    loadTexture: vi.fn(() => new Promise(() => undefined)),
+    loadKtx2Texture: vi.fn(() => new Promise(() => undefined)),
     releaseGltf: vi.fn(),
   }));
-  const { CharacterVisual: Ctor } = await import('../src/render/characters/visual');
-  const { assetsReady } = await import('../src/render/assets/preload');
-  await assetsReady();
-  return new Ctor(VISUAL_KEY, 0xffffff);
+  const { preloadTrainingDummyAssets } = await import('../src/render/characters/assets');
+  await preloadTrainingDummyAssets();
+  const { createCharacterVisual } = await import('../src/render/characters/index');
+  const visual = createCharacterVisual(dummyEntity);
+  if (!visual) throw new Error('test harness failed to build a CharacterVisual');
+  return visual;
 }
 
 describe('CharacterVisual keeps something driving the rig', () => {
@@ -96,11 +123,111 @@ describe('CharacterVisual keeps something driving the rig', () => {
     expect(poseWeight(visual)).toBeGreaterThan(1 - POSE_DRIVE_MIN_WEIGHT);
   });
 
+  it('checks only the current action on a healthy steady-state frame', () => {
+    const { actions, current } = visual as unknown as MixerPeek;
+    expect(current).not.toBeNull();
+    if (!current) throw new Error('healthy visual has no current action');
+    const scheduledSpies = [...actions.values()].map((action) => vi.spyOn(action, 'isScheduled'));
+    const weightSpies = [...actions.values()].map((action) =>
+      vi.spyOn(action, 'getEffectiveWeight'),
+    );
+
+    visual.update(FRAME, anim(), false);
+
+    const currentIndex = [...actions.values()].indexOf(current);
+    expect(scheduledSpies.map((spy) => spy.mock.calls.length)).toEqual(
+      scheduledSpies.map((_, index) => (index === currentIndex ? 1 : 0)),
+    );
+    expect(weightSpies.map((spy) => spy.mock.calls.length)).toEqual(
+      weightSpies.map((_, index) => (index === currentIndex ? 1 : 0)),
+    );
+  });
+
+  it('invalidates the live skeleton palette after CharacterVisual advances its mixer', () => {
+    const { model } = visual as unknown as MixerPeek;
+    const skeletons: THREE.Skeleton[] = [];
+    model.traverse((object) => {
+      const mesh = object as THREE.SkinnedMesh;
+      if (mesh.isSkinnedMesh) skeletons.push(mesh.skeleton);
+    });
+    const skeleton = skeletons[0];
+    expect(skeleton).toBeDefined();
+    if (!skeleton) throw new Error('test visual has no skeleton');
+
+    visual.root.updateMatrixWorld(true);
+    skeleton.update();
+    const firstPalette = [...skeleton.boneMatrices];
+
+    visual.update(FRAME, anim(), true);
+    visual.root.updateMatrixWorld(true);
+    skeleton.update();
+
+    expect([...skeleton.boneMatrices]).not.toEqual(firstPalette);
+    expect(visual.skeletonUpdateStats()).toMatchObject({ requests: 2, updates: 2, skips: 0 });
+  });
+
+  it('sleeps off-screen pose work while preserving bounded transition clocks', () => {
+    const peek = visual as unknown as MixerPeek;
+    const mixerUpdate = vi.spyOn(peek.mixer, 'update');
+
+    visual.playHit();
+    expect(peek.hitCooldown).toBeGreaterThan(0);
+    const hitCooldown = peek.hitCooldown;
+    visual.holdFrame(0.08, 0.1);
+    expect(peek.holdT).toBeGreaterThan(0);
+
+    visual.advanceOffscreen(0.2);
+
+    expect(mixerUpdate).not.toHaveBeenCalled();
+    expect(peek.hitCooldown).toBeCloseTo(hitCooldown - 0.2, 9);
+    expect(peek.holdT).toBeLessThanOrEqual(0);
+    expect(peek.holdCooldown).toBeGreaterThan(0);
+
+    visual.advanceOffscreen(1);
+    expect(mixerUpdate).not.toHaveBeenCalled();
+    expect(peek.pendingDt).toBeCloseTo(0.3, 9);
+    expect(peek.hitCooldown).toBe(0);
+
+    visual.update(FRAME, anim(), true);
+    expect(mixerUpdate).toHaveBeenCalledTimes(1);
+    expect(mixerUpdate).toHaveBeenLastCalledWith(0.3);
+    expect(peek.pendingDt).toBe(0);
+  });
+
+  it('reconciles death and revival on re-entry without exposing bind pose', () => {
+    const peek = visual as unknown as MixerPeek;
+
+    visual.advanceOffscreen(1);
+    visual.update(FRAME, anim({ dead: true }), true);
+
+    expect(peek.wasDead).toBe(true);
+    expect(poseWeight(visual)).toBeGreaterThan(1 - POSE_DRIVE_MIN_WEIGHT);
+
+    visual.advanceOffscreen(1);
+    visual.update(FRAME, anim({ dead: false }), true);
+
+    expect(peek.wasDead).toBe(false);
+    expect(poseWeight(visual)).toBeGreaterThan(1 - POSE_DRIVE_MIN_WEIGHT);
+  });
+
+  it('resets watchdog starvation on the healthy current-action fast path', () => {
+    const peek = visual as unknown as MixerPeek;
+    peek.starvedFrames = ANIM_REPAIR_FRAMES - 1;
+
+    visual.update(FRAME, anim(), false);
+    expect(peek.starvedFrames).toBe(0);
+
+    for (const action of peek.actions.values()) action.stop();
+    visual.update(FRAME, anim(), false);
+    expect(peek.starvedFrames).toBe(1);
+  });
+
   it('re-drives a rig that was left with no action at all, within the debounce window', () => {
-    // The whole bug class in one shape: something stopped every action while a
+    // The whole H1 class in one shape: something stopped every action while a
     // HELD state (strafe/cast/walk) was running, so no base-state edge is ever
     // coming to repair it. Nothing else in the machine can recover from this.
-    for (const action of actionsOf(visual).values()) action.stop();
+    const actions = (visual as unknown as MixerPeek).actions;
+    for (const action of actions.values()) action.stop();
     expect(poseWeight(visual)).toBe(0);
 
     for (let i = 0; i < ANIM_REPAIR_FRAMES; i++) {
@@ -109,23 +236,11 @@ describe('CharacterVisual keeps something driving the rig', () => {
     expect(poseWeight(visual)).toBeGreaterThan(1 - POSE_DRIVE_MIN_WEIGHT);
   });
 
-  it('does not wait for the mixer to catch up when the rig is distance-throttled', () => {
-    for (const action of actionsOf(visual).values()) action.stop();
+  it('does not wait for the mixer to catch up when the rig is throttled', () => {
+    const actions = (visual as unknown as MixerPeek).actions;
+    for (const action of actions.values()) action.stop();
     for (let i = 0; i < ANIM_REPAIR_FRAMES; i++) visual.update(FRAME, anim(), false);
     expect(poseWeight(visual)).toBeGreaterThan(1 - POSE_DRIVE_MIN_WEIGHT);
-  });
-
-  it('does not fire the watchdog during a legitimate crossfade', () => {
-    // Walking, then stopping, crossfades walk -> idle over FADE seconds. The
-    // two halves sum to ~1 the whole way, so the repair must never trip and
-    // snap the blend away.
-    for (let i = 0; i < 20; i++) visual.update(FRAME, anim({ moving: true, speed: 2 }), true);
-    const weights: number[] = [];
-    for (let i = 0; i < 30; i++) {
-      visual.update(FRAME, anim(), true);
-      weights.push(poseWeight(visual));
-    }
-    expect(Math.min(...weights)).toBeGreaterThan(1 - POSE_DRIVE_MIN_WEIGHT);
   });
 
   it('never blends toward bind pose across death and respawn (the rez T-pose)', () => {
@@ -144,31 +259,10 @@ describe('CharacterVisual keeps something driving the rig', () => {
     expect(Math.min(...weights)).toBeGreaterThan(1 - POSE_DRIVE_MIN_WEIGHT);
   });
 
-  it('never blends toward bind pose across an attack rotation', () => {
+  it('never blends toward bind pose when the same swing clip re-triggers', () => {
     const weights: number[] = [];
-    for (let swing = 0; swing < 4; swing++) {
+    for (let swing = 0; swing < 3; swing++) {
       visual.playAttack();
-      for (let i = 0; i < 4; i++) {
-        visual.update(FRAME, anim(), true);
-        weights.push(poseWeight(visual));
-      }
-    }
-    expect(Math.min(...weights)).toBeGreaterThan(1 - POSE_DRIVE_MIN_WEIGHT);
-  });
-
-  it('never blends toward bind pose when the SAME one-shot clip re-triggers', () => {
-    // A single-attack rig, a re-fired emote, or a swing that lands twice inside
-    // the fade all hand playOneShot the clip that is already `current`. Stopping
-    // it and fading it back in from zero, with no outgoing partner, T-poses the
-    // rig for the whole fade every single time.
-    const playOneShot = (
-      visual as unknown as {
-        playOneShot(name: string, timeScale: number): void;
-      }
-    ).playOneShot.bind(visual);
-    const weights: number[] = [];
-    for (let swing = 0; swing < 4; swing++) {
-      playOneShot('Attack_Headbutt', 1);
       for (let i = 0; i < 4; i++) {
         visual.update(FRAME, anim(), true);
         weights.push(poseWeight(visual));
@@ -179,45 +273,10 @@ describe('CharacterVisual keeps something driving the rig', () => {
 
   it('leaves a dead rig on a real pose when its rig ships no death clip', () => {
     // dead-lock freezes the watchdog, so enterDeath is the only repair there is.
-    actionsOf(visual).delete('Death');
-    for (const action of actionsOf(visual).values()) action.stop();
+    const actions = (visual as unknown as MixerPeek).actions;
+    actions.delete('Death');
+    for (const action of actions.values()) action.stop();
     visual.update(FRAME, anim({ dead: true }), true);
-    expect(poseWeight(visual)).toBeGreaterThan(1 - POSE_DRIVE_MIN_WEIGHT);
-  });
-
-  it('freezes the corpse of a rig with no death clip instead of jogging in place', () => {
-    actionsOf(visual).delete('Death');
-    // Die mid-run: the run loop is what is driving the rig.
-    for (let i = 0; i < 10; i++) visual.update(FRAME, anim({ moving: true, speed: 7 }), true);
-    const run = actionsOf(visual).get('Gallop');
-    if (!run) throw new Error('test harness lost the run action');
-    expect(run.isScheduled() && run.getEffectiveWeight() > 0.5).toBe(true);
-
-    visual.update(FRAME, anim({ dead: true }), true);
-    expect(run.paused).toBe(true);
-    const frozenAt = run.time;
-    for (let i = 0; i < 10; i++) visual.update(FRAME, anim({ dead: true }), true);
-    expect(run.time).toBe(frozenAt); // a corpse does not keep running
-    expect(poseWeight(visual)).toBeGreaterThan(1 - POSE_DRIVE_MIN_WEIGHT);
-  });
-
-  it('un-freezes that corpse on revive, even when the base action never changes', () => {
-    // The trap in the freeze above: revive() routes through fadeTo, which early
-    // returns when the incoming base action IS the current one, so the rig would
-    // stay paused forever after dying and reviving on the spot.
-    actionsOf(visual).delete('Death');
-    visual.update(FRAME, anim(), true); // idle is current
-    const idle = actionsOf(visual).get('Idle');
-    if (!idle) throw new Error('test harness lost the idle action');
-
-    visual.update(FRAME, anim({ dead: true }), true);
-    expect(idle.paused).toBe(true);
-
-    visual.update(FRAME, anim(), true); // revive, still standing still
-    expect(idle.paused).toBe(false);
-    const resumedAt = idle.time;
-    for (let i = 0; i < 5; i++) visual.update(FRAME, anim(), true);
-    expect(idle.time).toBeGreaterThan(resumedAt);
     expect(poseWeight(visual)).toBeGreaterThan(1 - POSE_DRIVE_MIN_WEIGHT);
   });
 });

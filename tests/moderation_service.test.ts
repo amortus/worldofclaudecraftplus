@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  canAttemptModerationCommands,
   type ModerationAudit,
   type ModerationHost,
   ModerationService,
@@ -8,11 +9,12 @@ import {
 
 type Session = ModerationSession;
 
-const admin = (pid: number, accountId: number): Session => ({
+const admin = (pid: number, accountId: number, permissions?: readonly string[]): Session => ({
   pid,
   accountId,
   characterId: accountId + 500,
   isAdmin: true,
+  adminPermissions: new Set(permissions ?? ['moderation.act', 'moderation.spectate']),
   name: `Admin${pid}`,
 });
 const player = (pid: number, accountId: number): Session => ({
@@ -20,6 +22,7 @@ const player = (pid: number, accountId: number): Session => ({
   accountId,
   characterId: accountId + 500,
   isAdmin: false,
+  adminPermissions: new Set(),
   name: `Player${pid}`,
 });
 
@@ -36,6 +39,11 @@ function setup(opts: { actor: Session; sessions?: Session[] }) {
   const systemNotices: { session: Session; text: string }[] = [];
   const spectated: { moderator: Session; target: Session }[] = [];
   const unspectated: Session[] = [];
+  const jailVisits: Session[] = [];
+  const jailVisitExits: Session[] = [];
+  const jailed: { moderator: Session; target: Session; minutes: number }[] = [];
+  const unjailed: { moderator: Session; target: Session }[] = [];
+  const jailedPids = new Set<number>();
   const recordAction = vi.fn<ModerationAudit['recordAction']>(async () => {});
   const mute = vi.fn<ModerationAudit['mute']>(async () => {});
   const ban = vi.fn<ModerationAudit['ban']>(async () => {});
@@ -54,6 +62,17 @@ function setup(opts: { actor: Session; sessions?: Session[] }) {
     killEntity: (entityId) => killed.push(entityId),
     enterSpectate: (moderator, target) => spectated.push({ moderator, target }),
     exitSpectate: (moderator) => unspectated.push(moderator),
+    enterJailVisit: (moderator) => jailVisits.push(moderator),
+    exitJailVisit: (moderator) => jailVisitExits.push(moderator),
+    isJailed: (session) => jailedPids.has(session.pid),
+    jail: (moderator, target, minutes) => {
+      jailedPids.add(target.pid);
+      jailed.push({ moderator, target, minutes });
+    },
+    unjail: (moderator, target) => {
+      jailedPids.delete(target.pid);
+      unjailed.push({ moderator, target });
+    },
   };
 
   const service = new ModerationService(host, { recordAction, mute, ban, suspend, forceRename });
@@ -67,6 +86,11 @@ function setup(opts: { actor: Session; sessions?: Session[] }) {
     systemNotices,
     spectated,
     unspectated,
+    jailVisits,
+    jailVisitExits,
+    jailed,
+    unjailed,
+    jailedPids,
     recordAction,
     mute,
     ban,
@@ -128,48 +152,51 @@ describe('ModerationService', () => {
 
   it('applies persistent actions only after their DB write succeeds', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-06-29T10:00:00Z'));
-    const actor = admin(1, 11);
-    const target = player(2, 22);
-    const context = setup({ actor, sessions: [target] });
+    try {
+      vi.setSystemTime(new Date('2026-06-29T10:00:00Z'));
+      const actor = admin(1, 11);
+      const target = player(2, 22);
+      const context = setup({ actor, sessions: [target] });
 
-    context.service.handleChatCommand(actor, '/mute "Player2" 5 spamming');
-    context.service.handleChatCommand(actor, '/suspend "Player2" 30 cheating');
-    context.service.handleChatCommand(actor, '/forcerename "Player2" offensive name');
-    await Promise.resolve();
-    await Promise.resolve();
+      context.service.handleChatCommand(actor, '/mute "Player2" 5 spamming');
+      context.service.handleChatCommand(actor, '/suspend "Player2" 30 cheating');
+      context.service.handleChatCommand(actor, '/forcerename "Player2" offensive name');
+      await Promise.resolve();
+      await Promise.resolve();
 
-    expect(context.muted).toEqual([
-      {
+      expect(context.muted).toEqual([
+        {
+          accountId: 22,
+          untilISO: '2026-06-29T10:05:00.000Z',
+          reason: 'spamming',
+        },
+      ]);
+      expect(context.suspend).toHaveBeenCalledWith({
         accountId: 22,
-        untilISO: '2026-06-29T10:05:00.000Z',
-        reason: 'spamming',
-      },
-    ]);
-    expect(context.suspend).toHaveBeenCalledWith({
-      accountId: 22,
-      adminAccountId: 11,
-      reason: 'cheating',
-      expiresAt: '2026-06-29T10:30:00.000Z',
-    });
-    expect(context.disconnected).toEqual([
-      { accountId: 22, reason: 'This account is suspended.' },
-      {
-        accountId: 22,
-        reason: 'A moderator requires one of your characters to be renamed.',
-      },
-    ]);
-    expect(context.forceRename).toHaveBeenCalledWith({
-      characterId: 522,
-      adminAccountId: 11,
-      reason: 'offensive name',
-    });
-    expect(context.systemNotices.map((notice) => notice.text)).toEqual([
-      'Muted Player2 for 5 minutes.',
-      'Suspended Player2 for 30 minutes.',
-      'Required Player2 to rename.',
-    ]);
-    vi.useRealTimers();
+        adminAccountId: 11,
+        reason: 'cheating',
+        expiresAt: '2026-06-29T10:30:00.000Z',
+      });
+      expect(context.disconnected).toEqual([
+        { accountId: 22, reason: 'This account is suspended.' },
+        {
+          accountId: 22,
+          reason: 'A moderator requires one of your characters to be renamed.',
+        },
+      ]);
+      expect(context.forceRename).toHaveBeenCalledWith({
+        characterId: 522,
+        adminAccountId: 11,
+        reason: 'offensive name',
+      });
+      expect(context.systemNotices.map((notice) => notice.text)).toEqual([
+        'Muted Player2 for 5 minutes.',
+        'Suspended Player2 for 30 minutes.',
+        'Required Player2 to rename.',
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('bans permanently without an expiry and disconnects the account', async () => {
@@ -223,21 +250,272 @@ describe('ModerationService', () => {
     expect(context.systemNotices).toEqual([]);
   });
 
-  it('starts, switches, and stops spectating without an audit write', () => {
+  it('refuses commands outside the actor permission set, per command', async () => {
+    const actorActOnly = admin(1, 11, ['moderation.act']);
+    const actorSpectateOnly = admin(2, 22, ['moderation.spectate']);
+    const target = player(3, 33);
+    const actContext = setup({ actor: actorActOnly, sessions: [target] });
+    const spectateContext = setup({ actor: actorSpectateOnly, sessions: [target] });
+
+    expect(actContext.service.handleChatCommand(actorActOnly, '/spectate Player3')).toBe(true);
+    expect(actContext.spectated).toEqual([]);
+    expect(actContext.notices.map((notice) => notice.text)).toEqual([
+      "You don't have permission to do that.",
+    ]);
+    expect(actContext.service.handleChatCommand(actorActOnly, '/kick "Player3" griefing')).toBe(
+      true,
+    );
+    expect(actContext.recordAction).toHaveBeenCalledTimes(1);
+
+    expect(
+      spectateContext.service.handleChatCommand(actorSpectateOnly, '/ban "Player3" cheating'),
+    ).toBe(true);
+    expect(spectateContext.ban).not.toHaveBeenCalled();
+    expect(spectateContext.notices.map((notice) => notice.text)).toEqual([
+      "You don't have permission to do that.",
+    ]);
+    expect(spectateContext.service.handleChatCommand(actorSpectateOnly, '/spectate Player3')).toBe(
+      true,
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(spectateContext.spectated).toEqual([{ moderator: actorSpectateOnly, target }]);
+
+    // /unspectate follows the spectate permission, not moderation.act.
+    expect(spectateContext.service.handleChatCommand(actorSpectateOnly, '/unspectate')).toBe(true);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(spectateContext.unspectated).toEqual([actorSpectateOnly]);
+    expect(actContext.service.handleChatCommand(actorActOnly, '/unspectate')).toBe(true);
+    expect(actContext.unspectated).toEqual([]);
+  });
+
+  it('gates the dispatch attempt on the moderation permissions', () => {
+    expect(canAttemptModerationCommands(admin(1, 11))).toBe(true);
+    expect(canAttemptModerationCommands(admin(1, 11, ['moderation.act']))).toBe(true);
+    expect(canAttemptModerationCommands(admin(1, 11, ['moderation.spectate']))).toBe(true);
+    expect(canAttemptModerationCommands(admin(1, 11, ['botdetector.read']))).toBe(false);
+    expect(canAttemptModerationCommands(player(1, 11))).toBe(false);
+  });
+
+  it('audits spectate and unspectate before applying their live effect', async () => {
     const actor = admin(1, 11);
     const first = player(2, 22);
     const second = { ...player(3, 33), name: 'Mira Sun' };
     const context = setup({ actor, sessions: [first, second] });
 
-    context.service.handleChatCommand(actor, '/spectate player2');
-    context.service.handleChatCommand(actor, '/spectate "Mira Sun"');
-    context.service.handleChatCommand(actor, '/unspectate');
+    expect(context.service.handleChatCommand(actor, '/spectate player2')).toBe(true);
+    // The audit write is awaited, so nothing is applied synchronously.
+    expect(context.spectated).toEqual([]);
+    await Promise.resolve();
+    await Promise.resolve();
 
+    expect(context.recordAction).toHaveBeenNthCalledWith(1, {
+      action: 'spectate',
+      accountId: 22,
+      adminAccountId: 11,
+      reason: 'Spectated via in-game moderator command',
+    });
+    expect(context.spectated).toEqual([{ moderator: actor, target: first }]);
+
+    expect(context.service.handleChatCommand(actor, '/spectate "Mira Sun"')).toBe(true);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(context.recordAction).toHaveBeenNthCalledWith(2, {
+      action: 'spectate',
+      accountId: 33,
+      adminAccountId: 11,
+      reason: 'Spectated via in-game moderator command',
+    });
     expect(context.spectated).toEqual([
       { moderator: actor, target: first },
       { moderator: actor, target: second },
     ]);
+
+    expect(context.service.handleChatCommand(actor, '/unspectate')).toBe(true);
+    expect(context.unspectated).toEqual([]);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(context.recordAction).toHaveBeenNthCalledWith(3, {
+      action: 'unspectate',
+      accountId: 11,
+      adminAccountId: 11,
+      reason: 'Stopped spectating via in-game moderator command',
+    });
     expect(context.unspectated).toEqual([actor]);
+  });
+
+  it('does not apply spectate when the audit write fails', async () => {
+    const actor = admin(1, 11);
+    const target = player(2, 22);
+    const context = setup({ actor, sessions: [target] });
+    context.recordAction.mockRejectedValueOnce(new Error('db down'));
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    context.service.handleChatCommand(actor, '/spectate Player2');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(context.spectated).toEqual([]);
+    consoleError.mockRestore();
+  });
+
+  it('drops a stale spectate audit completion that resolves after a later unspectate', async () => {
+    const actor = admin(1, 11);
+    const target = player(2, 22);
+    const context = setup({ actor, sessions: [target] });
+
+    // Make the /spectate audit write resolve AFTER the /unspectate one, even
+    // though /spectate was issued first, to reproduce the out-of-order
+    // completion the reviewer flagged.
+    let resolveSpectateAudit!: () => void;
+    context.recordAction.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveSpectateAudit = resolve;
+        }),
+    );
+
+    expect(context.service.handleChatCommand(actor, '/spectate Player2')).toBe(true);
+    expect(context.service.handleChatCommand(actor, '/unspectate')).toBe(true);
+    // /unspectate's own audit write resolves first.
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(context.unspectated).toEqual([actor]);
+    expect(context.spectated).toEqual([]);
+
+    // The stale /spectate audit write finally resolves. It must NOT re-enter
+    // spectate mode, since /unspectate already superseded it.
+    resolveSpectateAudit();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(context.spectated).toEqual([]);
+    expect(context.unspectated).toEqual([actor]);
+  });
+
+  it('drops a stale spectate audit completion when the target was switched', async () => {
+    const actor = admin(1, 11);
+    const first = player(2, 22);
+    const second = { ...player(3, 33), name: 'Mira Sun' };
+    const context = setup({ actor, sessions: [first, second] });
+
+    let resolveFirstAudit!: () => void;
+    context.recordAction.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveFirstAudit = resolve;
+        }),
+    );
+
+    expect(context.service.handleChatCommand(actor, '/spectate Player2')).toBe(true);
+    expect(context.service.handleChatCommand(actor, '/spectate "Mira Sun"')).toBe(true);
+    // The second /spectate's own audit write resolves first.
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(context.spectated).toEqual([{ moderator: actor, target: second }]);
+
+    // The stale first /spectate audit write resolves afterwards. It must NOT
+    // switch spectate back to the first target.
+    resolveFirstAudit();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(context.spectated).toEqual([{ moderator: actor, target: second }]);
+  });
+
+  it('visits and leaves jail without an audit write', () => {
+    const actor = admin(1, 11);
+    const context = setup({ actor });
+
+    expect(context.service.handleChatCommand(actor, '/jail')).toBe(true);
+    expect(context.service.handleChatCommand(actor, '/unjail')).toBe(true);
+
+    expect(context.jailVisits).toEqual([actor]);
+    expect(context.jailVisitExits).toEqual([actor]);
+    expect(context.recordAction).not.toHaveBeenCalled();
+  });
+
+  it('audits jail and unjail before applying their live effect', async () => {
+    const actor = admin(1, 11);
+    const target = player(2, 22);
+    const context = setup({ actor, sessions: [target] });
+
+    expect(context.service.handleChatCommand(actor, '/jail "Player2" 5')).toBe(true);
+    expect(context.jailed).toEqual([]);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(context.recordAction).toHaveBeenCalledWith({
+      action: 'jail',
+      accountId: 22,
+      adminAccountId: 11,
+      reason: 'Jailed by in-game moderator command (5 minutes)',
+    });
+    expect(context.jailed).toEqual([{ moderator: actor, target, minutes: 5 }]);
+    expect(context.systemNotices.map((notice) => notice.text)).toContain(
+      'Jailed Player2 for 5 minutes.',
+    );
+
+    expect(context.service.handleChatCommand(actor, '/unjail "Player2"')).toBe(true);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(context.recordAction).toHaveBeenCalledWith({
+      action: 'unjail',
+      accountId: 22,
+      adminAccountId: 11,
+      reason: 'Released by in-game moderator command',
+    });
+    expect(context.unjailed).toEqual([{ moderator: actor, target }]);
+    expect(context.systemNotices.map((notice) => notice.text)).toContain(
+      'Released Player2 from jail.',
+    );
+  });
+
+  it('carries a custom reason into the audit record', async () => {
+    const actor = admin(1, 11);
+    const target = player(2, 22);
+    const context = setup({ actor, sessions: [target] });
+
+    expect(context.service.handleChatCommand(actor, '/jail "Player2" 10 being a nuisance')).toBe(
+      true,
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(context.recordAction).toHaveBeenCalledWith({
+      action: 'jail',
+      accountId: 22,
+      adminAccountId: 11,
+      reason: 'being a nuisance (10 minutes)',
+    });
+    expect(context.jailed).toEqual([{ moderator: actor, target, minutes: 10 }]);
+    expect(context.systemNotices.map((notice) => notice.text)).toContain(
+      'Jailed Player2 for 10 minutes.',
+    );
+  });
+
+  it('guards malformed jail commands and duplicate jail state', () => {
+    const actor = admin(1, 11);
+    const target = player(2, 22);
+    const context = setup({ actor, sessions: [target] });
+    context.jailedPids.add(target.pid);
+
+    context.service.handleChatCommand(actor, '/jail Player2');
+    context.service.handleChatCommand(actor, '/jail "Player2"');
+    context.service.handleChatCommand(actor, '/jail "Player2" 5');
+    context.service.handleChatCommand(actor, '/unjail Missing');
+    context.jailedPids.delete(target.pid);
+    context.service.handleChatCommand(actor, '/unjail "Player2"');
+
+    expect(context.notices.map((notice) => notice.text)).toEqual([
+      'Usage: /jail ["<name>" <minutes> [reason]]',
+      'Usage: /jail ["<name>" <minutes> [reason]]',
+      'Player2 is already jailed.',
+      'Usage: /unjail ["<name>"]',
+      'Player2 is not jailed.',
+    ]);
     expect(context.recordAction).not.toHaveBeenCalled();
   });
 

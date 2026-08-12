@@ -1,9 +1,11 @@
 // Pure resolver: the item tooltip's explicit "Requires: <classes>" line. Classic
 // MMO tooltips always name the eligible classes for a class-restricted item, but
 // ONLY when that list is the restriction `canEquipItem` actually enforces:
-// - Weapons: a weapon's `requiredClass` is always the enforced proficiency group,
-//   whether it resolves to a known archetype (see equipment_rules.ts
-//   weaponArchetypeForItem) or falls through to the literal `requiredClass` check.
+// - Weapons: filter through the canonical equipment boundary, deriving the list
+//   when a hand-specific rule (such as the blanket Rogue two-handed prohibition)
+//   applies even without `requiredClass` metadata.
+// - Shields: `canEquipItem` enforces their literal `requiredClass` before generic
+//   armor-weight handling, so the tooltip must do the same.
 // - Armor: `canEquipItem` short-circuits on armor weight (cloth/leather/mail) and
 //   never reads `requiredClass` at all. On armor, `requiredClass` is loot-targeting
 //   metadata unless it happens to name EXACTLY the classes that weight already
@@ -12,24 +14,17 @@
 //   only rogue/hunter, when every mail class can also wear leather) is not enforced,
 //   and showing it would claim a restriction that does not exist.
 //
-// A rogue/hunter-only dagger (Fang of Korzul) or a warrior/paladin/shaman mail chest
-// (Deathlord Warplate) resolves to a known archetype/armor-weight group whose enforced
-// set matches `requiredClass` exactly, and a prior version of the tooltip hid the class
-// list whenever that happened, leaving a blocked player with no in-game explanation at
-// all. Fixing that must not start claiming restrictions armor does not actually
-// enforce (see classesThatCanEquipArmorType).
-//
-// NOTE on weapons: a weapon's `requiredClass` is NOT the enforced group here. The
-// archetype DETECTION sets in equipment_rules.ts (OLD_WARRIOR_WEAPON_ARCHETYPE,
-// OLD_CASTER_WEAPON_ARCHETYPE) are narrower than the PROFICIENCY sets canEquipItem
-// then enforces, so e.g. a warrior/paladin/shaman-tagged blade is genuinely equippable
-// by rogues and hunters too. Naming `requiredClass` there would state a restriction
-// that does not exist, so weapons name `classesThatCanEquipItem` (what is really
-// admitted) instead.
+// Bug #1893: a rogue/hunter-only dagger (Fang of Korzul) or a warrior/paladin/shaman
+// mail chest (Deathlord Warplate) resolves to a known archetype/armor-weight group
+// whose enforced set matches `requiredClass` exactly, and a prior version of the
+// tooltip hid the class list whenever that happened, leaving a blocked player with
+// no in-game explanation at all. Fixing that regression must not start claiming
+// restrictions armor doesn't actually enforce (see classesThatCanEquipArmorType).
 import {
   armorTypeForItem,
+  canEquipItem,
   classesThatCanEquipArmorType,
-  classesThatCanEquipItem,
+  isShieldItem,
 } from '../sim/equipment_rules';
 import { ALL_CLASSES, type ItemDef, type PlayerClass } from '../sim/types';
 
@@ -42,18 +37,21 @@ function sameClassSet(classes: readonly PlayerClass[], allowed: readonly PlayerC
 // class restriction, or when that restriction is not one `canEquipItem` enforces
 // (nothing accurate to show).
 export function requiredClassesForTooltip(item: ItemDef): readonly PlayerClass[] | null {
-  if (!item.requiredClass || item.requiredClass.length === 0) return null;
+  const required = item.requiredClass?.length ? item.requiredClass : null;
+  if (isShieldItem(item)) {
+    if (!required) return null;
+    const eligible = required.filter((cls) => canEquipItem(cls, item));
+    return eligible.length > 0 ? eligible : null;
+  }
   const armorType = armorTypeForItem(item);
   if (armorType) {
-    return sameClassSet(item.requiredClass, classesThatCanEquipArmorType(armorType))
-      ? item.requiredClass
-      : null;
+    if (!required) return null;
+    return sameClassSet(required, classesThatCanEquipArmorType(armorType)) ? required : null;
   }
-  // Weapons (and anything else carrying requiredClass): name the group canEquipItem
-  // really admits. Where that is exactly `requiredClass` (a literal-list weapon, or
-  // one whose archetype happens to match), keep the author's ordering; otherwise the
-  // enforced set is the only accurate list. A weapon nothing gates is not worth a line.
-  const enforced = classesThatCanEquipItem(item);
-  if (enforced.length === 0 || enforced.length === ALL_CLASSES.length) return null;
-  return sameClassSet(item.requiredClass, enforced) ? item.requiredClass : enforced;
+  // Apply hand/proficiency policy at the same boundary used by actual equips so
+  // tooltip eligibility can never drift from enforcement for future items.
+  const candidates = required ?? ALL_CLASSES;
+  const eligible = candidates.filter((cls) => canEquipItem(cls, item));
+  if (eligible.length === 0) return null;
+  return required || eligible.length < ALL_CLASSES.length ? eligible : null;
 }

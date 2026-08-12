@@ -1,5 +1,6 @@
 // Pure keyboard-navigation logic for the always-visible roving-tabindex pattern (a
-// tablist, a radiogroup, a menu of sibling options). It is the sibling of
+// tablist, a radiogroup, a menu of sibling options), lifted out of talents_window.ts so
+// the three handlers that triplicated it share one tested core. It is the sibling of
 // dropdown_nav.ts: that core models the OPEN/COLLAPSE listbox (a trigger that expands a
 // hidden menu); this one models ALWAYS-VISIBLE roving siblings, where Arrow/Home/End move
 // a roving focus among peers that are all on screen. Keep the two separate primitives: a
@@ -9,9 +10,10 @@
 // DOM-free and deterministic (no Math.random/Date.now/performance.now): it maps a
 // (key, current index, count, orientation) tuple to the next roving index, or null for any
 // key it does not own (so the caller falls through to its own Escape / Enter-Space
-// activation tail). The wrap is the single normalized form (((x % n) + n) % n), which is
-// equal to (((i +/- 1) % n) + n) % n for every i in [0, n), the canonical roving-tabindex
-// arithmetic (radiogroup, tablist, flyout) folded onto one expression.
+// activation tail). The wrap is the single normalized form (((x % n) + n) % n), which
+// unifies the radiogroup's (i - 1 + n) % n and the flyout's ((idx % n) + n) % n: both are
+// equal to (((i +/- 1) % n) + n) % n for every i in [0, n), so folding the three handlers
+// onto this one expression is byte-faithful, not merely close.
 //
 // It takes primitives, not an IWorld, so the ClientWorld-vs-Sim parity row
 // is N/A for it, exactly like dropdown_nav.ts; same-input-same-output is the contract.

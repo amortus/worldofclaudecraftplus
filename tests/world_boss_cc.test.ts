@@ -3,9 +3,6 @@
 // was applied, and the aura was then dropped by the ccImmune gate, so casting Polymorph
 // on the boss healed him to full without sheeping him: he "reset" mid-fight. These tests
 // pin that a cc-immune target is left entirely untouched, while normal poly is unchanged.
-//
-// Ported from upstream (levy-street) tests/world_boss_cc.test.ts; unchanged except that
-// our fork rejects the cast at cast time via the ccImmune gate in castAbility.
 import { describe, expect, it } from 'vitest';
 import { MOBS } from '../src/sim/data';
 import { createMob } from '../src/sim/entity';
@@ -50,12 +47,15 @@ describe('polymorph vs a cc-immune raid boss', () => {
     sim.castAbility('polymorph');
     const events = sim.tick();
 
+    // The cast is rejected outright, so the polymorph effect (and its sheep full-heal
+    // side effect, the "he just reset to full" bug) never runs.
     expect(
       events.some(
         (e) => e.type === 'error' && /cannot be polymorphed/i.test((e as { text: string }).text),
       ),
     ).toBe(true);
     expect(boss.auras.some((a) => a.kind === 'polymorph')).toBe(false);
+    // Its HP was not snapped to full; one tick of idle regen cannot reach maxHp from 40%.
     expect(boss.hp).toBeLessThan(boss.maxHp);
   });
 
@@ -65,6 +65,8 @@ describe('polymorph vs a cc-immune raid boss', () => {
 
     castPolymorphAt(sim, wolf);
 
+    // The regression guard: a non-immune mob is still sheeped. (The sheep full-heal
+    // itself is covered by tests/sim.test.ts; here we only prove immunity is targeted.)
     expect(wolf.auras.some((a) => a.kind === 'polymorph')).toBe(true);
   });
 });

@@ -1,83 +1,44 @@
-// Harmful-vs-beneficial classification for an aura, plus the pure decision for the
-// combat-log message an aura-GAIN SimEvent produces for an entity OTHER than the
-// player (the hud.ts 'aura' case). Host-agnostic (no DOM, no i18n runtime) so both
-// calls are unit-testable without a HUD harness, following the pure-core pattern used
-// across src/ui/*_view.ts.
+// Pure decision for the combat-log message an aura-GAIN SimEvent produces for an
+// entity OTHER than the player (the hud.ts 'aura' case). Kept host-agnostic (no
+// DOM, no i18n runtime) so the harmful-vs-beneficial call is unit-testable without
+// a HUD harness, following the pure-core pattern used across src/ui/*_view.ts.
 //
-// The gain event only carries {targetId, name, gained}, no kind and no value, so the
-// caller looks up the live Aura the event just applied on the target's aura list
-// (matched by name) and passes it in here. That reuses the SAME classifier the
-// buff/debuff aura bar split uses, instead of inventing a second harmful/beneficial
-// rule that could drift from it.
-
+// The SimEvent itself only carries {targetId, name, gained, auraKind?}, no value,
+// so the caller looks up the live Aura the event just applied on the target's
+// aura list (matched by name, and by kind when the event supplies one) and passes
+// its kind/value in here. That reuses the SAME classifier the debuff-bar split
+// and /targetbuffs use (src/sim/aura_classify.ts) instead of inventing a second
+// harmful/beneficial rule that could drift from it.
+import { isDebuffAura } from '../sim/aura_classify';
 import type { Aura, AuraKind } from '../sim/types';
 
-// Aura kinds that are harmful on their face: the CLIENT's list, lifted verbatim out
-// of hud.ts's aura-bar buff/debuff split so the bar and the combat-log line can never
-// disagree. It is deliberately WIDER than the sim's HARMFUL_AURA_KINDS (src/sim/sim.ts),
-// which exists only to tag /targetbuffs output; every kind the sim calls harmful is
-// harmful here too, and tests/aura_gain_log.test.ts pins that superset relation so a
-// kind added to the sim's set can never be beneficial here.
-const DEBUFF_AURA_KINDS: readonly AuraKind[] = [
-  'dot',
-  'slow',
-  'root',
-  'stun',
-  'incapacitate',
-  'polymorph',
-  'attackspeed',
-  'debuff_ap',
-  'sunder',
-  'mortal_wound',
-  'silence',
-  'disarm',
-  'blind',
-  'expose',
-  'spellvuln',
-  'lockout',
-  'vulnerability',
-  'hex',
-  'tongues',
-  'cost_tax',
-  'heal_absorb',
-  'critvuln',
-];
-
-const DEBUFF_KIND_SET = new Set<string>(DEBUFF_AURA_KINDS);
+export type AuraGainLogKey = 'hud.combat.auraAfflicted' | 'hud.combat.auraGainOther';
 
 /**
- * True when an aura is a debuff. A negative-value stat aura (a mob's Withering Wail
- * sapping attack power, an Intellect-draining curse) is a debuff even though it
- * reuses a `buff_*` kind, so the value breaks that tie.
- */
-export function isDebuffAura(kind: AuraKind, value: number): boolean {
-  return DEBUFF_KIND_SET.has(kind) || (kind.startsWith('buff_') && value < 0);
-}
-
-export type AuraGainLogKey = 'hud.combat.auraAfflicted' | 'hudChrome.combat.auraGainOther';
-
-/**
- * The combat-log key for "some other unit just gained an aura". `matchedAura` is the
- * live Aura found on the target at the moment the event is handled; when none can be
- * found (it already expired before the event drained, or the online mirror has not
- * echoed it yet) the gain reads as neutral rather than being assumed harmful.
+ * `matchedAura` is the live Aura found on the target (name/kind matched at the
+ * moment the event is handled). When no live aura can be found (e.g. it already
+ * expired before the event drained), `fallbackKind` -- the SimEvent's own optional
+ * `auraKind` -- still resolves every kind except a negative-value `buff_*` reuse,
+ * since only that case needs the real value to break the tie; absent both, the
+ * gain reads as neutral rather than assumed harmful.
  */
 export function auraGainLogKeyFor(
   matchedAura: Pick<Aura, 'kind' | 'value'> | undefined,
+  fallbackKind?: AuraKind,
 ): AuraGainLogKey {
-  if (!matchedAura) return 'hudChrome.combat.auraGainOther';
-  return isDebuffAura(matchedAura.kind, matchedAura.value ?? 0)
-    ? 'hud.combat.auraAfflicted'
-    : 'hudChrome.combat.auraGainOther';
+  const kind = matchedAura?.kind ?? fallbackKind;
+  if (kind === undefined) return 'hud.combat.auraGainOther';
+  const value = matchedAura?.value ?? 0;
+  return isDebuffAura(kind, value) ? 'hud.combat.auraAfflicted' : 'hud.combat.auraGainOther';
 }
 
-/**
- * Finds the live aura a just-applied gain event refers to on the target's aura list,
- * matched by the display name the event carries.
- */
-export function findAuraForGainEvent<T extends Pick<Aura, 'name'>>(
+/** Finds the live aura a just-applied SimEvent refers to on the target's aura
+ * list, matched by name (and by kind too when the event carries one, since a
+ * target can in principle hold two same-named auras from different sources). */
+export function findAuraForGainEvent<T extends Pick<Aura, 'name' | 'kind'>>(
   auras: readonly T[],
   name: string,
+  auraKind?: AuraKind,
 ): T | undefined {
-  return auras.find((a) => a.name === name);
+  return auras.find((a) => a.name === name && (auraKind === undefined || a.kind === auraKind));
 }

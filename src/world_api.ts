@@ -1,813 +1,926 @@
-import type { Role, SavedLoadout, TalentAllocation } from './sim/content/talents';
-import type { DeedCategory } from './sim/deeds';
-import type {
-  CraftingProfessionId,
-  DisenchantPlan,
-  EnchantGroup,
-  EnchantStatBonus,
-  EnchantTarget,
-  MasteryState,
-  PlayerCraftSkill,
-  PlayerProfessionSkill,
-  ReagentStatus,
-} from './sim/professions';
-import type { GuildLeaderboardPage, LeaderboardPage } from './sim/leaderboard_page';
-import type { Ante, LootTier, PickAction, VisibleCell } from './sim/lockpick';
-import type { MarketQuery } from './sim/market_query';
-import type { ResolvedAbility } from './sim/sim';
-import {
-  type ArenaCombatant,
-  type ArenaFormat,
-  type ArenaStanding,
-  type DelveObjectiveState,
-  type Entity,
-  type EquipSlot,
-  type InvSlot,
-  type LootRollChoice,
-  type LootRollPrompt,
-  type MasterLootSettings,
-  type MasterLootThreshold,
-  type MoveInput,
-  OVERHEAD_EMOTE_IDS,
-  type OverheadEmoteId,
-  type PetMode,
-  type PlayerClass,
-  type QuestProgress,
-  type QuestState,
-  type ResourceType,
-  type Vec3,
-} from './sim/types';
-
-export type { GuildLeaderboardPage, LeaderboardPage } from './sim/leaderboard_page';
-
-export interface PartyMemberInfo {
-  pid: number;
-  name: string;
-  cls: PlayerClass;
-  level: number;
-  hp: number;
-  mhp: number;
-  res: number;
-  mres: number;
-  rtype: ResourceType | null;
-  x: number;
-  z: number;
-  dead: number;
-  inCombat: number;
-  group: 1 | 2;
-}
-
-export interface PartyInfo {
-  leader: number;
-  raid: boolean;
-  master: MasterLootSettings;
-  members: PartyMemberInfo[];
-}
-
-export interface TradeOffer {
-  items: InvSlot[];
-  copper: number;
-}
-
-export interface TradeInfo {
-  otherPid: number;
-  otherName: string;
-  myOffer: TradeOffer;
-  theirOffer: TradeOffer;
-  myAccepted: boolean;
-  theirAccepted: boolean;
-}
-
-export interface DuelInfo {
-  otherPid: number;
-  otherName: string;
-  state: 'countdown' | 'active';
-}
-
-export interface DelveRunInfo {
-  delveId: string;
-  tierId: string;
-  slot: number;
-  origin: { x: number; z: number };
-  moduleIndex: number;
-  moduleCount: number;
-  modules: string[];
-  objective: DelveObjectiveState;
-  affixes: string[];
-  completed: boolean;
-  exitPortalOpen: boolean;
-  /** §7.6: this run rolled Bountiful: the reward chest is a purple Coffer that
-   * only yields to a Hard + Premium-ante solve and guarantees a signature rare. */
-  bountiful: boolean;
-}
-
-// ---------------------------------------------------------------------------
-// Rifts (src/sim/rift): the active run and the overworld entrances.
-//
-// Both are STRING-FREE, ids and numbers only: the sim stays language-agnostic
-// and every word about a rift is authored client-side, so these shapes carry
-// stable generator ids (`rank`, `themeId`, `mechanicId`, `zoneId`) that the HUD
-// resolves through `t()`. They are field-for-field the payloads of the
-// `riftEnter` / `riftFloor` / `riftPortal` events, so a live panel and an
-// announcement can never describe the same rift differently.
-// ---------------------------------------------------------------------------
-
-export interface RiftRunInfo {
-  /** Rank letter: 'C' | 'B' | 'A' | 'S'. */
-  rank: string;
-  /** Zero-based floor the party is standing on. */
-  floorIndex: number;
-  floorCount: number;
-  themeId: string;
-  mechanicId: string;
-  /**
-   * Absolute milliseconds (the `Date.now()` epoch on the authoritative server)
-   * at which the overworld entrance stops admitting new parties. The tracker
-   * subtracts its own now from this every frame, so a live countdown costs no
-   * extra traffic. 0 means the run carries no deadline any more.
-   */
-  entranceClosesAt: number;
-  /** True once the last warden has fallen and the rift is sealed. */
-  sealed?: boolean;
-}
-
-export interface RiftPortalInfo {
-  portalId: string;
-  zoneId: string;
-  rank: string;
-  /** Absolute ms on the same clock as `RiftRunInfo.entranceClosesAt`. */
-  opensAt: number;
-  expiresAt: number;
-  open: boolean;
-}
-
-// ---------------------------------------------------------------------------
-// Dungeon Finder. Every field below is a stable id or a number: the sim is
-// language-agnostic, so the client owns every word under `dungeonFinder.*`.
-//
-// The runtime identifier is `dungeonFinder`, NEVER `lfg`: that token is already
-// a joinable chat channel. Only the four SimEvent names keep the old spelling.
-// ---------------------------------------------------------------------------
-
-/** One offered dungeon. Derived from the dungeon's own spawn table, so it can
- *  never go stale against a boss retune. */
-export interface LfgOfferInfo {
-  dungeonId: string;
-  /** 'leveling' | 'endgame' | 'heroic'. */
-  tier: string;
-  groupSize: number;
-  /** The smallest group the queue will ever pop for this dungeon. */
-  minGroupSize: number;
-  /** Hard lower gate. There is deliberately no upper gate. */
-  minQueueLevel: number;
-  recommendedLevel: number;
-}
-
-/** The viewer's live place in the queue. */
-export interface LfgStatusInfo {
-  /** 'idle' | 'queued' | 'proposed' | 'cooldown'. */
-  state: string;
-  dungeonId: string | null;
-  /** The roles this player queued as, already intersected with what their class
-   *  can fill. */
-  roles: string[];
-  waitSeconds: number;
-  /** How strict the matchmaker currently is for THIS player's wait:
-   *  'ideal' | 'anchored' | 'any' | 'short'. */
-  relax: string;
-  queuedUnits: number;
-  queuedPlayers: number;
-  /** Players WILLING to fill each role, so a druid counts in all three (the way
-   *  every dungeon-finder readout has always counted). Never sum these. */
-  queuedByRole: Record<string, number>;
-  /**
-   * Absolute milliseconds (the `Date.now()` epoch on the authoritative server)
-   * at which a decline / timeout cooldown lifts, on the same clock as
-   * `RiftPortalInfo.expiresAt`. 0 means no cooldown is running.
-   */
-  cooldownUntil: number;
-}
-
-/** The ready check the viewer is sitting in. */
-export interface LfgProposalInfo {
-  proposalId: string;
-  dungeonId: string;
-  /** Absolute ms on the same clock as `LfgStatusInfo.cooldownUntil`. */
-  expiresAt: number;
-  /** The role this player was assigned: 'tank' | 'healer' | 'dps'. */
-  role: string;
-  responded: boolean;
-  accepted: boolean;
-  /** Group size and how many have accepted so far, for the "3 of 5 ready" row. */
-  size: number;
-  acceptedCount: number;
-}
-
-// Render-safe projection of an active lockpicking attempt. Only ever holds cells
-// inside the fog window, the full lock layout never reaches the client.
-export interface LockpickView {
-  sessionId: string;
-  objectId: number;
-  w: number;
-  h: number;
-  col: number;
-  row: number;
-  page: number;
-  pageCount: number;
-  tries: number;
-  triesTotal: number;
-  lootTier: LootTier;
-  allowed: Exclude<PickAction, 'abort'>[];
-  visible: VisibleCell[];
-  // Per-step budget (ms) for the server-authoritative clock, or null for no
-  // clock. The HUD renders a countdown from this; it never enforces it.
-  stepTimeoutMs: number | null;
-}
-
-export interface DelveCompanionInfo {
-  companionId: string;
-  entityId: number;
-  rank: number;
-  hp: number;
-  maxHp: number;
-}
-
-export interface DelveDailyInfo {
-  date: string;
-  firstClearXp: string[];
-  markClears: number;
-}
-
-// One recipe row of the crafting window, already resolved against the viewer's
-// bag. Ids and numbers only (this seam is string-free): the client supplies
-// every label, colour and localized line.
-export interface CraftRecipeView {
-  recipeId: string;
-  professionId: CraftingProfessionId;
-  resultItemId: string;
-  resultCount: number;
-  /** Where the recipe sits on the shared 25-point mastery ladder, in points. */
-  skillReq: number;
-  /** The output's content level (also its equip requirement). */
-  level: number;
-  recipeTier: number;
-  capabilityTier: number;
-  /** The four-state colour the row is painted in (full / reduced / minimal / none). */
-  masteryState: MasteryState;
-  /** Skill this craft would teach, already clamped. 0 means grey or capped. */
-  skillGain: number;
-  /** Masterwork proc odds in [0, 1]. Draw-free: reading this rolls nothing. */
-  masterworkChance: number;
-  /** Every reagent line: required, held, met. In the recipe's declared order. */
-  reagents: ReagentStatus[];
-  /** True when every reagent line is met. */
-  canCraft: boolean;
-}
-
-// One enchant row of the per-slot picker, resolved against the viewer's bag.
-export interface EnchantOptionView {
-  enchantId: string;
-  group: EnchantGroup;
-  itemSlot: EquipSlot;
-  /** The flat bonus this enchant bakes in. Frozen once applied. */
-  statBonus: EnchantStatBonus;
-  reagents: ReagentStatus[];
-  /** True when the bag holds every reagent. Says nothing about the target: the
-   *  already-enchanted and wrong-slot gates resolve server-side on apply. */
-  reagentsMet: boolean;
-  skillGain: number;
-}
-
-// A Marks-vendor (Brother Halven) shop entry resolved against the player's clears:
-// the static price/item plus its unlock state and a presentation breakdown of the
-// gate, so the shop tab can show why a locked offer is locked. Structurally matches
-// the sim's `DelveShopOffer`; both Sim and ClientWorld return that here.
-export interface DelveShopOfferView {
-  itemId: string;
-  marks: number;
-  unlocked: boolean;
-  requiresHeroicClear: boolean;
-  requiresClears: number; // >0 for a `clears:N` gate; 0 otherwise
-}
-
-export const OVERHEAD_EMOTES = [
-  { id: 'wave', label: 'Wave' },
-  { id: 'laugh', label: 'LOL' },
-  { id: 'question', label: 'Bro?' },
-  { id: 'cheer', label: 'Cheer' },
-  { id: 'dance', label: 'Dance' },
-  { id: 'point', label: 'Point' },
-  { id: 'flex', label: 'Flex' },
-  { id: 'salute', label: 'Salute' },
-  { id: 'cry', label: 'Cry' },
-  { id: 'bow', label: 'Bow' },
-  { id: 'clap', label: 'Clap' },
-  { id: 'roar', label: 'Roar' },
-  { id: 'kneel', label: 'Kneel' },
-] as const satisfies readonly { id: OverheadEmoteId; label: string }[];
-
-export type { OverheadEmoteId };
-
-export function isOverheadEmoteId(value: unknown): value is OverheadEmoteId {
-  return typeof value === 'string' && (OVERHEAD_EMOTE_IDS as readonly string[]).includes(value);
-}
-
-// Persistent social state, mirrored from the server's SocialService. Mirrors
-// server/social.ts shapes; kept here so the HUD has no server-side imports.
-export type PresenceStatus = 'online' | 'combat' | 'dungeon' | 'dead';
-export type GuildRank = 'leader' | 'officer' | 'member';
-
-export interface FriendInfo {
-  id: number;
-  name: string;
-  cls: string;
-  level: number;
-  realm: string;
-  online: boolean;
-  zone?: string;
-  status?: PresenceStatus;
-  // live world position of an online character, for plotting on the map
-  x?: number;
-  z?: number;
-}
-
-export interface GuildMemberInfo extends FriendInfo {
-  rank: GuildRank;
-}
-
-export interface GuildInfo {
-  id: number;
-  name: string;
-  rank: GuildRank;
-  members: GuildMemberInfo[];
-}
-
-export interface SocialInfo {
-  friends: FriendInfo[];
-  blocks: { id: number; name: string }[];
-  guild: GuildInfo | null;
-}
-
-export interface CharacterSearchResult {
-  name: string;
-  cls: string;
-  level: number;
-}
-
-// One ranked row of the lifetime-XP leaderboard (Max-Level XP Overflow). Always
-// computed server-side; the client only displays it.
-export interface LeaderboardEntry {
-  rank: number;
-  name: string;
-  cls: PlayerClass;
-  level: number;
-  virtualLevel: number;
-  lifetimeXp: number;
-  prestigeRank: number;
-  realm?: string; // present on the global (cross-realm) home-page board
-}
-
-// One ranked row of the GUILD high-score board. A guild's score is the SUM of
-// every member's lifetimeXp; memberCount and topLevel are shown alongside. Like
-// LeaderboardEntry it is always computed server-side (guilds live only in the
-// server social DB, never in the deterministic sim), so the offline Sim ranks no
-// guilds and the client only displays what the server ranked.
-export interface GuildLeaderboardEntry {
-  rank: number;
-  name: string;
-  memberCount: number;
-  totalLifetimeXp: number;
-  topLevel: number;
-  realm?: string; // present on the global (cross-realm) board
-}
-
-export type { ArenaCombatant, ArenaFormat, ArenaStanding };
-
-export interface ArenaLadderEntry {
-  pid: number;
-  name: string;
-  cls: PlayerClass;
-  rating: number;
-  wins: number;
-  losses: number;
-}
-
-// Live 2v2 Fiesta state for the local player, polled by the HUD each frame.
-export interface FiestaAugmentOffer {
-  tier: 'silver' | 'gold' | 'prismatic';
-  wave: number;
-  choices: string[]; // augment ids; localized + described client-side
-}
-// One combatant's line on the scoreboard.
-export interface FiestaScoreboardPlayer {
-  pid: number;
-  name: string;
-  cls: PlayerClass;
-  kills: number;
-  down: boolean; // currently benched, awaiting respawn
-  me: boolean;
-}
-
-// A ring power-up as the renderer/HUD sees it.
-export interface FiestaPowerupView {
-  id: number;
-  defId: string; // POWERUPS id (localized client-side)
-  x: number;
-  z: number;
-  state: 'spawning' | 'ready';
-  frac: number; // spawning: telegraph progress 0..1; ready: lifetime remaining 0..1
-  color: number; // orb/telegraph colour (hex)
-}
-
-export interface FiestaMatchInfo {
-  team: 'A' | 'B';
-  scoreA: number;
-  scoreB: number;
-  myScore: number; // my team's tally
-  theirScore: number;
-  scoreLimit: number;
-  wave: number;
-  totalWaves: number;
-  // hazard ring, in WORLD coordinates so the renderer can draw it directly
-  ring: { cx: number; cz: number; radius: number };
-  down: boolean; // am I currently benched, awaiting respawn
-  respawnIn: number; // whole seconds until I revive (0 if alive)
-  augments: string[]; // augment ids I have locked in this bout
-  offer: FiestaAugmentOffer | null; // a pending pick, if any
-  augmentPending: number; // queued offers awaiting my next death (indicator)
-  teamA: FiestaScoreboardPlayer[];
-  teamB: FiestaScoreboardPlayer[];
-  powerups: FiestaPowerupView[];
-}
-
-/**
- * What a released spirit may do right now. String-free, like the rest of this
- * seam: distances and flags only, the HUD renders the words. `corpse` is null
- * when the death left no body to run back to (a rift), in which case the Spirit
- * Healer at the graveyard is the only road back.
- */
-export interface GhostView {
-  corpse: Vec3 | null;
-  /** Yards to the body, or null when there is none. */
-  corpseDistance: number | null;
-  corpseInRange: boolean;
-  spiritHealerInRange: boolean;
-}
-
-export interface ArenaInfo {
-  // Backwards-compatible view of the currently selected/queued/matched bracket.
-  rating: number;
-  wins: number;
-  losses: number;
-  standings: Record<ArenaFormat, ArenaStanding>;
-  format: ArenaFormat | null;
-  queued: boolean;
-  queueSize: number;
-  // present only while in a match
-  match: {
-    format: ArenaFormat;
-    state: 'countdown' | 'active' | 'over';
-    oppName: string;
-    oppClass: PlayerClass;
-    oppLevel: number;
-    oppPid: number;
-    allies: ArenaCombatant[];
-    enemies: ArenaCombatant[];
-    returnIn?: number; // whole seconds left in the post-bout aftermath ('over')
-    // present only for the 2v2 Fiesta party mode
-    fiesta?: FiestaMatchInfo;
-  } | null;
-  // Backwards-compatible live ladder for the currently selected bracket.
-  ladder: ArenaLadderEntry[];
-  // live standings of rated players currently online, best first, by bracket
-  ladders: Record<ArenaFormat, ArenaLadderEntry[]>;
-}
-
-// ---------------------------------------------------------------------------
-// The World Market (the Merchant's auction house). Listings are global and
-// shared by every player; collections are the per-player gold + items waiting
-// to be picked up (sale proceeds, expired/returned listings).
-// ---------------------------------------------------------------------------
-
-export interface MarketListingView {
-  id: number;
-  sellerName: string;
-  itemId: string;
-  count: number;
-  price: number; // total copper buyout for the whole stack
-  mine: boolean; // the viewer is the seller (offer them Cancel, not Buy)
-  house: boolean; // the Merchant's own standing stock
-}
-
-export interface MarketInfo {
-  // The viewer's own listings (always wired, for reclaim) followed by ONE page of
-  // other sellers' listings matching the active query. The server filters + paginates
-  // authoritatively, so paging walks the whole market, not just a single wire window.
-  listings: MarketListingView[];
-  totalCount: number; // all listings matching the active filter (mine + others)
-  filter: string; // the active search string (echoed back from the server)
-  page: number; // current browse page (of other sellers' listings), 0-based
-  pageCount: number; // total browse pages of other sellers' listings (>= 1)
-  collectionCopper: number; // proceeds waiting to be collected
-  collectionItems: InvSlot[]; // returned/expired items waiting to be collected
-  cutPct: number; // the Merchant's cut on a sale, as a percentage
-  maxListings: number; // per-seller active-listing cap
-  myListingCount: number; // how many active listings the viewer already has
-}
-
-export interface AccountCosmetics {
-  completedQuestIds: string[];
-  mechChromaIds: string[];
-}
-
-// One raid's lockout as projected to the HUD: the dungeon id plus the time left
-// until it unlocks. The seam only ever surfaces still-locked raids.
-export interface RaidLockout {
-  id: string;
-  msRemaining: number;
-}
-
-// One Book of Deeds row. Ids and numbers only: the client renders
-// `deed.<id>.name` / `deed.<id>.desc` and the title text itself.
-export interface DeedEntryView {
-  id: string;
-  category: DeedCategory;
-  renown: number;
-  /** Masked out of the completion pair until earned. */
-  hidden: boolean;
-  earned: boolean;
-  /** The bar: `current` out of `required`. Boolean triggers report 0/1. */
-  current: number;
-  required: number;
-  titleId?: string;
-}
-
-// The whole chronicle readout: one row per deed in catalogue order, the renown
-// total, the earned/total pair (hidden deeds masked), and unlocked title ids.
-export interface DeedsView {
-  entries: DeedEntryView[];
-  renown: number;
-  earned: number;
-  total: number;
-  titles: string[];
-}
-
 // The surface the renderer + HUD need from a game world. The offline `Sim`
 // satisfies this structurally; the online `ClientWorld` implements it by
 // mirroring server snapshots and sending commands over the socket.
-export interface IWorld {
-  cfg: { seed: number; playerClass: PlayerClass };
-  entities: Map<number, Entity>;
-  /** O(cells_in_radius) spatial query over known entities. Backed by SpatialGrid in ClientWorld. */
-  entitiesNearby(x: number, z: number, radius: number, fn: (e: Entity, d2: number) => void): void;
-  playerId: number;
-  player: Entity;
-  moveInput: MoveInput;
-  inventory: InvSlot[];
-  vendorBuyback: InvSlot[];
-  equipment: Partial<Record<EquipSlot, string>>;
-  accountCosmetics: AccountCosmetics;
-  copper: number;
-  xp: number;
-  // Post-cap progression (Max-Level XP Overflow). All server-authoritative;
-  // the client renders these as-is and derives virtual level from lifetimeXp.
-  lifetimeXp: number;
-  prestigeRank: number;
-  unlockedMilestones: string[];
-  // Classic Rested XP pool (inn-rested kill-XP bonus); 0 when not rested.
-  restedXp: number;
-  known: ResolvedAbility[];
-  questLog: Map<string, QuestProgress>;
-  questsDone: Set<string>;
-  /** Faction reputation: factionId -> points (relative to Neutral=0). */
-  reputation: Record<string, number>;
-  questState(questId: string): QuestState;
-  castAbility(abilityId: string): void;
-  castAbilityBySlot(slot: number): void;
-  targetEntity(id: number | null): void;
-  tabTarget(): void;
-  targetNearestFriendly(): void;
-  friendlyTabTarget(): void;
-  startAutoAttack(): void;
-  stopAutoAttack(): void;
-  interact(): void;
-  lootCorpse(id: number): void;
-  submitLootRoll(rollId: number, choice: LootRollChoice): void;
-  // Open need-greed rolls the local player may still answer; lets the HUD
-  // reconcile prompts from authoritative state so a missed event is recoverable.
-  activeLootRolls(): LootRollPrompt[];
-  pickUpObject(id: number): void;
-  acceptQuest(questId: string): void;
-  turnInQuest(questId: string): void;
-  reportTelemetry(kind: string, data: Record<string, number>): void;
-  abandonQuest(questId: string): void;
-  acceptLinkedQuest(questId: string, fromPid: number): void;
-  equipItem(itemId: string): void;
-  unequipItem(slot: EquipSlot): void;
-  useItem(itemId: string): void;
-  discardItem(itemId: string, count?: number): void;
-  buyItem(npcId: number, itemId: string): void;
-  sellItem(itemId: string, count?: number): void;
-  // Sell every gray (poor-quality) item in the bags at once while a vendor is open.
-  // Quest items and anything flagged noVendorSell are left untouched.
-  sellAllJunk(): void;
-  buyBackItem(itemId: string): void;
-  changeSkin(skin: number, catalog?: 'class' | 'mech'): void;
-  // Lock in a skin from the cosmetic skin-select event overlay. The server
-  // re-validates the choice against the rank it rolled (skinEvent) and consumes
-  // the event token; the offline Sim resolves it directly.
-  claimEventSkin(skin: number): void;
-  unequipMechChroma(chromaId: string): void;
-  // The death loop (src/sim/spirit.ts). `releaseSpirit` no longer revives: it
-  // leaves the body where it fell and raises the spirit at its graveyard as a
-  // ghost. From there `ghostInfo()` says which road back is open and the two
-  // resurrect calls take it. Every gate is re-checked server-side; this surface
-  // only decides which button lights up.
-  releaseSpirit(): void;
-  // Null unless the viewer is a released spirit.
-  ghostInfo(): GhostView | null;
-  resurrectAtCorpse(): void;
-  resurrectAtSpiritHealer(): void;
-  chat(text: string): void;
-  playEmote(emoteId: OverheadEmoteId): void;
-  abandonPet(): void;
-  renamePet(name: string): void;
-  revivePet(): void;
-  petAttack(): void;
-  petTaunt(): void;
-  setPetAutoTaunt(enabled: boolean): void;
-  feedPet(itemId: string): void;
-  healPet(): void;
-  setPetMode(mode: PetMode): void;
-  // social systems
-  partyInfo: PartyInfo | null;
-  tradeInfo: TradeInfo | null;
-  duelInfo: DuelInfo | null;
-  arenaInfo: ArenaInfo | null;
-  marketInfo: MarketInfo | null;
-  partyInvite(targetPid: number): void;
-  partyAccept(): void;
-  partyDecline(): void;
-  partyLeave(): void;
-  partyKick(targetPid: number): void;
-  // Leader-only handoff: pass leadership to another member (roster unchanged).
-  partyPromote(targetPid: number): void;
-  convertPartyToRaid(): void;
-  convertRaidToParty(): void;
-  moveRaidMember(targetPid: number, group: 1 | 2): void;
-  // master loot (leader-only setter; master looter assigns threshold drops)
-  setPartyLootMaster(enabled: boolean, looter: number, threshold: MasterLootThreshold): void;
-  // The master looter's checked subset: 1 pid grants directly, 2+ opens a roll.
-  assignMasterLoot(rollId: number, targetPids: number[]): void;
-  // raid/target markers (party-scoped): markerId 0..7, null = no mark
-  markerFor(entityId: number): number | null;
-  setMarker(entityId: number, markerId: number): void;
-  clearMarker(entityId: number): void;
-  tradeRequest(targetPid: number): void;
-  tradeAccept(): void;
-  tradeSetOffer(items: InvSlot[], copper: number): void;
-  tradeConfirm(): void;
-  tradeCancel(): void;
-  duelRequest(targetPid: number): void;
-  duelAccept(): void;
-  duelDecline(): void;
-  // the realm (world/shard) this character lives on; '' in offline play
-  realm: string;
-  // persistent social: friends, ignore/block, guilds (online play only)
-  socialInfo: SocialInfo | null;
-  friendAdd(name: string): void;
-  friendRemove(name: string): void;
-  blockAdd(name: string): void;
-  blockRemove(name: string): void;
-  guildCreate(name: string): void;
-  guildInvite(name: string): void;
-  guildAccept(): void;
-  guildDecline(): void;
-  guildLeave(): void;
-  guildKick(name: string): void;
-  guildPromote(name: string): void;
-  guildDemote(name: string): void;
-  guildTransfer(name: string): void;
-  guildDisband(): void;
-  // realm-scoped username typeahead for friend/ignore/guild search
-  searchCharacters(query: string): Promise<CharacterSearchResult[]>;
-  arenaQueueJoin(format?: ArenaFormat): void;
-  arenaQueueLeave(): void;
-  // 2v2 Fiesta: lock in one of the augments currently on offer
-  arenaAugmentPick(augmentId: string): void;
-  // World Market. The browse query (search + type/subtype/rarity filters + page) is
-  // sent to the server, which filters and paginates; marketInfo mirrors the result.
-  marketSearch(query: MarketQuery): void;
-  marketList(itemId: string, count: number, price: number): void;
-  marketBuy(listingId: number): void;
-  marketCancel(listingId: number): void;
-  marketCollect(): void;
-  enterDungeon(dungeonId: string): void;
-  leaveDungeon(): void;
-  enterDelve(delveId: string, tierId: string): void;
-  leaveDelve(): void;
-  delveInteract(objectId: number): void;
-  companionUpgrade(companionId: string): void;
-  delveBuyShopItem(delveId: string, itemId: string): void;
-  // Brother Halven's Marks-vendor stock for a delve, resolved against the viewer's
-  // clears (unlock state per entry). The buy itself is server-authoritative.
-  delveShopOffers(delveId: string): DelveShopOfferView[];
-  lockpickState: LockpickView | null;
-  lockpickEngage(objectId: number, ante: Ante): void;
-  lockpickAction(action: PickAction): void;
-  lockpickAbort(): void;
-  collectDelveChestLoot(chestId: number): void;
-  // Rifts. Entering is server-authoritative: the client asks by portal id and
-  // renders the answer (a `riftEnter` or a `riftDeny`), it never predicts one.
-  enterRift(portalId: string): void;
-  leaveRift(): void;
-  /** The rift the local player is standing in, or null when they are not in one. */
-  riftRun: RiftRunInfo | null;
-  /** Every overworld tear the client knows about (the panel narrows by zone). */
-  riftPortals(): RiftPortalInfo[];
-  // Dungeon Finder. Server-authoritative like the rift: the client asks and
-  // renders the answer (an `lfgStatus` / `lfgProposal` / `lfgFormed` /
-  // `lfgDeny`), it never predicts a pop.
-  /** The viewer's live queue readout, or null when there is no character yet. */
-  dungeonFinderStatus: LfgStatusInfo | null;
-  /** The ready check the viewer is sitting in, or null. */
-  dungeonFinderProposal: LfgProposalInfo | null;
-  /** The dungeons the queue offers, in the order the catalog lists them. */
-  dungeonFinderOffers(): LfgOfferInfo[];
-  /** Queue for one dungeon. In a party this queues the WHOLE party as a
-   *  premade, and only the leader may do it. An empty/omitted `roles` means
-   *  "anything my class can fill", which is the fastest way to match. */
-  dungeonFinderJoin(dungeonId: string, roles?: readonly string[]): void;
-  /** Leave the queue, or walk out of an open ready check (a decline). */
-  dungeonFinderLeave(): void;
-  /** Answer a ready check. `proposalId` guards against a stale popup. */
-  dungeonFinderRespond(accept: boolean, proposalId?: string): void;
-  // Mounts. A reins item is used from the bag or the action bar (`useItem`),
-  // which is the whole summon surface; this is only the instant manual
-  // dismount, which is never refused.
-  dismount(): void;
-  delveRun: DelveRunInfo | null;
-  companionState: DelveCompanionInfo | null;
-  delveMarks: number;
-  companionUpgrades: Record<string, number>;
-  delveDaily: DelveDailyInfo;
-  // Still-locked raids for the local player (unlock countdown in ms), driving the
-  // minimap raid-lockout badge + panel. Empty when nothing is locked.
-  raidLockouts(): RaidLockout[];
-  // Gathering professions: the local player's rows (profession id, current
-  // proficiency, that profession's ceiling) for the professions panel. Always
-  // one row per profession, in a stable order.
-  gatheringSkills(): PlayerProfessionSkill[];
-  // Crafting professions: the local player's rows (craft id, current skill, the
-  // 125 ceiling) for the crafting panel. One row per craft, stable order.
-  craftingSkills(): PlayerCraftSkill[];
-  // Every recipe (optionally one craft's), each already resolved against the
-  // viewer's bag: reagent rows, mastery state, skill gain and the masterwork
-  // odds. Every recipe is known from the start, so there is no separate
-  // "known" list; `canCraft` is the availability the window greys rows on.
-  craftRecipes(professionId?: CraftingProfessionId): CraftRecipeView[];
-  // Craft one recipe. Server-authoritative: the client renders the outcome from
-  // the craftComplete / craftDeny events, it never predicts one.
-  craft(recipeId: string): void;
-  // The enchants that target one equipment slot, grouped base / runed / greater,
-  // each with its reagent status against the viewer's bag.
-  slotEnchants(slot: EquipSlot): EnchantOptionView[];
-  // Apply one enchant to one named copy (a worn slot or a bag index).
-  // `confirmReplace` is the explicit consent to DESTROY an existing enchant;
-  // without it an already-enchanted target is denied rather than overwritten.
-  applyEnchant(enchantId: string, target: EnchantTarget, confirmReplace?: boolean): void;
-  // The exact, draw-free yield preview the destructive disenchant confirmation
-  // shows for the piece in bag slot `index`. Null when it cannot be broken down.
-  disenchantPreview(index: number): DisenchantPlan | null;
-  // Destroy the bagged piece at `index` for its arcane materials.
-  disenchant(index: number): void;
-  // The Book of Deeds readout. Derived, so a method rather than a property:
-  // both worlds build it from the same pure helper over the raw progress.
-  deeds(): DeedsView;
-  // Seconds left on a live `/unstuck` countdown, or null when none is armed.
-  // Drives the countdown overlay; the move itself is server-authoritative.
-  unstuckCountdown(): number | null;
-  // Post-cap progression: the realm-scoped lifetime-XP leaderboard, and the
-  // opt-in cosmetic prestige action. Paged server-side (a realm can hold far
-  // more than one page of max-level players); page is 0-based.
-  leaderboard(page?: number, pageSize?: number): Promise<LeaderboardPage>;
-  // The realm-scoped guild high-score board (guilds ranked by summed member
-  // lifetime XP), paged server-side the same way as the player board. Guilds are
-  // a server-only social system, so the offline Sim resolves an empty page.
-  guildLeaderboard(page?: number, pageSize?: number): Promise<GuildLeaderboardPage>;
-  prestige(): void;
-  // Talents & Specializations. State is server-authoritative; the client stages
-  // edits locally and commits via applyTalents (the server re-validates).
-  talents: TalentAllocation;
-  talentSpec: string | null;
-  talentRole: Role | null;
-  loadouts: SavedLoadout[];
-  activeLoadout: number;
-  talentPoints(): { total: number; spent: number };
-  applyTalents(alloc: TalentAllocation): void;
-  respec(): void;
-  setSpec(specId: string | null): void;
-  saveLoadout(name: string, bar: (string | null)[], alloc?: TalentAllocation): void;
-  switchLoadout(index: number): void;
-  deleteLoadout(index: number): void;
-}
+//
+// `IWorld` is split into one interface per domain facet under `./world_api/`;
+// this file re-aggregates them via `extends` and re-exports every facet aux type
+// so every downstream `from '../world_api'` import path is unchanged. There is
+// deliberately NO `./world_api/index.ts`: the bare specifier `./world_api` must
+// keep resolving to THIS file, never the sibling directory.
+//
+// ---------------------------------------------------------------------------
+// FACET MAP: the domain facets (each IWorld member assigned exactly once; the
+// authoritative member COUNT lives in the pinned gates below, not this prose).
+// One interface per file under ./world_api/; aux types travel with their
+// facet. The authoritative member-per-facet split is the W0c parity test.
+//
+//   entity_roster.ts    IWorldEntityRoster   cfg/entities/player/moveInput/realm reads
+//   combat.ts           IWorldCombat         ability casts, auto-attack, spirit release
+//   targeting.ts        IWorldTargeting      target selection + tab cycling
+//   interaction.ts      IWorldInteraction    interact / lootCorpse / pickUpObject
+//   loot.ts             IWorldLoot           need/greed loot rolls
+//   inventory.ts        IWorldInventory      bags, equipment, vendor, copper
+//   cosmetics.ts        IWorldCosmetics      account skins + mech chroma
+//   quests.ts           IWorldQuests         quest log + accept/turn-in/abandon
+//   progression_xp.ts   IWorldProgressionXp  xp/lifetimeXp/prestige/rested/leaderboard
+//   talents.ts          IWorldTalents        talents, specs, loadouts
+//   pet.ts              IWorldPet            hunter-pet command surface
+//   party.ts            IWorldParty          party/raid + raid-target markers
+//   trade.ts            IWorldTrade          peer-to-peer trade window
+//   chat.ts             IWorldChat           chat router + emotes
+//   duel_arena.ts       IWorldDuelArena      duels + ranked arena + 2v2 fiesta
+//   battleground.ts     IWorldBattleground   Thornhollow Fields 5v5 capture-the-flag queue + match view
+//   social_graph.ts     IWorldSocialGraph    friends/blocks/guild (online-only frames)
+//   market.ts           IWorldMarket         World Market browse/list/buy
+//   mail.ts             IWorldMail           Ravenpost mail send/take + unread badge
+//   dungeons.ts         IWorldDungeons       dungeon enter/leave + raid lockouts
+//   delves.ts           IWorldDelves         delve runs, lockpick, companion
+//   daily_rewards.ts    IWorldDailyRewards   daily WOC-holder rewards
+//   telemetry.ts        IWorldTelemetry      fire-and-forget metrics sink
+//   professions.ts      IWorldProfessions    skill/craft/recipe/node read surface (#1164; node
+//                                            harvest read + action landed in #1121; recipe
+//                                            content + basic crafting action landed in #1127)
+//   bank.ts             IWorldBank           per-character deposit box (proximity-gated info +
+//                                            deposit/withdraw/buy-slots)
+//   guild_bank.ts       IWorldGuildBank      shared guild treasury + item store (guild-wide view
+//                                            with canEdit marking officer-plus EDITS,
+//                                            proximity-gated info + gold/item/buy-slots commands)
+//   vale_cup.ts         IWorldValeCup        Vale Cup boarball queue/roles/betting/practice
+//   mounts.ts           IWorldMounts         rideable ground mounts: pick + mount/dismount
+//   dungeon_finder.ts   IWorldDungeonFinder  Dungeon Finder queue/proposals/premade board
+//   deeds.ts            IWorldDeeds          earned deeds, lifetime stats, renown, active title,
+//                                            rarity + the account-Renown leaderboard reads
+//   reliquary.ts        IWorldReliquary      sparse firstFind / marks / recent + pure completion
+//
+// THREE GATES pin this seam (run before any facet edit; the literal counts are
+// pinned THERE and re-stale here, so this prose stays count-free):
+//   tests/snapshots.test.ts        (W0a)  selfWireJson <-> applySnapshot round-trip;
+//                                          ALL_DELTA_KEYS + TERSE_TO_IWORLD mapping.
+//   tests/command_schema.test.ts   (W0b)  COMMAND_NAMES universe; ClientWorld send-set
+//                                          subset-of dispatch-set; DISPATCH_ONLY.
+//   tests/world_api_parity.test.ts (W0c)  IWORLD_MEMBERS present + same-kind on
+//                                          Sim + ClientWorld; aggregate == disjoint
+//                                          union of the facets.
+// ---------------------------------------------------------------------------
+
+import type { IWorldActionBar } from './world_api/action_bar';
+import type { IWorldBank } from './world_api/bank';
+import type { IWorldBattleground } from './world_api/battleground';
+import type { IWorldCardMinigame } from './world_api/card_minigame';
+import type { IWorldChat } from './world_api/chat';
+import type { IWorldCombat } from './world_api/combat';
+import type { IWorldCosmetics } from './world_api/cosmetics';
+import type { IWorldDailyRewards } from './world_api/daily_rewards';
+import type { IWorldDeeds } from './world_api/deeds';
+import type { IWorldDelves } from './world_api/delves';
+import type { IWorldDuelArena } from './world_api/duel_arena';
+import type { IWorldDungeonFinder } from './world_api/dungeon_finder';
+import type { IWorldDungeons } from './world_api/dungeons';
+import type { IWorldEntityRoster } from './world_api/entity_roster';
+import type { IWorldGuildBank } from './world_api/guild_bank';
+import type { IWorldInteraction } from './world_api/interaction';
+import type { IWorldInventory } from './world_api/inventory';
+import type { IWorldLoot } from './world_api/loot';
+import type { IWorldMail } from './world_api/mail';
+import type { IWorldMarket } from './world_api/market';
+import type { IWorldMounts } from './world_api/mounts';
+import type { IWorldParty } from './world_api/party';
+import type { IWorldPet } from './world_api/pet';
+import type { IWorldProfessions } from './world_api/professions';
+import type { IWorldProgressionXp } from './world_api/progression_xp';
+import type { IWorldQuests } from './world_api/quests';
+import type { IWorldReliquary } from './world_api/reliquary';
+import type { IWorldSocialGraph } from './world_api/social_graph';
+import type { IWorldTalents } from './world_api/talents';
+import type { IWorldTargeting } from './world_api/targeting';
+import type { IWorldTelemetry } from './world_api/telemetry';
+import type { IWorldTrade } from './world_api/trade';
+import type { IWorldValeCup } from './world_api/vale_cup';
+
+// --- pass-through sim re-exports: downstream imports these FROM world_api ---
+// Account flair is defined in the host-agnostic sim core (src/sim/account_flair.ts)
+// because the server, the client mirror, and the HUD must all agree on its shape;
+// it rides through this seam so render/ui never import a concrete world.
+export type { PlayerFlair, StreamerLinks, StreamerPlatform } from './sim/account_flair';
+export type {
+  DeedsLeaderboardPage,
+  DevLeaderboardPage,
+  GuildLeaderboardPage,
+  LeaderboardPage,
+} from './sim/leaderboard_page';
+export type {
+  ArenaCombatant,
+  ArenaFormat,
+  ArenaStanding,
+  DeedStats,
+  OverheadEmoteId,
+} from './sim/types';
+
+// Online world-layout compatibility is encoded in the first WebSocket frame's
+// discriminator. Changing the authoritative town layout requires a new epoch:
+// the strict discriminator makes both rolling-deploy directions fail closed
+// before either binary loads a character into a differently shaped world.
+// 6 = the class-overhauls integration layout on top of the v0.35.0 base layout
+// (both sides of the 2026-08 base merge bumped independently: 4 and 5).
+export const ONLINE_WORLD_LAYOUT_VERSION = 6 as const;
+export const ONLINE_WORLD_AUTH_TYPE = `auth-world-${ONLINE_WORLD_LAYOUT_VERSION}` as const;
+// The one wire literal both sides emit for a layout-epoch mismatch. The server
+// rejects with it, the client synthesizes it for pre-epoch servers, and the UI
+// matcher re-localizes it, so all three must stay byte-identical.
+export const ONLINE_WORLD_INCOMPATIBLE_MESSAGE =
+  'Game and server versions are incompatible. Reload or update, then try again.' as const;
+
+// Snapshot timer wire capability shared by the browser mirror and authoritative
+// server. Keep the version exact so rolling deploys can negotiate fail-closed.
+export const STABLE_TIMER_WIRE_VERSION = 3 as const;
+export type StableTimerWireVersion = typeof STABLE_TIMER_WIRE_VERSION;
+
+// Warlock pet-bar signature command capability. It is negotiated independently
+// from the world-layout epoch so rolling deploys fail closed for this optional
+// behavior without disconnecting otherwise compatible clients.
+export const PET_SPECIAL_WIRE_VERSION = 1 as const;
+export type PetSpecialWireVersion = typeof PET_SPECIAL_WIRE_VERSION;
+
+// Absolute cooldown schedule in server simulation seconds. A number is the
+// expiry for 1x recovery. The tuple adds a temporary recovery-rate segment;
+// after acceleratedUntil, recovery continues at 1x until expiresAt.
+export type StableCooldownWire =
+  | number
+  | readonly [expiresAt: number, recoveryRate: number, acceleratedUntil: number];
+
+// --- facet aux-type + value re-exports (each travels with its facet file) ---
+export type {
+  ActionBarFormLayout,
+  ActionBarLayout,
+  ActionBarLayoutForm,
+  ActionBarLayoutRestore,
+  ActionBarSlotAction,
+} from './world_api/action_bar';
+export type { BankBonusSource, BankInfo } from './world_api/bank';
+export type {
+  BgFlagInfo,
+  BgInfo,
+  BgLadderEntry,
+  BgMatchInfo,
+  BgPlayerInfo,
+  BgProposalInfo,
+} from './world_api/battleground';
+export type { CardMinigameInfo } from './world_api/card_minigame';
+export { isOverheadEmoteId, OVERHEAD_EMOTES } from './world_api/chat';
+export type {
+  ActiveConsecration,
+  ActiveFrostRing,
+  ActiveTemporalHourglass,
+} from './world_api/combat';
+export type { AccountCosmetics } from './world_api/cosmetics';
+export type {
+  DailyRewardEligibilityView,
+  DailyRewardHistory,
+  DailyRewardLeaderboardEntry,
+  DailyRewardLeaderboardPage,
+  DailyRewardPayoutLogEntry,
+  DailyRewardSpinResult,
+  DailyRewardSpinView,
+  DailyRewardStatus,
+  DailyRewardTaskView,
+} from './world_api/daily_rewards';
+export type {
+  DeedsLeaderboardEntry,
+  DeedsLeaderboardSelf,
+  DeedsRarity,
+} from './world_api/deeds';
+export type {
+  DelveCompanionInfo,
+  DelveDailyInfo,
+  DelveRunInfo,
+  DelveShopOfferView,
+  LockpickView,
+} from './world_api/delves';
+export type {
+  ArenaInfo,
+  ArenaLadderEntry,
+  DuelInfo,
+  FiestaAugmentOffer,
+  FiestaMatchInfo,
+  FiestaPowerupView,
+  FiestaScoreboardPlayer,
+} from './world_api/duel_arena';
+export type {
+  DungeonFinderApplicantView,
+  DungeonFinderBoard,
+  DungeonFinderInfo,
+  DungeonFinderListingView,
+  DungeonFinderMyListingView,
+  DungeonFinderProposalView,
+  DungeonFinderQueueView,
+} from './world_api/dungeon_finder';
+export type { RaidLockout, RiftFloorView } from './world_api/dungeons';
+export {
+  GUILD_BANK_LOG_LIMIT,
+  type GuildBankInfo,
+  type GuildBankLogEntry,
+  type GuildBankLogOp,
+  type GuildBankLogView,
+} from './world_api/guild_bank';
+export type { WorldInteractionOutcome } from './world_api/interaction';
+export type { MailInfo, MailKindView, MailMessageView } from './world_api/mail';
+export type { MarketInfo, MarketListingView } from './world_api/market';
+export { queryDiffersFromEcho, searchDiffersFromEcho } from './world_api/market';
+export type { MountRaceView } from './world_api/mounts';
+export type { PartyInfo, PartyMemberAura, PartyMemberInfo } from './world_api/party';
+export type {
+  CraftingIdentityView,
+  CraftResultView,
+  DisenchantResultView,
+  PlayerProfessionsView,
+  RecipeDef,
+  ToolEffectSlotView,
+} from './world_api/professions';
+export type {
+  DevLeaderboardEntry,
+  GuildLeaderboardEntry,
+  LeaderboardEntry,
+} from './world_api/progression_xp';
+export type {
+  ReliquaryCatalogCompletion,
+  ReliquaryFirstFindView,
+  ReliquaryPageCompletion,
+  ReliquaryRarity,
+} from './world_api/reliquary';
+export type {
+  CharacterProfile,
+  CharacterSearchResult,
+  FriendInfo,
+  GuildEventInfo,
+  GuildInfo,
+  GuildMemberInfo,
+  GuildRank,
+  PresenceStatus,
+  SocialInfo,
+} from './world_api/social_graph';
+export type { TradeInfo, TradeOffer } from './world_api/trade';
+export type {
+  CupInfo,
+  VcBetInfo,
+  VcBetRecord,
+  VcBoardEntry,
+  VcLiveMatch,
+  VcMatchInfo,
+  VcPhase,
+  VcRosterPlayer,
+  VcSharedCupInfo,
+  VcStanding,
+  VcViewerReadout,
+} from './world_api/vale_cup';
+
+// The aggregate seam. Empty body: every member lives on exactly one facet above,
+// so `IWorld` is byte-identical to the pre-split flat interface and both the
+// offline `Sim` and the online `ClientWorld` still satisfy it structurally.
+export interface IWorld
+  extends IWorldEntityRoster,
+    IWorldCombat,
+    IWorldTargeting,
+    IWorldInteraction,
+    IWorldLoot,
+    IWorldInventory,
+    IWorldCosmetics,
+    IWorldQuests,
+    IWorldProgressionXp,
+    IWorldTalents,
+    IWorldPet,
+    IWorldParty,
+    IWorldTrade,
+    IWorldChat,
+    IWorldDuelArena,
+    IWorldBattleground,
+    IWorldCardMinigame,
+    IWorldSocialGraph,
+    IWorldMarket,
+    IWorldMail,
+    IWorldDungeons,
+    IWorldDelves,
+    IWorldDailyRewards,
+    IWorldTelemetry,
+    IWorldProfessions,
+    IWorldBank,
+    IWorldGuildBank,
+    IWorldValeCup,
+    IWorldDungeonFinder,
+    IWorldActionBar,
+    IWorldDeeds,
+    IWorldReliquary,
+    IWorldMounts {}
+
+// ---------------------------------------------------------------------------
+// Command schema (W0b): the shared wire-token vocabulary.
+//
+// COMMAND_NAMES is the canonical command universe: every entry is byte-identical
+// to a `case 'X':` label in `server/game.ts` dispatchMessage and to a `cmd:'X'`
+// literal that `src/net/online.ts` (ClientWorld) sends. Both files import this
+// single table so the command-schema lockstep invariant has one source of truth:
+// every ClientWorld send is provably a token the server dispatches.
+//
+// APPEND-ONLY: the wire string IS the protocol. Never rename or remove a token
+// (that is a breaking protocol change); the table only ever grows, with new
+// tokens added at the end. These literals are the one blessed string set in this
+// otherwise string-free seam: they are types-as-data (no t(), no DOM), not
+// player-facing copy.
+//
+// NOTE: this is the protocol vocabulary, deliberately not derived from any per
+// command method name, because the wire tokens (`pinvite`, `qlinkaccept`,
+// `unequip_item`, ...) intentionally differ from the IWorld member names.
+export const COMMAND_NAMES = [
+  'castSlot',
+  'castAt',
+  'cast',
+  'cancel_aura',
+  'target',
+  'tab',
+  'targetNearest',
+  'tabFriendly',
+  'targetNearestFriendly',
+  'attack',
+  'stopattack',
+  'interact',
+  'loot',
+  'harvestCorpse',
+  'lootRoll',
+  'pickup',
+  'accept',
+  'turnin',
+  'abandon',
+  'qlinkaccept',
+  'equip',
+  'inv_move',
+  'unequip_item',
+  'use',
+  'discard',
+  'buy',
+  'sell',
+  'buyback',
+  'sell_all_junk',
+  'harvest_node',
+  'craft_item',
+  'place_mobile_station',
+  'change_skin',
+  'unequip_mech_chroma',
+  'claim_event_skin',
+  'change_weapon_skin',
+  'release',
+  'challengeResponse',
+  'chat',
+  'emote',
+  'pinvite',
+  'paccept',
+  'pdecline',
+  'pleave',
+  'pkick',
+  'ppromote',
+  'praid',
+  'punraid',
+  'pmoveRaid',
+  'setLootMaster',
+  'masterAssign',
+  'setMarker',
+  'clearMarker',
+  'readyrespond',
+  'pet_abandon',
+  'pet_rename',
+  'pet_revive',
+  'pet_attack',
+  'pet_water_jet',
+  'pet_taunt',
+  'pet_auto_taunt',
+  'pet_auto_water_jet',
+  'pet_feed',
+  'pet_heal',
+  'pet_mode',
+  'trade_req',
+  'trade_accept',
+  'trade_offer',
+  'trade_confirm',
+  'trade_cancel',
+  'duel_req',
+  'duel_accept',
+  'duel_decline',
+  'friend_add',
+  'friend_remove',
+  'block_add',
+  'block_remove',
+  'social_refresh',
+  'guild_create',
+  'guild_invite',
+  'guild_accept',
+  'guild_decline',
+  'guild_leave',
+  'guild_kick',
+  'guild_promote',
+  'guild_demote',
+  'guild_transfer',
+  'guild_disband',
+  'arena_queue',
+  'arena_leave',
+  'arena_augment',
+  'card_queue_join',
+  'card_queue_leave',
+  'play_card',
+  'card_forfeit',
+  'prestige',
+  'applyTalents',
+  'respec',
+  'setSpec',
+  'saveLoadout',
+  'switchLoadout',
+  'deleteLoadout',
+  'market_search',
+  'market_list',
+  'market_list_instance',
+  'market_buy',
+  'market_cancel',
+  'market_collect',
+  'dev_level',
+  'dev_teleport',
+  'dev_give',
+  'dev_complete_quest',
+  'dev_complete_all_quests',
+  'enter_crypt',
+  'enter_dungeon',
+  'leave_crypt',
+  'leave_dungeon',
+  'enter_delve',
+  'leave_delve',
+  'delve_interact',
+  'companion_upgrade',
+  'delve_buy',
+  'lockpick_engage',
+  'lockpick_action',
+  'lockpick_abort',
+  'collect_delve_chest_loot',
+  'delve_rite_choose',
+  'telemetry',
+  'equip_bag',
+  'unequip_bag',
+  'mail_send',
+  'mail_take',
+  'mail_delete',
+  'mail_read',
+  'guild_event_create',
+  'guild_event_remove',
+  'autoloot',
+  'resurrect_corpse',
+  'resurrect_healer',
+  'bank_deposit',
+  'bank_withdraw',
+  'bank_buy_slots',
+  'set_town_focus',
+  'set_dungeon_difficulty',
+  'heroic_buy',
+  'vcup_queue',
+  'vcup_leave',
+  'vcup_role',
+  'vcup_ready',
+  'vcup_bet',
+  'vcup_practice',
+  'mount_toggle',
+  'mount_train_begin',
+  'mount_train_answer',
+  'mount_train_abort',
+  'mount_race_start',
+  'mount_race_cancel',
+  'learn_riding',
+  'releaseEmpowered',
+  'df_roles',
+  'df_queue',
+  'df_queue_leave',
+  'df_proposal',
+  'df_list_create',
+  'df_list_close',
+  'df_apply',
+  'df_apply_cancel',
+  'df_app_respond',
+  'rift_upgrade_item',
+  'rift_enchant_item',
+  'rift_socket_gem',
+  'deed_set_title',
+  // personal chat ignores: the chat-only sibling of block_add/block_remove.
+  // (An admin "mute" is a moderation action, not a wire command.)
+  'ignore_add',
+  'ignore_remove',
+  'stow_weapon',
+  // Local geometry recovery. Appended because wire tokens are never reordered.
+  'unstuck',
+  // Append-only protocol addition for the canonical Talents V2 row mutation.
+  'selectTalentRow',
+  'resurrect_respond',
+  // Recipe training (Professions 2.0): learn a trainer-taught recipe
+  // at its craft's station (Sim.trainRecipe via professions/training.ts).
+  'train_recipe',
+  // Tool effect slotting: attach a catalog effect to one gathering
+  // profession's tool (Sim.slotToolEffect via professions/tools.ts slotEffect),
+  // consuming one crafted charm copy from the sender's bags (the acquisition
+  // craft). Keyed per PROFESSION rather than per tool item, because the live
+  // harvest path resolves a tool tier and never a tool.
+  'slot_tool_effect',
+  // Tool effect recharge: refill the sender's slotted effect at the R39
+  // arcane-material price and the R30 re-derived maximum
+  // (Sim.rechargeToolEffect via professions/tools.ts resolveRechargeToolEffect).
+  'recharge_tool_effect',
+  // Per-character action-bar layout persistence: the owning client uploads its
+  // full arranged layout (debounced) so it restores at login on any device.
+  'save_hotbar_layout',
+  // Enchanting profession actions (Professions 2.0): disenchant a held
+  // piece into arcane materials, apply an enchant to a held copy, or salvage a
+  // held piece into generic materials (Sim.disenchantItem/applyEnchant/salvageItem
+  // via src/sim/professions/enchanting.ts and salvage.ts).
+  'disenchant_item',
+  'apply_enchant',
+  'salvage_item',
+  // Maker's Bond unbind service (Professions 2.0): clear the
+  // boundTo trade lock on one held bound commission piece for the
+  // tier-scaled gold fee (Sim.unbindItem via src/sim/professions/
+  // commission.ts).
+  'unbind_item',
+  // Guild billboard: set (or clear, with '') the officer-editable message
+  // pinned atop the social window's Guild tab (SocialService.guildSetMotd).
+  'guild_set_motd',
+  // Template-authored active on a controlled pet (Abyssal Chain, Felbolt)
+  // plus its pet-bar autocast toggle.
+  'pet_special',
+  'pet_auto_special',
+  // Commission order board (Professions 2.0, issue #1298): open/cancel a
+  // commission request, or accept/deliver one as a crafter (Sim.
+  // openCommissionOrder/cancelCommissionOrder/acceptCommissionOrder/
+  // deliverCommissionOrder via src/sim/professions/commission_order.ts).
+  'open_commission_order',
+  'cancel_commission_order',
+  'accept_commission_order',
+  'deliver_commission_order',
+  // "Stop Auto-Attack on Target Switch" QoL preference (issue #1358): mirrors
+  // the client setting onto the authoritative Targeting slice so every
+  // target-switch selector can gate on it (Sim.setStopAutoAttackOnTargetSwitch
+  // via src/sim/targeting.ts).
+  'stopAutoAttackOnTargetSwitch',
+  // Thornhollow Fields 5v5 capture-the-flag: queue join/leave and the deliberate
+  // battleground action press (flag pickup; Sim.bgQueueJoin/bgQueueLeave/
+  // bgFlagAction via src/sim/social/battleground.ts). dev_bg_start is the
+  // env-gated force-start (dispatch-only, below).
+  'bg_queue',
+  'bg_leave',
+  'bg_respond',
+  'bg_flag',
+  'dev_bg_start',
+  // Profiler-only server authority: idempotently prevents incoming damage while
+  // preserving normal outgoing damage and incoming hit presentation.
+  'dev_profiler_invulnerable',
+  // The Guild Bank cluster (shared treasury + item store, viewable guild-wide,
+  // EDITABLE officer-plus only: every token below is a mutating op the sim
+  // refuses for a plain member, src/sim/guild_bank.ts). Its own guild_bank_*
+  // tokens forever, NEVER a reuse
+  // of the personal bank_* strings (state.md decision; pinned by
+  // tests/command_facets.test.ts). `slot` is a container index and `count`
+  // optional (the bank_* wire idiom); `amount` is copper. The Sim owns every
+  // gameplay rule (banker proximity, officer-plus rank on edits, quest-bind,
+  // caps, table price); the server validates shape only.
+  'guild_bank_deposit_gold',
+  'guild_bank_withdraw_gold',
+  'guild_bank_deposit',
+  'guild_bank_withdraw',
+  'guild_bank_buy_slots',
+  // The guild bank ACTIVITY LOG request (the guild-visible history of the
+  // append-only bank_ledger rows; readable by every member since the v0.35
+  // member read-only view). A pure READ token: it mutates nothing, and
+  // its answer comes back on its own one-shot 'gbanklog' frame rather than the
+  // 20 Hz snapshot, because the payload is cold, identical for every member of
+  // the guild, and 50 rows wide. Sent only while the log view is open.
+  'guild_bank_log',
+  // Paperdoll eye toggle: helmet-visibility preference on the composed body.
+  // Appended because wire tokens are never reordered.
+  'set_helm',
+  // One-shot bag clean-up (IWorldInventory.sortInventory): no payload, the
+  // sim consolidates and restamps cell hints deterministically. Appended
+  // because wire tokens are never reordered.
+  'inv_sort',
+  // Book of Deeds nameplate border selection, the sibling of 'deed_set_title'.
+  // Appended rather than filed beside its twin because wire tokens are never
+  // reordered.
+  'deed_set_border',
+] as const;
+
+// The union both the send path (`online.ts`) and the dispatch switch
+// (`game.ts`) reference.
+export type CommandName = (typeof COMMAND_NAMES)[number];
+
+// Dispatch-only extras: commands the server routes but ClientWorld never sends.
+// `dev_*` are env-gated cheats (ALLOW_DEV_COMMANDS, never production);
+// `enter_crypt`/`leave_crypt` are legacy aliases that fall through to the
+// dungeon cases; `social_refresh` is a server-push refresh path; `targetNearest`
+// is called directly on the Sim by the headless RL action layer, never over the
+// wire. Each must be a member of COMMAND_NAMES (the `satisfies` enforces it).
+export const DISPATCH_ONLY_COMMANDS = [
+  'dev_level',
+  'dev_teleport',
+  'dev_give',
+  'dev_complete_quest',
+  'dev_complete_all_quests',
+  'enter_crypt',
+  'leave_crypt',
+  'social_refresh',
+  'targetNearest',
+  'dev_bg_start',
+  // Riding-lesson leftovers: 'mount_train_answer' (the removed lean-cue arm) and
+  // 'mount_train_abort' (the removed course minigame's cancel) no longer have a
+  // ClientWorld sender, but the wire strings ARE the protocol (append-only), so
+  // the server keeps dispatching them: answer as a no-op, abort as a session
+  // abandon.
+  'mount_train_answer',
+  'mount_train_abort',
+  'dev_profiler_invulnerable',
+] as const satisfies readonly CommandName[];
+
+export type DispatchOnlyCommand = (typeof DISPATCH_ONLY_COMMANDS)[number];
+
+// The tokens ClientWorld is allowed to send: the full vocabulary minus the
+// dispatch-only extras. The typed `cmd()` send path is keyed to this, so a send
+// of any dispatch-only token is a compile error.
+export type ClientCommand = Exclude<CommandName, DispatchOnlyCommand>;
+
+// ---------------------------------------------------------------------------
+// Command facet tags (W6+). APPEND-ONLY metadata that names, for each wire
+// command, the IWorld facet whose method sends it, so the command universe is
+// discoverable by domain. Like COMMAND_NAMES this is types-as-data, not
+// player-facing copy (no t(), no DOM); it never gates the wire (COMMAND_NAMES is
+// the protocol). PARTIAL by design: each cluster slice (W6-W10) appends its
+// facet's commands, and members with no wire command (roster reads like `cfg`,
+// the HUD-read `activeLootRolls`) are deliberately absent. Keyed by ClientCommand
+// so a dispatch-only token (e.g. `targetNearest`, the RL-only Sim action) can
+// never be tagged.
+export type WorldFacet =
+  | 'IWorldEntityRoster'
+  | 'IWorldCombat'
+  | 'IWorldTargeting'
+  | 'IWorldInteraction'
+  | 'IWorldLoot'
+  | 'IWorldInventory'
+  | 'IWorldCosmetics'
+  | 'IWorldQuests'
+  | 'IWorldProgressionXp'
+  | 'IWorldTalents'
+  | 'IWorldPet'
+  | 'IWorldParty'
+  | 'IWorldTrade'
+  | 'IWorldChat'
+  | 'IWorldDuelArena'
+  | 'IWorldBattleground'
+  | 'IWorldCardMinigame'
+  | 'IWorldSocialGraph'
+  | 'IWorldMarket'
+  | 'IWorldMail'
+  | 'IWorldDungeons'
+  | 'IWorldDelves'
+  | 'IWorldDailyRewards'
+  | 'IWorldTelemetry'
+  | 'IWorldBank'
+  | 'IWorldGuildBank'
+  | 'IWorldValeCup'
+  | 'IWorldDungeonFinder'
+  | 'IWorldActionBar'
+  | 'IWorldDeeds'
+  | 'IWorldReliquary'
+  | 'IWorldMounts';
+
+export const COMMAND_FACETS = {
+  // IWorldCombat: ability casts, auto-attack, spirit release.
+  cast: 'IWorldCombat',
+  castSlot: 'IWorldCombat',
+  castAt: 'IWorldCombat',
+  releaseEmpowered: 'IWorldCombat',
+  cancel_aura: 'IWorldCombat',
+  attack: 'IWorldCombat',
+  stopattack: 'IWorldCombat',
+  release: 'IWorldCombat',
+  unstuck: 'IWorldCombat',
+  // Ghost resurrection: run the spirit to its corpse, or accept the Spirit Healer's
+  // resurrection (with Resurrection Sickness). Wire strings are snake_case by design.
+  resurrect_corpse: 'IWorldCombat',
+  resurrect_healer: 'IWorldCombat',
+  resurrect_respond: 'IWorldCombat',
+  // IWorldTargeting: target selection + tab cycling.
+  target: 'IWorldTargeting',
+  tab: 'IWorldTargeting',
+  targetNearestFriendly: 'IWorldTargeting',
+  tabFriendly: 'IWorldTargeting',
+  stopAutoAttackOnTargetSwitch: 'IWorldTargeting',
+  // IWorldLoot: need-greed roll submit.
+  lootRoll: 'IWorldLoot',
+  // IWorldInventory: non-fungible Rift gear progression. These mutate the
+  // authoritative inventory copy; every cost and payload is validated again
+  // in the sim before the item instance is changed. (salvage_item rides the
+  // professions surface and, like the other enchanting-family commands, has
+  // no facet row here.)
+  rift_upgrade_item: 'IWorldInventory',
+  rift_enchant_item: 'IWorldInventory',
+  rift_socket_gem: 'IWorldInventory',
+  // IWorldInventory: the one-shot bag clean-up; the sim re-derives the whole
+  // arrangement, so there is no payload to validate.
+  inv_sort: 'IWorldInventory',
+  // IWorldTelemetry: fire-and-forget metrics sink.
+  telemetry: 'IWorldTelemetry',
+  // IWorldProgressionXp: opt-in cosmetic prestige (leaderboard is a REST GET, no
+  // wire command; the XP/milestone reads ride the self-snapshot, not a send).
+  prestige: 'IWorldProgressionXp',
+  // IWorldTalents: allocation commits + loadout edits (talentPoints is a local
+  // compute with no send; the server re-validates every allocation).
+  applyTalents: 'IWorldTalents',
+  respec: 'IWorldTalents',
+  setSpec: 'IWorldTalents',
+  selectTalentRow: 'IWorldTalents',
+  saveLoadout: 'IWorldTalents',
+  switchLoadout: 'IWorldTalents',
+  deleteLoadout: 'IWorldTalents',
+  // IWorldCosmetics: skin + mech-chroma equips (snake_case wire strings, by design).
+  change_skin: 'IWorldCosmetics',
+  claim_event_skin: 'IWorldCosmetics',
+  unequip_mech_chroma: 'IWorldCosmetics',
+  change_weapon_skin: 'IWorldCosmetics',
+  stow_weapon: 'IWorldCosmetics',
+  set_helm: 'IWorldCosmetics',
+  // IWorldPet: hunter-pet commands (snake_case wire strings, by design; pet state
+  // mirrors on the owned-mob entity wire, not a self-snapshot field).
+  pet_abandon: 'IWorldPet',
+  pet_rename: 'IWorldPet',
+  pet_revive: 'IWorldPet',
+  pet_attack: 'IWorldPet',
+  pet_water_jet: 'IWorldPet',
+  pet_taunt: 'IWorldPet',
+  pet_auto_taunt: 'IWorldPet',
+  pet_auto_water_jet: 'IWorldPet',
+  pet_special: 'IWorldPet',
+  pet_auto_special: 'IWorldPet',
+  pet_feed: 'IWorldPet',
+  pet_heal: 'IWorldPet',
+  pet_mode: 'IWorldPet',
+  // IWorldParty: party/raid commands + raid-target markers (terse wire strings; the
+  // markers belong to IWorldParty, not IWorldTargeting; partyInfo/markerFor are
+  // snapshot reads with no send).
+  pinvite: 'IWorldParty',
+  paccept: 'IWorldParty',
+  pdecline: 'IWorldParty',
+  pleave: 'IWorldParty',
+  pkick: 'IWorldParty',
+  ppromote: 'IWorldParty',
+  praid: 'IWorldParty',
+  punraid: 'IWorldParty',
+  pmoveRaid: 'IWorldParty',
+  setLootMaster: 'IWorldParty',
+  masterAssign: 'IWorldParty',
+  setMarker: 'IWorldParty',
+  clearMarker: 'IWorldParty',
+  readyrespond: 'IWorldParty',
+  // IWorldTrade: peer-to-peer trade-window commands (tradeInfo is a snapshot read,
+  // no send).
+  trade_req: 'IWorldTrade',
+  trade_accept: 'IWorldTrade',
+  trade_offer: 'IWorldTrade',
+  trade_confirm: 'IWorldTrade',
+  trade_cancel: 'IWorldTrade',
+  // IWorldDuelArena: duels + rated-arena queue + the 2v2 Fiesta augment pick. Fiesta
+  // has no top-level member (it lives in arenaInfo.match.fiesta and flows over the
+  // events queue); arena_augment is its only command. duelInfo/arenaInfo are snapshot
+  // reads (no send).
+  duel_req: 'IWorldDuelArena',
+  duel_accept: 'IWorldDuelArena',
+  duel_decline: 'IWorldDuelArena',
+  arena_queue: 'IWorldDuelArena',
+  arena_leave: 'IWorldDuelArena',
+  arena_augment: 'IWorldDuelArena',
+  // IWorldBattleground: the Thornhollow Fields queue + the deliberate flag action.
+  bg_queue: 'IWorldBattleground',
+  bg_leave: 'IWorldBattleground',
+  bg_respond: 'IWorldBattleground',
+  bg_flag: 'IWorldBattleground',
+  // IWorldCardMinigame: the Card Duel minigame queue + in-match card plays.
+  // cardMinigameInfo is a snapshot read (no send).
+  card_queue_join: 'IWorldCardMinigame',
+  card_queue_leave: 'IWorldCardMinigame',
+  play_card: 'IWorldCardMinigame',
+  card_forfeit: 'IWorldCardMinigame',
+  // IWorldSocialGraph: friends/blocks/guild commands (online only; resolved
+  // server-side by character name, handled by the #4 SocialService). socialInfo
+  // arrives via the social/socialpos frames (no command); searchCharacters is a REST
+  // GET (no wire command); accountFlair is a pure local read of the flair the entity
+  // wire and the chat event already carry (no command); social_refresh is a
+  // dispatch-only server push (untagged).
+  friend_add: 'IWorldSocialGraph',
+  friend_remove: 'IWorldSocialGraph',
+  block_add: 'IWorldSocialGraph',
+  block_remove: 'IWorldSocialGraph',
+  ignore_add: 'IWorldSocialGraph',
+  ignore_remove: 'IWorldSocialGraph',
+  guild_create: 'IWorldSocialGraph',
+  guild_invite: 'IWorldSocialGraph',
+  guild_accept: 'IWorldSocialGraph',
+  guild_decline: 'IWorldSocialGraph',
+  guild_leave: 'IWorldSocialGraph',
+  guild_kick: 'IWorldSocialGraph',
+  guild_promote: 'IWorldSocialGraph',
+  guild_demote: 'IWorldSocialGraph',
+  guild_transfer: 'IWorldSocialGraph',
+  guild_disband: 'IWorldSocialGraph',
+  guild_event_create: 'IWorldSocialGraph',
+  guild_event_remove: 'IWorldSocialGraph',
+  guild_set_motd: 'IWorldSocialGraph',
+  // IWorldMarket: World Market browse/list/buy/cancel/collect (snake_case wire
+  // strings, by design). marketInfo is a snapshot read (no send, untagged).
+  market_search: 'IWorldMarket',
+  market_list: 'IWorldMarket',
+  market_list_instance: 'IWorldMarket',
+  market_buy: 'IWorldMarket',
+  market_cancel: 'IWorldMarket',
+  market_collect: 'IWorldMarket',
+  // IWorldMail: Ravenpost letters (snake_case wire strings, by design). mailInfo /
+  // mailUnread are snapshot reads (no send, untagged).
+  mail_send: 'IWorldMail',
+  mail_take: 'IWorldMail',
+  mail_delete: 'IWorldMail',
+  mail_read: 'IWorldMail',
+  // IWorldDungeons: dungeon enter/leave. raidLockouts is a snapshot-derived read
+  // (no send, untagged). enter_crypt/leave_crypt are legacy dispatch-only aliases
+  // (untagged; on the DISPATCH_ONLY_COMMANDS allowlist), NOT IWorldDungeons.
+  enter_dungeon: 'IWorldDungeons',
+  leave_dungeon: 'IWorldDungeons',
+  set_dungeon_difficulty: 'IWorldDungeons',
+  heroic_buy: 'IWorldDungeons',
+  // IWorldDelves: delve enter/leave + interact + companion upgrade + Marks-vendor buy
+  // + lockpick lifecycle + chest collect. Note the wire-name skew: delveBuyShopItem
+  // sends `delve_buy`, so the tag is keyed on the WIRE string `delve_buy`. The reads
+  // delveShopOffers (pure client compute from the dclears mirror), lockpickState
+  // (event-rebuilt), delveRun/companionState/delveMarks/companionUpgrades/delveDaily
+  // (snapshot reads) carry no command and stay untagged.
+  enter_delve: 'IWorldDelves',
+  leave_delve: 'IWorldDelves',
+  delve_interact: 'IWorldDelves',
+  companion_upgrade: 'IWorldDelves',
+  delve_buy: 'IWorldDelves',
+  lockpick_engage: 'IWorldDelves',
+  lockpick_action: 'IWorldDelves',
+  lockpick_abort: 'IWorldDelves',
+  collect_delve_chest_loot: 'IWorldDelves',
+  delve_rite_choose: 'IWorldDelves',
+  // IWorldBank: the per-character deposit box (snake_case wire strings, by design).
+  // bankInfo is a proximity-gated snapshot read (no send, untagged).
+  bank_deposit: 'IWorldBank',
+  bank_withdraw: 'IWorldBank',
+  bank_buy_slots: 'IWorldBank',
+  // IWorldGuildBank: the officer-plus shared guild treasury + item store
+  // (snake_case wire strings, by design; its OWN tokens, never a bank_* reuse).
+  // guildBankInfo is a proximity + rank gated snapshot read (no send, untagged).
+  guild_bank_deposit_gold: 'IWorldGuildBank',
+  guild_bank_withdraw_gold: 'IWorldGuildBank',
+  guild_bank_deposit: 'IWorldGuildBank',
+  guild_bank_withdraw: 'IWorldGuildBank',
+  guild_bank_buy_slots: 'IWorldGuildBank',
+  guild_bank_log: 'IWorldGuildBank',
+  // IWorldValeCup: the Vale Cup boarball queue. cupInfo is a snapshot read (no
+  // send); vcup_practice starts a private instanced practice bout (online + off).
+  vcup_queue: 'IWorldValeCup',
+  vcup_leave: 'IWorldValeCup',
+  vcup_role: 'IWorldValeCup',
+  vcup_ready: 'IWorldValeCup',
+  vcup_bet: 'IWorldValeCup',
+  vcup_practice: 'IWorldValeCup',
+  // IWorldMounts: pick + mount/dismount (snake_case wire strings, by design).
+  // The active mount is a self-snapshot read (terse `mnt`, no send, untagged);
+  // summoning one is an item use (use_item), not a mount command.
+  // mount_train_begin is the legacy riding-lesson entry point; its feedback
+  // rides the mountTrain* events (no snapshot field).
+  mount_toggle: 'IWorldMounts',
+  mount_train_begin: 'IWorldMounts',
+  // mount_race_start begins a show-jumping race from the glowing platform;
+  // mount_race_cancel exits it. Both are validated server-side and feed the
+  // mountRace* events.
+  mount_race_start: 'IWorldMounts',
+  mount_race_cancel: 'IWorldMounts',
+  // learn_riding: purchase the riding skill from Marla (80g, once). No snapshot
+  // field; the result rides the ridingTrained snapshot delta (mntRtd).
+  learn_riding: 'IWorldMounts',
+  // IWorldDungeonFinder: the group finder (snake_case wire strings, by design).
+  // dungeonFinderInfo / dungeonFinderBoard are snapshot reads (no send, untagged).
+  df_roles: 'IWorldDungeonFinder',
+  df_queue: 'IWorldDungeonFinder',
+  df_queue_leave: 'IWorldDungeonFinder',
+  df_proposal: 'IWorldDungeonFinder',
+  df_list_create: 'IWorldDungeonFinder',
+  df_list_close: 'IWorldDungeonFinder',
+  df_apply: 'IWorldDungeonFinder',
+  df_apply_cancel: 'IWorldDungeonFinder',
+  df_app_respond: 'IWorldDungeonFinder',
+  // IWorldDeeds: the Book of Deeds cosmetic selections, title and nameplate
+  // border (snake_case wire strings, by design).
+  // deedsEarned/deedStats/renown/activeTitle/activeBorder are snapshot reads
+  // (no send, untagged).
+  deed_set_title: 'IWorldDeeds',
+  deed_set_border: 'IWorldDeeds',
+  // IWorldActionBar: the debounced action-bar layout upload. takeActionBarLayoutRestore
+  // is a login-time read (no send, untagged).
+  save_hotbar_layout: 'IWorldActionBar',
+} as const satisfies Partial<Record<ClientCommand, WorldFacet>>;

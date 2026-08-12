@@ -1,15 +1,14 @@
 import { readFileSync } from 'node:fs';
-import type { PoolClient } from 'pg';
-import { pool } from './db';
 import {
+  type ChatFilterState,
+  cleanEscalationConfig,
   DEFAULT_HARD_WORDS,
   DEFAULT_SOFT_WORDS,
-  cleanEscalationConfig,
+  type EscalationConfig,
   normalizeWord,
   parseWordList,
-  type ChatFilterState,
-  type EscalationConfig,
 } from './chat_filter';
+import { pool } from './db';
 
 // SQL for the chat filter: admin-managed word lists, escalation config,
 // per-account mute/strike state, and the hard-word incident log. Logic +
@@ -53,8 +52,21 @@ function envSeedHardWords(): string[] {
   return envSeedWords('CHAT_FILTER_HARD_LIST', 'CHAT_FILTER_HARD_FILE');
 }
 
-async function insertSeedWords(client: PoolClient, words: string[], tier: WordTier): Promise<void> {
-  const unique = Array.from(new Set(words.map((w) => normalizeWord(w)).filter((w) => w.length > 0)));
+// Minimal query surface for the boot-time seeding path: ensureSchema passes its
+// dedicated boot client (a plain pg Client, no release()), tests pass a
+// recording client. Only query() is used. Mirrors MarketBackfillClient.
+export interface ChatFilterSeedClient {
+  query(text: string, values?: unknown[]): Promise<{ rows: any[] }>;
+}
+
+async function insertSeedWords(
+  client: ChatFilterSeedClient,
+  words: string[],
+  tier: WordTier,
+): Promise<void> {
+  const unique = Array.from(
+    new Set(words.map((w) => normalizeWord(w)).filter((w) => w.length > 0)),
+  );
   for (const word of unique) {
     await client.query(
       `INSERT INTO chat_filter_words (word, tier) VALUES ($1, $2) ON CONFLICT (tier, word) DO NOTHING`,
@@ -68,7 +80,7 @@ async function insertSeedWords(client: PoolClient, words: string[], tier: WordTi
  * boot transaction (pinned client, under the advisory lock), so it's safe under
  * concurrent realm boots and only fills a tier when that tier is empty.
  */
-export async function seedChatFilterDefaults(client: PoolClient): Promise<void> {
+export async function seedChatFilterDefaults(client: ChatFilterSeedClient): Promise<void> {
   await client.query(`INSERT INTO chat_filter_config (id) VALUES (1) ON CONFLICT (id) DO NOTHING`);
   const counts = await client.query(
     `SELECT tier, count(*)::int AS n FROM chat_filter_words GROUP BY tier`,
@@ -86,7 +98,9 @@ export async function seedChatFilterDefaults(client: PoolClient): Promise<void> 
 export async function loadChatFilterState(): Promise<ChatFilterState> {
   const [words, config] = await Promise.all([
     pool.query(`SELECT word, tier FROM chat_filter_words`),
-    pool.query(`SELECT warnings_before_mute, mute_ladder_seconds FROM chat_filter_config WHERE id = 1`),
+    pool.query(
+      `SELECT warnings_before_mute, mute_ladder_seconds FROM chat_filter_config WHERE id = 1`,
+    ),
   ]);
   const soft: string[] = [];
   const hard: string[] = [];
@@ -174,7 +188,10 @@ export interface AppliedStrike {
  * `muteSeconds > 0`, extend the account-wide mute (never shortening an existing
  * longer mute). Returns the authoritative post-update values for the session.
  */
-export async function applyChatStrike(accountId: number, muteSeconds: number): Promise<AppliedStrike> {
+export async function applyChatStrike(
+  accountId: number,
+  muteSeconds: number,
+): Promise<AppliedStrike> {
   const res = await pool.query(
     `UPDATE accounts
      SET chat_strikes = chat_strikes + 1,
@@ -220,6 +237,30 @@ export async function recordChatViolation(input: {
   );
 }
 
+// Batched retention prune for chat_violations (the retention-sweep primitive,
+// mirrors pruneUnstuckReportsBatch in unstuck_db.ts). The hard-word incident
+// log's only reader is chatModerationForAccount below, already LIMIT-bounded
+// (defaults to 25, capped at 100 rows) per account, so pruning the oldest
+// rows never invalidates a page it can still return. retentionDays <= 0 keeps
+// rows forever (the safe default); the interval floors to one whole day.
+export async function pruneChatViolationsBatch(
+  retentionDays: number,
+  batchSize: number,
+): Promise<number> {
+  if (!Number.isFinite(retentionDays) || retentionDays <= 0) return 0;
+  const days = Math.max(1, Math.floor(retentionDays));
+  const res = await pool.query(
+    `DELETE FROM chat_violations
+      WHERE id IN (
+        SELECT id FROM chat_violations
+         WHERE created_at < now() - ($1::int * INTERVAL '1 day')
+         ORDER BY created_at ASC, id ASC
+         LIMIT $2)`,
+    [days, Math.max(1, Math.floor(batchSize))],
+  );
+  return res.rowCount ?? 0;
+}
+
 // ---- Admin: per-account chat moderation view + manual actions ---------------
 
 export interface ChatViolationRow {
@@ -239,7 +280,10 @@ export interface ChatModerationDetail {
   violations: ChatViolationRow[];
 }
 
-export async function chatModerationForAccount(accountId: number, limit = 25): Promise<ChatModerationDetail> {
+export async function chatModerationForAccount(
+  accountId: number,
+  limit = 25,
+): Promise<ChatModerationDetail> {
   const [acct, viol] = await Promise.all([
     pool.query(`SELECT chat_muted_until, chat_strikes FROM accounts WHERE id = $1`, [accountId]),
     pool.query(
@@ -251,7 +295,8 @@ export async function chatModerationForAccount(accountId: number, limit = 25): P
   const row = acct.rows[0];
   const mutedUntil = row?.chat_muted_until ? new Date(row.chat_muted_until) : null;
   return {
-    chatMutedUntil: mutedUntil && mutedUntil.getTime() > Date.now() ? mutedUntil.toISOString() : null,
+    chatMutedUntil:
+      mutedUntil && mutedUntil.getTime() > Date.now() ? mutedUntil.toISOString() : null,
     chatStrikes: Number(row?.chat_strikes ?? 0),
     violations: viol.rows.map((r) => ({
       id: Number(r.id),
@@ -293,19 +338,7 @@ export async function chatModeratedAccounts(limit = 200): Promise<ChatModeratedA
   }));
 }
 
-/** Clear an active mute. Returns the account id touched (for live disconnect/notice). */
-export async function liftChatMute(accountId: number): Promise<boolean> {
-  const res = await pool.query(
-    `UPDATE accounts SET chat_muted_until = NULL WHERE id = $1`,
-    [accountId],
-  );
-  return (res.rowCount ?? 0) > 0;
-}
-
 export async function resetChatStrikes(accountId: number): Promise<boolean> {
-  const res = await pool.query(
-    `UPDATE accounts SET chat_strikes = 0 WHERE id = $1`,
-    [accountId],
-  );
+  const res = await pool.query(`UPDATE accounts SET chat_strikes = 0 WHERE id = $1`, [accountId]);
   return (res.rowCount ?? 0) > 0;
 }

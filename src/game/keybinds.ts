@@ -1,5 +1,5 @@
-// Player-rebindable controls. Every bindable game action — movement, camera,
-// targeting, interface windows, and the 12 action-bar slots — lives in one
+// Player-rebindable controls. Every bindable game action, movement, camera,
+// targeting, interface windows, and the 34 action-bar slots, lives in one
 // registry, and the Keybinds map holds up to two KeyboardEvent.codes per
 // action (primary + secondary, e.g. W and ArrowUp both Move Forward). Input
 // dispatches edge actions and polls held (movement) actions through this map;
@@ -11,6 +11,9 @@
 // Escape is deliberately NOT a bindable action: it always opens/closes the
 // game menu, so it stays out of the registry and is refused by bind().
 
+import { repairStoredBindings } from './keybinds_repair';
+import { isReservedMouseCode, mouseCodeLabel } from './mouse_binds';
+
 export type BindKind = 'held' | 'edge';
 
 export interface BindAction {
@@ -19,7 +22,7 @@ export interface BindAction {
   category: string;
   kind: BindKind;
   defaults: string[]; // 1 or 2 codes; index 0 = primary, 1 = secondary
-  // When true this action is exempt from the WoW-style "one code per action"
+  // When true this action is exempt from the classic-style "one code per action"
   // uniqueness sweep: its code may deliberately overlap another action's. Used
   // by Attack Move, whose default (A) intentionally shadows Turn Left while the
   // setting is on, so they can share a key without either stealing it from the
@@ -27,7 +30,15 @@ export interface BindAction {
   allowShared?: boolean;
 }
 
-export const ACTION_BAR_SLOTS = 12; // slot 0 is Attack, 1..11 the ability bar
+// Slot 0 is Attack. Slots 1..11, 12..22, and 23..33 are the three ability rows.
+export const ACTION_BAR_SLOTS = 34;
+
+// Slots 0 (Attack) through PRIMARY_BAR_MAX_SLOT (11) make up the first,
+// always-visible action bar; every slot past it belongs to the optional
+// secondary/third bar (mirrors ACTION_BAR_ABILITY_SLOTS_PER_ROW in
+// src/ui/hud/action_bar/action_bar_layout_core.ts). Used by resetSlots() to
+// decide which slots restore to their default vs go fully unbound.
+const PRIMARY_BAR_MAX_SLOT = 11;
 
 const SLOT_DEFAULTS = [
   'Digit1',
@@ -42,6 +53,33 @@ const SLOT_DEFAULTS = [
   'Digit0',
   'Minus',
   'Equal',
+  // Secondary bar (slots 12..22): defaults to the numpad so it never collides
+  // with the primary number row. Fully rebindable like any other slot, and
+  // laptops without a numpad can simply assign their own keys.
+  'Numpad1',
+  'Numpad2',
+  'Numpad3',
+  'Numpad4',
+  'Numpad5',
+  'Numpad6',
+  'Numpad7',
+  'Numpad8',
+  'Numpad9',
+  'Numpad0',
+  'NumpadDecimal',
+  // Third bar (slots 23..33): shifted numpad bindings keep the row distinct
+  // while preserving the same physical layout as the secondary bar.
+  'Shift+Numpad1',
+  'Shift+Numpad2',
+  'Shift+Numpad3',
+  'Shift+Numpad4',
+  'Shift+Numpad5',
+  'Shift+Numpad6',
+  'Shift+Numpad7',
+  'Shift+Numpad8',
+  'Shift+Numpad9',
+  'Shift+Numpad0',
+  'Shift+NumpadDecimal',
 ];
 
 export const BIND_ACTIONS: BindAction[] = [
@@ -89,6 +127,17 @@ export const BIND_ACTIONS: BindAction[] = [
     defaults: ['KeyE'],
   },
   { id: 'jump', label: 'Jump', category: 'Movement', kind: 'held', defaults: ['Space'] },
+  // Swim down, the mirror of Jump's swim up. Ctrl is the one movement-hand key
+  // left unclaimed, and a HELD action matches the bare physical code, so a lone
+  // modifier drives it fine (only the rebinding CAPTURE ignores lone modifiers,
+  // so a player rebinding this must pick a non-modifier key).
+  {
+    id: 'dive',
+    label: 'Swim Down',
+    category: 'Movement',
+    kind: 'held',
+    defaults: ['ControlLeft'],
+  },
   {
     id: 'autorun',
     label: 'Toggle Autorun',
@@ -125,6 +174,17 @@ export const BIND_ACTIONS: BindAction[] = [
     kind: 'edge',
     defaults: ['KeyF'],
   },
+  {
+    // The deliberate Thornhollow Fields flag press (never a walk-over). The bare
+    // interact key also routes here inside a live match (main.ts), so this
+    // dedicated bind is the rebindable, always-explicit form on F's shifted
+    // layer (the thematically nearest key: it IS an interaction).
+    id: 'bgFlag',
+    label: 'Battleground Flag Action',
+    category: 'Targeting',
+    kind: 'edge',
+    defaults: ['Shift+KeyF'],
+  },
   // Only acts while the Attack Move setting is on; shares its default key with
   // Turn Left intentionally, and only that key is reserved while active.
   {
@@ -141,6 +201,7 @@ export const BIND_ACTIONS: BindAction[] = [
   { id: 'questlog', label: 'Quest Log', category: 'Interface', kind: 'edge', defaults: ['KeyL'] },
   { id: 'map', label: 'World Map', category: 'Interface', kind: 'edge', defaults: ['KeyM'] },
   { id: 'bags', label: 'Bags', category: 'Interface', kind: 'edge', defaults: ['KeyB'] },
+  { id: 'crafting', label: 'Crafting', category: 'Interface', kind: 'edge', defaults: ['KeyT'] },
   {
     id: 'nameplates',
     label: 'Toggle Nameplates',
@@ -149,7 +210,23 @@ export const BIND_ACTIONS: BindAction[] = [
     defaults: ['KeyV'],
   },
   { id: 'talents', label: 'Talents', category: 'Interface', kind: 'edge', defaults: ['KeyN'] },
-  { id: 'meters', label: 'Damage Meters', category: 'Interface', kind: 'edge', defaults: ['KeyH'] },
+  // Every bare letter is claimed by another default (see the KeyZ note on
+  // Book of Deeds below), so Damage Meters parks on the shifted layer of its
+  // thematically nearest key (H, "hate"/threat), like deeds does on Z.
+  {
+    id: 'meters',
+    label: 'Damage Meters',
+    category: 'Interface',
+    kind: 'edge',
+    defaults: ['Shift+KeyH'],
+  },
+  {
+    id: 'targetAuras',
+    label: 'Target Buffs and Debuffs',
+    category: 'Interface',
+    kind: 'edge',
+    defaults: ['Shift+KeyJ'],
+  },
   {
     id: 'social',
     label: 'Friends & Guild',
@@ -159,10 +236,34 @@ export const BIND_ACTIONS: BindAction[] = [
   },
   {
     id: 'arena',
-    label: 'Arena (Ashen Coliseum)',
+    label: 'PvP (Thornhollow Fields and Arenas)',
     category: 'Interface',
     kind: 'edge',
     defaults: ['KeyG'],
+  },
+  {
+    // Shift+KeyI: bare KeyI belongs to Calendar (unchanged).
+    id: 'dungeonFinder',
+    label: 'Dungeon Finder',
+    category: 'Interface',
+    kind: 'edge',
+    defaults: ['Shift+KeyI'],
+  },
+  {
+    id: 'valecup',
+    label: 'Vale Cup',
+    category: 'Interface',
+    kind: 'edge',
+    defaults: ['KeyY'],
+  },
+  // Mount / dismount toggle: Backquote avoids the release-owned KeyZ layers
+  // for weapon sheathing and the Book of Deeds.
+  {
+    id: 'mount',
+    label: 'Mount / Dismount',
+    category: 'Interface',
+    kind: 'edge',
+    defaults: ['Backquote'],
   },
   {
     id: 'leaderboard',
@@ -171,13 +272,48 @@ export const BIND_ACTIONS: BindAction[] = [
     kind: 'edge',
     defaults: ['KeyK'],
   },
-  // The two windows the HUD composes and dispatches itself (see Hud.bindPanelKeys).
-  // The classic layout above already claims A/B/C/D/E/F/G/H/J/K/L/M/N/O/P/Q/R/S/V/W/X,
-  // so I and U are free; they also sit side by side, which reads as a pair.
-  // (KeyY is deliberately left unbound: tests/keybinds.test.ts uses it as the
-  // "no action owns this code" probe.)
-  { id: 'skills', label: 'Skills', category: 'Interface', kind: 'edge', defaults: ['KeyI'] },
-  { id: 'deeds', label: 'Book of Deeds', category: 'Interface', kind: 'edge', defaults: ['KeyU'] },
+  {
+    id: 'calendar',
+    label: 'Event Calendar',
+    category: 'Interface',
+    kind: 'edge',
+    defaults: ['KeyI'],
+  },
+  {
+    id: 'discord',
+    label: 'Discord',
+    category: 'Interface',
+    kind: 'edge',
+    defaults: ['KeyU'],
+  },
+  // The Book of Deeds parks on the shifted layer of KeyZ, like Damage Meters
+  // does on H and the Shift+digit secondary bar. Rebindable like any other action.
+  {
+    id: 'deeds',
+    label: 'Book of Deeds',
+    category: 'Interface',
+    kind: 'edge',
+    defaults: ['Shift+KeyZ'],
+  },
+  // Professions parks on the shifted layer of KeyP like Deeds does on Z:
+  // every bare letter default is already taken, and Shift+P keeps the
+  // Spellbook's plain P untouched. Rebindable like any action.
+  {
+    id: 'professions',
+    label: 'Professions',
+    category: 'Interface',
+    kind: 'edge',
+    defaults: ['Shift+KeyP'],
+  },
+  // The Reliquary parks on Shift+X: bare KeyX is the emote wheel; Shift+X was
+  // free and sits beside Deeds (Shift+Z) on the shifted letter row.
+  {
+    id: 'reliquary',
+    label: 'The Reliquary',
+    category: 'Interface',
+    kind: 'edge',
+    defaults: ['Shift+KeyX'],
+  },
   {
     id: 'chat',
     label: 'Open Chat',
@@ -192,11 +328,60 @@ export const BIND_ACTIONS: BindAction[] = [
     kind: 'held',
     defaults: ['KeyX'],
   },
+  {
+    id: 'sheathe',
+    label: 'Sheathe/Unsheathe Weapon',
+    category: 'Interface',
+    kind: 'edge',
+    defaults: ['KeyZ'],
+  },
+  // Pet bar (hunter/warlock pet commands). Bound to Ctrl + 1..5 by default, so the
+  // action-bar 1..5 stay free; every one is rebindable like any other action. The
+  // handlers live in main.ts (onPet -> the IWorld pet commands).
+  {
+    id: 'petAttack',
+    label: 'Pet: Attack',
+    category: 'Pet',
+    kind: 'edge',
+    defaults: ['Ctrl+Digit1'],
+  },
+  { id: 'petStop', label: 'Pet: Stop', category: 'Pet', kind: 'edge', defaults: ['Ctrl+Digit2'] },
+  { id: 'petTaunt', label: 'Pet: Taunt', category: 'Pet', kind: 'edge', defaults: ['Ctrl+Digit3'] },
+  {
+    id: 'petDefensive',
+    label: 'Pet: Defensive',
+    category: 'Pet',
+    kind: 'edge',
+    defaults: ['Ctrl+Digit4'],
+  },
+  {
+    id: 'petAggressive',
+    label: 'Pet: Aggressive',
+    category: 'Pet',
+    kind: 'edge',
+    defaults: ['Ctrl+Digit5'],
+  },
+  // Selects your own pet, the keyboard route to what clicking the pet frame does.
+  // Ctrl+6 continues the pet row (Ctrl+1..5 above) and collides with nothing.
+  {
+    id: 'targetPet',
+    label: 'Pet: Mark',
+    category: 'Pet',
+    kind: 'edge',
+    defaults: ['Ctrl+Digit6'],
+  },
   // Action bar (slot 0 = Attack)
   ...SLOT_DEFAULTS.map(
     (code, i): BindAction => ({
       id: `slot${i}`,
-      label: i === 0 ? 'Attack' : `Action Bar ${i + 1}`,
+      label:
+        i === 0
+          ? 'Attack'
+          : i <= 11
+            ? `Action Bar ${i + 1}`
+            : i <= 22
+              ? `Secondary Bar ${i - 11}`
+              : `Third Bar ${i - 22}`,
       category: 'Action Bar',
       kind: 'edge',
       defaults: [code],
@@ -287,15 +472,21 @@ export function comboMods(combo: string): KeyMods {
 }
 
 export function isReservedCode(combo: string): boolean {
-  return comboCode(combo) === 'Escape'; // the game-menu key is never rebindable
+  const code = comboCode(combo);
+  // Escape always toggles the game menu; the left and right mouse buttons drive
+  // mouselook, click-to-move, and click-picking (see mouse_binds.ts). Neither is
+  // ever rebindable.
+  return code === 'Escape' || isReservedMouseCode(code);
 }
 
 // short on-screen label for a single e.code (the keycap glyph)
 function codeLabel(code: string): string {
+  const mouse = mouseCodeLabel(code); // "Mouse4" -> "M4"
+  if (mouse !== null) return mouse;
   if (/^Digit\d$/.test(code)) return code.slice(5);
   if (/^Key[A-Z]$/.test(code)) return code.slice(3);
   if (/^F\d{1,2}$/.test(code)) return code;
-  if (/^Numpad\d$/.test(code)) return 'Num' + code.slice(6);
+  if (/^Numpad\d$/.test(code)) return `Num${code.slice(6)}`;
   const named: Record<string, string> = {
     Minus: '-',
     Equal: '=',
@@ -356,6 +547,22 @@ export function keyLabel(combo: string | null): string {
   return head + codeLabel(code);
 }
 
+/**
+ * Compact keycap form of a binding label for the tiny UI keycaps (a side-menu
+ * button is 34px wide): lowercase, with modifier words shortened to classic
+ * one-letter prefixes, so "Shift+Z" reads "s-z" and stays inside the cap.
+ * Full-length surfaces (aria labels, tooltips, the keybind options rows) keep
+ * keyLabel/primaryLabel untouched.
+ */
+export function keyCapLabel(label: string): string {
+  return label
+    .toLowerCase()
+    .replace(/shift\+/g, 's-')
+    .replace(/ctrl\+/g, 'c-')
+    .replace(/alt\+/g, 'a-')
+    .replace(/meta\+/g, 'm-');
+}
+
 export class Keybinds {
   // actionId -> [primary, secondary] codes (either may be null)
   private map = new Map<string, (string | null)[]>();
@@ -385,8 +592,16 @@ export class Keybinds {
     // still seeds rather than dropping to bare defaults; the legacy blob is only
     // ever read here, never overwritten.
     let obj = readBindingsBlob(this.storeKey);
-    if (!obj && this.storeKey !== KEY_PREFIX) obj = readBindingsBlob(KEY_PREFIX);
+    if (!obj && this.storeKey !== KEY_PREFIX) {
+      obj = readBindingsBlob(KEY_PREFIX);
+    }
     if (!obj) return;
+    // One-time, signature-keyed repair of profiles corrupted by reverted layout
+    // changes (Q/E strafe overhaul; targetFriendly/meters KeyH collision). It
+    // deletes only the exact corrupted keys so they re-seed to current defaults
+    // below, and leaves every other stored value (including deliberate remaps)
+    // untouched. See keybinds_repair.ts.
+    repairStoredBindings(obj);
     // Apply stored codes over the defaults, but only for known actions and
     // never letting one code land on two actions (first writer keeps it).
     // Actions absent from the stored blob (e.g. ones added in a later release
@@ -400,18 +615,18 @@ export class Keybinds {
       const shared = actionAllowsShared(a.id);
       for (let i = 0; i < SLOTS_PER_ACTION; i++) {
         const v = entry[i];
+        if (typeof v !== 'string' || isReservedCode(v)) continue;
         // Shared actions keep their code even if another action already claimed
         // it, and never claim it themselves, so the overlap survives a round-trip.
-        if (typeof v === 'string' && !isReservedCode(v) && (shared || !claimed.has(v))) {
-          slots[i] = v;
-          if (!shared) claimed.add(v);
-        }
+        if (!shared && claimed.has(v)) continue;
+        slots[i] = v;
+        if (!shared) claimed.add(v);
       }
       this.map.set(a.id, slots);
     }
     // Second pass: for actions that kept their defaults, drop any code an
     // explicit stored binding already claimed so the same key can't drive two
-    // actions (preserving the WoW-style uniqueness invariant).
+    // actions (preserving the classic-style uniqueness invariant).
     for (const a of BIND_ACTIONS) {
       if (Array.isArray(obj[a.id])) continue;
       if (actionAllowsShared(a.id)) continue; // keep its (intentionally shared) default
@@ -530,6 +745,46 @@ export class Keybinds {
 
   reset(): void {
     this.map = this.defaults();
+    this.save();
+  }
+
+  /**
+   * Reset ONLY the action-bar slot bindings (`slot0`..`slot${ACTION_BAR_SLOTS - 1}`),
+   * leaving every other action (movement, targeting, interface, pet) untouched, unlike
+   * the everything-resetting reset(). The first bar (slot0 Attack plus slots
+   * 1..PRIMARY_BAR_MAX_SLOT) returns to its default keys; every slot on an optional
+   * secondary/third bar goes fully unbound rather than reverting to its numpad
+   * default, freeing those physical keys for the player to reuse elsewhere. Used by
+   * the on-bar key-binding mode's Reset action (src/ui/hud.ts).
+   */
+  resetSlots(): void {
+    const defaults = this.defaults();
+    for (const a of BIND_ACTIONS) {
+      if (!a.id.startsWith('slot')) continue;
+      const slot = Number(a.id.slice(4));
+      this.map.set(
+        a.id,
+        slot <= PRIMARY_BAR_MAX_SLOT ? (defaults.get(a.id) ?? [null, null]) : [null, null],
+      );
+    }
+    // The just-restored primary-bar defaults may collide with a code the player
+    // has since rebound elsewhere (another action, including a non-primary slot
+    // whose custom binding happened to match a primary default); the classic
+    // one-code-per-action invariant means the restored default wins, mirroring
+    // the eviction sweep bind() and load() both run.
+    const claimed = new Set<string>();
+    for (let slot = 0; slot <= PRIMARY_BAR_MAX_SLOT; slot++) {
+      for (const c of this.map.get(`slot${slot}`) ?? []) if (c !== null) claimed.add(c);
+    }
+    for (const [id, codes] of this.map) {
+      const slot = id.startsWith('slot') ? Number(id.slice(4)) : null;
+      if (slot !== null && slot <= PRIMARY_BAR_MAX_SLOT) continue; // the restored defaults themselves
+      if (actionAllowsShared(id)) continue;
+      for (let i = 0; i < codes.length; i++) {
+        const c = codes[i];
+        if (c !== null && claimed.has(c)) codes[i] = null;
+      }
+    }
     this.save();
   }
 }

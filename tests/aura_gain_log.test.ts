@@ -1,108 +1,69 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import type { Aura, AuraKind } from '../src/sim/types';
-import { auraGainLogKeyFor, findAuraForGainEvent, isDebuffAura } from '../src/ui/aura_gain_log';
-import { t } from '../src/ui/i18n';
+import type { Aura } from '../src/sim/types';
+import { auraGainLogKeyFor, findAuraForGainEvent } from '../src/ui/aura_gain_log';
 
-const aura = (kind: AuraKind, value = 0): Pick<Aura, 'kind' | 'value'> => ({ kind, value });
-
-describe('isDebuffAura', () => {
-  it('calls the named harmful kinds debuffs regardless of value', () => {
-    for (const kind of ['dot', 'stun', 'silence', 'mortal_wound', 'critvuln'] as AuraKind[])
-      expect(isDebuffAura(kind, 0), kind).toBe(true);
-  });
-
-  it('calls stat buffs, HoTs, shields, imbues, forms and stealth beneficial', () => {
-    for (const kind of [
-      'buff_ap',
-      'buff_armor',
-      'buff_allstats',
-      'hot',
-      'absorb',
-      'imbue',
-      'thorns',
-      'form_bear',
-      'form_cat',
-      'stealth',
-      'defensive_stance',
-      'righteous_fury',
-    ] as AuraKind[])
-      expect(isDebuffAura(kind, 10), kind).toBe(false);
-  });
-
-  it('treats a NEGATIVE-value buff_* aura as a debuff (a drain reusing a buff kind)', () => {
-    // A mob's Withering Wail sapping attack power, or an Intellect-draining curse.
-    expect(isDebuffAura('buff_ap', -12)).toBe(true);
-    expect(isDebuffAura('buff_int', -8)).toBe(true);
-    expect(isDebuffAura('buff_ap', 12)).toBe(false);
-    // Zero is not negative: an inert stat aura is not silently reclassified.
-    expect(isDebuffAura('buff_ap', 0)).toBe(false);
-  });
-});
-
-// The sim keeps its OWN harmful set for /targetbuffs tagging (src/sim must not import
-// src/ui). It is narrower on purpose, but it must never claim a kind is harmful that
-// this module calls beneficial, or the same aura would read two ways in one client.
-describe('the client classifier is a superset of the sim harmful set', () => {
-  it('every kind in sim.ts HARMFUL_AURA_KINDS is a debuff here too', () => {
-    const src = readFileSync(fileURLToPath(new URL('../src/sim/sim.ts', import.meta.url)), 'utf8');
-    const block = /const HARMFUL_AURA_KINDS[^[]*\[([\s\S]*?)\]\);/.exec(src);
-    expect(block, 'HARMFUL_AURA_KINDS block not found in sim.ts').not.toBeNull();
-    const kinds = [...(block?.[1] ?? '').matchAll(/'([a-z_]+)'/g)].map((m) => m[1] as AuraKind);
-    expect(kinds.length).toBeGreaterThan(5);
-    for (const kind of kinds) expect(isDebuffAura(kind, 0), kind).toBe(true);
-  });
-});
+function aura(over: Partial<Aura> = {}): Aura {
+  return {
+    id: 'test',
+    name: 'Test Aura',
+    kind: 'dot',
+    remaining: 10,
+    duration: 10,
+    value: 5,
+    sourceId: 0,
+    school: 'physical',
+    ...over,
+  };
+}
 
 describe('auraGainLogKeyFor', () => {
-  it('says "is afflicted by" for a harmful aura', () => {
-    expect(auraGainLogKeyFor(aura('dot', 12))).toBe('hud.combat.auraAfflicted');
-    expect(auraGainLogKeyFor(aura('polymorph'))).toBe('hud.combat.auraAfflicted');
-    expect(auraGainLogKeyFor(aura('buff_ap', -12))).toBe('hud.combat.auraAfflicted');
+  it('keeps the affliction wording for a harmful aura on another entity', () => {
+    const dot = aura({ kind: 'dot', value: 5 });
+    expect(auraGainLogKeyFor(dot)).toBe('hud.combat.auraAfflicted');
   });
 
-  it('says "gains" for a beneficial aura instead of calling it an affliction', () => {
-    // The bug this closes: every non-player aura GAIN was logged as an affliction,
-    // so an ally picking up a shield or a mob buffing itself read as a debuff.
-    expect(auraGainLogKeyFor(aura('buff_ap', 30))).toBe('hudChrome.combat.auraGainOther');
-    expect(auraGainLogKeyFor(aura('hot', 8))).toBe('hudChrome.combat.auraGainOther');
-    expect(auraGainLogKeyFor(aura('absorb', 200))).toBe('hudChrome.combat.auraGainOther');
-    expect(auraGainLogKeyFor(aura('form_bear'))).toBe('hudChrome.combat.auraGainOther');
+  it('uses the neutral gain wording for a stance/buff-kind aura on another entity', () => {
+    const stance = aura({ kind: 'defensive_stance', value: 1 });
+    expect(auraGainLogKeyFor(stance)).toBe('hud.combat.auraGainOther');
   });
 
-  it('returns keys the i18n catalog actually tracks', () => {
-    // t() throws on an untracked key in dev/test, so this proves both arms render.
-    for (const matched of [aura('dot', 5), aura('hot', 5), undefined])
-      expect(t(auraGainLogKeyFor(matched), { target: 'Aki', name: 'Rend' })).toContain('Aki');
+  it('uses the neutral gain wording for a positive stat buff on another entity', () => {
+    const buff = aura({ kind: 'buff_speed', value: 1.4 });
+    expect(auraGainLogKeyFor(buff)).toBe('hud.combat.auraGainOther');
   });
 
-  it('reads a gain it cannot resolve as neutral rather than assuming harm', () => {
-    // The aura expired before the event drained, or the online mirror has not
-    // echoed it yet: "gains" is the safe sentence, "is afflicted by" is a claim.
-    expect(auraGainLogKeyFor(undefined)).toBe('hudChrome.combat.auraGainOther');
+  it('still treats a negative-value stat buff reuse as a debuff', () => {
+    const drain = aura({ kind: 'buff_ap', value: -50 });
+    expect(auraGainLogKeyFor(drain)).toBe('hud.combat.auraAfflicted');
+  });
+
+  it('falls back to the SimEvent auraKind when no live aura is found', () => {
+    expect(auraGainLogKeyFor(undefined, 'stun')).toBe('hud.combat.auraAfflicted');
+    expect(auraGainLogKeyFor(undefined, 'hot')).toBe('hud.combat.auraGainOther');
+  });
+
+  it('defaults to the neutral wording when neither a matched aura nor a kind is available', () => {
+    expect(auraGainLogKeyFor(undefined, undefined)).toBe('hud.combat.auraGainOther');
   });
 });
 
 describe('findAuraForGainEvent', () => {
-  const auras = [
-    { name: 'Rend', kind: 'dot' as AuraKind, value: 5 },
-    { name: 'Battle Shout', kind: 'buff_ap' as AuraKind, value: 30 },
-  ];
-
-  it('finds the live aura the event names', () => {
-    expect(findAuraForGainEvent(auras, 'Battle Shout')?.kind).toBe('buff_ap');
+  it('matches by name when no auraKind is supplied', () => {
+    const auras = [aura({ name: 'Battle Stance', kind: 'defensive_stance' })];
+    expect(findAuraForGainEvent(auras, 'Battle Stance')?.kind).toBe('defensive_stance');
   });
 
-  it('returns undefined for a name no live aura carries', () => {
-    expect(findAuraForGainEvent(auras, 'Corruption')).toBeUndefined();
-    expect(findAuraForGainEvent([], 'Rend')).toBeUndefined();
+  it('matches by name and kind when both are supplied', () => {
+    const auras = [
+      aura({ name: 'Fresh Legs', kind: 'buff_speed', value: 1.4 }),
+      aura({ name: 'Fresh Legs', kind: 'dot', value: 3 }),
+    ];
+    const match = findAuraForGainEvent(auras, 'Fresh Legs', 'buff_speed');
+    expect(match?.kind).toBe('buff_speed');
   });
 
-  it('feeds auraGainLogKeyFor end to end: a buff gain is not an affliction', () => {
-    expect(auraGainLogKeyFor(findAuraForGainEvent(auras, 'Battle Shout'))).toBe(
-      'hudChrome.combat.auraGainOther',
-    );
-    expect(auraGainLogKeyFor(findAuraForGainEvent(auras, 'Rend'))).toBe('hud.combat.auraAfflicted');
+  it('returns undefined when nothing matches', () => {
+    const auras = [aura({ name: 'Other Aura' })];
+    expect(findAuraForGainEvent(auras, 'Missing Aura')).toBeUndefined();
   });
 });

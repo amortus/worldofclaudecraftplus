@@ -1,28 +1,17 @@
-// Pure, host-agnostic view model for the GUILD tab of the high-score board.
+// Pure, host-agnostic view model for the GUILD tab of the high-score window.
 //
-// The pure-core half of a pure-core + thin-painter split: it maps an
-// already-resolved GuildLeaderboardPage (or an explicit loading / error
-// discriminator) to a render model the painter (the inline leaderboard renderer
-// in hud.ts) localizes. It is ASYNC-FREE and DOM/i18n-free: the painter owns the
-// Promise, the await, and the t() copy. The async/paged shape is the
-// online-only-shape trap, so the core is fed BOTH a Sim-shaped (empty) and a
-// ClientWorld-mirror-shaped page in the tests.
+// The pure-core half of the pure-core + thin-painter split (sibling of
+// leaderboard_view.ts, which models the player tab). Like that core this is
+// ASYNC-FREE and DOM/i18n-free: it maps an already-resolved GuildLeaderboardPage
+// (or an explicit loading / error discriminator) to a render model the painter
+// localizes. The async/paged shape is the online-only-shape trap, so the core is
+// fed BOTH a Sim-shaped (empty) and a ClientWorld-mirror-shaped page in the tests.
 //
 // Guilds are server-only, so there is no "your standing" sticky row here (unlike
-// the player board): the offline Sim ranks no guilds and resolves the empty state.
+// the player tab): the offline Sim ranks no guilds and resolves the empty state.
 
 import type { GuildLeaderboardPage } from '../world_api';
-
-/** Prev/Next pager state for a ranked board. Null when the whole board fits on
- *  one page. Defined here (rather than imported from a shared leaderboard_view.ts)
- *  because this fork's player leaderboard UI is inline in hud.ts. */
-export interface LeaderboardPager {
-  /** Zero-based current page (already clamped by the server). */
-  page: number;
-  pageCount: number;
-  prevDisabled: boolean;
-  nextDisabled: boolean;
-}
+import type { LeaderboardPager } from './leaderboard_view';
 
 /** One ranked guild row: rank + the guild's summed-XP standing. */
 export interface GuildLeaderboardRow {

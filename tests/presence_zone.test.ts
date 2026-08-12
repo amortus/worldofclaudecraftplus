@@ -5,6 +5,7 @@ vi.mock('../server/db', () => ({
   pool: { query: vi.fn(async () => ({ rows: [] })) },
   saveCharacterState: vi.fn(async () => {}),
   openPlaySession: vi.fn(async () => 1),
+  touchCharacterLogin: vi.fn(async () => {}),
   closePlaySession: vi.fn(async () => {}),
   insertChatLogs: vi.fn(async () => {}),
   walletForAccount: vi.fn(async () => null),
@@ -13,7 +14,7 @@ vi.mock('../server/db', () => ({
 }));
 
 import { GameServer } from '../server/game';
-import { DELVES, DUNGEONS, delveOrigin, instanceOrigin } from '../src/sim/data';
+import { delveOrigin, instanceOrigin } from '../src/sim/data';
 
 function makeServerWithPlayer(): { server: any; session: any; entity: any } {
   const server: any = new GameServer();
@@ -46,7 +47,7 @@ describe('presenceOf zone resolution', () => {
     // Players moved into a dungeon get their position set to the instance origin
     // but never get e.dungeonId assigned, so the position must resolve the zone.
     entity.dungeonId = null;
-    const origin = instanceOrigin(DUNGEONS['hollow_crypt'].index, 0);
+    const origin = instanceOrigin(0, 0); // hollow_crypt is index 0
     entity.pos.x = origin.x;
     entity.pos.z = origin.z;
     const presence = server.presenceOf(session);
@@ -57,11 +58,43 @@ describe('presenceOf zone resolution', () => {
   it('names the delve and reports "dungeon" status at a delve instance position', () => {
     const { server, session, entity } = makeServerWithPlayer();
     entity.dungeonId = null;
-    const origin = delveOrigin(DELVES['collapsed_reliquary'].index, 0);
+    const origin = delveOrigin(0, 0); // collapsed_reliquary is index 0
     entity.pos.x = origin.x;
     entity.pos.z = origin.z;
     const presence = server.presenceOf(session);
     expect(presence.zone).toBe('The Collapsed Reliquary');
     expect(presence.status).toBe('dungeon');
+  });
+
+  it('reports "afk" status for an idle player flagged away in afk mode', () => {
+    const { server, session } = makeServerWithPlayer();
+    server.sim.meta(session.pid).away = { mode: 'afk', message: 'brb' };
+    expect(server.presenceOf(session).status).toBe('afk');
+  });
+
+  it('does not report "afk" for the dnd away mode (private state)', () => {
+    const { server, session } = makeServerWithPlayer();
+    server.sim.meta(session.pid).away = { mode: 'dnd', message: 'raiding' };
+    expect(server.presenceOf(session).status).toBe('online');
+  });
+
+  it('dead, dungeon, and combat all outrank afk', () => {
+    const { server, session, entity } = makeServerWithPlayer();
+    server.sim.meta(session.pid).away = { mode: 'afk', message: 'brb' };
+
+    entity.dead = true;
+    expect(server.presenceOf(session).status).toBe('dead');
+    entity.dead = false;
+
+    entity.dungeonId = 'hollow_crypt';
+    expect(server.presenceOf(session).status).toBe('dungeon');
+    entity.dungeonId = null;
+
+    entity.inCombat = true;
+    expect(server.presenceOf(session).status).toBe('combat');
+    entity.inCombat = false;
+
+    // With every higher-priority state cleared, afk shows through.
+    expect(server.presenceOf(session).status).toBe('afk');
   });
 });

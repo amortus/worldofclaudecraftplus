@@ -1,12 +1,16 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   applyRadialDeadzone,
-  stickToMoveFlags,
-  stickToLook,
-  risingEdges,
-  DEFAULT_GAMEPAD_BINDINGS,
   BINDABLE_BUTTONS,
+  DEFAULT_GAMEPAD_BINDINGS,
+  detectGamepadKind,
+  GAMEPAD_ZOOM_IN,
+  GAMEPAD_ZOOM_OUT,
   GP,
+  gamepadButtonLabel,
+  risingEdges,
+  stickToLook,
+  stickToMoveFlags,
 } from '../src/game/gamepad_map';
 
 describe('applyRadialDeadzone', () => {
@@ -36,7 +40,10 @@ describe('applyRadialDeadzone', () => {
 describe('stickToMoveFlags', () => {
   it('produces nothing inside the deadzone', () => {
     expect(stickToMoveFlags(0.1, 0.1, 0.25)).toEqual({
-      forward: false, back: false, strafeLeft: false, strafeRight: false,
+      forward: false,
+      back: false,
+      strafeLeft: false,
+      strafeRight: false,
     });
   });
 
@@ -70,8 +77,12 @@ describe('stickToMoveFlags', () => {
 });
 
 describe('stickToLook', () => {
-  it('returns zero inside the deadzone', () => {
-    expect(stickToLook(0.1, 0.1, 0.2, 2, false, 0.016)).toEqual({ yaw: 0, pitch: 0 });
+  it('returns zero and inactive inside the deadzone', () => {
+    expect(stickToLook(0.1, 0.1, 0.2, 2, false, 0.016)).toEqual({
+      yaw: 0,
+      pitch: 0,
+      active: false,
+    });
   });
 
   it('turns right (negative yaw delta) when pushed right and scales with dt', () => {
@@ -85,6 +96,30 @@ describe('stickToLook', () => {
     const normal = stickToLook(0, -1, 0.2, 2, false, 0.016);
     const inverted = stickToLook(0, -1, 0.2, 2, true, 0.016);
     expect(Math.sign(normal.pitch)).toBe(-Math.sign(inverted.pitch));
+  });
+
+  it('reports active whenever the stick clears the deadzone, even if the scaled delta is zero', () => {
+    // A deflected stick with dt === 0 (a stalled/zero-length frame) would
+    // otherwise compute yaw = pitch = 0 and be indistinguishable from a
+    // centered stick; `active` is derived from the raw deflection instead, so
+    // a "look active" consumer (Input.setGamepadLookActive) never misses a
+    // frame where the player is genuinely holding the stick over.
+    const zeroDt = stickToLook(1, 0, 0.2, 2, false, 0);
+    expect(zeroDt.yaw).toBeCloseTo(0, 10);
+    expect(zeroDt.active).toBe(true);
+
+    expect(stickToLook(1, 0, 0.2, 2, false, 0.016).active).toBe(true);
+    expect(stickToLook(0, 0, 0.2, 2, false, 0.016).active).toBe(false);
+  });
+
+  it('pushing the stick up (y < 0) with invertY off looks up, matching mouse/touch (negative pitch delta)', () => {
+    // camPitch accumulates this delta directly (Input.applyGamepadLook); the
+    // renderer raises the camera and tilts the view DOWN as camPitch increases
+    // (see the eyeY + sin(pitch)*dist orbit in renderer.ts), so "look up" means
+    // a negative delta here, the same sign mouse's lookPitchSign and touch's
+    // touchPitchSign both apply by default for a physically-up input.
+    const up = stickToLook(0, -1, 0.2, 2, false, 0.016);
+    expect(up.pitch).toBeLessThan(0);
   });
 });
 
@@ -110,7 +145,9 @@ describe('default layout', () => {
   });
 
   it('assigns a default to every bindable button (catches a dropped binding)', () => {
-    const bound = Object.keys(DEFAULT_GAMEPAD_BINDINGS).map(Number).sort((a, b) => a - b);
+    const bound = Object.keys(DEFAULT_GAMEPAD_BINDINGS)
+      .map(Number)
+      .sort((a, b) => a - b);
     expect(bound).toEqual(BINDABLE_BUTTONS);
   });
 
@@ -120,6 +157,124 @@ describe('default layout', () => {
       // Exactly once: count 0 = a dropped slot, count >= 2 = a duplicated slot
       // (additive or displacing). The default layout binds each slot to one button.
       expect(values.filter((v) => v === `slot${slot}`).length, `slot${slot}`).toBe(1);
+    }
+  });
+
+  it('ships camera zoom unbound (all 13 default buttons are already claimed)', () => {
+    // Zoom is pad-only and opt-in: there is no free default slot among the
+    // bindable buttons, so a player must remap one deliberately in options.
+    const values = Object.values(DEFAULT_GAMEPAD_BINDINGS);
+    expect(values).not.toContain(GAMEPAD_ZOOM_IN);
+    expect(values).not.toContain(GAMEPAD_ZOOM_OUT);
+  });
+});
+
+describe('detectGamepadKind', () => {
+  it('classifies a PlayStation pad by name and by Sony vendor id', () => {
+    expect(
+      detectGamepadKind(
+        'DualSense Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 0ce6)',
+      ),
+    ).toBe('playstation');
+    // DualShock 4 often reports the generic name "Wireless Controller"; the 054c
+    // vendor id is what still identifies it.
+    expect(
+      detectGamepadKind('Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 09cc)'),
+    ).toBe('playstation');
+  });
+
+  it('classifies an Xbox pad by name and by Microsoft vendor id', () => {
+    expect(
+      detectGamepadKind('Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e Product: 02fd)'),
+    ).toBe('xbox');
+  });
+
+  it('classifies Nintendo pads (Switch Pro, Joy-Con) by name and vendor id', () => {
+    expect(detectGamepadKind('Pro Controller (STANDARD GAMEPAD Vendor: 057e Product: 2009)')).toBe(
+      'nintendo',
+    );
+    expect(detectGamepadKind('Joy-Con (L/R)')).toBe('nintendo');
+  });
+
+  it('classifies Xbox pads reported with hyphenated or XInput-only names', () => {
+    expect(detectGamepadKind('Xbox 360 Controller (XInput STANDARD GAMEPAD)')).toBe('xbox');
+    expect(detectGamepadKind('Microsoft X-Box 360 pad')).toBe('xbox');
+  });
+
+  it('reads the vendor id from the Firefox "vendor-product-name" id format', () => {
+    expect(detectGamepadKind('054c-0ce6-DualSense Wireless Controller')).toBe('playstation');
+    // Vendor-only Firefox id with no recognizable product name still resolves.
+    expect(detectGamepadKind('045e-02fd-')).toBe('xbox');
+  });
+
+  it('prefers the product NAME over a colliding product-id hex (no misclassification)', () => {
+    // The product id here is 054c (Sony's vendor code), but the pad is an Xbox pad.
+    // Name must win, and the vendor must be read from its field, not the product.
+    expect(detectGamepadKind('Xbox Wireless Controller (Vendor: 045e Product: 054c)')).toBe('xbox');
+  });
+
+  it('reads the vendor from its field, not a colliding product id, when no name matches', () => {
+    // No name keyword; vendor 045e (Xbox) but product 054c (Sony's vendor code). A
+    // naive whole-string scan for "054c" would wrongly return 'playstation'; reading
+    // the vendor field returns 'xbox'. This is the case that actually pins the parse.
+    expect(detectGamepadKind('Wireless Controller (Vendor: 045e Product: 054c)')).toBe('xbox');
+  });
+
+  it('pins the PlayStation name arm alone (no vendor id present)', () => {
+    expect(detectGamepadKind('DualSense Wireless Controller')).toBe('playstation');
+  });
+
+  it('pins the Nintendo vendor arm alone (no name keyword present)', () => {
+    expect(detectGamepadKind('Wireless Controller (Vendor: 057e Product: 2009)')).toBe('nintendo');
+  });
+
+  it('falls back to generic for an unknown or empty id', () => {
+    expect(detectGamepadKind('Some Random Pad (Vendor: 1234 Product: 5678)')).toBe('generic');
+    expect(detectGamepadKind('')).toBe('generic');
+  });
+});
+
+describe('gamepadButtonLabel', () => {
+  it('mirrors the Nintendo A/B and X/Y face-button swap (labels follow the silk-screen)', () => {
+    // Position index 0 is the bottom face button: "B" on a Switch pad, "A" on Xbox.
+    expect(gamepadButtonLabel(GP.A, 'nintendo')).toBe('B');
+    expect(gamepadButtonLabel(GP.B, 'nintendo')).toBe('A');
+    expect(gamepadButtonLabel(GP.X, 'nintendo')).toBe('Y');
+    expect(gamepadButtonLabel(GP.Y, 'nintendo')).toBe('X');
+    // Xbox is unswapped: the same positions read A/B/X/Y.
+    expect(gamepadButtonLabel(GP.A, 'xbox')).toBe('A');
+    expect(gamepadButtonLabel(GP.Y, 'xbox')).toBe('Y');
+  });
+
+  it("uses each brand's shoulder/face names", () => {
+    expect(gamepadButtonLabel(GP.A, 'playstation')).toBe('Cross');
+    expect(gamepadButtonLabel(GP.X, 'playstation')).toBe('Square');
+    expect(gamepadButtonLabel(GP.LT, 'playstation')).toBe('L2');
+    expect(gamepadButtonLabel(GP.LT, 'nintendo')).toBe('ZL');
+    expect(gamepadButtonLabel(GP.LT, 'xbox')).toBe('LT');
+  });
+
+  it('shares identical d-pad arrows across brands', () => {
+    for (const kind of ['generic', 'xbox', 'playstation', 'nintendo'] as const) {
+      expect(gamepadButtonLabel(GP.DPAD_UP, kind)).toBe('D-pad ↑');
+    }
+  });
+
+  it('keeps the brand-neutral combined labels for the generic kind', () => {
+    expect(gamepadButtonLabel(GP.A, 'generic')).toBe('A / Cross');
+  });
+
+  it('falls back to a raw index for an out-of-range button', () => {
+    expect(gamepadButtonLabel(99, 'xbox')).toBe('#99');
+  });
+
+  it('labels every bindable button for every brand (no undefined glyphs)', () => {
+    for (const kind of ['generic', 'xbox', 'playstation', 'nintendo'] as const) {
+      for (const button of BINDABLE_BUTTONS) {
+        const label = gamepadButtonLabel(button, kind);
+        expect(label, `${kind} #${button}`).toBeTruthy();
+        expect(label.startsWith('#'), `${kind} #${button} unlabeled`).toBe(false);
+      }
     }
   });
 });

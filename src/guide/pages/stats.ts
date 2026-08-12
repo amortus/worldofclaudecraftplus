@@ -1,6 +1,6 @@
 // Character & Stats: what the five primary attributes do, the secondary stats they
 // feed, and where to read them on the character sheet. Directional only, no formulas
-// or balance numbers, so there is nothing here to min-max (WoW-style altitude).
+// or balance numbers, so there is nothing here to min-max (classic-guide altitude).
 
 import { esc } from '../../ui/esc';
 import { t } from '../../ui/i18n';
@@ -17,14 +17,21 @@ const PRIMARY = [
   ['guide.stats.spiTitle', 'guide.stats.spiBody'],
 ] as const;
 
-// Secondary / derived stats the sheet shows alongside the primaries.
+// Secondary / derived stats the sheet shows alongside the primaries, in the order the
+// character sheet groups them (STAT_PANELS in src/ui/char_stats_view.ts): the Offense
+// panel first, then the Defense panel, whose PvP summary line closes the sheet. The
+// sheet splits crit into a chance and a rating row; the guide covers both in one entry.
 const SECONDARY = [
-  ['guide.stats.armorTitle', 'guide.stats.armorBody'],
   ['guide.stats.apTitle', 'guide.stats.apBody'],
-  ['guide.stats.spTitle', 'guide.stats.spBody'],
-  ['guide.stats.critTitle', 'guide.stats.critBody'],
-  ['guide.stats.dodgeTitle', 'guide.stats.dodgeBody'],
   ['guide.stats.dpsTitle', 'guide.stats.dpsBody'],
+  ['guide.stats.critTitle', 'guide.stats.critBody'],
+  ['guide.stats.spTitle', 'guide.stats.spBody'],
+  ['guide.stats.hasteTitle', 'guide.stats.hasteBody'],
+  ['guide.stats.hitTitle', 'guide.stats.hitBody'],
+  ['guide.stats.armorTitle', 'guide.stats.armorBody'],
+  ['guide.stats.dodgeTitle', 'guide.stats.dodgeBody'],
+  ['guide.stats.parryTitle', 'guide.stats.parryBody'],
+  ['guide.stats.warfareTitle', 'guide.stats.warfareBody'],
 ] as const;
 
 export const stats: GuidePage = {
@@ -65,6 +72,7 @@ export const stats: GuidePage = {
           { href: hrefFor('classes'), key: 'guide.nav.classes' },
           { href: hrefFor('gear'), key: 'guide.nav.gear' },
           { href: hrefFor('reference/combat'), key: 'guide.nav.combat' },
+          { href: hrefFor('arena'), key: 'guide.nav.arena' },
         ])}
       </article>`;
   },

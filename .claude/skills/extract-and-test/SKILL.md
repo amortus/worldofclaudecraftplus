@@ -9,15 +9,17 @@ user-invocable: true
 This repo is built and maintained almost entirely by AI agents and grows by many
 small contributions. The thing that keeps it scalable, and keeps open-source merge
 conflicts small, is that new behavior lands as a focused module behind a known seam,
-not as another block appended to a 10k-line file. This skill is the detailed how-to
+not as another block appended to an already huge coordinator. This skill is the detailed how-to
 behind the root CLAUDE.md "Modularity" section. Apply it whenever you implement a
 feature or fix a bug.
 
 ## The one decision: sibling module or monolith edit
 
-The large files (`src/sim/sim.ts`, `src/ui/hud.ts`, then `src/main.ts`,
-`src/render/renderer.ts`) are sanctioned monoliths. Do not split them to hit a line
-count, and do not rewrite them as a side effect of your task. But before you add a
+The four logic monoliths (`src/ui/hud.ts`, `src/sim/sim.ts`, `src/main.ts`,
+`src/render/renderer.ts`) are coordinators, not a license to grow them: do
+not split them to hit a line count, and do not rewrite them as a side effect of your task,
+but never GROW one either. `src/main.ts` especially is a firewall, not a home (its
+client-bootstrap helpers belong in `src/game/` or `src/ui/` siblings). Before you add a
 block of new logic to one, ask:
 
 > Does this behavior need the monolith's private mutable state (the live `Sim`
@@ -35,30 +37,52 @@ block of new logic to one, ask:
 If your edit to a monolith is more than a thin wiring of something defined elsewhere,
 you are probably appending behavior that wants its own module.
 
+## The enforcement backstop: the monolith line-count ratchet
+
+`tests/monolith_budget.test.ts` pins a per-file line ceiling for every named monolith:
+the four coordinators above plus the unsanctioned ones that grew alongside them (for
+example `server/game.ts`, `src/net/online.ts`, `src/game/music.ts`, `server/db.ts`; the
+test's `MONOLITHS` table is the authoritative list, one seam suggestion per row). It is
+a ratchet, not a budget to spend:
+
+- Growing a named file past its ceiling fails the suite, and the failure message points
+  back at this skill: the fix is extraction behind the row's seam, never raising the
+  ceiling (a raise is a maintainer decision, justified in the PR body).
+- After a real extraction shrinks a file, LOWER its ceiling to the new size plus a small
+  margin in the same change; a companion check fails any ceiling sitting far above the
+  real file size, so the ratchet keeps tension.
+- A tracked file that disappears (split or renamed, good) must have its row updated in
+  the same change.
+- Data-as-code stays exempt by design: content tables, i18n catalogs and matcher DICTs,
+  and generated artifacts are correctly large and are not in the table.
+
 ## Use the seams this repo already has
 
-Do not invent a new architecture. Pick the seam that matches the work:
+Do not invent a new architecture. **The seam catalog lives in the root `CLAUDE.md`
+Modularity section** (one bullet per seam: `IWorld` facets, `SimContext` sim systems,
+content records, render modules, HUD components, `RouteDef` endpoints, server hot paths,
+barrel subsystems); pick the row that matches the work and follow the local `CLAUDE.md`
+it points at. This skill adds only the detail that list omits:
 
-- **render or ui needs new data or an action:** extend `IWorld` in
-  `src/world_api.ts` first, implement it in BOTH the offline `Sim` (`src/sim/sim.ts`)
-  and the online `ClientWorld` (`src/net/online.ts`), then consume it through
-  `IWorld`. render and ui never import a concrete world. This is the load-bearing
-  parity rule; the `cross-platform-sync` agent audits it.
-- **New game content (mob, quest, item, ability, zone, talent):** a declarative
-  record in `src/sim/content/`, merged into the flat tables by `src/sim/data.ts`.
-  Never inline a content table in `sim.ts`.
-- **New visual system:** a new `src/render/<thing>.ts` exporting a `build*()` that
-  returns a `*View` the renderer owns and calls. Not a new method bank on
-  `renderer.ts` (templates: `terrain.ts`, `props.ts`, `foliage.ts`).
-- **New self-contained HUD window or panel:** its own module the HUD composes,
-  rather than a new banner section inside `hud.ts`. This is the direction the HUD
-  modularization is heading; follow it for new windows.
-- **New server command:** validate every field in `dispatchMessage`
+- **HUD escape hatch:** a `src/ui` module that can be neither a pure view core nor a
+  painter (it must touch the DOM and is not on the `PainterHost` seam) is a LAST RESORT:
+  register it in `UI_PAINTER_HELPERS` (hard contract) or `UI_DOM_MODULES` (owns browser
+  state) in `tests/architecture.test.ts`, whose classification sweep fails an
+  unregistered module that reaches a browser host. Reuse a painter FAMILY before writing
+  a bespoke one (a unit-style frame is a `UnitFramePainter`; an extra action bar is a new
+  `ActionBarPainter(descriptor)`).
+- **New server WS command:** validate every field in `dispatchMessage`
   (`server/game.ts`), then call the `sim.*` method that owns the rule. The outcome
   resolves in the `Sim`, never on the server outside it.
-- **A multi-file subsystem:** a directory with an `index.ts` barrel that exports only
-  its public surface, plus its own short `CLAUDE.md` (templates:
-  `src/render/characters/`, `src/ui/i18n.catalog/`).
+- **New game content carries same-change obligations**, not just the declarative record
+  in `src/sim/content/` (merged by `src/sim/data.ts`, never inlined in `sim.ts`):
+  conquerable content authors its Book of Deeds records (`docs/design/deeds.md`,
+  `tests/deeds_content.test.ts`) and, for conquerable unique loot, its Reliquary pages
+  (`docs/design/reliquary.md`, `tests/reliquary_content.test.ts`); player-facing content
+  regenerates the wiki (`npm run wiki:content`, freshness-gated by `tests/guide.test.ts`)
+  plus any new `guide.*` prose keys; every new item id ships committed WebP art
+  (`tests/item_icons.test.ts`), a wordy English name its M16 non-Latin fills,
+  and new named entities their `src/ui/world_entity_i18n.ts` entries.
 
 ## When to extract, and when not to
 
@@ -114,15 +138,37 @@ After an extraction or fix, these stay green (run the subset your change touches
 
 - `npx tsc --noEmit`
 - `npx vitest run tests/<affected>.test.ts` (or `npm test` for broad changes)
-- `npx vitest run tests/architecture.test.ts` if you touched `src/sim/`
+- `npx vitest run tests/architecture.test.ts` if you touched `src/sim/`, or added / renamed a
+  `src/ui` or `src/render` `*_view` / `*_core` pure core (the completeness sweep also checks
+  `UI_PURE_CORES` / `RENDER_PURE_CORES` registration), or added ANY `src/ui` module (the
+  classification sweep requires a browser-touching one to register in `UI_PAINTER_HELPERS` or
+  `UI_DOM_MODULES`, and anything unregistered to touch no browser global)
 - `npx vitest run tests/localization_fixes.test.ts` if any player-visible text or a
   `src/sim`/`server` emit changed (the S3 i18n guard)
+- `npm run ci:changed` (Biome on the files you changed; this is what the `.githooks/pre-push`
+  floor runs, so clear it here, not at push time). If it flags formatting on your own files,
+  fix with a SCOPED `npx @biomejs/biome check --write <file>` per touched file, never a
+  whole-tree `--write` (the repo defers global Biome debt, so a whole-tree write buries your
+  change in thousands of unrelated reformats).
 - `npm run build` before a merge
+
+When the change is database-backed (SQL or a query call site, schema/indexes, query cadence
+or cardinality, pool/lock/timeout behavior, scheduled database work, or stored-data growth),
+get a read-only `database-performance-reviewer` checkpoint BEFORE implementing and carry its
+concrete bounds and evidence requirements into the test-first contract; re-run it on the
+finished diff.
 
 When you extract, the diff should read as move plus import, not rewrite. If you
 "improved" the moved code in the same change, that is scope creep: split it into a
 follow-up so the extraction stays reviewable. Delete the code you replaced; leave no
 dead duplicate, commented-out block, or unused import behind.
+
+The doctrine here is identical at every capability tier; only the effort scales (the
+root `CLAUDE.md` "Working style" block owns that mapping). On a frontier-tier model,
+after the extraction fan out a fresh subagent (or the `architecture-reviewer` for a
+`src/sim/` move) to review your move-diff for COVERAGE, every parity and correctness gap,
+before calling it done. On the baseline tier, take small verifiable steps and lean on
+one investigator.
 
 ## Repo anti-patterns to avoid
 

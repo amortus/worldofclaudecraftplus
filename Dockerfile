@@ -1,13 +1,20 @@
-# World of Claudecraft game server — serves the built client, REST API and WebSocket
+# World of Claudecraft game server: serves the built client, REST API and WebSocket
 # world on one port. Pair with a postgres service (see docker-compose.yml).
 
-FROM node:22-alpine AS build
+FROM node:26-slim AS build
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
-COPY .browserslistrc tsconfig.json vite.config.ts index.html admin.html play.html guide.html editor.html ./
+# Match package.json packageManager (Corepack not required; same as CONTRIBUTING).
+# .npmrc carries node-linker=hoisted so the install layout matches local/CI.
+RUN npm install -g pnpm@10.34.5
+COPY package.json pnpm-lock.yaml .npmrc ./
+# pnpm patchedDependencies: the lockfile pins patch file hashes, so a frozen
+# install needs the patch files present or it fails with ENOENT.
+COPY patches ./patches
+RUN pnpm install --frozen-lockfile
+COPY .browserslistrc tsconfig.json vite.config.ts svelte.config.js index.html admin.html play.html guide.html editor.html wallet-handoff.html ./
 COPY src ./src
 COPY server ./server
+COPY bot ./bot
 COPY headless ./headless
 COPY scripts ./scripts
 COPY public ./public
@@ -16,18 +23,29 @@ COPY public ./public
 # private bot detector into private/bot_detector before this Docker build.
 COPY private ./private
 # Public client config is inlined into the bundle at build time (Vite reads
-# VITE_* from the environment). Empty defaults keep optional UI disabled:
-# Turnstile widget off. Passed through from compose build args.
+# VITE_* from the environment). Empty defaults keep Turnstile and external
+# wallet handoff off; injected wallet UI stays enabled unless explicitly disabled.
+# Passed through from compose build args.
 ARG VITE_TURNSTILE_SITEKEY=""
+ARG VITE_REOWN_PROJECT_ID=""
+ARG VITE_WALLET_DISABLED=""
 RUN VITE_TURNSTILE_SITEKEY="$VITE_TURNSTILE_SITEKEY" \
-    npm run build && cp -a dist/media ./media-build && rm -rf dist/media && npm run build:server
+    VITE_REOWN_PROJECT_ID="$VITE_REOWN_PROJECT_ID" \
+    VITE_WALLET_DISABLED="$VITE_WALLET_DISABLED" \
+    pnpm run build && cp -a dist/media ./media-build && rm -rf dist/media && pnpm run build:server && pnpm run build:bot
 
-FROM node:22-alpine
+FROM node:26-slim
 WORKDIR /app
 ENV NODE_ENV=production
+# server/parse/build_version.ts reads the version from package.json in the
+# working directory; without it every telemetry batch reports build unknown.
+COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/media-build ./media-build
 COPY --from=build /app/dist-server ./dist-server
+COPY --from=build /app/dist-bot ./dist-bot
+COPY --from=build /app/scripts/prod_cpu_game_helper.mjs /app/ops/
+COPY --from=build /app/scripts/prod_cpu_profile_client.mjs /app/ops/
 RUN mkdir -p /app/dist/media && chown -R node:node /app/dist/media
 EXPOSE 8787
 USER node

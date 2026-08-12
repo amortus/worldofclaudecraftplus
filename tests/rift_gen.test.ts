@@ -1,444 +1,366 @@
 import { describe, expect, it } from 'vitest';
-import { layoutColliders } from '../src/sim/dungeon_layout';
+import type { Collider } from '../src/sim/colliders';
+import { RIFT_THEMES } from '../src/sim/content/rift/themes';
+import { DUNGEON_WALL_X } from '../src/sim/dungeon_layout';
+import { polygonContainsPoint } from '../src/sim/geometry2d';
 import {
-  AISLE_HALF,
-  BODY_R,
-  buildRiftFloor,
   generateRiftFloor,
   generateRiftPlan,
-  isClear,
-  RIFT_MAX_FLOORS,
-  RIFT_MIN_FLOORS,
-  RIFT_RANK_BASE_LEVEL,
+  isSetPieceSeed,
   riftFloorColliders,
   riftFloorCount,
-  RIFT_ENTRY_CLEARANCE,
-  type RiftFloorPlan,
-  type RiftObjectKind,
-} from '../src/sim/rift';
+} from '../src/sim/rift/rift_gen';
 
-// A spread of seeds wide enough to hit every archetype and every mechanic.
-const SEEDS = [1, 7, 42, 99, 1234, 20260731, 0x7fffffff, 555, 8675309, 31337];
+const BODY_R = 0.6;
 
-function everyFloor(seeds: number[], baseLevel = RIFT_RANK_BASE_LEVEL.C): RiftFloorPlan[] {
-  const out: RiftFloorPlan[] = [];
-  for (const seed of seeds) {
-    const count = riftFloorCount(seed);
-    for (let i = 0; i < count; i++) out.push(buildRiftFloor(seed, baseLevel, i));
+function clears(colliders: readonly Collider[], x: number, z: number, r = BODY_R): boolean {
+  for (const c of colliders) {
+    if (c.type === 'circle') {
+      const dx = x - c.x;
+      const dz = z - c.z;
+      if (dx * dx + dz * dz < (c.r + r) * (c.r + r)) return false;
+    } else {
+      // Rotated OBB in the box's local frame, matching colliders.ts pushOut
+      // (rotY(dx, dz, -rot) == (dx*cos(rot) - dz*sin(rot), dx*sin(rot) + dz*cos(rot))).
+      const dx = x - c.x;
+      const dz = z - c.z;
+      const cos = Math.cos(c.rot);
+      const sin = Math.sin(c.rot);
+      const lx = dx * cos - dz * sin;
+      const lz = dx * sin + dz * cos;
+      if (Math.abs(lx) < c.hw + r && Math.abs(lz) < c.hd + r) return false;
+    }
   }
-  return out;
+  return true;
 }
 
-// ---------------------------------------------------------------------------
-// Determinism: the whole point of the subsystem.
-// ---------------------------------------------------------------------------
+describe('rift generator: determinism', () => {
+  it('regenerates byte-identical floors for the same descriptor', () => {
+    // Force cache eviction (limit 128) between the two reads so this proves pure
+    // regeneration, not just a cached object identity.
+    const a = JSON.stringify(generateRiftFloor(12345, 15, 1));
+    for (let s = 0; s < 200; s++) generateRiftFloor(s, 15, 0);
+    const b = JSON.stringify(generateRiftFloor(12345, 15, 1));
+    expect(b).toBe(a);
+  });
 
-describe('rift generator determinism', () => {
-  it('produces an identical floor from the same descriptor, twice', () => {
-    for (const seed of SEEDS) {
-      const count = riftFloorCount(seed);
-      for (let i = 0; i < count; i++) {
-        // buildRiftFloor is the UNCACHED entry point, so these are two truly
-        // independent generations, not one object compared with itself.
-        const a = buildRiftFloor(seed, RIFT_RANK_BASE_LEVEL.C, i);
-        const b = buildRiftFloor(seed, RIFT_RANK_BASE_LEVEL.C, i);
-        expect(a).not.toBe(b);
-        expect(a).toEqual(b);
-        // Serialising too: the wire form must match, not just the object graph.
-        expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+  it('is independent of the live sim rng (own seeded stream)', () => {
+    const first = JSON.stringify(generateRiftFloor(777, 20, 2));
+    // Interleave unrelated generations; the target floor must be unchanged.
+    generateRiftPlan(999, 5);
+    generateRiftFloor(1, 1, 0);
+    const second = JSON.stringify(generateRiftFloor(777, 20, 2));
+    expect(second).toBe(first);
+  });
+
+  it('floor count is stable and within bounds', () => {
+    for (let s = 0; s < 300; s++) {
+      // The authored set-piece citadel is deliberately a fixed two-floor
+      // descent; the procedural bounds below only describe generated descents.
+      if (isSetPieceSeed(s)) {
+        expect(riftFloorCount(s)).toBe(2);
+        continue;
       }
+      const n = riftFloorCount(s);
+      expect(n).toBeGreaterThanOrEqual(3);
+      expect(n).toBeLessThanOrEqual(6);
+      expect(riftFloorCount(s)).toBe(n);
     }
-  });
-
-  it('produces DIFFERENT dungeons from different seeds (the assertion is not vacuous)', () => {
-    const shapes = new Set<string>();
-    for (const seed of SEEDS) shapes.add(JSON.stringify(buildRiftFloor(seed, 20, 0)));
-    expect(shapes.size).toBe(SEEDS.length);
-  });
-
-  it('produces different floors within one rift', () => {
-    const seed = 20260731;
-    const count = riftFloorCount(seed);
-    expect(count).toBeGreaterThan(1);
-    const shapes = new Set<string>();
-    for (let i = 0; i < count; i++) shapes.add(JSON.stringify(buildRiftFloor(seed, 20, i).layout));
-    expect(shapes.size).toBe(count);
-  });
-
-  it('generation never touches a shared stream: floor N is unaffected by generating floor M first', () => {
-    const seed = 8675309;
-    const count = riftFloorCount(seed);
-    const forwards = [];
-    for (let i = 0; i < count; i++) forwards.push(JSON.stringify(buildRiftFloor(seed, 20, i)));
-    const backwards: string[] = new Array(count);
-    for (let i = count - 1; i >= 0; i--) backwards[i] = JSON.stringify(buildRiftFloor(seed, 20, i));
-    expect(backwards).toEqual(forwards);
-  });
-
-  it('the memoised accessor agrees with a fresh build', () => {
-    for (const seed of SEEDS.slice(0, 4)) {
-      expect(generateRiftFloor(seed, 22, 0)).toEqual(buildRiftFloor(seed, 22, 0));
-    }
-  });
-
-  it('freezes the memoised plan, so a caller cannot poison a later read', () => {
-    const f = generateRiftFloor(1234, 20, 0);
-    expect(Object.isFrozen(f)).toBe(true);
-    expect(Object.isFrozen(f.layout)).toBe(true);
-    expect(Object.isFrozen(f.layout.pillars)).toBe(true);
-    expect(Object.isFrozen(f.spawns)).toBe(true);
-    expect(Object.isFrozen(f.objects)).toBe(true);
-    expect(() => (f.layout.pillars as { x: number; z: number }[]).push({ x: 0, z: 0 })).toThrow();
-    // ...and the second read is still the dungeon the descriptor names.
-    expect(generateRiftFloor(1234, 20, 0)).toEqual(buildRiftFloor(1234, 20, 0));
-  });
-
-  it('rank changes the plan but not the geometry stream', () => {
-    const seed = 42;
-    const c = buildRiftFloor(seed, RIFT_RANK_BASE_LEVEL.C, 0);
-    const s = buildRiftFloor(seed, RIFT_RANK_BASE_LEVEL.S, 0);
-    expect(s.layout).toEqual(c.layout);
-    expect(s.rank).toBe('S');
-    expect(c.rank).toBe('C');
   });
 });
 
-// ---------------------------------------------------------------------------
-// Shape of a run
-// ---------------------------------------------------------------------------
-
-describe('rift run shape', () => {
-  it('runs three to six floors for every seed', () => {
-    for (let seed = 1; seed <= 400; seed++) {
-      const n = riftFloorCount(seed);
-      expect(n).toBeGreaterThanOrEqual(RIFT_MIN_FLOORS);
-      expect(n).toBeLessThanOrEqual(RIFT_MAX_FLOORS);
-      expect(Number.isInteger(n)).toBe(true);
-    }
-  });
-
-  it('actually uses the whole floor-count range', () => {
-    const seen = new Set<number>();
-    for (let seed = 1; seed <= 400; seed++) seen.add(riftFloorCount(seed));
-    expect([...seen].sort()).toEqual([3, 4, 5, 6]);
-  });
-
-  it('the plan agrees with the floors it generates', () => {
-    for (const seed of SEEDS) {
-      const plan = generateRiftPlan(seed, RIFT_RANK_BASE_LEVEL.A);
-      expect(plan.floorCount).toBe(riftFloorCount(seed));
-      expect(plan.rank).toBe('A');
-      const last = buildRiftFloor(seed, RIFT_RANK_BASE_LEVEL.A, plan.floorCount - 1);
-      expect(last.themeId).toBe(plan.themeId);
-    }
-  });
-
-  it('rolls a real spread of themes and room archetypes', () => {
+describe('rift generator: variety', () => {
+  it('produces many distinct rift names and themes across seeds', () => {
+    const names = new Set<string>();
     const themes = new Set<string>();
+    const bossThemes = new Set<string>();
+    for (let s = 0; s < 200; s++) {
+      if (isSetPieceSeed(s)) continue; // the citadel has its own name + theme
+      const plan = generateRiftPlan(s, 15);
+      names.add(plan.name);
+      bossThemes.add(plan.themeId);
+      for (let f = 0; f < plan.floorCount; f++) {
+        themes.add(generateRiftFloor(s, 15, f).themeName);
+      }
+    }
+    // Names combine 8 themes x 4 nouns x 8 suffixes = plenty of distinct strings.
+    expect(names.size).toBeGreaterThan(40);
+    // Every authored theme should surface as a floor across 200 seeds.
+    expect(themes.size).toBe(RIFT_THEMES.length);
+    expect(bossThemes.size).toBeGreaterThan(4);
+  });
+
+  it('varies geometry (width, length, obstacle counts) across seeds', () => {
     const widths = new Set<number>();
-    for (let seed = 1; seed <= 200; seed++) {
-      const f = buildRiftFloor(seed, 20, 0);
-      themes.add(f.themeId);
-      widths.add(f.layout.wallX ?? 0);
+    const lengths = new Set<number>();
+    const pillarCounts = new Set<number>();
+    for (let s = 0; s < 120; s++) {
+      const fl = generateRiftFloor(s, 15, 0);
+      widths.add(fl.layout.wallX ?? DUNGEON_WALL_X);
+      lengths.add(fl.layout.zMax - fl.layout.zMin);
+      pillarCounts.add(fl.layout.pillars.length);
     }
-    expect(themes.size).toBe(8);
-    expect(widths.size).toBeGreaterThan(6);
+    expect(widths.size).toBeGreaterThan(3);
+    expect(lengths.size).toBeGreaterThan(10);
+    expect(pillarCounts.size).toBeGreaterThan(5);
   });
-});
 
-// ---------------------------------------------------------------------------
-// The boss
-// ---------------------------------------------------------------------------
-
-describe('rift boss placement', () => {
-  it('puts exactly one boss on the final floor and none anywhere else', () => {
-    for (const seed of SEEDS) {
-      const count = riftFloorCount(seed);
-      for (let i = 0; i < count; i++) {
-        const f = buildRiftFloor(seed, 20, i);
-        const bosses = f.spawns.filter((s) => s.boss);
-        if (i === count - 1) {
-          expect(f.isBoss).toBe(true);
-          expect(bosses).toHaveLength(1);
-          expect(bosses[0].role).toBe('boss');
-          expect(bosses[0].templateId.startsWith('rift_boss_')).toBe(true);
-          // The boss stands on its dais.
-          expect(bosses[0].x).toBe(0);
-          expect(bosses[0].z).toBe(f.layout.dais.z);
-        } else {
-          expect(f.isBoss).toBe(false);
-          expect(bosses).toHaveLength(0);
+  it('produces non-rectangular room shapes (not just plain rectangles)', () => {
+    let polygonFloors = 0;
+    let total = 0;
+    const distinctWidthProfiles = new Set<string>();
+    for (let s = 0; s < 120; s++) {
+      const n = riftFloorCount(s);
+      for (let f = 0; f < n; f++) {
+        const fl = generateRiftFloor(s, 15, f);
+        total++;
+        if (fl.layout.shellPolygon) {
+          polygonFloors++;
+          // fingerprint the silhouette by its rounded half-width samples
+          distinctWidthProfiles.add(
+            fl.layout.shellPolygon
+              .filter((p) => p.x >= 0)
+              .map((p) => Math.round(p.x))
+              .join(','),
+          );
         }
       }
     }
+    // The large majority of floors should be shaped rooms, not rectangles.
+    expect(polygonFloors / total).toBeGreaterThan(0.5);
+    // ...and those silhouettes should be highly varied.
+    expect(distinctWidthProfiles.size).toBeGreaterThan(30);
   });
 
-  it('gives the boss floor an exit and every other floor a descent', () => {
-    for (const seed of SEEDS) {
-      const count = riftFloorCount(seed);
-      for (let i = 0; i < count; i++) {
-        const f = buildRiftFloor(seed, 20, i);
-        const kinds = f.objects.map((o) => o.kind);
-        expect(kinds).toContain('beacon');
-        if (f.isBoss) {
-          expect(kinds).toContain('exit');
-          expect(kinds).toContain('chest');
-          expect(kinds).not.toContain('descent');
-        } else {
-          expect(kinds).toContain('descent');
-          expect(kinds).not.toContain('exit');
-        }
-      }
+  it('boss floors give the giant boss an open arena (dais fits the room width)', () => {
+    for (let s = 0; s < 120; s++) {
+      const n = riftFloorCount(s);
+      const fl = generateRiftFloor(s, 15, n - 1);
+      // The dais radius never exceeds the room half-width at the boss end.
+      const backWidth = fl.layout.shellPolygon
+        ? Math.max(...fl.layout.shellPolygon.map((p) => Math.abs(p.x)))
+        : (fl.layout.wallX ?? DUNGEON_WALL_X);
+      expect(fl.layout.dais.r).toBeLessThanOrEqual(backWidth);
+      expect(fl.layout.dais.r).toBeGreaterThanOrEqual(6);
     }
   });
 
-  it('never spawns anything on top of the arrival point', () => {
-    for (const f of everyFloor(SEEDS)) {
-      const minZ = f.entry.z + RIFT_ENTRY_CLEARANCE;
-      for (const s of f.spawns) expect(s.z).toBeGreaterThanOrEqual(minZ);
+  it('uses varied boss types across seeds', () => {
+    const bosses = new Set<string>();
+    for (let s = 0; s < 200; s++) {
+      const n = riftFloorCount(s);
+      const boss = generateRiftFloor(s, 15, n - 1).spawns.find((sp) => sp.boss);
+      if (boss) bosses.add(boss.templateId);
     }
+    expect(bosses.size).toBeGreaterThan(4);
   });
 });
 
-// ---------------------------------------------------------------------------
-// Exactly ONE headline mechanic per floor
-// ---------------------------------------------------------------------------
+describe('rift generator: playability', () => {
+  // The procedural invariants below (one nave, a clear central spine, a dais at the
+  // far end) describe GENERATED floors. The authored citadel is a room graph with
+  // no spine; tests/rift_infernal.test.ts pins its own walkability.
+  const cases: Array<[number, number, number]> = [];
+  for (let s = 0; s < 60; s++) {
+    if (isSetPieceSeed(s)) continue;
+    const n = riftFloorCount(s);
+    for (let f = 0; f < n; f++) cases.push([s, 15, f]);
+  }
 
-const MECHANIC_OBJECTS: Record<string, RiftObjectKind[]> = {
-  rune_pylons: ['rune_pylon'],
-  ice_slide: ['ice_goal'],
-  boulder_push: ['boulder', 'boulder_pad'],
-  sequence: ['seq_rune'],
-  switch_gate: ['gate', 'switch'],
-  none: [],
-};
-const ALL_MECHANIC_OBJECTS = new Set(Object.values(MECHANIC_OBJECTS).flat());
+  it('every floor is walkable and correctly gated', () => {
+    for (const [seed, base, f] of cases) {
+      const fl = generateRiftFloor(seed, base, f);
+      const colliders = riftFloorColliders(seed, base, f);
+      const wallX = fl.layout.wallX ?? DUNGEON_WALL_X;
 
-describe('rift floor mechanics', () => {
-  it('carries at most one headline mechanic, and its state fields agree', () => {
-    for (const f of everyFloor(SEEDS)) {
-      // The mechanic-specific state fields are a PARTITION: never both, and each
-      // present exactly when its own kind is the live one.
-      expect([f.iceZone !== null, f.gate !== null].filter(Boolean).length).toBeLessThanOrEqual(1);
-      expect(f.iceZone !== null).toBe(f.mechanic.kind === 'ice_slide');
-      expect(f.gate !== null).toBe(f.mechanic.kind === 'switch_gate');
-      // The placed nodes belong to exactly ONE mechanic's node set.
-      const placed = new Set(
-        f.objects.map((o) => o.kind).filter((k) => ALL_MECHANIC_OBJECTS.has(k)),
-      );
-      const owners = Object.entries(MECHANIC_OBJECTS).filter(
-        ([kind, kinds]) => kind !== 'none' && kinds.some((k) => placed.has(k)),
-      );
-      expect(owners.length).toBeLessThanOrEqual(1);
-      if (f.mechanic.kind === 'none') expect(placed.size).toBe(0);
-      else expect(owners[0][0]).toBe(f.mechanic.kind);
-    }
-  });
+      // Entry clears.
+      expect(clears(colliders, fl.entry.x, fl.entry.z), `entry seed ${seed} f${f}`).toBe(true);
 
-  it('places the objects of its own mechanic and of no other', () => {
-    for (const f of everyFloor(SEEDS)) {
-      const mine = new Set(MECHANIC_OBJECTS[f.mechanic.kind]);
-      const placed = f.objects.map((o) => o.kind).filter((k) => ALL_MECHANIC_OBJECTS.has(k));
-      for (const kind of placed) expect(mine.has(kind)).toBe(true);
-      for (const kind of mine) expect(placed).toContain(kind);
-    }
-  });
-
-  it('leaves boss floors clean, so only the boss reads', () => {
-    for (const seed of SEEDS) {
-      const f = buildRiftFloor(seed, 20, riftFloorCount(seed) - 1);
-      expect(f.mechanic.kind).toBe('none');
-      expect(f.iceZone).toBeNull();
-      expect(f.gate).toBeNull();
-    }
-  });
-
-  it('surfaces every mechanic kind across enough seeds', () => {
-    const seen = new Set<string>();
-    for (let seed = 1; seed <= 300; seed++) {
-      const count = riftFloorCount(seed);
-      for (let i = 0; i < count - 1; i++) seen.add(buildRiftFloor(seed, 20, i).mechanic.kind);
-    }
-    expect([...seen].sort()).toEqual([
-      'boulder_push',
-      'ice_slide',
-      'none',
-      'rune_pylons',
-      'sequence',
-      'switch_gate',
-    ]);
-  });
-
-  it('gives node-count mechanics real nodes', () => {
-    for (const f of everyFloor(SEEDS)) {
-      if (f.mechanic.kind === 'rune_pylons') {
-        expect(f.mechanic.nodeCount).toBeGreaterThanOrEqual(3);
-        expect(f.objects.filter((o) => o.kind === 'rune_pylon')).toHaveLength(f.mechanic.nodeCount);
+      // The centre spine from entry to dais is fully walkable (a guaranteed path).
+      for (let z = fl.entry.z; z <= fl.layout.dais.z; z += 2) {
+        expect(clears(colliders, 0, z), `spine seed ${seed} f${f} z${z}`).toBe(true);
       }
-      if (f.mechanic.kind === 'sequence') {
-        const runes = f.objects.filter((o) => o.kind === 'seq_rune');
-        expect(runes).toHaveLength(f.mechanic.nodeCount);
-        // Slots are a complete 0..n-1 set, so the runtime can order them.
-        expect(runes.map((r) => r.slot).sort((a, b) => (a ?? 0) - (b ?? 0))).toEqual(
-          runes.map((_, i) => i),
+
+      // Every spawn is clear and inside the room.
+      for (const sp of fl.spawns) {
+        expect(Math.abs(sp.x)).toBeLessThan(wallX);
+        expect(sp.z).toBeGreaterThan(fl.layout.zMin);
+        expect(sp.z).toBeLessThan(fl.layout.zMax);
+        expect(clears(colliders, sp.x, sp.z), `spawn seed ${seed} f${f} @${sp.x},${sp.z}`).toBe(
+          true,
         );
+        expect(sp.level).toBeGreaterThanOrEqual(1);
+        expect(sp.level).toBeLessThanOrEqual(60);
       }
-      if (f.mechanic.kind === 'boulder_push') {
-        const boulders = f.objects.filter((o) => o.kind === 'boulder');
-        const pads = f.objects.filter((o) => o.kind === 'boulder_pad');
-        expect(boulders.length).toBe(pads.length);
-        expect(boulders.length).toBeGreaterThan(0);
+
+      // Every object is clear and inside the room.
+      for (const ob of fl.objects) {
+        expect(Math.abs(ob.x)).toBeLessThan(wallX);
+        expect(clears(colliders, ob.x, ob.z), `object ${ob.kind} seed ${seed} f${f}`).toBe(true);
       }
-      if (f.mechanic.kind === 'switch_gate' && f.gate) {
-        // The plate must be reached BEFORE the gate, or the floor is unopenable.
-        expect(f.gate.switchZ).toBeLessThan(f.gate.z);
-        expect(f.gate.z).toBeLessThan(f.layout.dais.z);
+
+      // Gating: non-boss floors have a descent; boss floors have exactly one boss + a chest.
+      if (fl.isBoss) {
+        expect(fl.spawns.filter((sp) => sp.boss).length).toBe(1);
+        expect(fl.objects.some((o) => o.kind === 'chest')).toBe(true);
+        expect(fl.objects.some((o) => o.kind === 'descent')).toBe(false);
+      } else {
+        expect(fl.objects.some((o) => o.kind === 'descent')).toBe(true);
+        expect(fl.spawns.some((sp) => sp.boss)).toBe(false);
+      }
+
+      // rune_pylons puzzle places the declared number of pylons.
+      if (fl.puzzle.kind === 'rune_pylons') {
+        expect(fl.objects.filter((o) => o.kind === 'rune_pylon').length).toBe(fl.puzzle.pylonCount);
+      }
+    }
+  });
+
+  it('the boss floor is always the last floor', () => {
+    for (let s = 0; s < 80; s++) {
+      const n = riftFloorCount(s);
+      for (let f = 0; f < n; f++) {
+        expect(generateRiftFloor(s, 15, f).isBoss).toBe(f === n - 1);
       }
     }
   });
 });
 
-// ---------------------------------------------------------------------------
-// Playability: a generated dungeon that cannot be finished is worse than none.
-// ---------------------------------------------------------------------------
+describe('rift generator: objectives are never inside (or hidden by) a wall', () => {
+  // Per-kind prop clearance radii mirroring the toClear margins the generator
+  // passes when it places each interactable (a rune monolith is fatter than a
+  // body). Every objective must clear every collider by its prop radius, and no
+  // layout may carry a phantom (illusion) wall, so collider clearance IS visual
+  // clearance: a rune can never render embedded in, or tucked behind, a wall.
+  // Per-kind prop clearance radii: the three values below match the explicit
+  // toClear margin the generator passes; the rest use the player body radius
+  // (BODY_R = 0.6) because they are placed on the always-clear spine or within
+  // the obstacle-free AISLE_HALF band (|x| <= 5.5) by construction.
+  const PROP_R: Record<string, number> = {
+    rune_pylon: 1.7,
+    seq_rune: 1.5,
+    treasure: 1.0,
+    // The kinds below are placed on the always-clear centre spine (x=0) or
+    // within the obstacle-free AISLE_HALF band (|x| <= 5.5) by construction,
+    // so BODY_R (0.6) is the correct clearance check at their placement point:
+    // their visual footprint may be wider (boulder dodecahedron r=1.1, switch
+    // cylinder r=1.3, ice_goal disc r=1.7) but they are never placed near a
+    // wall. infernal_orb is authored at a fixed altar position inside the
+    // always-open citadel hall; it only appears on set-piece seeds which are
+    // skipped by the seed loop below, but is listed here for completeness.
+    chest: 0.6,
+    descent: 0.6,
+    gate: 0.6,
+    switch: 0.6,
+    boulder: 0.6,
+    boulder_pad: 0.6,
+    ice_goal: 0.6,
+    infernal_orb: 0.6,
+  };
 
-/** Flood fill the room on a one-yard grid using the SAME clearance test the
- * runtime resolver uses, and return the set of reachable cells. */
-function reachableCells(f: RiftFloorPlan): Set<string> {
-  const colliders = layoutColliders(f.layout);
-  const wallX = f.layout.wallX ?? 23;
-  const key = (x: number, z: number) => `${x},${z}`;
-  const inRoom = (x: number, z: number) =>
-    x >= -wallX && x <= wallX && z >= f.layout.zMin && z <= f.layout.zMax;
-  const start = { x: Math.round(f.entry.x), z: Math.round(f.entry.z) };
-  const seen = new Set<string>();
-  if (!isClear(colliders, start.x, start.z, BODY_R)) return seen;
-  const queue = [start];
-  seen.add(key(start.x, start.z));
-  while (queue.length) {
-    const cur = queue.pop() as { x: number; z: number };
-    for (const [dx, dz] of [
-      [1, 0],
-      [-1, 0],
-      [0, 1],
-      [0, -1],
-    ]) {
-      const nx = cur.x + dx;
-      const nz = cur.z + dz;
-      const k = key(nx, nz);
-      if (seen.has(k) || !inRoom(nx, nz)) continue;
-      if (!isClear(colliders, nx, nz, BODY_R)) continue;
-      seen.add(k);
-      queue.push({ x: nx, z: nz });
+  it('every interactable clears the walls by its prop radius, at every rank', () => {
+    for (const baseLevel of [20, 22, 25, 28]) {
+      for (let s = 0; s < 60; s++) {
+        if (isSetPieceSeed(s)) continue;
+        const n = riftFloorCount(s);
+        for (let f = 0; f < n; f++) {
+          const fl = generateRiftFloor(s, baseLevel, f);
+          const colliders = riftFloorColliders(s, baseLevel, f);
+          expect(fl.layout.illusionWalls ?? [], `phantom wall seed ${s} f${f}`).toHaveLength(0);
+          for (const ob of fl.objects) {
+            const r = PROP_R[ob.kind] ?? BODY_R;
+            expect(
+              clears(colliders, ob.x, ob.z, r),
+              `${ob.kind} seed ${s} f${f} base ${baseLevel} @${ob.x},${ob.z}`,
+            ).toBe(true);
+          }
+        }
+      }
     }
+  });
+});
+
+describe('rift generator: balance', () => {
+  it('floor level rises monotonically with depth and stays in band', () => {
+    for (let s = 0; s < 60; s++) {
+      const n = riftFloorCount(s);
+      let prev = 0;
+      for (let f = 0; f < n; f++) {
+        const lvl = generateRiftFloor(s, 22, f).spawns[0]?.level ?? 0;
+        expect(lvl).toBeGreaterThanOrEqual(prev);
+        expect(lvl).toBeLessThanOrEqual(60);
+        prev = lvl;
+      }
+    }
+  });
+
+  it('every floor has at least two trash packs worth of enemies', () => {
+    for (let s = 0; s < 60; s++) {
+      const n = riftFloorCount(s);
+      for (let f = 0; f < n; f++) {
+        const fl = generateRiftFloor(s, 15, f);
+        expect(fl.spawns.length).toBeGreaterThanOrEqual(fl.isBoss ? 3 : 4);
+      }
+    }
+  });
+});
+
+describe('rift runtime placements: exit portal and sealed cache are inside the room', () => {
+  // openExit() in runs.ts spawns two objects whose positions are computed at
+  // runtime (not by the generator): the rift exit portal and the Sealed Rift
+  // Cache. Their local positions mirror:
+  //   const chest = floor.objects.find(o => o.kind === 'chest');
+  //   const pos = chest ?? { x: 0, z: floor.layout.dais.z + 6 };
+  //   exit at (pos.x, pos.z), cache at (pos.x - 4, pos.z)
+  // Both must land inside the room polygon and clear every wall collider by
+  // at least BODY_R (0.6), across all procedural boss floors and all four
+  // rank base levels (20/22/25/28).
+
+  // Inline containment helper: polygon branch if shellPolygon is present
+  // (star-shaped room), rectangle branch otherwise. Matches the pattern from
+  // tests/rift_wall_solidity.test.ts.
+  function insideRoom(fl: ReturnType<typeof generateRiftFloor>, x: number, z: number): boolean {
+    const { layout } = fl;
+    if (layout.shellPolygon) {
+      return polygonContainsPoint(layout.shellPolygon, x, z);
+    }
+    const wx = layout.wallX ?? DUNGEON_WALL_X;
+    return Math.abs(x) < wx && z > layout.zMin && z < layout.zMax;
   }
-  return seen;
-}
 
-/** Whether a point of interest has a reachable grid cell beside it. */
-function reachable(cells: Set<string>, x: number, z: number, slack = 1): boolean {
-  for (let dx = -slack; dx <= slack; dx++) {
-    for (let dz = -slack; dz <= slack; dz++) {
-      if (cells.has(`${Math.round(x) + dx},${Math.round(z) + dz}`)) return true;
-    }
-  }
-  return false;
-}
-
-describe('rift floor playability', () => {
-  it('keeps the WHOLE central spine band clear at every depth', () => {
-    for (const f of everyFloor(SEEDS)) {
-      const colliders = layoutColliders(f.layout);
-      for (let z = f.layout.zMin + 2; z <= f.layout.zMax - 2; z += 1) {
-        // Not just x = 0: the entire |x| <= AISLE_HALF aisle, which is what the
-        // toClear march and the reachability guarantee actually rely on.
-        for (let x = -AISLE_HALF; x <= AISLE_HALF; x += 0.5) {
-          expect(isClear(colliders, x, z, BODY_R), `x ${x} z ${z}`).toBe(true);
-        }
+  it('exit portal and sealed cache land inside the room at every rank', () => {
+    for (const baseLevel of [20, 22, 25, 28]) {
+      for (let s = 0; s < 60; s++) {
+        if (isSetPieceSeed(s)) continue;
+        const n = riftFloorCount(s);
+        const bossFloor = n - 1;
+        const fl = generateRiftFloor(s, baseLevel, bossFloor);
+        if (!fl.isBoss) continue; // defensive: boss is always last
+        const colliders = riftFloorColliders(s, baseLevel, bossFloor);
+        // Mirror the openExit position logic from runs.ts.
+        const chest = fl.objects.find((o) => o.kind === 'chest');
+        const pos = chest ?? { x: 0, z: fl.layout.dais.z + 6 };
+        const exitX = pos.x;
+        const exitZ = pos.z;
+        const cacheX = pos.x - 4;
+        const cacheZ = pos.z;
+        expect(
+          insideRoom(fl, exitX, exitZ),
+          `exit inside room seed ${s} base ${baseLevel} @${exitX},${exitZ}`,
+        ).toBe(true);
+        expect(
+          clears(colliders, exitX, exitZ),
+          `exit clears walls seed ${s} base ${baseLevel} @${exitX},${exitZ}`,
+        ).toBe(true);
+        expect(
+          insideRoom(fl, cacheX, cacheZ),
+          `cache inside room seed ${s} base ${baseLevel} @${cacheX},${cacheZ}`,
+        ).toBe(true);
+        expect(
+          clears(colliders, cacheX, cacheZ),
+          `cache clears walls seed ${s} base ${baseLevel} @${cacheX},${cacheZ}`,
+        ).toBe(true);
       }
-      // And no obstacle CENTRE sits inside the aisle either.
-      for (const p of [...f.layout.pillars, ...f.layout.tombs, ...(f.layout.clutter ?? [])]) {
-        expect(Math.abs(p.x)).toBeGreaterThan(AISLE_HALF);
-      }
-    }
-  });
-
-  it('makes the boss, the way onward and every placed node reachable from the entrance', () => {
-    for (const seed of SEEDS) {
-      const count = riftFloorCount(seed);
-      for (let i = 0; i < count; i++) {
-        const f = buildRiftFloor(seed, 20, i);
-        const cells = reachableCells(f);
-        // A real fraction of the room, not a pocket by the door: the nave alone
-        // (11 wide x the room length) is already well past this.
-        const area = (2 * (f.layout.wallX ?? 23) + 1) * (f.layout.zMax - f.layout.zMin + 1);
-        expect(cells.size).toBeGreaterThan(area * 0.25);
-        const where = `seed ${seed} floor ${i}`;
-        // The dais itself.
-        expect(reachable(cells, f.layout.dais.x, f.layout.dais.z), `dais ${where}`).toBe(true);
-        for (const o of f.objects) {
-          expect(reachable(cells, o.x, o.z), `${o.kind} ${where}`).toBe(true);
-        }
-        for (const s of f.spawns) {
-          expect(reachable(cells, s.x, s.z), `${s.templateId} ${where}`).toBe(true);
-        }
-      }
-    }
-  });
-
-  it('keeps every spawn and object inside the room', () => {
-    for (const f of everyFloor(SEEDS)) {
-      const wallX = f.layout.wallX ?? 23;
-      for (const p of [...f.spawns, ...f.objects]) {
-        expect(Math.abs(p.x)).toBeLessThanOrEqual(wallX);
-        expect(p.z).toBeGreaterThan(f.layout.zMin);
-        expect(p.z).toBeLessThan(f.layout.zMax);
-        expect(Number.isFinite(p.x) && Number.isFinite(p.z)).toBe(true);
-      }
-    }
-  });
-
-  it('gives every floor real trash to clear', () => {
-    for (const f of everyFloor(SEEDS)) {
-      const trash = f.spawns.filter((s) => !s.boss);
-      expect(trash.length).toBeGreaterThanOrEqual(4);
-      expect(trash.length).toBeLessThanOrEqual(40);
-      for (const s of trash) expect(s.role).toBe('trash');
-    }
-  });
-
-  it('derives its colliders through the shared layoutColliders path', () => {
-    for (const seed of SEEDS.slice(0, 5)) {
-      const f = generateRiftFloor(seed, 20, 0);
-      expect(riftFloorColliders(seed, 20, 0)).toEqual(layoutColliders(f.layout));
-    }
-  });
-
-  it('the reachability check can actually FAIL (negative control)', () => {
-    const f = buildRiftFloor(SEEDS[0], 20, 0);
-    const wallX = f.layout.wallX ?? 23;
-    const sealed: RiftFloorPlan = {
-      ...f,
-      layout: {
-        ...f.layout,
-        // One full-width slab across the nave, spine included: the dais must now
-        // be unreachable. If this still passes, the flood fill proves nothing.
-        stubs: [
-          ...f.layout.stubs,
-          { x: 0, z: f.layout.zMin + 40, hw: wallX + 2, hd: 4 },
-        ],
-      },
-    };
-    const cells = reachableCells(sealed);
-    expect(reachable(cells, sealed.layout.dais.x, sealed.layout.dais.z)).toBe(false);
-    // ...while the unsealed original is reachable.
-    expect(reachable(reachableCells(f), f.layout.dais.x, f.layout.dais.z)).toBe(true);
-  });
-
-  it('fits one instance slot (data.ts stacks slots 500 apart in z, 600 in x)', () => {
-    for (const f of everyFloor(SEEDS)) {
-      expect(f.layout.zMax - f.layout.zMin).toBeLessThan(400);
-      expect((f.layout.endWallHw ?? 0) * 2).toBeLessThan(300);
     }
   });
 });

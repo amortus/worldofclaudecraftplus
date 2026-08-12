@@ -11,14 +11,14 @@ export const shellStrings = {
     seo: {
       title: 'World of ClaudeCraft: Classic-Style Web MMO',
       description:
-        'Embark on an epic adventure in World of ClaudeCraft, a classic-style micro-MMO playable directly in your browser. Join a persistent shared realm, level up classes, and defeat enemies!',
+        'Embark on an epic adventure in World of ClaudeCraft, a classic-style micro-MMO playable directly in your browser. Join a persistent shared world, level up classes, and defeat enemies!',
       genre: 'MMORPG',
       playMode: 'Multiplayer',
       applicationCategory: 'Game',
       operatingSystem: 'Web browser',
       officialLabel: 'Official World of ClaudeCraft website',
       officialBody:
-        'worldofclaudecraft.com is the official free browser MMO for the Claudemoon realm. Play online with a persistent character, explore solo offline, read the wiki, and follow verified community links from this site.',
+        'worldofclaudecraft.com is the official free browser MMO for the Claudemoon world. Play online with a persistent character, explore solo offline, read the wiki, and follow verified community links from this site.',
     },
     a11y: {
       goHome: 'Go to homepage',
@@ -30,16 +30,52 @@ export const shellStrings = {
       discordCommunity: 'Join the World of ClaudeCraft Discord community',
       donateProject: 'Donate to support World of ClaudeCraft',
     },
+    entryGuard: {
+      title: 'Graphics lowered',
+      body: 'The game closed unexpectedly while entering the world, so graphics are now set to {preset}. You can change this in the graphics selector below or in the in-game Options.',
+      dismiss: 'Dismiss',
+    },
     loading: {
       world: 'Loading world...',
       worldProgress: 'Loading world... {done}/{total}',
       enteringWorld: 'Entering the world...',
-      connectingRealm: 'Connecting to realm...',
+      connectingRealm: 'Connecting to world...',
       assetsFailed: 'Asset loading failed: try reloading. {error}',
       rendererFailed: 'Could not start the renderer: try reloading. {error}',
       enterTimeout: 'Could not enter world. The connection timed out. Is the game server running?',
       connectionLost: 'Connection to the server was lost.',
+      reconnectingAttempt:
+        'Connection lost. Reconnecting... (attempt {attempt}/{maxAttempts}, retrying in {seconds}s)',
+      reconnectingNow: 'Connection lost. Reconnecting now... (attempt {attempt}/{maxAttempts})',
+      slowConnection: 'This is taking longer than usual. Check your internet connection.',
       connectionRejected: 'The server closed the connection.',
+      incompatibleWorldVersion:
+        'Game and server versions are incompatible. Reload or update, then try again.',
+      realmFull: 'This world is full right now. Please try again in a few minutes.',
+      tooManyConnections:
+        'Too many connections to this world are coming from your network. Please close extra game windows or try again in a few minutes.',
+      messageRateExceeded:
+        'You were disconnected for sending actions too quickly. Please wait a moment and log back in.',
+      tips: {
+        classes:
+          'Tip: each of the 9 classes plays differently. Try a few before committing to one.',
+        talents:
+          'Tip: you can reset your talents any time you are out of combat, so an early pick is never a trap.',
+        dungeons:
+          'Tip: try a dungeon on heroic difficulty once you outgear normal for a tougher, more rewarding fight.',
+        market: 'Tip: the World Market lets you buy and sell with players across the whole realm.',
+        guilds:
+          'Tip: joining a guild gives you a private chat channel and a shared roster of your guildmates.',
+        professions:
+          'Tip: gathering and crafting professions can be trained alongside your combat class.',
+        loadouts:
+          'Tip: save more than one talent loadout to swap between builds without spending points twice.',
+        pvp: 'Tip: challenge another player to a friendly duel, or queue for the Ashen Coliseum arena, to test your build.',
+        // The tips rotation renders through a bare t(key) with no values, so no
+        // tip can name a live keybind without going stale when a player rebinds
+        // it. This one used to spell out Shift+X; it now stays chord-free.
+        reliquary: 'Tip: the Reliquary tracks the unique spoils you collect, shelf by shelf.',
+      },
     },
     errors: {
       nothingInteract: 'Nothing to interact with.',
@@ -58,6 +94,7 @@ export const shellStrings = {
         usernameTaken: 'That username is already taken.',
         invalidCredentials: 'Invalid username or password.',
         verificationFailed: 'Verification failed. Please try again.',
+        desktopCodeInvalid: 'Desktop login code is invalid or expired. Please try again.',
         invalidCharacterName: 'Invalid character name. Use 2-16 letters.',
         characterNameNotAllowed: 'That character name is not allowed.',
         invalidClass: 'Invalid class.',
@@ -71,18 +108,85 @@ export const shellStrings = {
         webLoginOnly: 'Logins are only allowed from the game client.',
         accountSuspended: 'This account is suspended until {date}.',
         alreadyInWorld: 'Character is already in world.',
+        accountSessionLimit: 'Too many characters on this account are already in the world.',
         takenOver: 'Your character was taken over by another session.',
         renameBeforeEntering: 'This character must be renamed before entering the world.',
         renameNotPermitted: 'Renaming this character is not allowed.',
+        unsupportedMediaType: 'Unsupported request format.',
+        crossSiteOrigin: 'Request blocked for security reasons.',
       },
     },
+    // Desktop (Electron) shell surfaces: the auto-update card rendered by the
+    // renderer (src/ui/desktop_update_toast.ts) and the crash-dialog strings
+    // the renderer pushes to the main process (src/game/desktop_shell_strings.ts,
+    // mirrored by electron/shell_strings.cjs DEFAULT_SHELL_STRINGS in English).
+    desktop: {
+      update: {
+        // Classic desktop-client voice (Discord / VS Code / Steam style): short
+        // titles, calm bodies, primary action first on the ready card.
+        checkingTitle: 'Checking for updates...',
+        checkingBody: 'New versions download while you play.',
+        uptodateTitle: "You're up to date",
+        downloadingTitle: 'Downloading update {version}...',
+        downloadingBody: 'You can keep playing. It installs when you quit.',
+        readyTitle: 'Update {version} is ready',
+        readyBody: 'Restart to install now, or keep playing and it installs when you quit.',
+        restart: 'Restart now',
+        later: 'Later',
+        dismiss: 'Dismiss',
+      },
+      crash: {
+        title: 'World of ClaudeCraft',
+        body: 'The game view stopped working. Reload it?',
+        reload: 'Reload',
+        quit: 'Quit',
+        fatalBody: 'World of ClaudeCraft hit an unexpected error and needs to close.',
+      },
+    },
+    // Software-rendering notice (src/ui/gpu_notice_toast.ts): shown once when
+    // the session runs on a software rasterizer (WARP/SwiftShader). Two body
+    // variants because the fix differs: inside the desktop shell there is no
+    // "browser setting" to enable, so that copy points at drivers and the
+    // Windows per-app graphics setting instead.
+    gpuNotice: {
+      bodyDesktop:
+        'The game is running without GPU acceleration and will be slow. Update your graphics drivers, then restart the game. On Windows, also set the game to High performance under Settings > System > Display > Graphics.',
+      bodyWeb:
+        'The game is running without GPU acceleration and will be slow. Enable hardware acceleration in your browser settings, update your graphics drivers, then restart your browser.',
+      // Hybrid-GPU variant (issue #2119): shown at boot when the session is
+      // likely on an integrated GPU on a laptop that also has a discrete one.
+      // Never shown inside the desktop shell (it already forces the discrete
+      // adapter), so the split below is purely by OS.
+      hybridBodyWindows:
+        'This session is rendering on the integrated (power-saving) GPU. If this computer also has a discrete gaming GPU, set your browser to High performance under Settings > System > Display > Graphics, then restart it. The desktop app picks the discrete GPU automatically.',
+      hybridBodyLinux:
+        'This session is rendering on the integrated (power-saving) GPU. If this computer also has a discrete gaming GPU, your browser or graphics driver may offer its own GPU selection setting, or your distribution may offer a GPU switching tool (such as PRIME or optimus-manager). The desktop app picks the discrete GPU automatically.',
+      hybridBodyOther:
+        'This session is rendering on the integrated (power-saving) GPU. If this computer also has a discrete gaming GPU, check your browser and operating system graphics settings to enable it. The desktop app picks the discrete GPU automatically.',
+      dismiss: 'Dismiss',
+    },
+    // Performance nudge (src/ui/perf_nudge_toast.ts): the gpuNotice sibling
+    // shown once mid-session when the client perf-doctor finds a machine-local
+    // cause (packet 0 rulings R14-R16). The integrated-GPU copy is deliberately
+    // conditional: the adapter string cannot prove a discrete GPU exists, only
+    // that the session is not on one (ruling R15). The hardware-acceleration
+    // variants mirror the gpuNotice desktop/web split for the same reason.
+    perfNudge: {
+      integratedGpu:
+        'The game is running on the integrated (power-saving) GPU. If this computer also has a gaming GPU, set your browser to High performance under Settings > System > Display > Graphics on Windows, then restart the browser. The desktop app picks the gaming GPU automatically.',
+      hardwareAccelerationDesktop:
+        'The game is running without GPU acceleration, which makes it very slow. Update your graphics drivers, then restart the game. On Windows, also set the game to High performance under Settings > System > Display > Graphics.',
+      hardwareAccelerationWeb:
+        'The game is running without GPU acceleration, which makes it very slow. Enable hardware acceleration in your browser settings, update your graphics drivers, then restart your browser.',
+      dismiss: 'Dismiss',
+    },
     realm: {
-      noRealms: 'No realms available.',
-      loading: 'Loading realms...',
+      noRealms: 'No worlds available.',
+      loading: 'Loading worlds...',
       recommended: 'Recommended',
       checkingStatus: 'Checking status...',
       onlineNow: '{count} online now',
-      down: 'Realm is down',
+      down: 'World is down',
       offline: 'Offline',
       full: 'Full',
       high: 'High',
@@ -91,15 +195,15 @@ export const shellStrings = {
       popTipLow:
         'Low population: fewer than 15 players online right now. Plenty of room; great for a fresh start.',
       popTipMedium:
-        'Medium population: 15 to 39 players online right now. A healthy, active realm.',
+        'Medium population: 15 to 79 players online right now. A healthy, active world.',
       popTipHigh:
-        'High population: 40 to 79 players online right now. Busy, with lots of players around.',
+        'High population: 80 or more players online right now. Busy, with lots of players around.',
       popTipFull:
-        'Full population: 80 or more players online right now. Very busy; you may wait in a login queue.',
-      popTipOffline: 'Offline: this realm is unreachable right now and cannot be joined.',
+        'Full population: this world is at capacity right now. New logins are declined until a player logs out.',
+      popTipOffline: 'Offline: this world is unreachable right now and cannot be joined.',
       characterCountOne: '{count} character',
       characterCountOther: '{count} characters',
-      selectedRealm: 'Realm: {name}',
+      selectedRealm: 'World: {name}',
       statsOffline: 'Offline',
       statsRealmOffline: '{realm} (Offline)',
     },
@@ -129,6 +233,12 @@ export const shellStrings = {
       sortName: 'Name',
       sortRecent: 'Recently Played',
       sortPlaytime: 'Playtime',
+      redesign: 'Redesign',
+      redesignHint:
+        'This character predates the new character creator. You get one free redesign; it is used when you save.',
+      redesignTitle: 'Redesign {name}',
+      redesignSave: 'Save New Look',
+      redesignCancel: 'Keep Current Look',
     },
     deleteCharacter: {
       title: 'Delete Character',
@@ -157,6 +267,7 @@ export const shellStrings = {
         mana: 'Mana',
         energy: 'Energy',
         rage: 'Rage',
+        focus: 'Focus',
       },
       roles: {
         warrior: 'Tank / Melee DPS',
@@ -186,18 +297,18 @@ export const shellStrings = {
         warrior:
           'Warriors are battle-hardened melee fighters who build Rage as they deal or take damage. They absorb heavy hits or crush foes with powerful weapons.',
         paladin:
-          'Paladins are holy crusaders who support allies with blessings, heal wounds with Holy Light, and protect the weak in heavy armor.',
+          'Paladins are holy crusaders who support allies with blessings, heal wounds with Mending Light, and protect the weak in heavy armor.',
         hunter:
           'Hunters are ranged specialists who fight beside a tamed beast, peppering enemies with aimed and rapid shots, slowing them with stings and concussive fire, and shifting aspects to suit the moment.',
         rogue:
           'Rogues are stealthy assassins who spend Energy and Combo Points on backstabs and finishing moves from the shadows.',
         priest:
-          'Priests call on Holy Light to heal and shield allies, while Shadow magic lets them drain the life of their enemies.',
+          'Priests call on Mending Light to heal and shield allies, while Shadow magic lets them drain the life of their enemies.',
         shaman:
           'Shaman command the elements, imbuing weapons with power, shocking enemies with lightning, and restoring allies.',
-        mage: 'Mages bend Fire, Frost, and Arcane power to destroy enemies, conjure water, and freeze threats in place.',
+        mage: 'Mages bend Fire, Frost, and arcane force to destroy enemies, summon water, and freeze threats in place.',
         warlock:
-          'Warlocks summon demons, apply curses and damage-over-time magic, and drain life from enemies to endure.',
+          'Warlocks summon demons, apply curses and damage-over-time magic, and leech life from enemies to endure.',
         druid:
           'Druids channel nature, healing wounds, entangling foes, and shifting into animal forms for defense or damage.',
       },
@@ -208,7 +319,7 @@ export const shellStrings = {
       title: 'Play in Landscape Fullscreen',
       continue: 'Continue to Game',
       rotateTitle: 'Rotate to Landscape',
-      rotateSub: 'Play in landscape fullscreen for the best mobile experience.',
+      rotateSub: 'Portrait mode is not supported. Rotate your device to landscape to continue.',
       baseLandscape: 'Rotate your device to landscape before entering the world.',
       basePerformance:
         'Mobile performance may be degraded. Close extra tabs and lower Render Quality if the game feels slow.',
@@ -227,10 +338,10 @@ export const shellStrings = {
         'Install or add this page to your Home screen for the best fullscreen mobile experience.',
     },
     serverUnavailable: {
-      title: 'World of ClaudeCraft - Realm Unavailable',
+      title: 'World of ClaudeCraft - World Unavailable',
       logoAlt: 'World of ClaudeCraft',
-      eyebrow: 'Realm maintenance',
-      heading: 'The realm is temporarily unavailable.',
+      eyebrow: 'World maintenance',
+      heading: 'The world is temporarily unavailable.',
       body: 'We are restarting the game service and expect Claudemoon to return shortly. This page will keep checking automatically.',
       status: 'Back soon',
     },
@@ -357,6 +468,7 @@ export const shellStrings = {
         mana: 'Maná',
         energy: 'Energía',
         rage: 'Ira',
+        focus: 'Concentración',
       },
       roles: {
         warrior: 'Tanque / DPS cuerpo a cuerpo',
@@ -560,6 +672,7 @@ export const shellStrings = {
         mana: 'Maná',
         energy: 'Energía',
         rage: 'Ira',
+        focus: 'Concentración',
       },
       roles: {
         warrior: 'Tanque / DPS cuerpo a cuerpo',
@@ -764,6 +877,7 @@ export const shellStrings = {
         mana: 'Mana',
         energy: 'Énergie',
         rage: 'Rage',
+        focus: 'Concentration',
       },
       roles: {
         warrior: 'Tank / DPS mêlée',
@@ -968,6 +1082,7 @@ export const shellStrings = {
         mana: 'Mana',
         energy: 'Énergie',
         rage: 'Rage',
+        focus: 'Concentration',
       },
       roles: {
         warrior: 'Tank / DPS mêlée',
@@ -1184,6 +1299,7 @@ export const shellStrings = {
         mana: 'Mana',
         energy: 'Energy',
         rage: 'Rage',
+        focus: 'Focus',
       },
       roles: {
         warrior: 'Tank / Melee DPS',
@@ -1235,7 +1351,7 @@ export const shellStrings = {
       title: 'Play in Landscape Fullscreen',
       continue: 'Continue to Game',
       rotateTitle: 'Rotate to Landscape',
-      rotateSub: 'Play in landscape fullscreen for the best mobile experience.',
+      rotateSub: 'Portrait mode is not supported. Rotate your device to landscape to continue.',
       baseLandscape: 'Rotate your device to landscape before entering the world.',
       basePerformance:
         'Mobile performance may be degraded. Close extra tabs and lower Render Quality if the game feels slow.',
@@ -1386,6 +1502,7 @@ export const shellStrings = {
         mana: 'Mana',
         energy: 'Energia',
         rage: 'Rabbia',
+        focus: 'Concentrazione',
       },
       roles: {
         warrior: 'Tank / DPS da mischia',
@@ -1590,6 +1707,7 @@ export const shellStrings = {
         mana: 'Mana',
         energy: 'Energie',
         rage: 'Wut',
+        focus: 'Fokus',
       },
       roles: {
         warrior: 'Tank / Nahkampf-DPS',
@@ -1791,6 +1909,7 @@ export const shellStrings = {
         mana: '法力',
         energy: '能量',
         rage: '怒气',
+        focus: '集中值',
       },
       roles: {
         warrior: '坦克 / 近战 DPS',
@@ -1979,6 +2098,7 @@ export const shellStrings = {
         mana: '法力',
         energy: '能量',
         rage: '怒氣',
+        focus: '集中值',
       },
       roles: {
         warrior: '坦克 / 近戰 DPS',
@@ -2168,6 +2288,7 @@ export const shellStrings = {
         mana: '마나',
         energy: '기력',
         rage: '분노',
+        focus: '집중',
       },
       roles: {
         warrior: '탱커 / 근접 DPS',
@@ -2368,6 +2489,7 @@ export const shellStrings = {
         mana: 'マナ',
         energy: 'エネルギー',
         rage: '怒り',
+        focus: '集中値',
       },
       roles: {
         warrior: 'タンク / 近接DPS',
@@ -2566,6 +2688,7 @@ export const shellStrings = {
         mana: 'Mana',
         energy: 'Energia',
         rage: 'Raiva',
+        focus: 'Foco',
       },
       roles: {
         warrior: 'Tanque / DPS corpo a corpo',
@@ -2769,6 +2892,7 @@ export const shellStrings = {
         mana: 'Мана',
         energy: 'Энергия',
         rage: 'Ярость',
+        focus: 'Концентрация',
       },
       roles: {
         warrior: 'Танк / ближний DPS',

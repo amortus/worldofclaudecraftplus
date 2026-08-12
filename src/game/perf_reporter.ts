@@ -1,9 +1,18 @@
 import { graphicsPresetLabel } from '../render/gfx';
+import { isSoftwareRendererName } from '../render/software_renderer';
+import { crowdBucketLabel } from './crowd_bucket';
 import { localDevPerfTraceEnabled, type PerfMonitor, type PerfSnapshot } from './perf';
+import { analyzePerfSuggestions } from './perf_doctor';
+import { jitteredPerfReportDelay } from './perf_report_schedule';
 import type { Settings } from './settings';
+import type { WorldTelemetry } from './world_telemetry';
 
 declare const __APP_VERSION__: string;
 declare const __APP_BUILD_ID__: string;
+
+// Bumped to 2 for the packet 0 report dimensions (zone, crowd, views,
+// worst-10s; ruling R6). The server's intIn clamp keeps version-1 clients valid.
+const PERF_REPORT_SCHEMA_VERSION = 2;
 
 const FIRST_REPORT_MS = 75_000;
 const REPEAT_REPORT_MS = 5 * 60_000;
@@ -20,6 +29,14 @@ export interface PerfReporterOptions {
   settings: Settings;
   tokenProvider: () => string | null;
   characterIdProvider: () => number | null;
+  // Zone identity plus the sim entity count for gameplay sessions (rulings R3,
+  // R4); null (or absent, for benchmark harness callers) leaves the payload on
+  // the legacy gameplay label with null crowd numerators.
+  worldTelemetryProvider?: () => WorldTelemetry | null;
+  // True inside the Electron shell, which already forces the discrete GPU
+  // (PR #1991), so the perf-doctor 'integrated-gpu' suggestion never fires
+  // there (ruling R15). Absent (benchmark harness callers) means false.
+  desktopShell?: boolean;
 }
 
 export type PerfReporterSkipReason = 'disabled' | 'hidden' | 'not-ready' | 'no-renderer';
@@ -76,7 +93,11 @@ function makeStatus(enabled: boolean, devTrace: boolean, sessionId: string): Per
   };
 }
 
-function exposeDebug(status: PerfReporterStatus, sendNow: () => void, stop: () => void): () => void {
+function exposeDebug(
+  status: PerfReporterStatus,
+  sendNow: () => void,
+  stop: () => void,
+): () => void {
   if (!status.devTrace || typeof window === 'undefined') return () => {};
   const debug: PerfReporterDebug = { status, sendNow, stop };
   window.__wocPerfReporter = debug;
@@ -103,9 +124,10 @@ function storedSessionId(): string {
   try {
     const existing = sessionStorage.getItem(SESSION_KEY);
     if (existing) return existing;
-    const id = typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID()
-      : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+    const id =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
     sessionStorage.setItem(SESSION_KEY, id);
     return id;
   } catch {
@@ -135,7 +157,7 @@ function osFamily(userAgent: string): string {
 function gpuBucket(renderer: string): string {
   const r = renderer.toLowerCase();
   if (!r) return 'unknown';
-  if (/swiftshader|llvmpipe|software/.test(r)) return 'software';
+  if (isSoftwareRendererName(r)) return 'software';
   if (/apple/.test(r)) {
     const chip = /(m[1-9][a-z0-9 ]*)/i.exec(renderer)?.[1]?.toLowerCase().replace(/\s+/g, '-');
     return chip ? `apple-${chip}` : 'apple';
@@ -147,7 +169,12 @@ function gpuBucket(renderer: string): string {
   }
   if (/nvidia|geforce|rtx|gtx/.test(r)) return 'nvidia';
   if (/amd|radeon/.test(r)) return 'amd';
-  return renderer.slice(0, 48).replace(/[^\w.-]+/g, '-').toLowerCase() || 'other';
+  return (
+    renderer
+      .slice(0, 48)
+      .replace(/[^\w.-]+/g, '-')
+      .toLowerCase() || 'other'
+  );
 }
 
 function viewportBucket(width: number, height: number): string {
@@ -161,14 +188,18 @@ function viewportBucket(width: number, height: number): string {
 
 function scenarioFromUrl(): { source: 'gameplay' | 'benchmark'; zoneOrScenario: string } {
   const params = new URLSearchParams(location.search);
-  const scenario = (params.get('perfScenario') ?? params.get('perf_scenario') ?? '').trim().slice(0, 80);
+  const scenario = (params.get('perfScenario') ?? params.get('perf_scenario') ?? '')
+    .trim()
+    .slice(0, 80);
   if (scenario) return { source: 'benchmark', zoneOrScenario: scenario };
   return { source: 'gameplay', zoneOrScenario: 'gameplay' };
 }
 
 type RendererPrewarmSnapshot = NonNullable<NonNullable<PerfSnapshot['renderer']>['prewarm']>;
 
-function rendererPrewarmSummary(prewarm: RendererPrewarmSnapshot | null): Record<string, unknown> | null {
+function rendererPrewarmSummary(
+  prewarm: RendererPrewarmSnapshot | null,
+): Record<string, unknown> | null {
   if (!prewarm) return null;
   return {
     elapsedMs: prewarm.elapsedMs,
@@ -186,8 +217,10 @@ function rendererPrewarmSummary(prewarm: RendererPrewarmSnapshot | null): Record
     compileTimedOut: prewarm.compileTimedOut,
     manifestPlanned: prewarm.manifestPlanned,
     manifestCompleted: prewarm.manifestCompleted,
+    manifestPartial: prewarm.manifestPartial,
     manifestTimedOut: prewarm.manifestTimedOut,
     manifestFailed: prewarm.manifestFailed,
+    partialEntryIds: prewarm.partialEntryIds,
     timedOutEntryIds: prewarm.timedOutEntryIds,
     failedEntryIds: prewarm.failedEntryIds,
     entries: prewarm.manifestEntries.map((entry) => ({
@@ -199,7 +232,58 @@ function rendererPrewarmSummary(prewarm: RendererPrewarmSnapshot | null): Record
       remainingMsAfter: entry.remainingMsAfter,
       programDelta: entry.programDelta,
       textureDelta: entry.textureDelta,
+      workDone: entry.workDone,
+      workPlanned: entry.workPlanned,
       detail: entry.detail,
+    })),
+  };
+}
+
+type RendererGpuQueueSnapshot = NonNullable<PerfSnapshot['renderer']>['gpuQueue'];
+
+// The GPU queue is serial, so one unit that never settles blocks every later
+// unit in every lane while contributing nothing to the completed-unit ring.
+// The running unit and the recorded stalls ride the beacon beside the slowest
+// completed units, so a wedge is a fleet signal instead of local console noise
+// (issue #3167). Bounded like every other raw-summary block; atMs is dropped
+// because a page-relative timestamp carries no fleet meaning.
+const GPU_QUEUE_REPORT_STALLS = 6;
+const GPU_QUEUE_REPORT_SLOWEST = 5;
+// The queue's own tail cap keeps this list tiny; the slice only pins the
+// beacon size against a future cap raise, mirroring the two lists above.
+const GPU_QUEUE_REPORT_TAILS = 4;
+
+function rendererGpuQueueSummary(gpuQueue: RendererGpuQueueSnapshot): Record<string, unknown> {
+  return {
+    units: gpuQueue.units,
+    totalSyncMs: gpuQueue.totalSyncMs,
+    worstSyncMs: gpuQueue.worstSyncMs,
+    pending: gpuQueue.pending,
+    stallCount: gpuQueue.stallCount,
+    active: gpuQueue.active
+      ? {
+          label: gpuQueue.active.label,
+          priority: gpuQueue.active.priority,
+          ageMs: gpuQueue.active.ageMs,
+        }
+      : null,
+    // Released compile-gate tails settling off-thread.
+    waitingTails: gpuQueue.waitingTails.slice(0, GPU_QUEUE_REPORT_TAILS).map((tail) => ({
+      label: tail.label,
+      priority: tail.priority,
+      ageMs: tail.ageMs,
+    })),
+    stalls: gpuQueue.stalls.slice(-GPU_QUEUE_REPORT_STALLS).map((stall) => ({
+      label: stall.label,
+      priority: stall.priority,
+      ageMs: stall.ageMs,
+      settled: stall.settled,
+    })),
+    slowest: gpuQueue.slowest.slice(0, GPU_QUEUE_REPORT_SLOWEST).map((unit) => ({
+      label: unit.label,
+      priority: unit.priority,
+      syncMs: unit.syncMs,
+      wallMs: unit.wallMs,
     })),
   };
 }
@@ -209,6 +293,8 @@ function payloadFromSnapshot(
   settings: Settings,
   sessionId: string,
   characterId: number | null,
+  worldTelemetry: WorldTelemetry | null = null,
+  desktopShell = false,
 ): Record<string, unknown> | null {
   const renderer = snapshot.renderer;
   if (!renderer) return null;
@@ -218,8 +304,25 @@ function payloadFromSnapshot(
   const viewportWidth = Math.max(1, Math.round(window.innerWidth));
   const viewportHeight = Math.max(1, Math.round(window.innerHeight));
   const scenario = scenarioFromUrl();
+  // The benchmark ?perfScenario label keeps priority; gameplay sessions carry
+  // the instance-aware zone id from the provider (rulings R3, R4).
+  const zoneOrScenario =
+    scenario.source === 'benchmark'
+      ? scenario.zoneOrScenario
+      : (worldTelemetry?.zoneId ?? scenario.zoneOrScenario);
+  // Crowd is bucketed on the renderer's activeViews (draw-band scoped, ruling
+  // R3); the raw counts ship beside it. lastFrame is null-guarded: the first
+  // report can land before a rendered frame.
+  const activeViews = renderer.lastFrame?.activeViews ?? null;
+  const visibleViews = renderer.lastFrame?.visibleViews ?? null;
+  // CLIENT-computed perf-doctor suggestion ids (ruling R14): the analyzer runs
+  // over this same snapshot, so the fleet dimension and the player nudge toast
+  // agree on the machine-local diagnosis. Ids only; titles/bodies stay local.
+  const suggestionIds = analyzePerfSuggestions(snapshot, location.search, { desktopShell }).map(
+    (suggestion) => suggestion.id,
+  );
   return {
-    schemaVersion: 1,
+    schemaVersion: PERF_REPORT_SCHEMA_VERSION,
     releaseVersion: __APP_VERSION__,
     buildId: __APP_BUILD_ID__,
     sessionId,
@@ -257,7 +360,13 @@ function payloadFromSnapshot(
     glRenderer: renderer.glRenderer,
     glRendererBucket: gpuBucket(renderer.glRenderer),
     source: scenario.source,
-    zoneOrScenario: scenario.zoneOrScenario,
+    zoneOrScenario,
+    simEntities: worldTelemetry?.simEntities ?? null,
+    activeViews,
+    visibleViews,
+    crowdBucket: crowdBucketLabel(activeViews),
+    worst10sFrameP95Ms: snapshot.windows.worst10s?.frameMs.p95 ?? null,
+    suggestionIds,
     rawSummary: {
       graphicsConfigVersion: renderer.graphicsConfigVersion,
       seconds: snapshot.seconds,
@@ -271,12 +380,28 @@ function payloadFromSnapshot(
       rendererDiagnostics: renderer.renderDiagnostics,
       rendererPrewarmSummary: rendererPrewarmSummary(renderer.prewarm),
       rendererPrewarm: renderer.prewarm,
+      rendererGpuQueue: rendererGpuQueueSummary(renderer.gpuQueue),
       assets: {
         preload: snapshot.assets.preload,
         byType: snapshot.assets.byType,
       },
       input: snapshot.input,
       hud: snapshot.hud,
+      netPipeline: snapshot.netPipeline,
+      heapSawtooth: snapshot.heapSawtooth,
+      // The two top-level longtask fields (longTaskCount, longTaskP95Ms) cannot
+      // corroborate a rare multi-second stall: a single event never moves a
+      // p95. These four ride here (issue #2479) rather than as new top-level
+      // columns, so storing them needs no DDL; the server bounds them on
+      // ingest (server/perf_report.ts).
+      browser: {
+        longTasks: {
+          totalMs: longTasks.totalMs,
+          avg: longTasks.avg,
+          max: longTasks.max,
+          lastAge: longTasks.lastAge,
+        },
+      },
       ...(snapshot.devTrace ? { devTrace: snapshot.devTrace } : {}),
     },
   };
@@ -287,7 +412,11 @@ export function startPerfReporter(options: PerfReporterOptions): () => void {
   const devTrace = localDevPerfTraceEnabled();
   if (params.get('perfReport') === '0' || params.get('perf_report') === '0') {
     const status = makeStatus(false, devTrace, '');
-    const cleanupDebug = exposeDebug(status, () => {}, () => {});
+    const cleanupDebug = exposeDebug(
+      status,
+      () => {},
+      () => {},
+    );
     devTraceLog(status, 'debug', 'disabled by URL parameter');
     return cleanupDebug;
   }
@@ -297,7 +426,11 @@ export function startPerfReporter(options: PerfReporterOptions): () => void {
   let stopped = false;
   let timer: number | null = null;
   let lastFinalFlushAt = 0;
+  let reportSequence = 0;
   let cleanupDebug = (): void => {};
+
+  const cadenceDelay = (baseMs: number): number =>
+    devTrace ? baseMs : jitteredPerfReportDelay(baseMs, sessionId, reportSequence++);
 
   const schedule = (delay: number): void => {
     if (stopped) return;
@@ -316,7 +449,7 @@ export function startPerfReporter(options: PerfReporterOptions): () => void {
     timer = null;
     if (stopped) return;
     if (!sendOptions.allowHidden && document.visibilityState !== 'visible') {
-      skip('hidden', REPEAT_REPORT_MS);
+      skip('hidden', cadenceDelay(REPEAT_REPORT_MS));
       return;
     }
     const snapshot = options.perf.report();
@@ -327,9 +460,16 @@ export function startPerfReporter(options: PerfReporterOptions): () => void {
       skip('not-ready', sendOptions.final ? null : 15_000);
       return;
     }
-    const body = payloadFromSnapshot(snapshot, options.settings, sessionId, options.characterIdProvider());
+    const body = payloadFromSnapshot(
+      snapshot,
+      options.settings,
+      sessionId,
+      options.characterIdProvider(),
+      options.worldTelemetryProvider?.() ?? null,
+      options.desktopShell ?? false,
+    );
     if (!body) {
-      skip('no-renderer', sendOptions.final ? null : REPEAT_REPORT_MS);
+      skip('no-renderer', sendOptions.final ? null : cadenceDelay(REPEAT_REPORT_MS));
       return;
     }
     const token = options.tokenProvider();
@@ -340,9 +480,15 @@ export function startPerfReporter(options: PerfReporterOptions): () => void {
     status.lastHttpStatus = null;
     status.lastBodyBytes = textBytes(bodyText);
     status.sendCount++;
-    const useKeepalive = Boolean(sendOptions.final && status.lastBodyBytes <= FETCH_KEEPALIVE_MAX_BYTES);
+    const useKeepalive = Boolean(
+      sendOptions.final && status.lastBodyBytes <= FETCH_KEEPALIVE_MAX_BYTES,
+    );
     if (sendOptions.final && !useKeepalive) {
-      devTraceLog(status, 'debug', `final post too large for keepalive: ${status.lastBodyBytes} bytes`);
+      devTraceLog(
+        status,
+        'debug',
+        `final post too large for keepalive: ${status.lastBodyBytes} bytes`,
+      );
     }
     void fetch('/api/perf-report', {
       method: 'POST',
@@ -352,25 +498,35 @@ export function startPerfReporter(options: PerfReporterOptions): () => void {
       },
       body: bodyText,
       keepalive: useKeepalive,
-    }).then(async (res) => {
-      status.lastHttpStatus = res.status;
-      if (!res.ok) {
-        const responseText = (await res.text().catch(() => '')).slice(0, 160);
+    })
+      .then(async (res) => {
+        status.lastHttpStatus = res.status;
+        if (!res.ok) {
+          const responseText = (await res.text().catch(() => '')).slice(0, 160);
+          status.failCount++;
+          status.lastError = responseText
+            ? `HTTP ${res.status}: ${responseText}`
+            : `HTTP ${res.status}`;
+          devTraceLog(status, 'warn', `post failed: ${status.lastError}`);
+          return;
+        }
+        status.successCount++;
+        status.lastSuccessAt = Date.now();
+        status.lastError = null;
+        // Worst-per-report-interval semantics (ruling R5): the retained worst
+        // 10 s window resets only once its report is stored, so a failed post
+        // carries the storm into the retry instead of losing it.
+        options.perf.drainWorstWindow();
+        devTraceLog(status, 'debug', `posted ${status.lastBodyBytes} bytes`);
+      })
+      .catch((err: unknown) => {
         status.failCount++;
-        status.lastError = responseText ? `HTTP ${res.status}: ${responseText}` : `HTTP ${res.status}`;
+        status.lastError = errorText(err);
         devTraceLog(status, 'warn', `post failed: ${status.lastError}`);
-        return;
-      }
-      status.successCount++;
-      status.lastSuccessAt = Date.now();
-      status.lastError = null;
-      devTraceLog(status, 'debug', `posted ${status.lastBodyBytes} bytes`);
-    }).catch((err: unknown) => {
-      status.failCount++;
-      status.lastError = errorText(err);
-      devTraceLog(status, 'warn', `post failed: ${status.lastError}`);
-    });
-    if (!sendOptions.final) schedule(devTrace ? DEV_TRACE_REPEAT_REPORT_MS : REPEAT_REPORT_MS);
+      });
+    if (!sendOptions.final) {
+      schedule(devTrace ? DEV_TRACE_REPEAT_REPORT_MS : cadenceDelay(REPEAT_REPORT_MS));
+    }
   }
 
   function sendNow(): void {
@@ -405,7 +561,7 @@ export function startPerfReporter(options: PerfReporterOptions): () => void {
   cleanupDebug = exposeDebug(status, sendNow, stop);
   window.addEventListener('pagehide', flushFinal);
   document.addEventListener('visibilitychange', handleVisibilityChange);
-  schedule(devTrace ? DEV_TRACE_FIRST_REPORT_MS : FIRST_REPORT_MS);
+  schedule(devTrace ? DEV_TRACE_FIRST_REPORT_MS : cadenceDelay(FIRST_REPORT_MS));
   return stop;
 }
 
@@ -415,4 +571,5 @@ export const perfReporterInternalsForTest = {
   gpuBucket,
   viewportBucket,
   payloadFromSnapshot,
+  PERF_REPORT_SCHEMA_VERSION,
 };

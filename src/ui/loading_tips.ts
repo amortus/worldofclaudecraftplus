@@ -1,43 +1,45 @@
-// Cycling loading-screen tips. A long "Loading world.. N/206" is dead time, so rotate a
-// short, spoiler-free gameplay hint every few seconds while the world streams in. One
-// interval, looped; started when the loading screen shows and stopped when it hides.
-import { t, type TranslationKey } from './i18n';
+// Rotating "did you know" style tips shown under the loading-screen progress
+// bar. Pure and DOM-free: picks/rotates a tip key, the caller renders it via
+// t(). Kept separate from main.ts (a firewall, not a home for new logic).
+import { type TranslationKey, t } from './i18n';
 
-const TIP_KEYS: readonly TranslationKey[] = [
-  'hudChrome.loadingTips.map',
-  'hudChrome.loadingTips.quests',
-  'hudChrome.loadingTips.inspect',
-  'hudChrome.loadingTips.camera',
-  'hudChrome.loadingTips.chat',
-  'hudChrome.loadingTips.rested',
-  'hudChrome.loadingTips.talents',
-  'hudChrome.loadingTips.vendor',
-  'hudChrome.loadingTips.group',
-  'hudChrome.loadingTips.classes',
+const LOADING_TIP_KEYS: TranslationKey[] = [
+  'loading.tips.classes',
+  'loading.tips.talents',
+  'loading.tips.dungeons',
+  'loading.tips.market',
+  'loading.tips.guilds',
+  'loading.tips.professions',
+  'loading.tips.loadouts',
+  'loading.tips.pvp',
+  'loading.tips.reliquary',
 ];
 
-let tipTimer: number | undefined;
-
-/** Begin cycling tips into `el` (resolved fresh each call so a locale switch re-renders).
- *  Safe to call repeatedly; a null element or empty list is a no-op. */
-export function startLoadingTips(el: HTMLElement | null, periodMs = 5000): void {
-  stopLoadingTips();
-  if (!el) return;
-  const tips = TIP_KEYS.map((k) => t(k));
-  if (tips.length === 0) return;
-  // Vary the first tip so a quick reload is not always the same line (UI timing only).
-  let i = Math.floor(performance.now() / periodMs) % tips.length;
-  const show = (): void => {
-    el.textContent = tips[i % tips.length];
-    i += 1;
-  };
-  show();
-  tipTimer = window.setInterval(show, periodMs);
+export interface LoadingTipRotation {
+  /** Current tip text, already resolved through t(). */
+  current(): string;
+  /** Advances to the next tip (wraps around) and returns its text. */
+  next(): string;
 }
 
-export function stopLoadingTips(): void {
-  if (tipTimer !== undefined) {
-    clearInterval(tipTimer);
-    tipTimer = undefined;
-  }
+/**
+ * Starts a rotation at a pseudo-random offset (Date.now()-seeded is fine here:
+ * this is cosmetic UI copy, not sim state, so it's exempt from the sim's
+ * Rng-only randomness rule) so repeat page loads don't always open on the
+ * same tip.
+ */
+export function createLoadingTipRotation(
+  startIndex = Math.floor(Math.random() * LOADING_TIP_KEYS.length),
+): LoadingTipRotation {
+  let index =
+    ((startIndex % LOADING_TIP_KEYS.length) + LOADING_TIP_KEYS.length) % LOADING_TIP_KEYS.length;
+  return {
+    current(): string {
+      return t(LOADING_TIP_KEYS[index]);
+    },
+    next(): string {
+      index = (index + 1) % LOADING_TIP_KEYS.length;
+      return t(LOADING_TIP_KEYS[index]);
+    },
+  };
 }

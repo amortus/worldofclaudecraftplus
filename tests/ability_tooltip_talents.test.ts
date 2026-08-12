@@ -11,6 +11,8 @@ import { ABILITIES } from '../src/sim/data';
 // Regression guard for "I select a talent and the spell tooltip doesn't update" (the
 // cooldown line used to read res.def.cooldown and ignored cooldown-reducing talents).
 
+// Chronomancy gating (mage-chronomancy.md Phase 1): fire_blast now belongs to
+// the DPS specs, so every resolution here rides a fire-spec build.
 function modsFor(
   ability: string,
   mod: Partial<
@@ -18,13 +20,22 @@ function modsFor(
   >,
 ) {
   const m = emptyModifiers();
+  m.spec = 'fire';
   m.abilities[ability] = {
     dmgPct: 0,
+    dmgPctVsDotted: 0,
     flatDmg: 0,
     costPct: 0,
     cooldownPct: 0,
+    critPct: 0,
+    cooldownFlat: 0,
     castPct: 0,
     buffPct: 0,
+    castWhileMoving: false,
+    damagePushbackImmune: false,
+    ignoreStealthRequirement: false,
+    bonusCharges: 0,
+    addEffects: [],
     ...mod,
   };
   return m;
@@ -39,7 +50,9 @@ const resolved = (
 describe('ability tooltip data reflects selected talents', () => {
   // Compare the modified resolution against the UNMODIFIED resolution at the same level,
   // so the rank-at-level cost/cooldown is the baseline (not the rank-1 def values).
-  const baseKnown = resolved('mage', 'fire_blast', emptyModifiers())!;
+  const baseMods = emptyModifiers();
+  baseMods.spec = 'fire';
+  const baseKnown = resolved('mage', 'fire_blast', baseMods)!;
 
   it('a cooldown-reducing talent lowers the resolved cooldown (def untouched)', () => {
     expect(baseKnown.cooldown).toBeGreaterThan(0);
@@ -59,12 +72,12 @@ describe('ability tooltip data reflects selected talents', () => {
   it('a buff-strengthening talent (buffPct) raises the resolved buff value', () => {
     // Improved Devotion Aura / Aspect of the Hawk / Fortitude scale the buff's value,
     // which the tooltip's resolved buff line reads (the static description can't show it).
-    const base = resolved('paladin', 'devotion_aura', emptyModifiers())!;
-    const baseBuff = base.effects.find((e) => e.type === 'selfBuff') as { value: number };
+    const base = resolved('paladin', 'devotion_ward', emptyModifiers())!;
+    const baseBuff = base.effects.find((e) => e.type === 'buffTarget') as { value: number };
     expect(baseBuff.value).toBeGreaterThan(0);
-    const known = resolved('paladin', 'devotion_aura', modsFor('devotion_aura', { buffPct: 0.2 }))!;
-    const buff = known.effects.find((e) => e.type === 'selfBuff') as { value: number };
-    expect(buff.value).toBe(Math.round(baseBuff.value * 1.2));
+    const known = resolved('paladin', 'devotion_ward', modsFor('devotion_ward', { buffPct: 0.2 }))!;
+    const buff = known.effects.find((e) => e.type === 'buffTarget') as { value: number };
+    expect(buff.value).toBeCloseTo(baseBuff.value * 1.2, 10);
   });
 
   it('a damage talent raises the resolved effect damage', () => {

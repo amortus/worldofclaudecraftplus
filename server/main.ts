@@ -1,18 +1,31 @@
+// FIRST import on purpose: loads .env before realm.ts (or any other module
+// with an import-time process.env read) evaluates. See server/env.ts.
+import './env';
 import * as fs from 'node:fs';
 import * as http from 'node:http';
 import * as path from 'node:path';
-import { type WebSocket, WebSocketServer } from 'ws';
+import { WebSocketServer } from 'ws';
+import { DEEDS } from '../src/sim/content/deeds';
 import {
   LEADERBOARD_MAX,
   LEADERBOARD_PAGE_SIZE,
+  paginateDevLeaderboard,
   paginateGuildLeaderboard,
   paginateLeaderboard,
 } from '../src/sim/leaderboard_page';
 import { Sim } from '../src/sim/sim';
 import type { PlayerClass } from '../src/sim/types';
 import { virtualLevel } from '../src/sim/types';
-import type { GuildLeaderboardEntry, LeaderboardEntry } from '../src/world_api';
+import { WORLD_SEED } from '../src/sim/world_seed';
 import {
+  type DeedsLeaderboardEntry,
+  type DeedsLeaderboardSelf,
+  type GuildLeaderboardEntry,
+  type LeaderboardEntry,
+  ONLINE_WORLD_AUTH_TYPE,
+} from '../src/world_api';
+import {
+  configureAccountRuntime,
   handleAccount2faDisable,
   handleAccount2faEnable,
   handleAccount2faSetup,
@@ -23,44 +36,110 @@ import {
   handleAccountExport,
   handleAccountLogout,
   handleAccountMarketing,
+  handleAccountPasswordForgot,
+  handleAccountPasswordReset,
   handleAccountSetEmail,
+  handleAccountSetInitialEmail,
   handleAccountWhoami,
   handleEmailUnsubscribe,
   verifyLoginTwoFactor,
 } from './account';
-import { handleAdminApi } from './admin';
-import { currentSitePresenceUsers, recordSitePresenceSample } from './admin_db';
+import {
+  configureAdminGuildBoardCacheBust,
+  configureAdminPlayersCap,
+  configureAdminRuntime,
+  handleAdminApi,
+} from './admin';
+import {
+  currentSitePresenceUsers,
+  distinctOnlineSampleRealms,
+  foldOnlinePeak,
+  pruneOnlineSamplesBatch,
+  pruneSitePresenceSamplesBatch,
+  pruneSitePresenceSessionsBatch,
+  recordSitePresenceSample,
+} from './admin_db';
+import { permissionsForRoles } from './admin_permissions';
+import { loadAntibotConfig } from './antibot_config_db';
+import {
+  configureAppleAuthRuntime,
+  handleAppleLogin,
+  handleAppleLoginLink,
+  handleAppleLoginNew,
+} from './apple_auth';
+import { pruneApplePendingLogins } from './apple_auth_db';
 import {
   hashPassword,
+  MAX_PASSWORD_LENGTH,
+  MIN_PASSWORD_LENGTH,
   newToken,
   normalizeCharName,
+  normalizeEmail,
   offensiveName,
-  validPassword,
   validUsernameShape,
   verifyPassword,
 } from './auth';
-import { BUG_DESCRIPTION_MAX, BugReportRateLimitError, createBugReport } from './bug_report_db';
-import { characterSheet, type SheetRank } from './character_sheet';
+import { configureAuthRuntime } from './auth_routes';
+import { computeBankBonus } from './bank_entitlements';
+import { bankLedgerIdle } from './bank_ledger';
+import { configureBattlegroundRuntime, readBgLeaderboard } from './battleground';
 import {
+  BUG_DESCRIPTION_MAX,
+  BugReportRateLimitError,
+  createBugReport,
+  pruneBugReportsBatch,
+} from './bug_report_db';
+import { createCachedRead } from './cached_read';
+import { bustAllLifetimeXpRankCache } from './character_rank_cache';
+import { characterSheet, SHEET_RECENT_DEEDS, type SheetRank } from './character_sheet';
+import {
+  buildCharacterList,
+  configureCharactersRuntime,
+  parseCreationCosmetics,
+  purgeDeletedCharacterWorldState,
+  rekeyReclaimedCharacterWorldState,
+  withCreationHelm,
+} from './characters';
+import { pruneChatViolationsBatch } from './chat_filter_db';
+import {
+  claudiumPreAuthMutationRateLimited,
+  configureClaudiumRuntime,
+  handleClaudiumApi,
+  handleClaudiumStripeWebhook,
+} from './claudium';
+import { configureCommunityTestAccounts } from './community_test_accounts';
+import {
+  bustDailyRewardBoardCache,
+  bustDailyRewardWinnersCache,
+  dailyRewardEventsCutoffDay,
+  handleDailyRewardApi,
+  handleDailyRewardInternalApi,
+} from './daily_rewards';
+import { pruneDailyRewardEventsBatch } from './daily_rewards_db';
+import {
+  type ArenaLeaderRow,
   accountAndScopeForToken,
   accountById,
-  accountForToken,
+  acquireCharacterLease,
+  type BgLeaderRow,
+  bankBonusFactsForAccount,
   type CharacterRow,
-  characterCountForAccount,
   characterCountsByRealm,
+  charactersForDeedsBoard,
   chatMuteStatusForAccount,
   closeOrphanSessions,
   createAccount,
   createCharacterCapped,
   createCompanionToken,
+  deedsBoardRanked,
   deleteCharacter,
   ensureSchema,
   findAccount,
   findCharacterReportTargetByName,
-  getPublicCharacterByName,
   getAccountsCount,
   getCharacter,
   getCharacterById,
+  getCharactersCount,
   guildNameForCharacter,
   isAdminAccount,
   lifetimeXpRankForCharacter,
@@ -68,98 +147,259 @@ import {
   listCharacters,
   listCompanionTokens,
   loadAccountCosmetics,
+  loadWorldState,
   moderationStatusForAccount,
   pool,
   primarySlugForAccount,
-  pruneChatLogs,
-  pruneClientPerfReports,
+  pruneChatLogsBatch,
+  pruneClientPerfReportsBatch,
+  pruneEmailChangeRequestsBatch,
+  pruneEmailLogBatch,
+  prunePasswordResetRequestsBatch,
   reclaimDeactivatedName,
   referralCountForAccount,
+  releaseAllCharacterLeases,
+  releaseCharacterLease,
   renameCharacter,
   revokeCompanionToken,
-  revokeTokensExcept,
+  runConcurrentIndexMigrations,
   saveToken,
+  saveWorldState,
   scopeAllowsMutation,
   searchCharacters,
-  setAccountDeactivated,
   setAccountEmail,
   type TokenScope,
   topArenaRatings,
+  topBgRatings,
   topGuilds,
   topLifetimeXp,
   touchLogin,
-  updatePasswordHash,
 } from './db';
+import { configureDeedsRuntime } from './deeds';
+import {
+  buildDeedsBoardEntries,
+  DEEDS_BOARD_ENTRY_FLOOR,
+  deedsBoardSelf,
+  type RankedDeedsAccount,
+} from './deeds_board';
+import {
+  DEEDS_BOARD_DEMAND_TTL_MS,
+  singleFlight,
+  warmDeedsBoardIfDemanded,
+} from './deeds_board_warm';
+import { deedRarityCounts, recentDeedsForCharacter } from './deeds_db';
+import { deedRecordsIdle, publicRarityPayload } from './deeds_records';
+import {
+  type DesktopLoginRouteDeps,
+  handleDesktopLoginExchange,
+  issueDesktopLoginCode,
+} from './desktop_login';
+import {
+  configureDiscordRuntime,
+  handleDiscordCallback,
+  handleDiscordLoginLink,
+  handleDiscordLoginNew,
+  handleDiscordStart,
+  handleDiscordStatus,
+  handleDiscordUnlink,
+  handleNativeDiscordExchange,
+} from './discord';
+import { pruneDiscordOAuthStates, pruneDiscordPendingLogins } from './discord_db';
 import { emailAccountCreated } from './email';
+import { stopEpicMirror } from './epic/mirror';
 import { GameServer } from './game';
-import { isUniqueViolation, json, readBody } from './http_util';
-import { handleInternalApi } from './internal';
+import {
+  handleGitHubCallback,
+  handleGitHubStart,
+  handleGitHubStatus,
+  handleGitHubUnlink,
+} from './github';
+import { configureGithubContributorsRuntime, topContributors } from './github_contributors';
+import { pruneGitHubOAuthStates } from './github_db';
+import { guildBankLogCacheStats } from './guild_bank_log';
+import { createAccessLogSink } from './http/access_log';
+import { setAttackSignalSink } from './http/attack_signals';
+import { registerBusinessMetrics } from './http/business_metrics';
+import { handleClientError } from './http/client_error';
+import { type Config, DEFAULT_DISPATCH, type DispatchMode, loadConfig } from './http/config';
+import { registerDiscordBotMetrics } from './http/discord_bot_metrics';
+import {
+  type ApiDelegate,
+  type ApiDispatcher,
+  createApiDispatcher,
+  selectApiEntry,
+} from './http/dispatch';
+import { type GameStateSource, registerGameStateMetrics } from './http/game_metrics';
+import { setGameMetricsCounters } from './http/game_signals';
+import {
+  handleLivez,
+  handleMetricsGate,
+  handleReadyz,
+  markDraining,
+  registerLivenessSource,
+} from './http/health';
+import { type Logger, logger } from './http/logger';
+import { createHttpMetrics } from './http/metrics';
+import { teeMetricSink } from './http/middleware/metric_sink';
+import { withSecurityHeaders } from './http/middleware/security_headers';
+import { apiRegistry } from './http/registry';
+import { applyServerTimeouts, MAX_HEADER_SIZE_BYTES } from './http/server_timeouts';
+import {
+  contentLengthExceeds,
+  isUniqueViolation,
+  json,
+  moderationErrorBody,
+  readBody,
+} from './http_util';
+import { configureInternalRuntime, handleInternalApi } from './internal';
 import { isConnectionRefused } from './ip_block';
 import { pruneExpiredBlockedIps } from './ip_block_db';
+import {
+  buildDeedsBoard,
+  configureLeaderboardRuntime,
+  decodedRouteName,
+  type ReleaseEntry,
+  readArenaLeaderboard,
+  readProjectStats,
+} from './leaderboard';
+import { MAX_MAP_SAVE_BYTES } from './maps';
+import {
+  mapDeleteCore,
+  mapForkCore,
+  mapGetCore,
+  mapSaveCore,
+  mapSetPublishedCore,
+  mapsCreateCore,
+  mapsListMineCore,
+  mapsPublicListCore,
+} from './maps_routes';
+import { metaEventSourceUrl, metaRequestUserData, trackAccountCreated } from './meta_capi';
 import {
   cleanReportReason,
   createPlayerReport,
   createSuspiciousRegistrationReport,
+  prunePlayerReportsBatch,
+  setOnAccountModerated,
+  setOnModerationQueueChanged,
 } from './moderation_db';
-import { createNativeAttestationChallenge, verifyNativeAttestation } from './native_attestation';
+import { bustModerationQueueCache } from './moderation_queue_cache';
+import { createNativeAttestationChallenge } from './native_attestation';
 import { handleOAuth, seedOAuthClients } from './oauth';
 import { pruneExpiredOAuthGrants } from './oauth_db';
+import { registerParseMetrics } from './parse';
 import { handlePerfReport } from './perf_report';
+import {
+  pruneAccountIpAssociationsBatch,
+  prunePlaySessionsBatch,
+} from './play_session_retention_db';
 import {
   captureReferral,
   cardUploadContentLengthTooLarge,
   handleCardRoutes,
   handleCardUpload,
 } from './player_card';
+import { prunePlayerActivityDailyBatch } from './player_metrics_db';
 import { handleAvatar, handleCharacterSitemap, handleProfilePage } from './profile_page';
 import { recordUsageCacheEvent, recordUsageMetric, setUsageCacheSize } from './provider_usage';
 import {
+  assetUploadRateLimited,
   authThrottled,
-  CARD_UPLOAD_MAX_PER_MINUTE,
   cardUploadRateLimited,
   clearAuthFailures,
-  PUBLIC_READ_MAX_PER_MINUTE,
+  discordRateLimited,
+  githubRateLimited,
+  mapMutationRateLimited,
   publicReadRateLimited,
-  rateLimit429Headers,
   rateLimited,
   recordAuthFailure,
   requestIp,
-  WOC_BALANCE_MAX_PER_MINUTE,
+  setRateLimitTier2Store,
+  walletLinkRateLimited,
   wocBalanceRateLimited,
 } from './ratelimit';
-import {
-  isPublicCorsPath,
-  publicOriginFromRequest,
-  REALM,
-  REALM_DIRECTORY,
-  REALM_ORIGINS,
-} from './realm';
+import { createPgRateLimitStore } from './ratelimit_db';
+import { isPublicCorsPath, publicOriginFromRequest, REALM, REALM_DIRECTORY } from './realm';
+import { configureReliquaryRuntime } from './reliquary';
+import { reliquaryRarityCounts } from './reliquary_rarity_db';
 import { resolveReportTarget } from './report_target';
-import { withSecurityHeaders } from './security_headers';
+import { BUG_REPORT_MAX_BODY_BYTES, configureReportsRuntime } from './reports';
+import { createRetentionSweep, RETENTION_SWEEP_BATCH_SIZE } from './retention_sweep';
+import { resolveSfxOverlayFile } from './sfx_overlay';
 import { handleSitePresenceHeartbeat } from './site_presence';
-import { cacheControlFor, etagFor, isNotModified } from './static_cache';
-import { verifyTurnstile } from './turnstile';
+import { adminRolesForAccount } from './staff_db';
 import {
+  cacheControlFor,
+  etagFor,
+  isNotModified,
+  isPublicSfxPath,
+  requestedSfxBlobHash,
+  requestedSfxVersion,
+  sfxBlobIntegrityMatches,
+} from './static_cache';
+import { readStaticSfxSnapshot, type StaticSfxSnapshot } from './static_sfx';
+import { stopSteamMirror } from './steam/mirror';
+import { passesTurnstile } from './turnstile';
+import { pruneUnstuckReportsBatch } from './unstuck_db';
+import { stopUnstuckRecords, UNSTUCK_RECORD_SHUTDOWN_DRAIN_MS } from './unstuck_records';
+import { MAX_ASSET_BYTES } from './user_assets';
+import {
+  assetBytesCore,
+  assetDeleteCore,
+  assetsListMineCore,
+  assetUploadCore,
+} from './user_assets_routes';
+import {
+  configureWalletRuntime,
+  handleDesktopWalletHandoffClaim,
+  handleDesktopWalletHandoffComplete,
+  handleDesktopWalletHandoffCreate,
+  handleDesktopWalletHandoffResult,
   handleWalletChallenge,
   handleWalletGet,
   handleWalletLink,
   handleWalletUnlink,
 } from './wallet';
-import {
-  isNativeAppRequest,
-  isWebClientRequest,
-  NATIVE_APP_ORIGINS,
-  webLoginEnforced,
-} from './web_login_guard';
+import { allowedCorsOrigin, isWebClientRequest } from './web_login_guard';
 import { handleWocBalance, parseWocBalanceQuery } from './woc_balance';
+import { createWsAuth } from './ws_auth';
 import { bufferHandshakeMessages } from './ws_buffer';
 
-const PORT = Number(process.env.PORT ?? 8787);
+// The one validated boot Config, loaded ONCE and memoized. Boot-consumed values
+// (port, retention, dispatch, ws cap) thread directly off the local `config` in
+// startServer, which primes this accessor as its first step. Request-time consumers
+// (handleApi, the releases feed, the leaderboard runtime, the /metrics gate) read
+// activeConfig() so a bare import of this module reads no env and calls loadConfig
+// nowhere: the read resolves lazily at first call and sees the same values the old
+// module-scope process.env consts saw. loadConfig runs at most once per process
+// (fail fast on a garbage env). resetActiveConfigForTests mirrors the existing
+// setApiDispatchModeForTests seam so a test can re-load after mutating process.env.
+let activeConfigCache: Config | null = null;
+function activeConfig(): Config {
+  if (activeConfigCache === null) activeConfigCache = loadConfig(process.env);
+  return activeConfigCache;
+}
+
+/** Test-only: drop the memoized Config so the next activeConfig() re-reads process.env. */
+export function resetActiveConfigForTests(): void {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('resetActiveConfigForTests must not be called in production');
+  }
+  activeConfigCache = null;
+}
+
+// The realm player cap advertised on /api/status, canonicalized for the wire: a
+// configured 0 or negative (the cap disabled) is normalized to 0 so the field is
+// always a non-negative count. Both /api/status arms (the legacy handleApi twin
+// below and the migrated statusHandler via the injected leaderboard runtime) read
+// it here, so the players_cap field stays byte-identical across the two arms.
+function canonicalPlayersCap(): number {
+  return Math.max(0, activeConfig().maxPlayersPerRealm);
+}
+
 const STATIC_DIR = path.join(__dirname, '..', 'dist');
-// DEPRECATED: the standalone community MediaWiki is being retired in favour of the
-// curated in-app guide, which now serves at /wiki. This constant and its (now removed)
-// /wiki -> MediaWiki redirect are dead and slated for deletion in a follow-up ticket.
-const WIKI_URL = process.env.WIKI_URL ?? 'http://localhost:8080/wiki/index.php/Main_Page';
+const SFX_PACK_DIR = process.env.SFX_PACK_DIR?.trim()
+  ? path.resolve(process.env.SFX_PACK_DIR.trim())
+  : null;
 // Pretty URLs that serve standalone static HTML pages.
 const STATIC_PAGE_ALIASES = new Map([
   ['/links', '/links.html'],
@@ -170,6 +410,8 @@ const STATIC_PAGE_ALIASES = new Map([
   ['/social-media-links/', '/links.html'],
   ['/play', '/play.html'],
   ['/play/', '/play.html'],
+  ['/wallet-handoff', '/wallet-handoff.html'],
+  ['/wallet-handoff/', '/wallet-handoff.html'],
   ['/privacy', '/privacy.html'],
   ['/privacy/', '/privacy.html'],
   ['/terms', '/terms.html'],
@@ -184,35 +426,52 @@ const STATIC_PAGE_ALIASES = new Map([
   ['/support/', '/support.html'],
   ['/wiki', '/guide.html'],
   ['/wiki/', '/guide.html'],
-  // Dev-only marker map editor (noindex). Static paste-back authoring aid: it
-  // serves editor.html and touches nothing server-side, so no auth is needed.
   ['/editor', '/editor.html'],
   ['/editor/', '/editor.html'],
 ]);
-// How long chat logs are kept (0 = forever); pruned at boot and daily.
-const CHAT_LOG_RETENTION_DAYS = Number(process.env.CHAT_LOG_RETENTION_DAYS ?? 90);
-// Client performance reports are operational telemetry, not permanent records.
-// Keep enough history for tuning runs while bounding table growth.
-const PERF_REPORT_RETENTION_DAYS = Number(process.env.PERF_REPORT_RETENTION_DAYS ?? 14);
+// Chat-log and perf-report retention days (0 = forever) plus the Turnstile secret
+// and the hard per-IP WS cap now live on the boot Config (see activeConfig above):
+// startServer reads config.chatLogRetentionDays / .perfReportRetentionDays /
+// .maxWsPerIpHard, and handleApi reads activeConfig().turnstileSecret.
 const ADMIN_ONLINE_SAMPLE_MS = 60_000;
-// Cloudflare Turnstile secret. When unset (local dev / tests) registration and
-// login skip human verification entirely — see requireTurnstile below.
-const TURNSTILE_SECRET = process.env.TURNSTILE_SECRET ?? '';
-// Hard WS connection limit per IP. Soft threshold (adds bot evidence) is in game.ts.
-const MAX_WS_PER_IP_HARD = Number(process.env.MAX_WS_PER_IP_HARD ?? '20');
-const MAX_PLAYERS_TOTAL = Number(process.env.MAX_PLAYERS_TOTAL ?? '300');
 // Each realm re-reads the blocklist on this interval so edits on another realm
 // process propagate and expired blocks fall out.
 const BLOCKED_IP_REFRESH_MS = 60_000;
+// The hard WS frame cap: the largest legitimate client message is a small JSON
+// command, so 16 KiB is generous. NEVER widen it (server/CLAUDE.md invariant):
+// without a tight cap the ws default (~100 MiB) lets one socket force a huge
+// allocation + parse before any field-level validation runs, so one socket could
+// OOM the process or stall the 20 Hz loop.
+const WS_MAX_PAYLOAD_BYTES = 16 * 1024;
+// Boot DB-readiness retry: Postgres may still be starting under docker, so poll
+// SELECT 1 up to DB_BOOT_MAX_ATTEMPTS times, DB_BOOT_RETRY_MS apart, before giving
+// up (~1 minute total at 120 attempts x 500ms).
+const DB_BOOT_MAX_ATTEMPTS = 120; // attempts (count)
+const DB_BOOT_RETRY_MS = 500;
+// Low-frequency background prune (OAuth grants/states, pending logins) runs once
+// a day; the retention-table prunes run in the nightly retention sweep instead.
+const DAILY_PRUNE_INTERVAL_MS = 24 * 3600 * 1000;
 
-const game = new GameServer();
+// The live GameServer, constructed on FIRST TOUCH via liveGame() (the
+// activeConfig() memoization pattern). Production takes that first touch inside
+// startServer(); nothing else touches the game until then (routes, timers, and
+// the WS server are all wired later inside startServer(), and every module-scope
+// configure*Runtime closure defers its liveGame() read to request time). The
+// parity/characterization harnesses import this module and drive routeHttpRequest
+// WITHOUT running startServer(), so their first request constructs the world
+// lazily instead of at module load.
+let gameInstance: GameServer | null = null;
+function liveGame(): GameServer {
+  gameInstance ??= new GameServer();
+  return gameInstance;
+}
 
 function initialCharacterState(
   cls: PlayerClass,
   name: string,
   skin: number,
 ): import('../src/sim/sim').CharacterState {
-  const sim = new Sim({ seed: 20061, playerClass: cls, playerName: name });
+  const sim = new Sim({ seed: WORLD_SEED, playerClass: cls, playerName: name });
   sim.setPlayerSkin(sim.playerId, skin);
   const character = sim.serializeCharacter(sim.playerId);
   if (!character) throw new Error('failed to serialize initial character');
@@ -222,13 +481,22 @@ function initialCharacterState(
 // ---------------------------------------------------------------------------
 // Lifetime-XP leaderboard cache (Max-Level XP Overflow, FR-4.2 / PR-3).
 // Same shape as the chat-censor memoization: compute once, serve from memory,
-// refresh on an interval. The query is never run per request under load — at
+// refresh on an interval. The query is never run per request under load, at
 // most once per LEADERBOARD_TTL_MS, plus the boot warm-up below.
 // ---------------------------------------------------------------------------
 const LEADERBOARD_TTL_MS = 30_000;
 // Cache the full exposed depth (LEADERBOARD_MAX) once per scope; the REST handler
 // pages through it as an in-memory slice, so no extra query per page click.
 const LEADERBOARD_SIZE = LEADERBOARD_MAX;
+// Monotonic generation counter for every player-derived board cache. A refresh
+// captures it before its first await and installs its result only if it is still
+// unchanged when the read returns; bustBoardCaches (the moderation hook) bumps
+// it. This closes a lost-bust race: a ban landing while a refresh is in flight
+// would otherwise be overwritten by that refresh's pre-ban snapshot for up to
+// one TTL cycle. The in-flight caller still gets the computed snapshot; the cache
+// is left null so the NEXT read triggers a fresh refresh whose SQL delists the
+// account via ELIGIBLE_ACCOUNT_SQL.
+let boardEpoch = 0;
 // One cache per scope: 'realm' for the in-game panel, 'global' for the
 // cross-realm home-page board.
 const leaderboardCache: Record<
@@ -240,6 +508,7 @@ const leaderboardCache: Record<
 };
 
 async function refreshLeaderboard(scope: 'realm' | 'global'): Promise<LeaderboardEntry[]> {
+  const epoch = boardEpoch;
   const rows = await topLifetimeXp(LEADERBOARD_SIZE, { global: scope === 'global' });
   const entries: LeaderboardEntry[] = rows.map((r, i) => ({
     rank: i + 1,
@@ -249,17 +518,40 @@ async function refreshLeaderboard(scope: 'realm' | 'global'): Promise<Leaderboar
     virtualLevel: virtualLevel(r.lifetimeXp),
     lifetimeXp: r.lifetimeXp,
     prestigeRank: r.prestigeRank,
+    // a deed id (never display text); the client localizes via deed_i18n
+    title: r.activeTitle,
+    // The guild tag shown beside the name. Omitted (not null) for an unguilded
+    // character, the `realm` treatment below, so an unguilded row is byte-unchanged
+    // on the wire.
+    ...(r.guild ? { guild: r.guild } : {}),
     ...(scope === 'global' ? { realm: r.realm } : {}),
   }));
-  leaderboardCache[scope] = { at: Date.now(), entries };
+  // Skip the install if a moderation bust landed mid-refresh (see boardEpoch).
+  if (boardEpoch === epoch) leaderboardCache[scope] = { at: Date.now(), entries };
   return entries;
 }
+
+// Single-flight per scope, keyed on boardEpoch so a moderation bust (which bumps
+// boardEpoch) drops any in-flight pre-ban refresh: a post-bust reader no longer
+// joins that flight and receives its pre-ban snapshot, it starts a fresh delisting
+// read. Both read paths (the inline getter and the warm loop) share these, so a
+// warm tick landing on an inline read cannot run the query twice.
+const refreshLeaderboardShared: Record<'realm' | 'global', () => Promise<LeaderboardEntry[]>> = {
+  realm: singleFlight(
+    () => refreshLeaderboard('realm'),
+    () => boardEpoch,
+  ),
+  global: singleFlight(
+    () => refreshLeaderboard('global'),
+    () => boardEpoch,
+  ),
+};
 
 async function getLeaderboard(scope: 'realm' | 'global'): Promise<LeaderboardEntry[]> {
   const cached = leaderboardCache[scope];
   if (cached && Date.now() - cached.at < LEADERBOARD_TTL_MS) return cached.entries;
   try {
-    return await refreshLeaderboard(scope);
+    return await refreshLeaderboardShared[scope]();
   } catch (err) {
     console.error(`leaderboard refresh failed (${scope}):`, err);
     return cached?.entries ?? [];
@@ -280,6 +572,7 @@ const guildLeaderboardCache: Record<
 async function refreshGuildLeaderboard(
   scope: 'realm' | 'global',
 ): Promise<GuildLeaderboardEntry[]> {
+  const epoch = boardEpoch;
   const rows = await topGuilds(LEADERBOARD_SIZE, { global: scope === 'global' });
   const entries: GuildLeaderboardEntry[] = rows.map((r, i) => ({
     rank: i + 1,
@@ -289,20 +582,452 @@ async function refreshGuildLeaderboard(
     topLevel: r.topLevel,
     ...(scope === 'global' ? { realm: r.realm } : {}),
   }));
-  guildLeaderboardCache[scope] = { at: Date.now(), entries };
+  // Skip the install if a moderation bust landed mid-refresh (see boardEpoch).
+  if (boardEpoch === epoch) guildLeaderboardCache[scope] = { at: Date.now(), entries };
   return entries;
 }
+
+const refreshGuildLeaderboardShared: Record<
+  'realm' | 'global',
+  () => Promise<GuildLeaderboardEntry[]>
+> = {
+  realm: singleFlight(
+    () => refreshGuildLeaderboard('realm'),
+    () => boardEpoch,
+  ),
+  global: singleFlight(
+    () => refreshGuildLeaderboard('global'),
+    () => boardEpoch,
+  ),
+};
 
 async function getGuildLeaderboard(scope: 'realm' | 'global'): Promise<GuildLeaderboardEntry[]> {
   const cached = guildLeaderboardCache[scope];
   if (cached && Date.now() - cached.at < LEADERBOARD_TTL_MS) return cached.entries;
   try {
-    return await refreshGuildLeaderboard(scope);
+    return await refreshGuildLeaderboardShared[scope]();
   } catch (err) {
     console.error(`guild leaderboard refresh failed (${scope}):`, err);
     return cached?.entries ?? [];
   }
 }
+
+// Arena ladder cache. Per FORMAT ('1v1' | '2v2', the only two the public ladder
+// serves; the wider ArenaFormat union never reaches here, so an unrecognized
+// ?format value can never mint a third cache slot), same compute-once /
+// serve-from-memory shape as the player and guild boards above. Wired into
+// bustBoardCaches below because the ladder is character-faced and
+// moderation-visible: a ban delists immediately in-process while cross-process
+// peers converge within one TTL, the same tradeoff the other boards already make.
+// readArenaLeaderboard (server/leaderboard.ts) is the INNER read, so
+// ARENA_LEADERBOARD_LIMIT stays the one place the ladder depth is set.
+const arenaLeaderboardCache: Record<
+  '1v1' | '2v2',
+  { at: number; leaders: ArenaLeaderRow[] } | null
+> = {
+  '1v1': null,
+  '2v2': null,
+};
+
+async function refreshArena(format: '1v1' | '2v2'): Promise<ArenaLeaderRow[]> {
+  const epoch = boardEpoch;
+  const { leaders } = await readArenaLeaderboard({ topArenaRatings }, format);
+  // Skip the install if a moderation bust landed mid-refresh (see boardEpoch).
+  if (boardEpoch === epoch) arenaLeaderboardCache[format] = { at: Date.now(), leaders };
+  return leaders;
+}
+
+// Single-flight per format, keyed on boardEpoch exactly like the player/guild
+// refreshes, so a moderation bust (which bumps boardEpoch) drops any in-flight
+// pre-ban arena refresh instead of handing a post-bust reader its pre-ban snapshot.
+const refreshArenaShared: Record<'1v1' | '2v2', () => Promise<ArenaLeaderRow[]>> = {
+  '1v1': singleFlight(
+    () => refreshArena('1v1'),
+    () => boardEpoch,
+  ),
+  '2v2': singleFlight(
+    () => refreshArena('2v2'),
+    () => boardEpoch,
+  ),
+};
+
+async function getArenaLeaderboard(format: '1v1' | '2v2'): Promise<ArenaLeaderRow[]> {
+  const cached = arenaLeaderboardCache[format];
+  if (cached && Date.now() - cached.at < LEADERBOARD_TTL_MS) return cached.leaders;
+  try {
+    return await refreshArenaShared[format]();
+  } catch (err) {
+    console.error(`arena leaderboard refresh failed (${format}):`, err);
+    return cached?.leaders ?? [];
+  }
+}
+
+// Thornhollow Fields ladder cache. ONE entry (the battleground has a single format),
+// same compute-once / serve-from-memory shape as the arena ladder above. Wired
+// into bustBoardCaches below because the ladder is character-faced and
+// moderation-visible: a ban delists immediately in-process while cross-process
+// peers converge within one TTL, the same tradeoff the other boards make.
+// readBgLeaderboard (server/battleground.ts) is the INNER read, so
+// BG_LEADERBOARD_LIMIT stays the one place the ladder depth is set.
+let bgLeaderboardCache: { at: number; leaders: BgLeaderRow[] } | null = null;
+
+async function refreshBg(): Promise<BgLeaderRow[]> {
+  const epoch = boardEpoch;
+  const { leaders } = await readBgLeaderboard({ topBgRatings });
+  // Skip the install if a moderation bust landed mid-refresh (see boardEpoch).
+  if (boardEpoch === epoch) bgLeaderboardCache = { at: Date.now(), leaders };
+  return leaders;
+}
+
+// Single-flight keyed on boardEpoch exactly like the player/guild/arena
+// refreshes, so a moderation bust (which bumps boardEpoch) drops any in-flight
+// pre-ban refresh instead of handing a post-bust reader its pre-ban snapshot.
+const refreshBgShared = singleFlight(refreshBg, () => boardEpoch);
+
+async function getBgLeaderboard(): Promise<BgLeaderRow[]> {
+  const cached = bgLeaderboardCache;
+  if (cached && Date.now() - cached.at < LEADERBOARD_TTL_MS) return cached.leaders;
+  try {
+    return await refreshBgShared();
+  } catch (err) {
+    console.error('battleground leaderboard refresh failed:', err);
+    return cached?.leaders ?? [];
+  }
+}
+
+// Renown (deeds) board cache. Same compute-once/serve-from-memory shape as
+// the boards above, but ONE entry, not one per scope: the board is
+// account-level and accounts span realms, so it is GLOBAL-ONLY by design.
+// `entries` is the public, display-character-faced list (paged by the route;
+// NEVER carries an account id); `ranked` keeps the accountId-keyed ranking
+// INTERNALLY for the self-rank read, and totalRanked is the pre-cap total the
+// percentile uses.
+interface DeedsBoardCache {
+  at: number;
+  entries: DeedsLeaderboardEntry[];
+  ranked: RankedDeedsAccount[];
+  totalRanked: number;
+}
+let deedsBoardCache: DeedsBoardCache | null = null;
+// Wall-clock ms of the last actual deeds-board request in THIS process, 0 before
+// the first. Stamped on the shared read path (ensureDeedsBoard) and read by the
+// warm loop's demand gate so the full-table board read only runs while someone is
+// viewing (see deeds_board_warm.ts). Per-process like the board caches: peer
+// realm processes gate their own warm loops off their own local demand.
+let deedsBoardLastRequestAt = 0;
+
+async function refreshDeedsBoard(): Promise<DeedsBoardCache> {
+  const epoch = boardEpoch;
+  // Renown values are content-owned (never in SQL), so hand the whole content
+  // table to the SQL roll-up as two parallel arrays plus the floor. deedsBoardRanked
+  // aggregates IN Postgres and returns only the ranked accounts, 1:1 with the
+  // former computeDeedsBoard(rows).ranked shape.
+  const deedIds = Object.keys(DEEDS);
+  const renowns = deedIds.map((id) => DEEDS[id].renown);
+  const board = await deedsBoardRanked(deedIds, renowns, DEEDS_BOARD_ENTRY_FLOOR);
+  if (board.unknownDeedIds.length > 0) {
+    // Rows for removed/renamed content are skipped, never scored; surface the
+    // ids so a content rename is noticed instead of silently shrinking scores.
+    console.error('deeds board: skipping unknown deed ids:', board.unknownDeedIds.join(', '));
+  }
+  // buildDeedsBoardEntries faces each ranked account with its display
+  // character and SKIPS an account whose character vanished mid-refresh
+  // (deleted between the row read and this fill; the rows cascade away by the
+  // next refresh), never minting a blank row.
+  const entries = buildDeedsBoardEntries(
+    board.ranked,
+    await charactersForDeedsBoard(board.ranked.map((a) => a.displayCharacterId)),
+  );
+  const cache: DeedsBoardCache = {
+    at: Date.now(),
+    entries,
+    ranked: board.ranked,
+    totalRanked: board.totalRanked,
+  };
+  // Skip the install if a moderation bust landed mid-refresh (see boardEpoch);
+  // the in-flight caller still gets this snapshot, the next read self-corrects.
+  if (boardEpoch === epoch) deedsBoardCache = cache;
+  return cache;
+}
+
+// Single-flight on the board refresh, covering BOTH read paths: the inline
+// read (ensureDeedsBoard) and the demand-warm loop. The board read is the one
+// full-table roll-up here, so callers racing a cold or just-expired cache (a
+// login-page storm on a fresh process, or a warm tick landing on an inline
+// request, since the warm interval equals the cache TTL) must share ONE
+// refresh: concurrent flights would multiply the most expensive query the
+// process has, and the slower flight would overwrite a newer snapshot with a
+// fresher timestamp. The flight is keyed on boardEpoch like the leaderboard
+// and arena flights: the board is character-faced, and a plain flight let a
+// reader arriving AFTER a moderation bust join the in-flight pre-ban refresh
+// and be served a just-banned account's character for one read; keyed, the
+// bust (which bumps the epoch) makes that reader start a fresh, delisting
+// read instead, and the install guard above declines the pre-ban snapshot.
+const refreshDeedsBoardShared = singleFlight(refreshDeedsBoard, () => boardEpoch);
+
+// Freshness gate shared by the two board reads below: serve the cache inside
+// the TTL, else refresh, else stale-serve (or null before the first success).
+async function ensureDeedsBoard(): Promise<DeedsBoardCache | null> {
+  // Mark demand on every board read (fresh-cache hit included): this is the one
+  // chokepoint both dispatch arms funnel through, and it is never on the warm
+  // path, so the stamp measures real viewer demand and nothing else. It keeps the
+  // warm loop refreshing the board for DEEDS_BOARD_DEMAND_TTL_MS after the last
+  // request; a cold or stale request still refreshes inline just below.
+  deedsBoardLastRequestAt = Date.now();
+  if (deedsBoardCache && Date.now() - deedsBoardCache.at < LEADERBOARD_TTL_MS) {
+    return deedsBoardCache;
+  }
+  try {
+    return await refreshDeedsBoardShared();
+  } catch (err) {
+    console.error('deeds board refresh failed:', err);
+    return deedsBoardCache;
+  }
+}
+
+async function getDeedsLeaderboard(): Promise<DeedsLeaderboardEntry[]> {
+  return (await ensureDeedsBoard())?.entries ?? [];
+}
+
+async function deedsSelfRank(accountId: number): Promise<DeedsLeaderboardSelf | null> {
+  const cache = await ensureDeedsBoard();
+  return cache ? deedsBoardSelf(cache.ranked, accountId) : null;
+}
+
+// Moderation delisting in THIS process is immediate, never TTL-bound: null
+// EVERY cached board scope after a successful moderateAccount of any action
+// kind, so a ban delists and an unban relists on the next read here. In the
+// process-per-realm fleet, PEER realm processes keep their own caches and
+// converge within one LEADERBOARD_TTL_MS (the boards' pre-existing staleness
+// ceiling); the SQL exclusion makes their next refresh correct. The arena ladder
+// is now cached per format (arenaLeaderboardCache), so it is busted here too: its
+// former fleet-wide exactness becomes in-process-immediate delisting plus
+// TTL-bounded peer convergence, the same tradeoff every other board already made.
+// The daily-rewards board is cached in-process behind dailyRewardService's board
+// cache (daily_rewards_board_cache.ts, same TTL tradeoff), so it is busted below
+// with the rest. Bumping boardEpoch as well as nulling the caches closes the
+// lost-bust race: a refresh already in flight when this fires will decline to
+// install its pre-ban snapshot (see boardEpoch), so a ban cannot be masked for up
+// to a TTL cycle.
+function bustBoardCaches(): void {
+  boardEpoch++;
+  leaderboardCache.realm = null;
+  leaderboardCache.global = null;
+  guildLeaderboardCache.realm = null;
+  guildLeaderboardCache.global = null;
+  arenaLeaderboardCache['1v1'] = null;
+  arenaLeaderboardCache['2v2'] = null;
+  bgLeaderboardCache = null;
+  deedsBoardCache = null;
+  bustDailyRewardBoardCache();
+  // Not a board, but the same delisting-must-be-immediate reasoning: the
+  // per-character lifetime-XP rank cache (server/character_rank_cache.ts).
+  // A ban/unban changes every OTHER eligible character's ahead/total counts
+  // too, so the whole cache is dropped rather than just the moderated
+  // account's own key.
+  bustAllLifetimeXpRankCache();
+  // Not a board: the Discord winner-announcement snapshot. The daily-reward ban
+  // and IP-ban writes fire this same hook, and they feed the
+  // daily_reward_excluded_accounts view that unannouncedWinnerDays filters its
+  // payouts through, so an exclusion is a content change a warm snapshot would
+  // hide. Without this a just-banned winner's username could still be announced
+  // publicly for up to the winners TTL (wallet pubkeys left the winner rows
+  // with the #2791 narrowing). Scope, honestly: the
+  // bust is per process (the snapshot lives on this process's service singleton),
+  // so it is immediate on the process that served the moderation write; a peer
+  // realm process's warm snapshot converges within one TTL, the same fleet story
+  // every board cache above already has.
+  bustDailyRewardWinnersCache();
+}
+setOnAccountModerated(bustBoardCaches);
+// The admin moderation queue's cached base read (server/moderation_queue_cache.ts):
+// busted the same immediate way as the boards above, so a ban/mute/ignored
+// report never lingers in the queue for up to a TTL cycle after the write that
+// resolved it.
+setOnModerationQueueChanged(bustModerationQueueCache);
+
+// Deed + reliquary rarity cache. Same compute-once/serve-from-memory shape as
+// the boards above, one entry (both aggregates are global/cross-realm by
+// design). 5 minutes: rarity moves slowly and the refresh scans
+// character_deeds plus the characters blobs, so the 30 s board TTL is tighter
+// than this read needs. Stale-on-error like the boards; with nothing cached
+// yet a failed refresh serves the empty aggregate (the endpoints stay 200 and
+// clients simply render no rarity lines). The reliquary aggregate rides the
+// SAME cache entry and refresh ON PURPOSE: reliquaryRarityCounts is a
+// characters walk (it detoasts every eligible blob), and sharing the deeds
+// walk's single flight and TTL keeps that walk to at most one run per TTL
+// window no matter which UI asks, instead of giving a second full-table scan
+// its own cadence.
+const DEEDS_RARITY_TTL_MS = 5 * 60_000;
+// The reliquary slice may carry forward across a failed arm (see the refresh
+// below), so it carries its own age stamp with a drop-to-empty bound: without
+// one, an arm that fails every cycle would serve arbitrarily old counts
+// indistinguishable from fresh ones. Three TTLs of staleness is where honest
+// degrades beats stale serves for a slow-moving cosmetic read.
+const RELIQUARY_RARITY_MAX_STALE_MS = 3 * DEEDS_RARITY_TTL_MS;
+const EMPTY_RELIQUARY_RARITY: import('../src/world_api').ReliquaryRarity = {
+  totalEligible: 0,
+  found: {},
+  illuminated: {},
+};
+let deedsRarityCache: {
+  at: number;
+  payload: import('../src/world_api').DeedsRarity;
+  reliquary: import('../src/world_api').ReliquaryRarity;
+  reliquaryAt: number;
+} | null = null;
+
+// Single-flight the rarity refresh so a login-page storm on a cold or just-expired
+// cache runs the full-table aggregate scans (deedRarityCounts +
+// reliquaryRarityCounts) once, not once per caller. publicRarityPayload strips
+// hidden deeds at refresh time, before the cache install, so the anonymous
+// endpoint never enumerates a hidden deed (the reliquary aggregate needs no
+// strip: the whole relic catalog is public data-as-code the /wiki already
+// publishes). deedsRarityCache is deliberately NOT wired into bustBoardCaches
+// (rarity is not moderation-visible in the delisting sense); if it is ever
+// added there, the same boardEpoch capture-before-install guard the
+// leaderboard refreshes carry must be added in that same change.
+// NOTE on scope: "at most one walk per TTL" is a PER-PROCESS bound. Every
+// realm process holds its own cache and flight against the one Postgres, so N
+// processes mean up to N unstaggered walks per TTL window; harmless at the
+// measured cost, stated here so a future multi-realm scale-up prices it in.
+const refreshDeedsRarityShared = singleFlight(
+  async (): Promise<import('../src/world_api').DeedsRarity> => {
+    const startedAt = Date.now();
+    const counts = await deedRarityCounts();
+    const payload = publicRarityPayload(counts);
+    // Install the deeds slice BEFORE the heavier reliquary arm, so a
+    // reliquary-only failure can never blank the pre-existing deeds feature
+    // (a cold getDeedsRarity would otherwise degrade to the empty aggregate),
+    // and the fresh `at` stamp negative-caches the failed arm for one TTL
+    // window instead of re-running the healthy deeds scan on every anonymous
+    // retry. The reliquary slice carries forward until its arm succeeds, but
+    // only inside the staleness bound: past it, honest empty beats a count
+    // that could be arbitrarily old.
+    const carried = deedsRarityCache;
+    const carriedFresh =
+      carried !== null && Date.now() - carried.reliquaryAt <= RELIQUARY_RARITY_MAX_STALE_MS;
+    deedsRarityCache = {
+      at: Date.now(),
+      payload,
+      reliquary: carriedFresh ? carried.reliquary : EMPTY_RELIQUARY_RARITY,
+      reliquaryAt: carried?.reliquaryAt ?? 0,
+    };
+    // The deeds denominator is byte-identical to the reliquary one (shared
+    // predicate constants), so hand it over rather than counting twice; the
+    // UNSTRIPPED aggregate carries it (publicRarityPayload only strips ids).
+    const reliquary = await reliquaryRarityCounts(counts.totalEligible);
+    deedsRarityCache = { at: Date.now(), payload, reliquary, reliquaryAt: Date.now() };
+    // The one observability line for the walk: elapsed and the population it
+    // covered, so the growth curve is visible before the endpoint degrades.
+    console.log(
+      `rarity refresh: ${Date.now() - startedAt}ms, ${counts.totalEligible} eligible characters`,
+    );
+    return payload;
+  },
+);
+
+async function getDeedsRarity(): Promise<import('../src/world_api').DeedsRarity> {
+  if (deedsRarityCache && Date.now() - deedsRarityCache.at < DEEDS_RARITY_TTL_MS) {
+    return deedsRarityCache.payload;
+  }
+  try {
+    return await refreshDeedsRarityShared();
+  } catch (err) {
+    console.error('deeds rarity refresh failed:', err);
+    return deedsRarityCache?.payload ?? { totalEligible: 0, earned: {} };
+  }
+}
+
+async function getReliquaryRarity(): Promise<import('../src/world_api').ReliquaryRarity> {
+  if (deedsRarityCache && Date.now() - deedsRarityCache.at < DEEDS_RARITY_TTL_MS) {
+    return deedsRarityCache.reliquary;
+  }
+  try {
+    // The flight installs the combined entry; the shared tail below reads the
+    // reliquary slice from it (or stale-serves / degrades on failure).
+    await refreshDeedsRarityShared();
+  } catch (err) {
+    console.error('reliquary rarity refresh failed:', err);
+  }
+  return deedsRarityCache?.reliquary ?? EMPTY_RELIQUARY_RARITY;
+}
+
+// Project-stats counters cache. Unlike the player/guild/arena boards, the
+// COUNT(*) reads over accounts and characters are moderation-INVARIANT (a ban or
+// unban never changes a row count, only eligibility), so they need NO bust or
+// epoch wiring, the same call getDeedsRarity's cache makes above. They are a
+// single-key read, so they ride createCachedRead (server/cached_read.ts) directly
+// rather than the per-scope singleFlight the boards use. 60s TTL (the D11
+// exception): both are slow-moving marketing counters, not moderation-sensitive
+// ranked lists, so a minute of staleness is fine. ONE cache holds the whole
+// readProjectStats body (server/leaderboard.ts, the INNER read), so a cold burst
+// costs one shared flight with exactly one getAccountsCount and one
+// getCharactersCount read between both getters; players_online is a live
+// per-request value the handler re-attaches, so the inner read gets a throwaway 0
+// for players_online that the getters discard.
+const PROJECT_STATS_TTL_MS = 60_000;
+const projectStatsCache = createCachedRead(
+  () => readProjectStats({ getAccountsCount, getCharactersCount }, 0, REALM),
+  { ttlMs: PROJECT_STATS_TTL_MS },
+);
+
+async function getAccountsCreatedCount(): Promise<number> {
+  try {
+    return (await projectStatsCache.read()).accounts_created;
+  } catch (err) {
+    // Only a never-warmed cache reaches here (createCachedRead stale-serves the
+    // last counts on a later failure). Serve 0 rather than 500, the same
+    // degrade-not-throw contract getLeaderboard / getDeedsRarity already ship, so
+    // /api/project-stats stays 200 when the db is unreachable.
+    console.error('accounts-created count refresh failed:', err);
+    return 0;
+  }
+}
+
+async function getCharactersCreatedCount(): Promise<number> {
+  try {
+    return (await projectStatsCache.read()).characters_created;
+  } catch (err) {
+    console.error('characters-created count refresh failed:', err);
+    return 0;
+  }
+}
+
+// Test-only handle for the board-read single-flight suite. Not used in production:
+// it exposes the module-private board getters, their shared flights, the bust
+// hook, and a cache reset so a unit test can exercise the real single-flight
+// (concurrency, rejection-not-cached, stale-serve, and the bust-mid-flight
+// joiner-eviction) without driving through the runtime injection seams (which
+// would replace the function under test with a fake).
+export const boardReadTestSeam = {
+  getDeedsRarity,
+  getDeedsLeaderboard,
+  getLeaderboard,
+  getGuildLeaderboard,
+  getArenaLeaderboard,
+  getBgLeaderboard,
+  getAccountsCreatedCount,
+  getCharactersCreatedCount,
+  refreshDeedsRarityShared,
+  refreshLeaderboardShared,
+  refreshGuildLeaderboardShared,
+  refreshArenaShared,
+  refreshBgShared,
+  bustBoardCaches,
+  reset(): void {
+    leaderboardCache.realm = null;
+    leaderboardCache.global = null;
+    guildLeaderboardCache.realm = null;
+    guildLeaderboardCache.global = null;
+    arenaLeaderboardCache['1v1'] = null;
+    arenaLeaderboardCache['2v2'] = null;
+    bgLeaderboardCache = null;
+    deedsBoardCache = null;
+    deedsRarityCache = null;
+    projectStatsCache.bust();
+  },
+};
 
 // ---------------------------------------------------------------------------
 // News & Updates: GitHub Releases proxy (read-only, public).
@@ -314,22 +1039,14 @@ async function getGuildLeaderboard(scope: 'realm' | 'global'): Promise<GuildLead
 // secret to the client; (3) we return only the small, sanitised subset the UI
 // needs. Same compute-once/serve-from-memory pattern as the leaderboard cache.
 // ---------------------------------------------------------------------------
-const GITHUB_REPO = process.env.GITHUB_REPO ?? 'levy-street/world-of-claudecraft';
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN ?? '';
-const DISCORD_BUG_WEBHOOK = process.env.DISCORD_BUG_WEBHOOK ?? '';
-const RELEASES_TTL_MS = 15 * 60_000; // 15 min — releases change rarely
-const RELEASES_SIZE = 20;
-const RELEASE_BODY_MAX = 8_000; // guard against a pathologically long body
+// The repo slug + optional token live on the boot Config (activeConfig().githubRepo /
+// .githubToken); read at request time so this module reads no env at import.
+const RELEASES_TTL_MS = 15 * 60_000; // 15 min, releases change rarely
+const RELEASES_SIZE = 20; // releases fetched + cached per refresh (count)
+const RELEASE_BODY_MAX = 8_000; // bytes; guard against a pathologically long body
 
-export interface ReleaseEntry {
-  id: number;
-  tag: string;
-  name: string;
-  body: string;
-  url: string;
-  prerelease: boolean;
-  publishedAt: string; // ISO 8601
-}
+// ReleaseEntry is defined in server/leaderboard.ts (the module that owns the
+// public /api/releases route) and imported above; the fetch + cache stay here.
 
 let releasesCache: { at: number; entries: ReleaseEntry[] } | null = null;
 setUsageCacheSize('github.releases', 0, RELEASES_SIZE);
@@ -337,14 +1054,15 @@ setUsageCacheSize('github.releases', 0, RELEASES_SIZE);
 async function refreshReleases(): Promise<ReleaseEntry[]> {
   recordUsageMetric('github.releases.fetch');
   try {
+    const { githubRepo, githubToken } = activeConfig();
     const res = await fetch(
-      `https://api.github.com/repos/${GITHUB_REPO}/releases?per_page=${RELEASES_SIZE}`,
+      `https://api.github.com/repos/${githubRepo}/releases?per_page=${RELEASES_SIZE}`,
       {
         headers: {
           Accept: 'application/vnd.github+json',
           'X-GitHub-Api-Version': '2022-11-28',
           'User-Agent': 'world-of-claudecraft-server',
-          ...(GITHUB_TOKEN ? { Authorization: `Bearer ${GITHUB_TOKEN}` } : {}),
+          ...(githubToken ? { Authorization: `Bearer ${githubToken}` } : {}),
         },
         signal: AbortSignal.timeout(8000),
       },
@@ -398,41 +1116,29 @@ function toSheetRank(rank: { rank: number; total: number } | null): SheetRank | 
 
 // The character-list response shared by the full-session GET /api/characters and
 // the read-scoped GET /api/me/characters, so both stay byte-identical.
-function characterListPayload(chars: CharacterRow[]): {
-  realm: string;
-  characters: {
-    id: number;
-    name: string;
-    class: PlayerClass;
-    level: number;
-    skin: number;
-    online: boolean;
-    forceRename: boolean;
-    lastPlayed: string | null;
-    playtimeSeconds: number;
-  }[];
-} {
-  return {
-    realm: REALM,
-    characters: chars.map((c) => ({
-      id: c.id,
-      name: c.name,
-      class: c.class,
-      level: c.level,
-      skin: c.state?.skin ?? 0,
-      online: [...game.clients.values()].some((s) => s.characterId === c.id),
-      forceRename: c.force_rename,
-      lastPlayed: c.last_played ? new Date(c.last_played).toISOString() : null,
-      playtimeSeconds: Number(c.playtime_seconds ?? 0),
-    })),
-  };
+function characterListPayload(
+  chars: CharacterRow[],
+  weaponSkinLoadout: Record<string, string>,
+): unknown {
+  // Delegates to the RouteDef arm's shared builder (review follow-up on the
+  // weaponSkinId addition): one implementation means the retained legacy arm
+  // and the new pipeline CANNOT diverge in payload shape, and the behavioral
+  // route tests in tests/server/characters.test.ts cover both by construction.
+  // Only the online scan stays legacy-owned (the same live-session scan main
+  // injects into the RouteDef runtime as isCharacterOnline).
+  return buildCharacterList(
+    chars,
+    (characterId) => [...liveGame().clients.values()].some((s) => s.characterId === characterId),
+    weaponSkinLoadout,
+  );
 }
 
 async function bearerAccount(req: http.IncomingMessage): Promise<number | null> {
   const auth = req.headers.authorization ?? '';
   const m = /^Bearer ([a-f0-9]{64})$/.exec(auth);
   if (!m) return null;
-  return accountForToken(m[1]);
+  const info = await accountAndScopeForToken(m[1]);
+  return info?.accountId ?? null;
 }
 
 // Account + token scope for the bearer (or null when unauthenticated). The scope
@@ -446,7 +1152,7 @@ async function bearerScopeAccount(
   return accountAndScopeForToken(m[1]);
 }
 
-// Raw bearer token string (or null) — needed when an account action must keep
+// Raw bearer token string (or null), needed when an account action must keep
 // the caller's own session alive while revoking the rest (password change).
 function bearerToken(req: http.IncomingMessage): string | null {
   const m = /^Bearer ([a-f0-9]{64})$/.exec(req.headers.authorization ?? '');
@@ -455,7 +1161,7 @@ function bearerToken(req: http.IncomingMessage): string | null {
 
 // Mutating + owner-scoped routes funnel through here. HARDENED: a read-only
 // token (scope!=='full') is rejected with 403, so every existing mutating route
-// (which already calls this) automatically refuses companion/OAuth read tokens —
+// (which already calls this) automatically refuses companion/OAuth read tokens,
 // the single choke point that keeps read tokens harmless.
 async function bearerActiveAccount(
   req: http.IncomingMessage,
@@ -463,35 +1169,35 @@ async function bearerActiveAccount(
 ): Promise<number | null> {
   const info = await bearerScopeAccount(req);
   if (info === null) {
-    json(res, 401, { error: 'not authenticated' });
+    json(res, 401, { error: 'not authenticated', code: 'auth.required' });
     return null;
   }
   if (!scopeAllowsMutation(info.scope)) {
-    json(res, 403, { error: 'this token is read-only' });
+    json(res, 403, { error: 'this token is read-only', code: 'auth.forbidden' });
     return null;
   }
   const status = await moderationStatusForAccount(info.accountId);
   if (status.locked) {
-    json(res, 403, { error: status.message });
+    json(res, 403, moderationErrorBody(status));
     return null;
   }
   return info.accountId;
 }
 
 // Read routes (the owner character sheet) accept both 'read' and 'full' tokens.
-// Moderation still applies — a banned account can't read through a read token.
+// Moderation still applies, a banned account can't read through a read token.
 async function bearerReadAccount(
   req: http.IncomingMessage,
   res: http.ServerResponse,
 ): Promise<number | null> {
   const info = await bearerScopeAccount(req);
   if (info === null) {
-    json(res, 401, { error: 'not authenticated' });
+    json(res, 401, { error: 'not authenticated', code: 'auth.required' });
     return null;
   }
   const status = await moderationStatusForAccount(info.accountId);
   if (status.locked) {
-    json(res, 403, { error: status.message });
+    json(res, 403, moderationErrorBody(status));
     return null;
   }
   return info.accountId;
@@ -504,18 +1210,20 @@ function requestMetadata(req: http.IncomingMessage): { ip: string; userAgent: st
   };
 }
 
-// Gate account creation / login behind Cloudflare Turnstile. Returns true when
-// the request may proceed: trivially true when no secret is configured, else the
-// client-supplied token must verify. The English error is matched to a t() key
-// by userFacingApiError() in src/main.ts — keep the two strings in sync.
-async function passesTurnstile(
-  req: http.IncomingMessage,
-  body: Record<string, unknown>,
-): Promise<boolean> {
-  if (isNativeAppRequest(req)) return verifyNativeAttestation(req, body.nativeAttestation);
-  if (!TURNSTILE_SECRET) return true;
-  return verifyTurnstile(String(body.turnstileToken ?? ''), TURNSTILE_SECRET, requestIp(req));
-}
+// Host wiring for the desktop-login route handlers (server/desktop_login.ts):
+// the real db/auth implementations here, stubs in tests. The create leg's
+// bearer resolution moved OUT of the handler and into the arm below
+// (bearerActiveAccount, the desktop-login create scope fix), so the deps carry only the
+// post-auth reads.
+const desktopLoginRouteDeps: DesktopLoginRouteDeps = {
+  readBody,
+  json,
+  requestMetadata,
+  accountById,
+  moderationStatusForAccount,
+  touchLogin,
+  saveToken,
+};
 
 const MIME: Record<string, string> = {
   '.html': 'text/html',
@@ -533,11 +1241,11 @@ const MIME: Record<string, string> = {
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
   '.webp': 'image/webp',
+  '.mp3': 'audio/mpeg',
 };
-
 // The admin dashboard is reached via the admin.* subdomain (Caddy proxies it
 // to this same port) or /admin for local dev. The hostname only picks which
-// HTML shell is served — the admin API itself is gated by admin tokens.
+// HTML shell is served, the admin API itself is gated by admin tokens.
 function isAdminRequest(req: http.IncomingMessage): boolean {
   const host = String(req.headers.host ?? '').toLowerCase();
   const urlPath = (req.url ?? '/').split('?')[0];
@@ -545,7 +1253,15 @@ function isAdminRequest(req: http.IncomingMessage): boolean {
 }
 
 function serveStatic(req: http.IncomingMessage, res: http.ServerResponse): void {
-  let urlPath = (req.url ?? '/').split('?')[0];
+  let requestUrl: URL;
+  try {
+    requestUrl = new URL(req.url ?? '/', 'http://static.local');
+  } catch {
+    res.writeHead(400, { 'Content-Type': 'text/plain' });
+    res.end('invalid request target');
+    return;
+  }
+  let urlPath = requestUrl.pathname;
   // The curated Guide is the site wiki: a client-routed SPA served at /wiki with its
   // own shell, so deep paths (/wiki/classes/...) fall back to guide.html rather than the
   // game's index.html. (It previously 302'd to a standalone MediaWiki; that is retired.)
@@ -554,11 +1270,36 @@ function serveStatic(req: http.IncomingMessage, res: http.ServerResponse): void 
   // Pretty-URL aliases for standalone static pages.
   urlPath = STATIC_PAGE_ALIASES.get(urlPath) ?? urlPath;
   if (urlPath === '/' || urlPath === '/admin' || urlPath === '/admin/') urlPath = `/${shell}`;
-  // normalize once and reuse for BOTH file resolution and cache policy —
+  // normalize once and reuse for BOTH file resolution and cache policy,
   // otherwise /assets/../x would serve a mutable file with immutable caching
   urlPath = path.posix.normalize(urlPath).replace(/^([.][.][/\\])+/, '');
-  const file = path.join(STATIC_DIR, urlPath);
-  const stats = file.startsWith(STATIC_DIR) && fs.existsSync(file) ? fs.statSync(file) : null;
+  const overlayFile = resolveSfxOverlayFile(SFX_PACK_DIR, urlPath);
+  const file = overlayFile ?? path.join(STATIC_DIR, urlPath);
+  const cachePath = `${urlPath}${requestUrl.search}`;
+  const requestedVersion = requestedSfxVersion(cachePath);
+  const requestedBlobHash = requestedSfxBlobHash(cachePath);
+  const needsVerifiedSfx = requestedVersion !== null || requestedBlobHash !== null;
+  let verifiedSfx: StaticSfxSnapshot | null = null;
+  let stats: fs.Stats | null = null;
+  if (overlayFile !== null || file.startsWith(STATIC_DIR)) {
+    try {
+      if (needsVerifiedSfx) {
+        verifiedSfx = readStaticSfxSnapshot(file);
+        stats = verifiedSfx.stats;
+      } else {
+        // statSync is already the existence check. Keeping it inside this catch
+        // closes the former existsSync-to-statSync disappearance race.
+        stats = fs.statSync(file);
+      }
+    } catch {
+      if (needsVerifiedSfx) {
+        res.writeHead(404, { 'Content-Type': 'text/plain', 'Cache-Control': 'no-store' });
+        res.end('SFX asset changed during integrity verification');
+        return;
+      }
+      stats = null;
+    }
+  }
   if (!stats?.isFile()) {
     // Asset paths must 404, not SPA-fall-back: a missing .glb served as index.html
     // surfaces as a cryptic GLTFLoader parse error instead of a clear 404.
@@ -580,8 +1321,14 @@ function serveStatic(req: http.IncomingMessage, res: http.ServerResponse): void 
   }
   const isReadMethod = req.method === 'GET' || req.method === 'HEAD';
   const etag = etagFor(stats);
+  const actualSfxHash = verifiedSfx?.hash;
+  if (!sfxBlobIntegrityMatches(cachePath, actualSfxHash)) {
+    res.writeHead(404, { 'Content-Type': 'text/plain', 'Cache-Control': 'no-store' });
+    res.end('content-addressed SFX blob failed integrity verification');
+    return;
+  }
   const validators = {
-    'Cache-Control': cacheControlFor(urlPath),
+    'Cache-Control': cacheControlFor(cachePath, actualSfxHash),
     ETag: etag,
     'Last-Modified': stats.mtime.toUTCString(),
   };
@@ -593,11 +1340,15 @@ function serveStatic(req: http.IncomingMessage, res: http.ServerResponse): void 
   res.writeHead(200, {
     ...validators,
     'Content-Type': MIME[path.extname(file)] ?? 'application/octet-stream',
-    'Content-Length': stats.size,
+    'Content-Length': verifiedSfx?.bytes.length ?? stats.size,
   });
   if (req.method === 'HEAD') {
-    // don't read a multi-MB asset from disk just to discard the bytes
+    // Versioned SFX was already snapshotted for integrity, but HEAD sends no body.
     res.end();
+    return;
+  }
+  if (verifiedSfx !== null) {
+    res.end(verifiedSfx.bytes);
     return;
   }
   fs.createReadStream(file).pipe(res);
@@ -608,15 +1359,15 @@ function serveStatic(req: http.IncomingMessage, res: http.ServerResponse): void 
 // ---------------------------------------------------------------------------
 
 // Cross-realm CORS: a client served by one realm may call another realm's API
-// after switching realms in the picker. Native Capacitor builds also call the
-// production origin from localhost-style WebView origins. Auth is via bearer
-// token (no cookies), so reflecting these specific origins is safe.
+// after switching realms in the picker. The native Capacitor and Electron
+// desktop shells also call the production origin from non-site origins. The
+// allow-list itself lives in allowedCorsOrigin (server/web_login_guard.ts).
 function maybeCors(req: http.IncomingMessage, res: http.ServerResponse): void {
-  const origin = req.headers.origin;
-  if (typeof origin === 'string' && (REALM_ORIGINS.has(origin) || NATIVE_APP_ORIGINS.has(origin))) {
+  const origin = allowedCorsOrigin(req.headers.origin);
+  if (origin !== null) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
     res.setHeader('Access-Control-Max-Age', '600');
   }
@@ -640,19 +1391,10 @@ function publicCors(res: http.ServerResponse): void {
   res.setHeader('Access-Control-Max-Age', '600');
 }
 
-// Send a 429 carrying the draft-11 rate-limit headers (Retry-After + RateLimit +
-// RateLimit-Policy) for a named policy. The headers go through res.setHeader, which
-// json()'s writeHead preserves (same path the security-header pass relies on).
-function sendRateLimited(res: http.ServerResponse, policyName: string, limit: number): void {
-  for (const [name, value] of Object.entries(rateLimit429Headers(policyName, limit))) {
-    res.setHeader(name, value);
-  }
-  json(res, 429, { error: 'rate limited' });
-}
-
 // Anti-bot: when enabled, /api/login + /api/register require a same-origin browser
 // request (a recognised Origin header), so only the web client can obtain a token.
-const REQUIRE_WEB_LOGIN = webLoginEnforced();
+// Resolved once on the boot Config (activeConfig().requireWebLogin), which mirrors
+// web_login_guard.ts webLoginEnforced, replacing the former module-scope const.
 
 async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
   const url = (req.url ?? '').split('?')[0];
@@ -666,109 +1408,175 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
       return await handleSitePresenceHeartbeat(req, res);
     }
     if (
-      REQUIRE_WEB_LOGIN &&
+      activeConfig().requireWebLogin &&
       req.method === 'POST' &&
-      (url === '/api/register' || url === '/api/login') &&
+      (url === '/api/register' ||
+        url === '/api/login' ||
+        url === '/api/account/password/forgot' ||
+        url === '/api/account/password/reset') &&
       !isWebClientRequest(req)
     ) {
-      return json(res, 403, { error: 'logins are only allowed from the game client' });
+      return json(res, 403, {
+        error: 'logins are only allowed from the game client',
+        code: 'auth.web_login_only',
+      });
     }
+    // The desktop-login handoff shares the same per-IP budget: exchange is
+    // unauthenticated (defense in depth on top of the 160-bit single-use code)
+    // and create bounds how fast one authenticated client can grow the store.
     if (
       req.method === 'POST' &&
-      (url === '/api/register' || url === '/api/login') &&
-      rateLimited(req)
+      (url === '/api/register' ||
+        url === '/api/login' ||
+        url === '/api/desktop-login/create' ||
+        url === '/api/desktop-login/exchange') &&
+      !rateLimited(req).allowed
     ) {
-      return json(res, 429, { error: 'too many attempts — wait a minute and try again' });
+      return json(res, 429, {
+        error: 'too many attempts, wait a minute and try again',
+        code: 'auth.too_many_attempts',
+      });
     }
     // Reuse the rate-limit message so a blocked client gets no signal that the
     // block exists. Login is gated separately below, after the account is known,
     // so admins can bypass; registration has no account to check.
-    if (req.method === 'POST' && url === '/api/register' && game.isIpBlocked(requestIp(req))) {
-      return json(res, 429, { error: 'too many attempts — wait a minute and try again' });
+    if (
+      req.method === 'POST' &&
+      url === '/api/register' &&
+      liveGame().isIpBlocked(requestIp(req))
+    ) {
+      return json(res, 429, {
+        error: 'too many attempts, wait a minute and try again',
+        code: 'auth.too_many_attempts',
+      });
     }
     if (req.method === 'POST' && url === '/api/register') {
       const body = await readBody(req);
-      if (!(await passesTurnstile(req, body)))
-        return json(res, 403, { error: 'verification failed, please try again' });
+      const meta = requestMetadata(req);
+      if (!(await passesTurnstile(req, body, activeConfig().turnstileSecret)))
+        return json(res, 403, {
+          error: 'verification failed, please try again',
+          code: 'auth.verification_failed',
+        });
       if (!validUsernameShape(body.username))
-        return json(res, 400, { error: 'username must be 3-24 chars (letters, digits, _)' });
-      if (offensiveName(body.username)) return json(res, 400, { error: 'username is not allowed' });
-      if (!validPassword(body.password))
-        return json(res, 400, { error: 'password must be at least 6 chars' });
+        return json(res, 400, {
+          error: 'username must be 3-24 chars (letters, digits, _)',
+          code: 'account.username_invalid',
+        });
+      if (offensiveName(body.username))
+        return json(res, 400, {
+          error: 'username is not allowed',
+          code: 'account.username_not_allowed',
+        });
+      if (typeof body.password !== 'string' || body.password.length < MIN_PASSWORD_LENGTH)
+        return json(res, 400, {
+          error: `password must be at least ${MIN_PASSWORD_LENGTH} chars`,
+          code: 'account.password_too_short',
+        });
+      if (body.password.length > MAX_PASSWORD_LENGTH)
+        return json(res, 400, {
+          error: `password must be at most ${MAX_PASSWORD_LENGTH} chars`,
+          code: 'account.password_too_long',
+        });
+      // Email is mandatory at signup: it is the recovery address that later proves
+      // account ownership on a password reset, so we capture it up front.
+      const signupEmail = normalizeEmail(body.email);
+      if (!signupEmail)
+        return json(res, 400, {
+          error: 'enter a valid email address',
+          code: 'email.invalid',
+        });
       const existing = await findAccount(body.username);
-      if (existing) return json(res, 409, { error: 'username already taken' });
+      if (existing)
+        return json(res, 409, { error: 'username already taken', code: 'account.username_taken' });
       let account: Awaited<ReturnType<typeof createAccount>>;
       try {
-        account = await createAccount(
-          body.username,
-          await hashPassword(body.password),
-          requestMetadata(req),
-        );
+        account = await createAccount(body.username, await hashPassword(body.password), meta);
       } catch (err: any) {
         // a concurrent registration can win the insert after our findAccount
         // check; the username UNIQUE index is the real guard. Surface it as a
         // 409 like the duplicate path above, not a generic 500.
-        if (isUniqueViolation(err)) return json(res, 409, { error: 'username already taken' });
+        if (isUniqueViolation(err))
+          return json(res, 409, {
+            error: 'username already taken',
+            code: 'account.username_taken',
+          });
         throw err;
       }
       const token = newToken();
       await saveToken(token, account.id);
-      // Optional email at signup: if a valid address is supplied, store it and
-      // send the welcome mail. Kept optional so existing clients that register
-      // without an email are unaffected (the email is otherwise set later via
-      // the account portal).
-      const signupEmailRaw = typeof body.email === 'string' ? body.email.trim() : '';
-      if (
-        signupEmailRaw &&
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signupEmailRaw) &&
-        signupEmailRaw.length <= 254
-      ) {
-        await setAccountEmail(account.id, signupEmailRaw);
-        emailAccountCreated({
-          id: account.id,
-          username: account.username,
-          email: signupEmailRaw,
-          locale: null,
-          marketing_opt_in: false,
-        });
-      }
+      // Store the mandatory signup email and send the welcome mail. Validated above,
+      // so this always runs for a fresh registration.
+      await setAccountEmail(account.id, signupEmail);
+      emailAccountCreated({
+        id: account.id,
+        username: account.username,
+        email: signupEmail,
+        locale: null,
+        marketing_opt_in: false,
+      });
+      void trackAccountCreated(
+        account.id,
+        {
+          email: signupEmail,
+          ...metaRequestUserData(req, meta),
+        },
+        metaEventSourceUrl(req),
+      );
       void createSuspiciousRegistrationReport({
         accountId: account.id,
         username: account.username,
-        ...requestMetadata(req),
-      }).catch((err) => console.error('suspicious registration report failed:', err));
+        ...meta,
+      }).catch((err) => logger.error({ err }, 'suspicious registration report failed'));
       // Capture the referral when this account signed up via a card link
       // (?ref=<slug>). Best-effort: never block or fail registration on it.
       void captureReferral(account.id, body.ref).catch((err) =>
-        console.error('referral capture failed:', err),
+        logger.error({ err }, 'referral capture failed'),
       );
-      return json(res, 200, { token, username: account.username });
+      // emailMissing is always false here (email is required above); sent so the
+      // client can use one uniform post-auth check across register and login.
+      return json(res, 200, {
+        token,
+        username: account.username,
+        accountId: account.id,
+        emailMissing: false,
+      });
     }
     if (req.method === 'POST' && url === '/api/login') {
       const body = await readBody(req);
-      if (!(await passesTurnstile(req, body)))
-        return json(res, 403, { error: 'verification failed, please try again' });
+      if (!(await passesTurnstile(req, body, activeConfig().turnstileSecret)))
+        return json(res, 403, {
+          error: 'verification failed, please try again',
+          code: 'auth.verification_failed',
+        });
       const username = typeof body.username === 'string' ? body.username : '';
       // Per-account brute-force throttle (#93). The message is identical to a
       // bad-password response so it never reveals whether the account exists.
-      if (username && authThrottled(username)) {
+      if (username && !authThrottled(username).allowed) {
         return json(res, 429, {
-          error: 'too many failed attempts — wait a few minutes and try again',
+          error: 'too many failed attempts, wait a few minutes and try again',
+          code: 'auth.too_many_failed_attempts',
         });
       }
       const account = username ? await findAccount(username) : null;
       if (!account || !(await verifyPassword(String(body.password ?? ''), account.password_hash))) {
         if (username) recordAuthFailure(username);
-        return json(res, 401, { error: 'invalid username or password' });
+        return json(res, 401, {
+          error: 'invalid username or password',
+          code: 'auth.invalid_credentials',
+        });
       }
       const status = await moderationStatusForAccount(account.id);
-      if (status.locked) return json(res, 403, { error: status.message });
+      if (status.locked) return json(res, 403, moderationErrorBody(status));
       // Checked only now that the account is known, so admins (verified after the
       // password) are never locked out. This does mean a blocked IP gets 429 on a
-      // correct password vs 401 on a wrong one — a small credential-validity tell
+      // correct password vs 401 on a wrong one, a small credential-validity tell
       // we accept, since moving the check before the password would lock admins out.
-      if (game.isIpBlocked(requestIp(req)) && !(await isAdminAccount(account.id))) {
-        return json(res, 429, { error: 'too many attempts — wait a minute and try again' });
+      if (liveGame().isIpBlocked(requestIp(req)) && !(await isAdminAccount(account.id))) {
+        return json(res, 429, {
+          error: 'too many attempts, wait a minute and try again',
+          code: 'auth.too_many_attempts',
+        });
       }
       // Second factor: if 2FA is enabled, the password alone is not enough. With
       // no code supplied we return a challenge (not a token) so the client shows
@@ -781,14 +1589,36 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
         }
         if (!(await verifyLoginTwoFactor(account, code, recoveryCode))) {
           recordAuthFailure(username);
-          return json(res, 401, { error: 'invalid authentication code', twoFactorRequired: true });
+          return json(res, 401, {
+            error: 'invalid authentication code',
+            code: 'two_factor.code_invalid',
+            twoFactorRequired: true,
+          });
         }
       }
       clearAuthFailures(username); // correct password: forgive earlier typos
       await touchLogin(account.id, requestMetadata(req));
       const token = newToken();
       await saveToken(token, account.id);
-      return json(res, 200, { token, username: account.username });
+      // Tell the client whether this (possibly pre-email) account still needs a
+      // recovery address, so it can force the mandatory-email prompt on sign-in.
+      const emailMissing = !(account.email && account.email.trim());
+      return json(res, 200, { token, username: account.username, emailMissing });
+    }
+    if (req.method === 'POST' && url === '/api/desktop-login/create') {
+      // Desktop-login create scope fix: the handoff code mints a FULL session
+      // via exchange, so create requires a full active session too
+      // (bearerActiveAccount: read and companion tokens answer 403 'this token
+      // is read-only'), where the pre-fix handler resolved the scope-blind
+      // identity-only token resolver. Mirrored on
+      // the RouteDef twin (server/desktop_login_routes.ts); the
+      // desktopLoginCreateFullScope known deviation records the change.
+      const accountId = await bearerActiveAccount(req, res);
+      if (accountId === null) return;
+      return issueDesktopLoginCode(req, res, desktopLoginRouteDeps, accountId);
+    }
+    if (req.method === 'POST' && url === '/api/desktop-login/exchange') {
+      return handleDesktopLoginExchange(req, res, desktopLoginRouteDeps);
     }
     // Read-scoped "my characters" list: lets a companion holding a character:read
     // token (OAuth or a pasted companion token) discover its character ids so it
@@ -799,20 +1629,41 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
     if (req.method === 'GET' && url === '/api/me/characters') {
       const accountId = await bearerReadAccount(req, res);
       if (accountId === null) return;
-      return json(res, 200, characterListPayload(await listCharacters(accountId)));
+      return json(
+        res,
+        200,
+        characterListPayload(
+          await listCharacters(accountId),
+          (await loadAccountCosmetics(accountId)).weaponSkinLoadout,
+        ),
+      );
     }
     if (url === '/api/characters') {
       const accountId = await bearerActiveAccount(req, res);
       if (accountId === null) return;
       if (req.method === 'GET') {
-        return json(res, 200, characterListPayload(await listCharacters(accountId)));
+        return json(
+          res,
+          200,
+          characterListPayload(
+            await listCharacters(accountId),
+            (await loadAccountCosmetics(accountId)).weaponSkinLoadout,
+          ),
+        );
       }
       if (req.method === 'POST') {
         const body = await readBody(req);
         const name = normalizeCharName(body.name);
         if (name === null)
-          return json(res, 400, { error: 'invalid character name (2-16 letters)' });
-        if (offensiveName(name)) return json(res, 400, { error: 'character name is not allowed' });
+          return json(res, 400, {
+            error: 'invalid character name (2-16 letters)',
+            code: 'character.name_invalid',
+          });
+        if (offensiveName(name))
+          return json(res, 400, {
+            error: 'character name is not allowed',
+            code: 'character.name_not_allowed',
+          });
         const validClasses = [
           'warrior',
           'paladin',
@@ -824,18 +1675,29 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
           'warlock',
           'druid',
         ];
-        if (!validClasses.includes(body.class)) return json(res, 400, { error: 'invalid class' });
+        if (!validClasses.includes(body.class))
+          return json(res, 400, { error: 'invalid class', code: 'character.invalid_class' });
         const skin = Math.max(
           0,
           Math.min(7, Math.floor(typeof body.skin === 'number' ? body.skin : 0)),
         );
+        // Same cosmetic rules as the migrated arm, through the SAME parser, so
+        // a dispatch rollback cannot create characters without their authored
+        // look or wearing a helmet they never chose.
+        const cosmetics = parseCreationCosmetics(body);
+        if (cosmetics === 'invalid')
+          return json(res, 400, {
+            error: 'invalid appearance',
+            code: 'character.invalid_appearance',
+          });
         const create = () =>
           createCharacterCapped(
             accountId,
             name,
             body.class,
             10,
-            initialCharacterState(body.class, name, skin),
+            withCreationHelm(initialCharacterState(body.class, name, skin), cosmetics.helmHidden),
+            cosmetics.appearance,
           );
         const created = (c: NonNullable<Awaited<ReturnType<typeof createCharacterCapped>>>) =>
           json(res, 200, {
@@ -848,7 +1710,11 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
           });
         try {
           const c = await create();
-          if (!c) return json(res, 400, { error: 'character limit reached' });
+          if (!c)
+            return json(res, 400, {
+              error: 'character limit reached',
+              code: 'character.limit_reached',
+            });
           return created(c);
         } catch (err: any) {
           if (!isUniqueViolation(err)) throw err;
@@ -856,14 +1722,33 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
           // account, free it (the orphaned character is archived) and retry once;
           // otherwise it is genuinely taken. This is the self-service path that
           // replaces the hidden admin-only reactivate/force-rename recovery.
-          if (!(await reclaimDeactivatedName(name)))
-            return json(res, 409, { error: 'that name is taken' });
+          const reclaimed = await reclaimDeactivatedName(name);
+          if (!reclaimed)
+            return json(res, 409, { error: 'that name is taken', code: 'character.name_taken' });
+          // The SAME post-reclaim world-state rekey the migrated create arm
+          // runs, through the shared helper, so a legacy rollback keeps it.
+          await rekeyReclaimedCharacterWorldState(
+            {
+              rekeyMarketSeller: (id, oldName, newName) =>
+                liveGame().rekeyMarketSeller(id, oldName, newName),
+              saveMarket: () => liveGame().saveMarket(),
+              rekeyMailOwner: (id, oldName, newName) =>
+                liveGame().rekeyMailOwner(id, oldName, newName),
+              saveMail: () => liveGame().saveMail(),
+            },
+            reclaimed,
+          );
           try {
             const c = await create();
-            if (!c) return json(res, 400, { error: 'character limit reached' });
+            if (!c)
+              return json(res, 400, {
+                error: 'character limit reached',
+                code: 'character.limit_reached',
+              });
             return created(c);
           } catch (err2: any) {
-            if (isUniqueViolation(err2)) return json(res, 409, { error: 'that name is taken' });
+            if (isUniqueViolation(err2))
+              return json(res, 409, { error: 'that name is taken', code: 'character.name_taken' });
             throw err2;
           }
         }
@@ -874,16 +1759,22 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
     // come before generic /api routes; it never touches a bearer token.
     const publicSheetMatch = /^\/api\/public\/characters\/(.+)\/sheet$/.exec(url);
     if (req.method === 'GET' && publicSheetMatch) {
-      if (publicReadRateLimited(req))
-        return sendRateLimited(res, 'public_read', PUBLIC_READ_MAX_PER_MINUTE);
-      const rawName = decodeURIComponent(publicSheetMatch[1]);
+      if (!publicReadRateLimited(req).allowed) return json(res, 429, { error: 'rate limited' });
+      // Same decode arm as the RouteDef handler in leaderboard.ts: a malformed
+      // escape falls back to the raw segment and 404s, never a URIError 500.
+      // This legacy arm stays live under the API_DISPATCH=legacy rollback, so
+      // it must mirror the migrated handler.
+      const rawName = decodedRouteName(publicSheetMatch[1]);
       const target = await findCharacterReportTargetByName(rawName);
-      if (!target) return json(res, 404, { error: 'character not found' });
+      if (!target)
+        return json(res, 404, { error: 'character not found', code: 'character.not_found' });
       const row = await getCharacterById(target.characterId);
-      if (!row) return json(res, 404, { error: 'character not found' });
-      const [guild, rank] = await Promise.all([
+      if (!row)
+        return json(res, 404, { error: 'character not found', code: 'character.not_found' });
+      const [guild, rank, deedsRecent] = await Promise.all([
         guildNameForCharacter(row.id),
         lifetimeXpRankForCharacter(row.id),
+        recentDeedsForCharacter(row.id, SHEET_RECENT_DEEDS),
       ]);
       return json(
         res,
@@ -895,6 +1786,7 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
           origin: publicOrigin(req),
           guild,
           rank: toSheetRank(rank),
+          deedsRecent,
         }),
       );
     }
@@ -903,10 +1795,12 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
       const accountId = await bearerReadAccount(req, res);
       if (accountId === null) return;
       const row = await getCharacter(accountId, Number(ownerSheetMatch[1]));
-      if (!row) return json(res, 404, { error: 'character not found' });
-      const [guild, rank] = await Promise.all([
+      if (!row)
+        return json(res, 404, { error: 'character not found', code: 'character.not_found' });
+      const [guild, rank, deedsRecent] = await Promise.all([
         guildNameForCharacter(row.id),
         lifetimeXpRankForCharacter(row.id),
+        recentDeedsForCharacter(row.id, SHEET_RECENT_DEEDS),
       ]);
       return json(
         res,
@@ -918,6 +1812,7 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
           origin: publicOrigin(req),
           guild,
           rank: toSheetRank(rank),
+          deedsRecent,
         }),
       );
     }
@@ -929,7 +1824,8 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
       const accountId = await bearerActiveAccount(req, res);
       if (accountId === null) return;
       const standing = await lifetimeXpStanding(accountId, Number(standingMatch[1]));
-      if (!standing) return json(res, 404, { error: 'character not found' });
+      if (!standing)
+        return json(res, 404, { error: 'character not found', code: 'character.not_found' });
       return json(res, 200, standing);
     }
     if (req.method === 'POST' && renameMatch) {
@@ -937,11 +1833,20 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
       if (accountId === null) return;
       const body = await readBody(req);
       const name = normalizeCharName(body.name);
-      if (name === null) return json(res, 400, { error: 'invalid character name (2-16 letters)' });
-      if (offensiveName(name)) return json(res, 400, { error: 'character name is not allowed' });
+      if (name === null)
+        return json(res, 400, {
+          error: 'invalid character name (2-16 letters)',
+          code: 'character.name_invalid',
+        });
+      if (offensiveName(name))
+        return json(res, 400, {
+          error: 'character name is not allowed',
+          code: 'character.name_not_allowed',
+        });
       const characterId = Number(renameMatch[1]);
       const character = await getCharacter(accountId, characterId);
-      if (!character) return json(res, 404, { error: 'character not found' });
+      if (!character)
+        return json(res, 404, { error: 'character not found', code: 'character.not_found' });
       // A rename is a moderator-sanctioned action: the character-select UI only
       // shows the rename control when a moderator has set force_rename. The UI is
       // not a security boundary, so gate here too: a normal owner hitting this
@@ -949,15 +1854,18 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
       // UPDATE in renameCharacter re-checks the flag race-free; this returns a
       // clear 403 instead of a misleading 404.)
       if (!character.force_rename) {
-        return json(res, 403, { error: 'character rename is not permitted' });
+        return json(res, 403, {
+          error: 'character rename is not permitted',
+          code: 'character.rename_not_permitted',
+        });
       }
       // A rename mutates the DB name and clears force_rename, but a live
       // ClientSession keeps its own copy of the name (used by reports, chat and
-      // /api/status). Renaming an online character desyncs that copy and — worse
-      // — lets a force-renamed player already in the world clear the moderation
+      // /api/status). Renaming an online character desyncs that copy and, worse
+      // lets a force-renamed player already in the world clear the moderation
       // flag without ever leaving. Mirror the DELETE guard and require offline.
-      if ([...game.clients.values()].some((s) => s.characterId === characterId)) {
-        return json(res, 400, { error: 'character is currently online' });
+      if ([...liveGame().clients.values()].some((s) => s.characterId === characterId)) {
+        return json(res, 400, { error: 'character is currently online', code: 'character.online' });
       }
       try {
         const c = await renameCharacter(accountId, characterId, name);
@@ -969,12 +1877,18 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
           // instead of always answering a misleading 404.
           const still = await getCharacter(accountId, characterId);
           if (still && !still.force_rename) {
-            return json(res, 403, { error: 'character rename is not permitted' });
+            return json(res, 403, {
+              error: 'character rename is not permitted',
+              code: 'character.rename_not_permitted',
+            });
           }
-          return json(res, 404, { error: 'character not found' });
+          return json(res, 404, { error: 'character not found', code: 'character.not_found' });
         }
-        if (game.rekeyMarketSeller(characterId, character.name, c.name)) {
-          await game.saveMarket();
+        if (liveGame().rekeyMarketSeller(characterId, character.name, c.name)) {
+          await liveGame().saveMarket();
+        }
+        if (liveGame().rekeyMailOwner(characterId, character.name, c.name)) {
+          await liveGame().saveMail();
         }
         return json(res, 200, {
           id: c.id,
@@ -984,7 +1898,8 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
           forceRename: c.force_rename,
         });
       } catch (err: any) {
-        if (isUniqueViolation(err)) return json(res, 409, { error: 'that name is taken' });
+        if (isUniqueViolation(err))
+          return json(res, 409, { error: 'that name is taken', code: 'character.name_taken' });
         throw err;
       }
     }
@@ -996,8 +1911,8 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
       if (accountId === null) return;
       const characterId = Number(takeoverMatch[1]);
       const character = await getCharacter(accountId, characterId);
-      if (!character) return json(res, 404, { error: 'not found' });
-      const result = await game.takeOverCharacter(accountId, characterId);
+      if (!character) return json(res, 404, { error: 'not found', code: 'character.not_found' });
+      const result = await liveGame().takeOverCharacter(accountId, characterId);
       return json(res, 200, { ok: true, takenOver: result === 'taken-over' });
     }
     if (req.method === 'DELETE' && delMatch) {
@@ -1006,15 +1921,36 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
       const characterId = Number(delMatch[1]);
       const body = await readBody(req);
       const character = await getCharacter(accountId, characterId);
-      if (!character) return json(res, 404, { error: 'not found' });
-      if ([...game.clients.values()].some((s) => s.characterId === characterId)) {
-        return json(res, 400, { error: 'character is currently online' });
+      if (!character) return json(res, 404, { error: 'not found', code: 'character.not_found' });
+      if ([...liveGame().clients.values()].some((s) => s.characterId === characterId)) {
+        return json(res, 400, { error: 'character is currently online', code: 'character.online' });
       }
       if (normalizeDeleteConfirmation(body.name) !== normalizeDeleteConfirmation(character.name)) {
-        return json(res, 400, { error: 'type the character name to confirm deletion' });
+        return json(res, 400, {
+          error: 'type the character name to confirm deletion',
+          code: 'character.delete_confirm',
+        });
       }
       const ok = await deleteCharacter(accountId, characterId);
-      return json(res, ok ? 200 : 404, ok ? { ok: true } : { error: 'not found' });
+      if (ok) {
+        // The SAME world-state purge the migrated deleteHandler runs (R43), through
+        // the one shared helper, so an API_DISPATCH=legacy rollback keeps it.
+        await purgeDeletedCharacterWorldState(
+          {
+            purgeMarketSeller: (id, name) => liveGame().purgeMarketSeller(id, name),
+            saveMarket: () => liveGame().saveMarket(),
+            purgeMailOwner: (id, name) => liveGame().purgeMailOwner(id, name),
+            saveMail: () => liveGame().saveMail(),
+          },
+          characterId,
+          character.name,
+        );
+      }
+      return json(
+        res,
+        ok ? 200 : 404,
+        ok ? { ok: true } : { error: 'not found', code: 'character.not_found' },
+      );
     }
     if (req.method === 'GET' && url === '/api/realms') {
       // optionally authenticated: with a token we also return how many
@@ -1043,7 +1979,7 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
       const reporter = await getCharacter(accountId, reporterCharacterId);
       if (!reporter) return json(res, 404, { error: 'reporting character not found' });
       const resolved = await resolveReportTarget(body, {
-        reportTargetForPid: (pid) => game.reportTargetForPid(pid),
+        reportTargetForPid: (pid) => liveGame().reportTargetForPid(pid),
         findCharacterReportTargetByName,
       });
       if (!resolved.ok) return json(res, resolved.status, { error: resolved.error });
@@ -1063,26 +1999,15 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
         });
       }
     }
-    if (req.method === 'POST' && url === '/api/ad-reward') {
-      const accountId = await bearerActiveAccount(req, res);
-      if (accountId === null) return;
-      let body: Record<string, unknown>;
-      try { body = await readBody(req); } catch { return json(res, 400, { error: 'bad request' }); }
-      const type = body.type;
-      if (type !== 'xp_boost' && type !== 'death_revive') return json(res, 400, { error: 'invalid type' });
-      const result = game.applyAdReward(accountId, type);
-      if (result === 'no_session') return json(res, 404, { error: 'no active session' });
-      if (result === 'cooldown') return json(res, 429, { error: 'cooldown active' });
-      return json(res, 200, { ok: true });
-    }
     if (req.method === 'POST' && url === '/api/bug-reports') {
       const accountId = await bearerActiveAccount(req, res);
       if (accountId === null) return;
-      // A downscaled screenshot data URL dominates the payload; allow ~1 MB
-      // (well above the 64 KB JSON default) and surface an oversize body as 413.
+      // A downscaled screenshot data URL dominates the payload; allow the roomier
+      // BUG_REPORT_MAX_BODY_BYTES (1 MiB, well above the 64 KB JSON default, owned by
+      // server/reports.ts) and surface an oversize body as 413.
       let body: any;
       try {
-        body = await readBody(req, 1024 * 1024);
+        body = await readBody(req, BUG_REPORT_MAX_BODY_BYTES);
       } catch (err) {
         if (err instanceof Error && err.message === 'body too large') {
           return json(res, 413, { error: 'bug report too large' });
@@ -1119,43 +2044,6 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
           screenshot: typeof body.screenshot === 'string' ? body.screenshot : null,
           meta: body.meta,
         });
-        if (DISCORD_BUG_WEBHOOK) {
-          const posStr = `${Math.round(pos.x ?? 0)}, ${Math.round(pos.z ?? 0)}`;
-          const who = characterName ? `**${characterName}**` : `conta #${accountId}`;
-          const desc = description.slice(0, 300) + (description.length > 300 ? '…' : '');
-          const screenshot = typeof body.screenshot === 'string' && report.screenshotStored
-            ? body.screenshot
-            : null;
-          const embedPayload = {
-            embeds: [{
-              title: `🐛 Bug Report #${report.id}`,
-              color: 0xe74c3c,
-              fields: [
-                { name: 'Personagem', value: who, inline: true },
-                { name: 'Posição', value: posStr, inline: true },
-                { name: 'Descrição', value: desc },
-              ],
-              ...(screenshot ? { image: { url: 'attachment://screenshot.jpg' } } : {}),
-              footer: { text: `Reino: ${REALM}` },
-            }],
-          };
-          if (screenshot) {
-            // Strip data URL prefix and send as multipart attachment
-            const base64Data = screenshot.replace(/^data:image\/[^;]+;base64,/, '');
-            const imgBuf = Buffer.from(base64Data, 'base64');
-            const form = new FormData();
-            form.append('payload_json', JSON.stringify(embedPayload));
-            form.append('files[0]', new Blob([imgBuf], { type: 'image/jpeg' }), 'screenshot.jpg');
-            fetch(DISCORD_BUG_WEBHOOK, { method: 'POST', body: form })
-              .catch((err) => console.error('discord bug webhook failed:', err));
-          } else {
-            fetch(DISCORD_BUG_WEBHOOK, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(embedPayload),
-            }).catch((err) => console.error('discord bug webhook failed:', err));
-          }
-        }
         return json(res, 200, {
           ok: true,
           reportId: report.id,
@@ -1170,34 +2058,73 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
       return await handlePerfReport(req, res);
     }
     if (req.method === 'GET' && url === '/api/project-stats') {
-      const accountsCount = await getAccountsCount();
+      // Accounts-created COUNT served from the shared cache getter (the same 60s
+      // cache the migrated projectStatsHandler reads); players_online stays a live
+      // per-request read, so it is re-attached here rather than cached. Rate-limited
+      // per IP like its migrated twin (same public-read budget, same 429 body).
+      if (!publicReadRateLimited(req).allowed) return json(res, 429, { error: 'rate limited' });
+      const [accountsCreated, charactersCreated] = await Promise.all([
+        getAccountsCreatedCount(),
+        getCharactersCreatedCount(),
+      ]);
       return json(res, 200, {
-        accounts_created: accountsCount,
-        players_online: game.clients.size,
+        accounts_created: accountsCreated,
+        characters_created: charactersCreated,
+        players_online: liveGame().clients.size,
         realm: REALM,
       });
     }
     if (req.method === 'GET' && url === '/api/status') {
+      // steam.enabled is the capability advert clients read before rendering any
+      // Steam / Epic link UI. HARDCODED false on the legacy ladder: those surfaces
+      // exist only as RouteDefs (server/steam/routes.ts, server/epic/routes.ts),
+      // which the legacy arm never serves, so every /api/steam/* and /api/epic/*
+      // 404s here. Advertising the capability on an arm that then 404s it would
+      // strand a client into a dead link flow. Under the default 'new' dispatch
+      // the migrated statusHandler (server/leaderboard.ts) reads the real
+      // steamEnabled() / epicEnabled(), where the routes are live. This is a
+      // deliberate divergence from the new arm under STEAM_ENABLED=1 or
+      // EPIC_ENABLED=1 (pinned in tests/server/http/parity.test.ts).
       return json(res, 200, {
         ok: true,
         realm: REALM,
-        players_online: game.clients.size,
-        names: [...game.clients.values()].map((s) => s.name),
+        players_online: liveGame().clients.size,
+        // The configured realm player cap so the client realm list can display
+        // honestly; 0 means the cap is disabled. Dual-arm edit: the migrated
+        // statusHandler (server/leaderboard.ts) carries the same players_cap field.
+        players_cap: canonicalPlayersCap(),
+        names: [...liveGame().clients.values()].map((s) => s.name),
+        steam: { enabled: false },
+        epic: { enabled: false },
+        // The /dev GUI capability advert. NOT hardcoded like steam.enabled above:
+        // the dev_* cheats ride the websocket dispatcher, which this arm serves
+        // exactly as the migrated one does, so advertising the real env here
+        // strands nobody. Dual-arm edit: the migrated statusHandler
+        // (server/leaderboard.ts) carries the same dev_commands field. Read live
+        // per request, mirroring the /api/perf gate just below.
+        dev_commands: process.env.ALLOW_DEV_COMMANDS === '1',
+        // Online-profiler capability handshake. Presence proves this server
+        // supports the idempotent invulnerability command; false tells the
+        // harness to stop before entry because the dev gate is off. Dual-arm
+        // edit: the migrated statusHandler carries the identical field.
+        profiler_invulnerability: process.env.ALLOW_DEV_COMMANDS === '1',
       });
     }
-    if (req.method === 'GET' && url.startsWith('/api/player')) {
-      const name = new URL(req.url ?? '/', 'http://localhost').searchParams.get('name') ?? '';
-      if (!name.trim()) return json(res, 400, { error: 'name required' });
-      const profile = await getPublicCharacterByName(name);
-      if (!profile) return json(res, 404, { error: 'character not found' });
-      const online = game.liveLevelForCharacter(profile.id) !== null;
-      return json(res, 200, { ...profile, online });
+    // Dev-only world-loop perf profile (per-phase tick p95/max), for the load
+    // harness. Gated by ALLOW_DEV_COMMANDS so it is never exposed in production.
+    if (req.method === 'GET' && url === '/api/perf' && process.env.ALLOW_DEV_COMMANDS === '1') {
+      return json(res, 200, liveGame().perfProfile());
     }
     if (req.method === 'GET' && url === '/api/arena/leaderboard') {
-      // public all-time Ashen Coliseum ladder (top rated characters)
+      // public all-time Ashen Coliseum ladder (top rated characters), served from
+      // the shared per-format cache getter (the same cache the migrated
+      // arenaLeaderboardHandler reads), so the ladder query runs at most once per
+      // TTL per format instead of once per request. Rate-limited per IP like its
+      // migrated twin (same public-read budget, same 429 body).
+      if (!publicReadRateLimited(req).allowed) return json(res, 429, { error: 'rate limited' });
       const params = new URLSearchParams((req.url ?? '').split('?')[1] ?? '');
-      const format = params.get('format') === '2v2' ? '2v2' : '1v1';
-      return json(res, 200, { format, leaders: await topArenaRatings(20, format) });
+      const format: '1v1' | '2v2' = params.get('format') === '2v2' ? '2v2' : '1v1';
+      return json(res, 200, { format, leaders: await getArenaLeaderboard(format) });
     }
     if (req.method === 'GET' && url === '/api/leaderboard') {
       // lifetime-XP leaderboard (Max-Level XP Overflow), served from the
@@ -1222,6 +2149,41 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
           metric: 'guildLifetimeXp',
           ...guildSlice,
         });
+      }
+      // ?board=devs ranks open-source CONTRIBUTORS by merged pull requests, sourced
+      // from the cached public GitHub PR stats. The same data for every realm,
+      // so it is realm-agnostic; rate-limited per IP like the other boards via the
+      // shared route limiter is unnecessary here (it reads an in-memory cache), but
+      // a failing GitHub fetch already backs off inside topContributors.
+      if (params.get('board') === 'devs') {
+        const devEntries = await topContributors();
+        const devPageSize = Number(params.get('pageSize')) || LEADERBOARD_PAGE_SIZE;
+        const devPage = Number(params.get('page')) || 0;
+        const devSlice = paginateDevLeaderboard(devEntries, devPage, devPageSize);
+        return json(res, 200, {
+          realm: REALM,
+          scope,
+          board: 'devs',
+          metric: 'landedCommits',
+          ...devSlice,
+        });
+      }
+      // ?board=deeds is the Renown board: ACCOUNTS ranked by lifetime deed
+      // Renown, character-faced. GLOBAL-ONLY by design (accounts span realms),
+      // so ?scope is accepted and ignored and the body always carries scope
+      // 'global' (buildDeedsBoard fixes it). The bearer is resolved LENIENTLY
+      // here, the legacy arms' shape (cf. the realms arm): a missing, invalid,
+      // or locked token serves the board anonymously with no self row, while
+      // the router-owned arm validates a present token (the labeled
+      // authz-gap-close divergence class); anonymous and valid-token responses
+      // are byte-identical on both dispatch paths via the shared builder.
+      if (params.get('board') === 'deeds') {
+        const deedsEntries = await getDeedsLeaderboard();
+        const deedsPageSize = Number(params.get('pageSize')) || LEADERBOARD_PAGE_SIZE;
+        const deedsPage = Number(params.get('page')) || 0;
+        const bearer = await bearerScopeAccount(req).catch(() => null);
+        const self = bearer ? await deedsSelfRank(bearer.accountId) : null;
+        return json(res, 200, buildDeedsBoard(REALM, deedsEntries, deedsPage, deedsPageSize, self));
       }
       const entries = await getLeaderboard(scope);
       // Legacy ?limit=N (home-page board): top N as a single page, no paging UI.
@@ -1260,9 +2222,9 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
         Math.min(RELEASES_SIZE, Number(params.get('limit')) || RELEASES_SIZE),
       );
       const entries = await getReleases();
-      return json(res, 200, { repo: GITHUB_REPO, releases: entries.slice(0, limit) });
+      return json(res, 200, { repo: activeConfig().githubRepo, releases: entries.slice(0, limit) });
     }
-    // Account self-service portal — all bearer-auth, account-scoped. Each route
+    // Account self-service portal, all bearer-auth, account-scoped. Each route
     // delegates to an exported, testable handler in server/account.ts (mirroring
     // server/wallet.ts); main.ts only resolves the bearer account first.
     if (req.method === 'GET' && url === '/api/account') {
@@ -1276,13 +2238,27 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
       // Resolve the caller's own token once so the revoke inside the handler can
       // never accidentally fall back to null (which would nuke this session too).
       const callerToken = bearerToken(req);
-      if (!callerToken) return json(res, 401, { error: 'not authenticated' });
-      return handleAccountChangePassword(req, res, accountId, callerToken);
+      if (!callerToken)
+        return json(res, 401, { error: 'not authenticated', code: 'auth.required' });
+      return handleAccountChangePassword(req, res, accountId, callerToken, {
+        disconnectAccount: (id, reason) => liveGame().disconnectAccount(id, reason),
+      });
+    }
+    // Password reset is for users who are locked out, so both routes are
+    // unauthenticated (rate-limited + web-login guarded above, and each handler is
+    // written to never reveal whether an account exists).
+    if (req.method === 'POST' && url === '/api/account/password/forgot') {
+      return handleAccountPasswordForgot(req, res);
+    }
+    if (req.method === 'POST' && url === '/api/account/password/reset') {
+      return handleAccountPasswordReset(req, res, {
+        disconnectAccount: (id, reason) => liveGame().disconnectAccount(id, reason),
+      });
     }
     if (req.method === 'POST' && url === '/api/account/logout') {
       const callerToken = bearerToken(req);
-      if (!callerToken || (await accountForToken(callerToken)) === null)
-        return json(res, 401, { error: 'not authenticated' });
+      if (!callerToken || (await accountAndScopeForToken(callerToken)) === null)
+        return json(res, 401, { error: 'not authenticated', code: 'auth.required' });
       return handleAccountLogout(res, callerToken);
     }
     if (req.method === 'POST' && url === '/api/account/email') {
@@ -1290,21 +2266,29 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
       if (accountId === null) return;
       return handleAccountSetEmail(req, res, accountId);
     }
+    // Set the recovery email on an account that has none yet (the mandatory-email
+    // backfill the client forces on sign-in). Bearer-scoped; rejects once an
+    // address already exists (that must go through the verified change flow).
+    if (req.method === 'POST' && url === '/api/account/email/set-initial') {
+      const accountId = await bearerActiveAccount(req, res);
+      if (accountId === null) return;
+      return handleAccountSetInitialEmail(req, res, accountId);
+    }
     if (req.method === 'POST' && url === '/api/account/deactivate') {
       const accountId = await bearerActiveAccount(req, res);
       if (accountId === null) return;
       return handleAccountDeactivate(req, res, accountId, {
         anyCharacterOnline: (characterIds) =>
-          [...game.clients.values()].some(
+          [...liveGame().clients.values()].some(
             (s) => s.characterId != null && characterIds.includes(s.characterId),
           ),
-        disconnectAccount: (id, reason) => game.disconnectAccount(id, reason),
+        disconnectAccount: (id, reason) => liveGame().disconnectAccount(id, reason),
       });
     }
     // Companion read-only tokens: a 90-day scope='read' token a user can paste
     // into a companion app instead of running OAuth. Managed from a full web
     // session only (bearerActiveAccount rejects read tokens, so a read token can
-    // never mint or list more — no privilege escalation).
+    // never mint or list more, no privilege escalation).
     if (url === '/api/account/companion-token') {
       const accountId = await bearerActiveAccount(req, res);
       if (accountId === null) return;
@@ -1369,7 +2353,28 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
       const token = new URL(req.url ?? '', 'http://localhost').searchParams.get('token') ?? '';
       return handleEmailUnsubscribe(res, token);
     }
-    // Non-custodial Solana wallet linking — all account-scoped.
+    // Non-custodial Solana wallet linking, all account-scoped.
+    if (req.method === 'POST' && url === '/api/desktop-wallet/create') {
+      const accountId = await bearerActiveAccount(req, res);
+      if (accountId === null) return;
+      if (!walletLinkRateLimited(req, accountId).allowed) {
+        return json(res, 429, { error: 'rate limited' });
+      }
+      return handleDesktopWalletHandoffCreate(req, res, accountId);
+    }
+    if (req.method === 'POST' && url === '/api/desktop-wallet/claim') {
+      if (!publicReadRateLimited(req).allowed) return json(res, 429, { error: 'rate_limited' });
+      return handleDesktopWalletHandoffClaim(req, res);
+    }
+    if (req.method === 'POST' && url === '/api/desktop-wallet/complete') {
+      if (!publicReadRateLimited(req).allowed) return json(res, 429, { error: 'rate_limited' });
+      return handleDesktopWalletHandoffComplete(req, res);
+    }
+    if (req.method === 'POST' && url === '/api/desktop-wallet/result') {
+      const accountId = await bearerActiveAccount(req, res);
+      if (accountId === null) return;
+      return handleDesktopWalletHandoffResult(req, res, accountId);
+    }
     if (req.method === 'POST' && url === '/api/wallet/link/challenge') {
       const accountId = await bearerActiveAccount(req, res);
       if (accountId === null) return;
@@ -1390,17 +2395,131 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
       if (accountId === null) return;
       return handleWalletGet(req, res, accountId);
     }
-    // $WOC balance proxy — keeps the Solana RPC endpoint (and any key in it)
+    if (req.method === 'POST' && url === '/api/auth/apple') {
+      return handleAppleLogin(req, res, await readBody(req));
+    }
+    if (req.method === 'POST' && url === '/api/auth/apple/login/new') {
+      return handleAppleLoginNew(req, res, await readBody(req), (ip) => liveGame().isIpBlocked(ip));
+    }
+    if (req.method === 'POST' && url === '/api/auth/apple/login/link') {
+      return handleAppleLoginLink(req, res, await readBody(req));
+    }
+    // Discord integration: OAuth login/link, link status, unlink. `start` returns
+    // the authorize URL (the browser then navigates to Discord); `callback` is the
+    // discord.com -> us redirect (no auth/Origin, so it is NOT gated by the
+    // web-login guard, which is login/register-only). Mutations go through
+    // bearerActiveAccount; the dedicated Discord rate-limit bucket guards them.
+    if (req.method === 'POST' && url === '/api/auth/discord/start') {
+      const discordStartUrl = new URL(req.url ?? '/', 'http://localhost');
+      const mode = discordStartUrl.searchParams.get('mode') === 'link' ? 'link' : 'login';
+      const native = discordStartUrl.searchParams.get('native') === '1';
+      const nativeChallenge = discordStartUrl.searchParams.get('challenge') ?? undefined;
+      const desktop = mode === 'login' && discordStartUrl.searchParams.get('desktop') === '1';
+      let accountId: number | null = null;
+      if (mode === 'link') {
+        accountId = await bearerActiveAccount(req, res);
+        if (accountId === null) return;
+      }
+      if (!discordRateLimited(req, accountId ?? 0).allowed)
+        return json(res, 429, { error: 'rate limited' });
+      const body = native ? await readBody(req) : {};
+      return handleDiscordStart(req, res, {
+        mode,
+        accountId,
+        native,
+        nativeChallenge,
+        nativeAttestation: body.nativeAttestation,
+        desktop,
+      });
+    }
+    if (req.method === 'GET' && url === '/api/auth/discord/callback') {
+      return handleDiscordCallback(req, res, (ip) => liveGame().isIpBlocked(ip));
+    }
+    // First-time-login chooser endpoints. Unauthenticated like /callback: the
+    // authorization is the single-use pending-login token (minted only after a
+    // verified Discord OAuth), and the handlers carry their own Discord rate-limit
+    // bucket + (for the link path) the same password/2FA/moderation checks as login.
+    if (req.method === 'POST' && url === '/api/auth/discord/login/new') {
+      return handleDiscordLoginNew(req, res, (ip) => liveGame().isIpBlocked(ip));
+    }
+    if (req.method === 'POST' && url === '/api/auth/discord/login/link') {
+      return handleDiscordLoginLink(req, res, (ip) => liveGame().isIpBlocked(ip));
+    }
+    if (req.method === 'POST' && url === '/api/auth/discord/native/exchange') {
+      return handleNativeDiscordExchange(req, res);
+    }
+    if (req.method === 'GET' && url === '/api/discord') {
+      const accountId = await bearerActiveAccount(req, res);
+      if (accountId === null) return;
+      if (!discordRateLimited(req, accountId).allowed)
+        return json(res, 429, { error: 'rate limited' });
+      return handleDiscordStatus(req, res, accountId);
+    }
+    if (req.method === 'DELETE' && url === '/api/discord') {
+      const accountId = await bearerActiveAccount(req, res);
+      if (accountId === null) return;
+      if (!discordRateLimited(req, accountId).allowed)
+        return json(res, 429, { error: 'rate limited' });
+      return handleDiscordUnlink(req, res, accountId);
+    }
+    // GitHub OAuth link (developer badge). Link-only: the start leg resolves the
+    // caller's account first, so the verified GitHub identity attaches to a known
+    // account. The callback carries no Origin (a github.com redirect) and is
+    // exempt from the web-login Origin guard, exactly like the Discord callback.
+    if (req.method === 'POST' && url === '/api/auth/github/start') {
+      const accountId = await bearerActiveAccount(req, res);
+      if (accountId === null) return;
+      if (!githubRateLimited(req, accountId).allowed) {
+        recordUsageMetric('github.link.rate_limited');
+        return json(res, 429, { error: 'rate limited' });
+      }
+      return handleGitHubStart(req, res, { accountId });
+    }
+    if (req.method === 'GET' && url === '/api/auth/github/callback') {
+      return handleGitHubCallback(req, res);
+    }
+    if (req.method === 'GET' && url === '/api/github') {
+      const accountId = await bearerActiveAccount(req, res);
+      if (accountId === null) return;
+      if (!githubRateLimited(req, accountId).allowed)
+        return json(res, 429, { error: 'rate limited' });
+      return handleGitHubStatus(req, res, accountId);
+    }
+    if (req.method === 'DELETE' && url === '/api/github') {
+      const accountId = await bearerActiveAccount(req, res);
+      if (accountId === null) return;
+      if (!githubRateLimited(req, accountId).allowed)
+        return json(res, 429, { error: 'rate limited' });
+      return handleGitHubUnlink(req, res, accountId);
+    }
+    // $WOC balance proxy, keeps the Solana RPC endpoint (and any key in it)
     // server-side so it never ships in the client bundle. Public (on-chain
     // balances are public) but narrow + IP rate-limited + per-wallet cached.
     if (req.method === 'GET' && url === '/api/woc/balance') {
-      if (wocBalanceRateLimited(req)) {
+      if (!wocBalanceRateLimited(req).allowed) {
         recordUsageMetric('woc.balance.rate_limited');
-        return sendRateLimited(res, 'woc_balance', WOC_BALANCE_MAX_PER_MINUTE);
+        return json(res, 429, { error: 'rate limited' });
       }
       // `fresh=1` is parsed AFTER the IP rate-limit above, so it can't be used to hammer the RPC.
       const { owner, fresh } = parseWocBalanceQuery(req.url ?? '');
       return handleWocBalance(res, owner, fresh);
+    }
+    if (url.startsWith('/api/daily-rewards')) {
+      const accountId = await bearerActiveAccount(req, res);
+      if (accountId === null) return;
+      return handleDailyRewardApi(req, res, accountId);
+    }
+    if (req.method === 'POST' && url === '/api/claudium/stripe/webhook') {
+      return handleClaudiumStripeWebhook(req, res);
+    }
+    if (url.startsWith('/api/claudium')) {
+      const preAuthLimit = claudiumPreAuthMutationRateLimited(req);
+      if (preAuthLimit && !preAuthLimit.allowed) {
+        return json(res, 429, { error: 'rate_limited' });
+      }
+      const accountId = await bearerActiveAccount(req, res);
+      if (accountId === null) return;
+      return handleClaudiumApi(req, res, accountId);
     }
     // Shareable player card: publish (PNG body) + referral stats for the card.
     if (req.method === 'POST' && url === '/api/card') {
@@ -1413,12 +2532,12 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
       }
       const accountId = await bearerActiveAccount(req, res);
       if (accountId === null) return;
-      if (cardUploadRateLimited(req, accountId)) {
+      if (!cardUploadRateLimited(req, accountId).allowed) {
         recordUsageMetric('card.publish.rate_limited');
-        return sendRateLimited(res, 'card_upload', CARD_UPLOAD_MAX_PER_MINUTE);
+        return json(res, 429, { error: 'rate limited' });
       }
       return handleCardUpload(req, res, accountId, (characterId) =>
-        game.liveLevelForCharacter(characterId),
+        liveGame().liveLevelForCharacter(characterId),
       );
     }
     if (req.method === 'GET' && url === '/api/referrals') {
@@ -1430,62 +2549,609 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
       ]);
       return json(res, 200, { count, slug });
     }
+    // -----------------------------------------------------------------------
+    // Map editor: saved custom maps + uploaded GLB assets. The lane BODIES live
+    // in server/maps_routes.ts / server/user_assets_routes.ts as shared cores
+    // BOTH dispatch arms call (the migrated RouteDefs mount the equivalent
+    // guards), so the two paths cannot drift. These legacy arms keep only the
+    // guard order: Content-Length precheck BEFORE auth on the save/upload lanes
+    // (413 + Connection: close, the /api/card treatment), then the bearer
+    // resolver, then the fused ip+account limiter.
+    // -----------------------------------------------------------------------
+    if (url === '/api/maps' && (req.method === 'GET' || req.method === 'POST')) {
+      if (req.method === 'GET') {
+        const accountId = await bearerReadAccount(req, res);
+        if (accountId === null) return;
+        return mapsListMineCore(res, accountId);
+      }
+      if (contentLengthExceeds(req, MAX_MAP_SAVE_BYTES)) {
+        res.shouldKeepAlive = false;
+        res.setHeader('Connection', 'close');
+        return json(res, 413, { error: 'map_too_large' });
+      }
+      const accountId = await bearerActiveAccount(req, res);
+      if (accountId === null) return;
+      if (!mapMutationRateLimited(req, accountId).allowed)
+        return json(res, 429, { error: 'rate_limited' });
+      return mapsCreateCore(req, res, accountId);
+    }
+    if (req.method === 'GET' && url === '/api/maps/public') {
+      if (!publicReadRateLimited(req).allowed) return json(res, 429, { error: 'rate_limited' });
+      return mapsPublicListCore(req, res);
+    }
+    const mapIdMatch = /^\/api\/maps\/(\d+)$/.exec(url);
+    if (req.method === 'GET' && mapIdMatch) {
+      // Owner or public. Auth is optional; anonymous readers share the public
+      // read throttle like the public character sheet.
+      const accountId = await bearerAccount(req);
+      if (accountId === null && !publicReadRateLimited(req).allowed) {
+        return json(res, 429, { error: 'rate_limited' });
+      }
+      return mapGetCore(res, accountId, Number(mapIdMatch[1]));
+    }
+    if (req.method === 'PUT' && mapIdMatch) {
+      if (contentLengthExceeds(req, MAX_MAP_SAVE_BYTES)) {
+        res.shouldKeepAlive = false;
+        res.setHeader('Connection', 'close');
+        return json(res, 413, { error: 'map_too_large' });
+      }
+      const accountId = await bearerActiveAccount(req, res);
+      if (accountId === null) return;
+      if (!mapMutationRateLimited(req, accountId).allowed)
+        return json(res, 429, { error: 'rate_limited' });
+      return mapSaveCore(req, res, accountId, Number(mapIdMatch[1]));
+    }
+    if (req.method === 'DELETE' && mapIdMatch) {
+      const accountId = await bearerActiveAccount(req, res);
+      if (accountId === null) return;
+      if (!mapMutationRateLimited(req, accountId).allowed)
+        return json(res, 429, { error: 'rate_limited' });
+      return mapDeleteCore(res, accountId, Number(mapIdMatch[1]));
+    }
+    const mapForkMatch = /^\/api\/maps\/(\d+)\/fork$/.exec(url);
+    if (req.method === 'POST' && mapForkMatch) {
+      const accountId = await bearerActiveAccount(req, res);
+      if (accountId === null) return;
+      if (!mapMutationRateLimited(req, accountId).allowed)
+        return json(res, 429, { error: 'rate_limited' });
+      return mapForkCore(req, res, accountId, Number(mapForkMatch[1]));
+    }
+    const mapPublishMatch = /^\/api\/maps\/(\d+)\/(publish|unpublish)$/.exec(url);
+    if (req.method === 'POST' && mapPublishMatch) {
+      const accountId = await bearerActiveAccount(req, res);
+      if (accountId === null) return;
+      if (!mapMutationRateLimited(req, accountId).allowed)
+        return json(res, 429, { error: 'rate_limited' });
+      return mapSetPublishedCore(
+        res,
+        accountId,
+        Number(mapPublishMatch[1]),
+        mapPublishMatch[2] === 'publish',
+      );
+    }
+    if (req.method === 'POST' && url === '/api/assets') {
+      if (contentLengthExceeds(req, MAX_ASSET_BYTES)) {
+        res.shouldKeepAlive = false;
+        res.setHeader('Connection', 'close');
+        return json(res, 413, { error: 'asset_too_large' });
+      }
+      const accountId = await bearerActiveAccount(req, res);
+      if (accountId === null) return;
+      if (!assetUploadRateLimited(req, accountId).allowed) {
+        return json(res, 429, { error: 'rate_limited' });
+      }
+      return assetUploadCore(req, res, accountId);
+    }
+    if (req.method === 'GET' && url === '/api/assets/mine') {
+      const accountId = await bearerReadAccount(req, res);
+      if (accountId === null) return;
+      return assetsListMineCore(res, accountId);
+    }
+    const assetGlbMatch = /^\/api\/assets\/([a-f0-9]{64})\.glb$/.exec(url);
+    if (req.method === 'GET' && assetGlbMatch) {
+      if (!publicReadRateLimited(req).allowed) return json(res, 429, { error: 'rate_limited' });
+      return assetBytesCore(res, assetGlbMatch[1]);
+    }
+    const assetIdMatch = /^\/api\/assets\/(\d+)$/.exec(url);
+    if (req.method === 'DELETE' && assetIdMatch) {
+      const accountId = await bearerActiveAccount(req, res);
+      if (accountId === null) return;
+      if (!assetUploadRateLimited(req, accountId).allowed) {
+        return json(res, 429, { error: 'rate_limited' });
+      }
+      return assetDeleteCore(res, accountId, Number(assetIdMatch[1]));
+    }
     json(res, 404, { error: 'unknown endpoint' });
   } catch (err: any) {
-    console.error('api error:', err);
+    logger.error({ err }, 'api error');
     json(res, 500, { error: 'internal error' });
   }
+}
+
+// ---------------------------------------------------------------------------
+// HTTP route dispatch
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// The /api dispatch seam
+// ---------------------------------------------------------------------------
+
+// Inject the main.ts runtime the ported public-read handlers (server/leaderboard.ts)
+// need but cannot import without a cycle: the live online count + dev perf profile
+// off the GameServer, the cache-fronted board and stats readers (unchanged: the
+// same TTL caches the legacy arms use, arena and the project-stats count included),
+// the releases feed's repo + cap, and the two request-shaped helpers. Done at module
+// load, before any request, so the static `routes` array registry.ts already spread
+// in can serve.
+configureLeaderboardRuntime({
+  playersOnline: () => liveGame().clients.size,
+  playersCap: canonicalPlayersCap,
+  perfProfile: () => liveGame().perfProfile(),
+  getLeaderboard,
+  getGuildLeaderboard,
+  getDevLeaderboard: () => topContributors(),
+  getDeedsLeaderboard,
+  deedsSelfRank,
+  getArenaLeaderboard,
+  getAccountsCreatedCount,
+  getCharactersCreatedCount,
+  getReleases,
+  // A getter, not a value: configureLeaderboardRuntime runs at module load (before
+  // startServer primes the config), but leaderboard.ts reads rt.githubRepo only at
+  // request time, so deferring the read via a getter keeps activeConfig() off the
+  // module-load path while still single-sourcing the repo slug through the Config.
+  get githubRepo() {
+    return activeConfig().githubRepo;
+  },
+  releasesMaxLimit: RELEASES_SIZE,
+  publicOrigin,
+  toSheetRank,
+});
+
+// Inject the main.ts runtime the Thornhollow Fields ladder handler
+// (server/battleground.ts) needs but cannot import without a cycle: the
+// cache-fronted ladder read. Done at module load, before any request,
+// mirroring configureLeaderboardRuntime above.
+configureBattlegroundRuntime({
+  getBgLeaderboard,
+});
+
+// Inject the main.ts runtime the deeds handlers (server/deeds.ts) need but
+// cannot import without a cycle: the cache-fronted global rarity read. Done at
+// module load, before any request, mirroring configureLeaderboardRuntime above.
+configureDeedsRuntime({
+  deedsRarity: getDeedsRarity,
+});
+
+// Same cycle-break for the reliquary rarity handler (server/reliquary.ts):
+// the read shares the deeds rarity cache entry and single flight above.
+configureReliquaryRuntime({
+  reliquaryRarity: getReliquaryRarity,
+});
+
+// Inject the main.ts runtime the ported auth handlers (server/auth_routes.ts) need
+// but cannot import without a cycle: the live IP-block gate off the GameServer, the
+// one Turnstile / native-attestation decision, and the request-metadata stamp. Done
+// at module load, before any request, mirroring configureLeaderboardRuntime above.
+configureAuthRuntime({
+  isIpBlocked: (ip) => liveGame().isIpBlocked(ip),
+  // Bind the secret here so the migrated register/login arm runs the exact same
+  // bot gate (incl. the native-attestation and desktop-origin branches) as the
+  // legacy handleApi arm above.
+  passesTurnstile: (req, body) => passesTurnstile(req, body, activeConfig().turnstileSecret),
+  requestMetadata,
+});
+configureAppleAuthRuntime({
+  isIpBlocked: (ip) => liveGame().isIpBlocked(ip),
+});
+
+// Inject the main.ts runtime the ported character handlers (server/characters.ts) need
+// but cannot import without a cycle: the live online-session check off the GameServer,
+// takeOverCharacter, the market rekey/save after a rename, initialCharacterState, and the
+// public share origin. Done at module load, before any request, mirroring the two calls
+// above. The legacy handleApi character arms stay intact as the flag-off rollback path.
+configureCharactersRuntime({
+  isCharacterOnline: (characterId) =>
+    [...liveGame().clients.values()].some((s) => s.characterId === characterId),
+  takeOverCharacter: (accountId, characterId) =>
+    liveGame().takeOverCharacter(accountId, characterId),
+  rekeyMarketSeller: (characterId, oldName, newName) =>
+    liveGame().rekeyMarketSeller(characterId, oldName, newName),
+  setHelmHiddenForCharacter: (characterId, hidden) =>
+    liveGame().setHelmHiddenForCharacter(characterId, hidden),
+  applyAppearanceForCharacter: (characterId, appearance) =>
+    liveGame().applyAppearanceForCharacter(characterId, appearance),
+  saveMarket: () => liveGame().saveMarket(),
+  purgeMarketSeller: (characterId, name) => liveGame().purgeMarketSeller(characterId, name),
+  rekeyMailOwner: (characterId, oldName, newName) =>
+    liveGame().rekeyMailOwner(characterId, oldName, newName),
+  saveMail: () => liveGame().saveMail(),
+  purgeMailOwner: (characterId, name) => liveGame().purgeMailOwner(characterId, name),
+  initialCharacterState,
+  publicOrigin,
+});
+
+// Inject the main.ts game-session hooks the ported account handlers
+// (server/account.ts) need but cannot import without a cycle: the live
+// character-online check and the post-deactivation disconnect off the GameServer.
+// These are the exact AccountGameHooks the legacy /api/account/deactivate arm
+// built inline; the legacy account arms stay intact as the flag-off rollback path.
+configureAccountRuntime({
+  anyCharacterOnline: (characterIds) =>
+    [...liveGame().clients.values()].some(
+      (s) => s.characterId != null && characterIds.includes(s.characterId),
+    ),
+  disconnectAccount: (id, reason) => liveGame().disconnectAccount(id, reason),
+});
+
+// Inject the one main.ts-local singleton the ported wallet handlers
+// (server/wallet.ts) need but cannot import without a cycle: the live
+// authoritative Sim level the /api/card publish reads for an online character.
+// This is the exact (characterId) => game.liveLevelForCharacter(characterId) the
+// legacy /api/card arm passed to handleCardUpload; the legacy wallet/card/referral
+// arms stay intact as the flag-off rollback path.
+configureWalletRuntime({
+  liveLevelForCharacter: (characterId) => liveGame().liveLevelForCharacter(characterId),
+});
+
+// Inject the one main.ts-local singleton the ported report handler
+// (server/reports.ts) needs but cannot import without a cycle: the live report
+// target for an online player id. This is the exact (pid) =>
+// game.reportTargetForPid(pid) the legacy /api/reports arm passed to
+// resolveReportTarget; the legacy reports/bug-report/perf-report/site-presence arms
+// stay intact as the flag-off rollback path.
+configureReportsRuntime({
+  reportTargetForPid: (pid) => liveGame().reportTargetForPid(pid),
+});
+
+// Inject the two main.ts-local game-session hooks the ported Discord routes
+// (server/discord.ts) need but cannot import without a cycle: the moderation
+// IP-block check (applied on start + callback to close the PR #1044/#1075 review
+// gap) and the live mech-chroma grant for a cosmetic swag claim. The legacy
+// handleApi Discord arms stay intact as the flag-off rollback path.
+configureDiscordRuntime({
+  isIpBlocked: (ip) => liveGame().isIpBlocked(ip),
+  grantCosmetic: (accountId, chromaId) => liveGame().grantMechChromaToAccount(accountId, chromaId),
+});
+
+// Claudium routes mirror weapon-skin purchases into account cosmetics live (the
+// same deferred liveGame() closure pattern as the Discord hooks above).
+configureClaudiumRuntime({
+  grantWeaponSkins: (accountId, skinIds) =>
+    liveGame().grantWeaponSkinsToAccount(accountId, skinIds),
+});
+
+// configureAdminRuntime(game) and configureInternalRuntime(game) pass the live
+// GameServer BY VALUE (AdminRuntime / InternalRuntime are Picks of GameServer, so
+// the live game satisfies them directly). Since construction is deferred off
+// module load (liveGame()'s first touch happens in startServer()), those two
+// injections happen in startServer() right after that first touch, unlike the
+// closure-based configure* calls above, which defer every liveGame() read to
+// request time and stay at module scope.
+
+// The RED /metrics exporter: ONE prom-client registry with the default
+// process/runtime metrics attached, paired with the structured access-log sink
+// into ONE composite tee. Every migrated route records through this composite, so
+// each request both increments the Prometheus counter/histogram and emits one
+// structured access line; the route :param TEMPLATE bounds the metric cardinality
+// and disambiguates the four surfaces, which is why all four dispatchers below
+// share this single registry and access-log stream. Built BEFORE the tier-2 store
+// wiring so every emission path below shares this one exporter instance.
+const httpMetrics = createHttpMetrics({ defaultMetrics: true });
+const httpMetricSink = teeMetricSink(createAccessLogSink(logger), httpMetrics.sink);
+
+// Install the four attack-signal counters (source-spec 4.9: rate_limit_hits_total,
+// auth_failures_total, bola_denied_total, pg_limiter_writes_total) process-wide.
+// Their emission sites (the rate_limit middleware, the ratelimit.ts auth-failure
+// choke point, the requireOwned deny path, the tier-2 pg store) read this slot at
+// emission time, so all of them land on the single /metrics registry above.
+setAttackSignalSink(httpMetrics.attackSignals);
+
+// Wire the pg-backed GLOBAL tier-2 rate-limit store (server/ratelimit_db.ts) into
+// the two-tier resolver (server/http/middleware/rate_limit.ts). Unconditional: the
+// authoritative server always has Postgres, and RATELIMIT_SCHEMA is created by
+// ensureSchema during boot (before listen), so the rate_limits table exists by the
+// time any request records a tier-2 hit. This only registers the store reference;
+// it opens no connection here (createPgRateLimitStore just wraps the shared pool),
+// so a bare import of main stays inert. Tier-2 fails open, so a pg outage degrades
+// to tier-1-only limiting rather than failing requests. The store counts each pg
+// upsert on pg_limiter_writes_total via the attack-signal slot above; the request
+// itself still lands in the access log with its final status.
+setRateLimitTier2Store(createPgRateLimitStore({ pool }));
+
+// The in-house dispatcher that fronts the legacy handleApi ladder via a per-path
+// delegate. Built once; a path the registry owns runs the onion, every
+// un-migrated path delegates to handleApi UNCHANGED.
+const apiDispatcher = createApiDispatcher({
+  registry: apiRegistry,
+  delegate: handleApi,
+  metricSink: httpMetricSink,
+});
+
+// The bound /api entry for the current dispatch mode, recomputed only when the
+// mode changes (boot + tests), never per request. It starts at the config default
+// dispatch (DEFAULT_DISPATCH, 'new' today) so importing this module (e.g. in a
+// test) never depends on the environment; startServer reads the real API_DISPATCH
+// flag via loadConfig once at boot. The production default is 'new';
+// API_DISPATCH=legacy is the one-flag rollback to the retained legacy ladder.
+let apiEntry: ApiDispatcher = selectApiEntry(DEFAULT_DISPATCH, apiDispatcher, handleApi);
+
+// The /admin/api surface gets its OWN flag-gated dispatcher over the SAME registry
+// (admin paths are a disjoint '/admin' first segment, so they never collide with the
+// /api family) whose DELEGATE is the legacy handleAdminApi ladder (bound to the live
+// game). Under API_DISPATCH 'new' a matched admin RouteDef runs the onion; every
+// unmatched admin path (an unknown endpoint, a wrong method, a HEAD) delegates to
+// handleAdminApi UNCHANGED, so behavior stays byte-identical until the ladder-deletion
+// PR (next release) removes it.
+const adminLegacy: ApiDelegate = (req, res) => handleAdminApi(req, res, liveGame());
+const adminApiDispatcher = createApiDispatcher({
+  registry: apiRegistry,
+  delegate: adminLegacy,
+  metricSink: httpMetricSink,
+});
+let adminApiEntry: ApiDispatcher = selectApiEntry(
+  DEFAULT_DISPATCH,
+  adminApiDispatcher,
+  adminLegacy,
+);
+
+// The /oauth surface's flag-gated dispatcher, over the SAME registry
+// (oauth paths are a disjoint '/oauth' first segment). The delegate is the legacy
+// handleOAuth ladder UNCHANGED, so the GET consent/device HTML pages (off the route
+// table), HEAD, unknown /oauth paths, and wrong-method requests all keep their
+// legacy behavior byte-identically until the ladder-deletion PR (next release).
+const oauthLegacy: ApiDelegate = (req, res) => handleOAuth(req, res);
+const oauthApiDispatcher = createApiDispatcher({
+  registry: apiRegistry,
+  delegate: oauthLegacy,
+  metricSink: httpMetricSink,
+});
+let oauthApiEntry: ApiDispatcher = selectApiEntry(
+  DEFAULT_DISPATCH,
+  oauthApiDispatcher,
+  oauthLegacy,
+);
+
+// The /internal surface's flag-gated dispatcher. The delegate is the EXACT
+// legacy composite from the pre-migration ladder arm: the daily-rewards ops
+// family (/internal/daily-rewards/*, never part of handleInternalApi) is tried
+// first and short-circuits when handled; everything else falls to the legacy
+// handleInternalApi ladder UNCHANGED (unknown endpoints, wrong methods, HEAD, and
+// the flag-off rollback path).
+const internalLegacy: ApiDelegate = async (req, res) => {
+  if (await handleDailyRewardInternalApi(req, res)) return;
+  await handleInternalApi(req, res, liveGame());
+};
+const internalApiDispatcher = createApiDispatcher({
+  registry: apiRegistry,
+  delegate: internalLegacy,
+  metricSink: httpMetricSink,
+});
+let internalApiEntry: ApiDispatcher = selectApiEntry(
+  DEFAULT_DISPATCH,
+  internalApiDispatcher,
+  internalLegacy,
+);
+
+function setApiDispatchMode(mode: DispatchMode): void {
+  apiEntry = selectApiEntry(mode, apiDispatcher, handleApi);
+  adminApiEntry = selectApiEntry(mode, adminApiDispatcher, adminLegacy);
+  oauthApiEntry = selectApiEntry(mode, oauthApiDispatcher, oauthLegacy);
+  internalApiEntry = selectApiEntry(mode, internalApiDispatcher, internalLegacy);
+}
+
+/**
+ * Emit the one-line boot record of the active API dispatch path, plus a stderr
+ * ALERT when the un-hardened legacy ladder is serving in production. The production
+ * default is now 'new', so a 'legacy' prod boot means someone set
+ * API_DISPATCH=legacy to roll back, a deliberate choice worth flagging loudly.
+ * Logger-injected and exported so a test asserts the ALERT fires ONLY for legacy +
+ * production. Dev-channel English (no t()); the fields are static, never
+ * request-derived (logger_call_hygiene safe).
+ */
+export function logApiDispatchSelection(
+  log: Pick<Logger, 'info' | 'warn'>,
+  dispatch: DispatchMode,
+  nodeEnv: string | undefined,
+): void {
+  log.info({ dispatch }, 'api dispatch mode selected');
+  if (dispatch === 'legacy' && nodeEnv === 'production') {
+    log.warn(
+      { dispatch },
+      'ALERT: serving the un-hardened legacy API ladder in production (API_DISPATCH=legacy)',
+    );
+  }
+}
+
+// Test-only override so the parity harness can drive routeHttpRequest under both
+// flag values in-process. The flag is boot-time only in production (API_DISPATCH),
+// so this throws there, mirroring ratelimit.setRateLimitClock.
+export function setApiDispatchModeForTests(mode: DispatchMode): void {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('setApiDispatchModeForTests must not be called in production');
+  }
+  setApiDispatchMode(mode);
+}
+
+/**
+ * Restore the BOOT DEFAULT /api dispatch after a test (DEFAULT_DISPATCH, now 'new'),
+ * matching the module-init state of the four flag-gated entries. A mode-dependent
+ * test sets its mode explicitly (setApiDispatchModeForTests) and this returns to the
+ * imported default, so nothing leaks a stale mode across tests.
+ */
+export function resetApiDispatchModeForTests(): void {
+  setApiDispatchMode(DEFAULT_DISPATCH);
+}
+
+// Single top-level source of truth for CORS + the OPTIONS-204 preflight, applied
+// BEFORE the prefix ladder so the legacy handlers AND the new /api dispatcher
+// inherit identical CORS from ONE place (a rollback can never drop preflight, and
+// the delegated and onion paths can never diverge on CORS). It applies the exact
+// CORS the ladder always did: the wide-open '*' for public read paths, the narrow
+// realm/native allowlist for other /api + /admin/api. Returns true when the
+// request was a fully-handled OPTIONS preflight, so the caller returns.
+function applyCorsAndPreflight(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  isApi: boolean,
+  publicCorsPath: boolean,
+  publicSfxPath: boolean,
+): boolean {
+  if (publicCorsPath || publicSfxPath) publicCors(res);
+  else if (isApi) maybeCors(req, res);
+  if (req.method === 'OPTIONS' && (isApi || publicCorsPath || publicSfxPath)) {
+    res.writeHead(204);
+    res.end();
+    return true;
+  }
+  return false;
+}
+
+// The createServer prefix-dispatch ladder, lifted to module scope as an
+// importable pure function. Every symbol it touches (liveGame(), the imported
+// route handlers, the CORS + dispatch helpers) is module-level, so it moves cleanly.
+// The exact prefix order, the url-vs-path arm asymmetry, the CORS + OPTIONS-204
+// short-circuit position, and every fire-and-forget `void` are preserved 1:1; the
+// only change from the pre-dispatcher ladder is the /api, /admin/api, /oauth, and
+// /internal arms route through apiEntry / adminApiEntry / oauthApiEntry /
+// internalApiEntry (all four
+// flag-gated dispatchers) instead of calling handleApi / handleAdminApi / handleOAuth
+// / the daily-rewards+handleInternalApi composite directly; each dispatcher delegates
+// its own unmatched paths to the same legacy handler, so behavior is byte-identical
+// until the ladder-deletion PR (next release).
+export function routeHttpRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
+  // Top-level so both dispatch arms and every prefix (and the OPTIONS-204
+  // short-circuit) carry the headers; a flag rollback cannot drop them.
+  withSecurityHeaders(req, res);
+  const url = req.url ?? '';
+  const path = url.split('?')[0];
+  const isApi = url.startsWith('/api/') || url.startsWith('/admin/api/');
+  // Public read surfaces (/api/public/..., /avatar/...) are CORS-open to any
+  // origin so browser-origin companion apps can call them client-side; every
+  // other /api route keeps the narrow realm/native allowlist.
+  const publicCorsPath = isPublicCorsPath(path);
+  const publicSfxPath = isPublicSfxPath(url);
+  if (applyCorsAndPreflight(req, res, isApi, publicCorsPath, publicSfxPath)) return;
+  // Operational health + metrics endpoints, ahead of the /internal/ arm so they
+  // answer even while the rest of the surface drains. GET-only exact matches on
+  // the query-stripped path (mirroring the /sitemap-characters.xml arm below);
+  // other methods fall through to serveStatic. They inherit the top-level
+  // security headers set above and carry their own Cache-Control: no-store.
+  if (req.method === 'GET' && path === '/livez') handleLivez(res);
+  else if (req.method === 'GET' && path === '/readyz') handleReadyz(res);
+  // /metrics is bearer-gated by config.metricsToken: feature-off 404 when unset,
+  // 401 on a missing/wrong bearer, exposition only on a match (see handleMetricsGate).
+  // /livez and /readyz stay open above.
+  else if (req.method === 'GET' && path === '/metrics')
+    void handleMetricsGate(req, res, httpMetrics, activeConfig().metricsToken);
+  else if (url.startsWith('/internal/')) {
+    // The flag-gated internal dispatcher; its delegate is the exact pre-migration
+    // composite (daily-rewards ops tried first, then handleInternalApi), so the
+    // 'legacy' mode and every unmatched path stay byte-identical.
+    void internalApiEntry(req, res);
+  } else if (url.startsWith('/admin/api/')) void adminApiEntry(req, res);
+  else if (url.startsWith('/api/')) void apiEntry(req, res);
+  else if (url.startsWith('/oauth/')) void oauthApiEntry(req, res);
+  else if (req.method === 'GET' && url.startsWith('/p/')) void handleCardRoutes(req, res);
+  else if (req.method === 'GET' && path.startsWith('/avatar/')) void handleAvatar(req, res);
+  else if (req.method === 'GET' && path.startsWith('/c/')) void handleProfilePage(req, res);
+  else if (req.method === 'GET' && path === '/sitemap-characters.xml')
+    void handleCharacterSitemap(req, res);
+  else serveStatic(req, res);
 }
 
 // ---------------------------------------------------------------------------
 // Boot
 // ---------------------------------------------------------------------------
 
-async function main(): Promise<void> {
+export async function startServer(): Promise<http.Server> {
+  // Load + validate the whole environment ONCE, before anything else (before the
+  // 120x500ms DB retry loop), so a garbage flag or a missing required value fails fast
+  // with a clear message rather than after a minute of connection retries. This
+  // primes activeConfig() for the request path (a request-time read returns this
+  // same memoized Config).
+  const config = activeConfig();
+  configureCommunityTestAccounts(config.provisionTestAccounts);
+  // Point the contributor-stats reader at the one boot Config, replacing its former
+  // duplicate GITHUB_REPO/GITHUB_TOKEN module reads (configure<Domain>Runtime).
+  configureGithubContributorsRuntime({
+    githubRepo: config.githubRepo,
+    githubToken: config.githubToken,
+  });
+
   // wait for the database (it may still be starting in docker)
   for (let attempt = 1; ; attempt++) {
     try {
       await pool.query('SELECT 1');
       break;
     } catch (err) {
-      if (attempt >= 30) throw err;
+      if (attempt >= DB_BOOT_MAX_ATTEMPTS) throw err;
       console.log(`waiting for postgres (attempt ${attempt})...`);
-      await new Promise((r) => setTimeout(r, 2000));
+      await new Promise((r) => setTimeout(r, DB_BOOT_RETRY_MS));
     }
   }
   await ensureSchema();
   await seedOAuthClients();
+  const game = liveGame();
+  // Inject the game-session methods the ported admin routes (server/admin.ts) call
+  // for their live reads + side effects (adminStats/liveSessions/disconnectAccount/
+  // muteAccountChat/reloadChatFilter/reloadBlockedIps/disconnectByIp/...), and the
+  // one game-loop side effect the ported /internal restart-countdown route calls
+  // (InternalRuntime is Pick<GameServer, 'startRestartCountdown'>). Both take the
+  // live game BY VALUE, so they must run after the first touch above; the legacy
+  // handleAdminApi / handleInternalApi ladders stay intact as the flag-off rollback
+  // paths (and are the corresponding dispatchers' delegates).
+  configureAdminRuntime(game);
+  // The admin overview's realm player cap: canonicalPlayersCap needs no game instance
+  // (unlike AdminRuntime), so it rides its own seam, fed the SAME canonical source
+  // /api/status uses, keeping the cap byte-identical across the status and overview reads.
+  configureAdminPlayersCap(canonicalPlayersCap);
+  configureAdminGuildBoardCacheBust(bustBoardCaches);
+  configureInternalRuntime(game);
+  // Bot detector: replay this realm's saved config overrides onto the fresh
+  // detector. Boot applies what it can; a stale entry (schema drift after a
+  // deploy) is skipped and logged, never allowed to drop the whole document.
+  const storedAntibotConfig = await loadAntibotConfig();
+  const antibotOverrides =
+    typeof storedAntibotConfig.data === 'object' && storedAntibotConfig.data !== null
+      ? (storedAntibotConfig.data as Record<string, unknown>)
+      : {};
+  for (const error of game.applyAntibotConfig(antibotOverrides).errors) {
+    console.warn(`bot-detector config override skipped: ${error}`);
+  }
   const orphans = await closeOrphanSessions();
   if (orphans > 0) console.log(`closed ${orphans} orphaned play session(s) from a previous run`);
-  const pruned = await pruneChatLogs(CHAT_LOG_RETENTION_DAYS);
-  if (pruned > 0)
-    console.log(`pruned ${pruned} chat log row(s) older than ${CHAT_LOG_RETENTION_DAYS} days`);
-  const prunedPerfReports = await pruneClientPerfReports(PERF_REPORT_RETENTION_DAYS);
-  if (prunedPerfReports > 0)
-    console.log(
-      `pruned ${prunedPerfReports} client perf report row(s) older than ${PERF_REPORT_RETENTION_DAYS} days`,
-    );
+  await pruneApplePendingLogins(pool);
   await game.loadMarket();
+  await game.loadMail();
+  // Guild bank books boot-load BEFORE listen() below, so every non-oversized
+  // guild's book is live before any player can join (Guild Bank Phase 3: this
+  // releases the deliberately silent-inert Phase 2 wire).
+  await game.loadGuildBanks();
+  await game.loadRifts();
   await game.loadChatFilter();
   await game.loadBlockedIps();
   void game.recordOnlineSnapshot();
   void currentSitePresenceUsers()
     .then((count) => recordSitePresenceSample(count))
     .catch((err) => console.error('site presence sample failed:', err));
-  setInterval(
-    () => {
-      void pruneChatLogs(CHAT_LOG_RETENTION_DAYS).catch((err) =>
-        console.error('chat log prune failed:', err),
-      );
-      void pruneClientPerfReports(PERF_REPORT_RETENTION_DAYS).catch((err) =>
-        console.error('perf report prune failed:', err),
-      );
-      void pruneExpiredOAuthGrants(pool).catch((err) =>
-        console.error('oauth grant prune failed:', err),
-      );
-    },
-    24 * 3600 * 1000,
-  ).unref();
+  setInterval(() => {
+    void pruneExpiredOAuthGrants(pool).catch((err) =>
+      console.error('oauth grant prune failed:', err),
+    );
+    void pruneDiscordOAuthStates(pool).catch((err) =>
+      console.error('discord oauth state prune failed:', err),
+    );
+    void pruneDiscordPendingLogins(pool).catch((err) =>
+      console.error('discord pending login prune failed:', err),
+    );
+    void pruneApplePendingLogins(pool).catch((err) =>
+      console.error('apple pending login prune failed:', err),
+    );
+    void pruneGitHubOAuthStates(pool).catch((err) =>
+      console.error('github oauth state prune failed:', err),
+    );
+  }, DAILY_PRUNE_INTERVAL_MS).unref();
   setInterval(() => {
     void game.recordOnlineSnapshot();
     void currentSitePresenceUsers()
@@ -1502,279 +3168,341 @@ async function main(): Promise<void> {
   // keep both leaderboard caches warm so the first viewer never waits on the
   // query and it never recomputes per request (PR-3)
   const warmLeaderboards = () => {
-    void refreshLeaderboard('realm').catch((err) =>
-      console.error('leaderboard refresh failed (realm):', err),
-    );
-    void refreshLeaderboard('global').catch((err) =>
-      console.error('leaderboard refresh failed (global):', err),
-    );
-    void refreshGuildLeaderboard('realm').catch((err) =>
-      console.error('guild leaderboard refresh failed (realm):', err),
-    );
-    void refreshGuildLeaderboard('global').catch((err) =>
-      console.error('guild leaderboard refresh failed (global):', err),
+    void refreshLeaderboardShared
+      .realm()
+      .catch((err) => console.error('leaderboard refresh failed (realm):', err));
+    void refreshLeaderboardShared
+      .global()
+      .catch((err) => console.error('leaderboard refresh failed (global):', err));
+    void refreshGuildLeaderboardShared
+      .realm()
+      .catch((err) => console.error('guild leaderboard refresh failed (realm):', err));
+    void refreshGuildLeaderboardShared
+      .global()
+      .catch((err) => console.error('guild leaderboard refresh failed (global):', err));
+    // Demand-gated: the Renown board is a full-table roll-up, so keep it warm
+    // only while it is actually being viewed (a request within
+    // DEEDS_BOARD_DEMAND_TTL_MS). An idle board pays nothing here; a cold or stale
+    // request still refreshes inline on its own read path (ensureDeedsBoard), then
+    // this loop keeps it fresh until demand lapses again.
+    warmDeedsBoardIfDemanded(
+      () => {
+        void refreshDeedsBoardShared().catch((err) =>
+          console.error('deeds board refresh failed:', err),
+        );
+      },
+      deedsBoardLastRequestAt,
+      Date.now(),
+      DEEDS_BOARD_DEMAND_TTL_MS,
     );
   };
   warmLeaderboards();
   setInterval(warmLeaderboards, LEADERBOARD_TTL_MS).unref();
   console.log('database ready');
 
-  const server = http.createServer((req, res) => {
-    const url = req.url ?? '';
-    const path = url.split('?')[0];
-    const isApi = url.startsWith('/api/') || url.startsWith('/admin/api/');
-    // Public read surfaces (/api/public/..., /avatar/...) are CORS-open to any
-    // origin so browser-origin companion apps can call them client-side; every
-    // other /api route keeps the narrow realm/native allowlist.
-    const publicCorsPath = isPublicCorsPath(path);
-    // Security headers FIRST, before CORS/preflight and any route dispatch, so
-    // every prefix and the OPTIONS-204 short-circuit below carry them. The public,
-    // embeddable RESOURCE surfaces (avatars, the public read API, and the shareable
-    // player-card image under /p/) get cross-origin CORP so an off-origin browser
-    // <img>/fetch still loads them (they carried no CORP before); everything else,
-    // including the /c/ profile HTML (a navigation, not a cross-origin embed), is
-    // locked to same-origin.
-    const corpCrossOrigin = publicCorsPath || path.startsWith('/p/');
-    withSecurityHeaders(req, res, { corpCrossOrigin });
-    if (publicCorsPath) publicCors(res);
-    else if (isApi) maybeCors(req, res);
-    if (req.method === 'OPTIONS' && (isApi || publicCorsPath)) {
-      res.writeHead(204);
-      res.end();
-      return;
-    }
-    if (url.startsWith('/internal/')) void handleInternalApi(req, res, game);
-    else if (url.startsWith('/admin/api/')) void handleAdminApi(req, res, game);
-    else if (url.startsWith('/api/')) void handleApi(req, res);
-    else if (url.startsWith('/oauth/')) void handleOAuth(req, res);
-    else if (req.method === 'GET' && url.startsWith('/p/')) void handleCardRoutes(req, res);
-    else if (req.method === 'GET' && path.startsWith('/avatar/')) void handleAvatar(req, res);
-    else if (req.method === 'GET' && path.startsWith('/c/')) void handleProfilePage(req, res);
-    else if (req.method === 'GET' && path === '/sitemap-characters.xml')
-      void handleCharacterSitemap(req, res);
-    else if (req.method === 'GET' && path === '/metrics') {
-      const s = game.adminStats();
-      const mem = process.memoryUsage();
-      const lines = [
-        '# HELP woc_players_online Number of connected players',
-        '# TYPE woc_players_online gauge',
-        `woc_players_online ${s.online}`,
-        '# HELP woc_entities_total Number of entities in simulation',
-        '# TYPE woc_entities_total gauge',
-        `woc_entities_total ${s.simEntities}`,
-        '# HELP woc_tick_duration_ms Exponential moving average of server tick duration in ms',
-        '# TYPE woc_tick_duration_ms gauge',
-        `woc_tick_duration_ms ${s.tickMsAvg}`,
-        '# HELP woc_process_heap_bytes Node.js heap used bytes',
-        '# TYPE woc_process_heap_bytes gauge',
-        `woc_process_heap_bytes ${mem.heapUsed}`,
-        '# HELP woc_process_rss_bytes Node.js resident set size bytes',
-        '# TYPE woc_process_rss_bytes gauge',
-        `woc_process_rss_bytes ${mem.rss}`,
-        '# HELP woc_process_uptime_seconds Process uptime in seconds',
-        '# TYPE woc_process_uptime_seconds counter',
-        `woc_process_uptime_seconds ${s.uptimeSeconds}`,
-      ];
-      res.writeHead(200, { 'Content-Type': 'text/plain; version=0.0.4; charset=utf-8' });
-      res.end(lines.join('\n') + '\n');
-    }
-    else serveStatic(req, res);
-  });
+  // Select the /api dispatch path from the single API_DISPATCH flag on the one boot
+  // Config loaded above (never a scattered process.env read). The default is 'new';
+  // API_DISPATCH=legacy is the one-flag rollback to the retained legacy ladder.
+  setApiDispatchMode(config.dispatch);
+  logApiDispatchSelection(logger, config.dispatch, process.env.NODE_ENV);
+
+  // maxHeaderSize is read-only after construction so it rides createServer here;
+  // the three mutable timeouts are set by applyServerTimeouts. Every value equals
+  // Node's own default (server/http/server_timeouts.ts), so the effective behavior
+  // is byte-equal to the prior implicit defaults; naming + pinning them is the
+  // whole change.
+  const server = http.createServer({ maxHeaderSize: MAX_HEADER_SIZE_BYTES }, routeHttpRequest);
+  applyServerTimeouts(server);
+  server.on('clientError', handleClientError);
 
   // cap frame size: the largest legitimate client message is a small JSON
   // command; without this the ws default (~100 MiB) lets one socket force a
   // huge allocation + parse before any field-level validation runs
-  const wss = new WebSocketServer({
-    noServer: true,
-    maxPayload: 16 * 1024,
+  const wss = new WebSocketServer({ noServer: true, maxPayload: WS_MAX_PAYLOAD_BYTES });
+  const wsAuth = createWsAuth({
+    game,
+    accountAndScopeForToken,
+    moderationStatusForAccount,
+    getCharacter,
+    chatMuteStatusForAccount,
+    adminRolesForAccount,
+    permissionsForRoles,
+    metaRequestUserData,
+    metaEventSourceUrl,
+    loadAccountCosmetics,
+    isConnectionRefused,
+    bufferHandshakeMessages,
+    requestMetadata,
+    maxWsPerIpHard: config.maxWsPerIpHard,
+    maxPlayersPerRealm: config.maxPlayersPerRealm,
+    acquireCharacterLease,
+    releaseCharacterLease,
+    bankBonusForAccount: async (id) => computeBankBonus(await bankBonusFactsForAccount(id)),
   });
-  server.on('upgrade', (req, socket, head) => {
-    const url = new URL(req.url ?? '/', 'http://localhost');
-    if (url.pathname !== '/ws') {
-      socket.destroy();
-      return;
-    }
-    wss.handleUpgrade(req, socket, head, (ws) => {
-      void onConnection(ws, req);
-    });
-  });
+  wsAuth.attachUpgrade(server, wss);
 
-  async function authenticateWebSocket(
-    ws: WebSocket,
-    raw: string,
-    req: http.IncomingMessage,
-  ): Promise<void> {
-    let msg: any;
-    try {
-      msg = JSON.parse(raw);
-    } catch {
-      ws.send(JSON.stringify({ t: 'error', error: 'bad auth message' }));
-      ws.close();
-      return;
-    }
-    if (msg?.t !== 'auth') {
-      ws.send(JSON.stringify({ t: 'error', error: 'authentication required' }));
-      ws.close();
-      return;
-    }
+  // Register the game-state gauges + throughput counters on the SAME registry the
+  // RED exporter built at module scope, then install the counter sink process-wide
+  // (mirrors setAttackSignalSink). Wired here, after `game` and `wss` exist, so the
+  // gauges read live state at scrape time; ws_connections is the raw open-socket
+  // count (joined or not), distinct from players_online (joined sessions).
+  const gameStateSource: GameStateSource = {
+    playersOnline: () => game.clients.size,
+    accountsOnline: () => game.liveAccountIds().size,
+    wsConnections: () => wss.clients.size,
+    simEntities: () => game.sim.entities.size,
+    simTickHz: () => game.simTickHz(),
+    tickPhaseMillis: () => game.tickPhaseMillis(),
+    // Coerced at the untyped boundary: @types/pg hand-declares these getters,
+    // so a pg upgrade that drops one type-checks clean and would otherwise
+    // fail the ENTIRE scrape at collect time (one bad collector rejects
+    // registry.metrics(), taking every gauge with it).
+    dbPool: () => ({
+      total: Number(pool.totalCount) || 0,
+      idle: Number(pool.idleCount) || 0,
+      waiting: Number(pool.waitingCount) || 0,
+    }),
+    lastTickAt: () => game.lastTickAt(),
+    loopStartedAt: () => game.loopStartedAt(),
+    // Read at scrape time and never constructs the cache: an idle process must
+    // not mint one as a side effect of being measured.
+    guildBankLogCache: () => guildBankLogCacheStats(),
+  };
+  setGameMetricsCounters(registerGameStateMetrics(httpMetrics.registry, gameStateSource));
+  registerParseMetrics(httpMetrics.registry, game.parseCapture.counters);
+  // Hand the same live source to /livez, so a wedged loop answers 503 from outside
+  // the process. Registered HERE rather than read from the route arm: the /livez arm
+  // must never touch liveGame() (a health probe constructing a GameServer is the bug
+  // tests/server/game_boot_order.test.ts pins against).
+  registerLivenessSource(gameStateSource);
 
-    const token = typeof msg.token === 'string' ? msg.token : '';
-    const characterId = Number(msg.character ?? 'NaN');
-    const clientSeed = typeof msg.clientSeed === 'string' ? msg.clientSeed : '';
-    const accountId = await accountForToken(token);
-    if (accountId === null || !Number.isFinite(characterId)) {
-      ws.send(JSON.stringify({ t: 'error', error: 'not authenticated' }));
-      ws.close();
-      return;
-    }
-    const status = await moderationStatusForAccount(accountId);
-    if (status.locked) {
-      ws.send(JSON.stringify({ t: 'error', error: status.message }));
-      ws.close();
-      return;
-    }
-    const character = await getCharacter(accountId, characterId);
-    if (!character) {
-      ws.send(JSON.stringify({ t: 'error', error: 'no such character' }));
-      ws.close();
-      return;
-    }
-    if (character.force_rename) {
-      ws.send(
-        JSON.stringify({
-          t: 'error',
-          error: 'This character must be renamed before entering the world.',
-        }),
-      );
-      ws.close();
-      return;
-    }
-    const chatMute = await chatMuteStatusForAccount(accountId);
-    // Hard per-IP WS connection limit. The soft threshold (composite score evidence)
-    // is handled inside game.join(); this guard blocks egregious bot farms before
-    // they consume a session slot.
-    const ip = requestMetadata(req).ip;
-    const isAdmin = await isAdminAccount(accountId);
-    if (!isAdmin && game.clients.size >= MAX_PLAYERS_TOTAL) {
-      ws.send(JSON.stringify({ t: 'error', error: 'Server is full, try again later' }));
-      ws.close(1013, 'Server full');
-      return;
-    }
-    if (
-      isConnectionRefused({
-        blocked: game.isIpBlocked(ip),
-        isAdmin,
-        ipSessions: game.countIpSessions(ip),
-        hardLimit: MAX_WS_PER_IP_HARD,
-      })
-    ) {
-      ws.close(1008, 'Too many connections from your network');
-      return;
-    }
-    const accountCosmetics = await loadAccountCosmetics(accountId);
-    const result = game.join(
-      ws,
-      accountId,
-      character.id,
-      character.name,
-      character.class,
-      character.state,
-      character.is_gm,
-      {
-        ...requestMetadata(req),
-        mutedUntil: status.chatMutedUntil ?? chatMute.mutedUntil,
-        reason: chatMute.reason,
-        chatStrikes: status.chatStrikes,
-        accountCosmetics,
-        isAdmin,
-        clientSeed,
-      },
-    );
-    if ('error' in result) {
-      ws.send(JSON.stringify({ t: 'error', error: result.error }));
-      ws.close();
-      return;
-    }
-    const session = result;
-    console.log(`+ ${character.name} (${character.class}) joined — ${game.clients.size} online`);
-    ws.on('message', (data) => {
-      game.handleMessage(session, String(data));
-    });
-    const keepAlive = setInterval(() => { if (ws.readyState === ws.OPEN) ws.ping(); }, 30_000);
-    ws.on('close', () => {
-      clearInterval(keepAlive);
-      void game.leave(session, 'disconnected');
-      console.log(`- ${character.name} left — ${game.clients.size} online`);
-    });
-    ws.on('error', () => {
-      void game.leave(session, 'connection error');
-    });
-  }
+  // The Discord bot's own rate-limit and breaker health, pushed in on the presence
+  // request and cached process-locally. No collector and no query: the gauges read
+  // that cache at scrape time and the counters ride the push itself.
+  registerDiscordBotMetrics(httpMetrics.registry);
 
-  async function onConnection(ws: WebSocket, req: http.IncomingMessage): Promise<void> {
-    const authTimer = setTimeout(() => {
-      ws.send(JSON.stringify({ t: 'error', error: 'authentication timed out' }));
-      ws.close();
-    }, 10_000);
-
-    // Pre-auth socket errors (e.g. a first frame over maxPayload, which ws
-    // surfaces as an 'error' event) would otherwise be an unhandled exception
-    // and crash the process. Tear the connection down quietly instead. The
-    // post-auth game.leave handler is attached separately once joined.
-    ws.on('error', () => {
-      clearTimeout(authTimer);
-      try {
-        ws.close();
-      } catch {
-        /* already closing */
-      }
-    });
-
-    ws.once('message', (data) => {
-      clearTimeout(authTimer);
-      // Buffer any frames the client sends while the async auth/join handshake
-      // is still in flight, then replay them once authenticateWebSocket has
-      // attached the permanent message handler. Without this the frames are
-      // silently dropped (see ws_buffer.ts).
-      const flush = bufferHandshakeMessages(ws);
-      // A rejection in here (a database call failing under load, say) used to be an
-      // unhandled promise: the auth timer is already cleared above, so the socket
-      // stayed open with no error frame and no close and the client sat on a dead
-      // connection forever. We have no auto-reconnect, so that means a stuck loading
-      // screen until the player reloads. Fail the socket the same way the auth
-      // timeout does. (Transport diagnostics stay English by design, see main.ts's
-      // localizeApiError note.)
-      void authenticateWebSocket(ws, String(data), req)
-        .catch((err) => {
-          console.error('websocket auth handshake failed:', err);
-          try {
-            ws.send(JSON.stringify({ t: 'error', error: 'server error during authentication' }));
-          } catch {
-            /* socket already gone */
-          }
-          try {
-            ws.close();
-          } catch {
-            /* already closing */
-          }
-        })
-        .finally(flush);
-    });
-  }
+  // Business gauges use isolated, staggered, timeout-protected engagement and
+  // funnel snapshots every 15 minutes. Scrapes publish only cached data and never
+  // query Postgres. Client FPS stays available in the admin tooling but is
+  // intentionally not polled for the business dashboard.
+  const businessMetrics = registerBusinessMetrics(httpMetrics.registry);
+  businessMetrics.start();
 
   game.start();
-  server.listen(PORT, () => {
-    console.log(`World of ClaudeCraft server listening on http://localhost:${PORT}`);
+  server.listen(config.port, () => {
+    console.log(`World of ClaudeCraft server listening on http://localhost:${config.port}`);
     console.log(`  REST: /api/register /api/login /api/characters /api/status`);
-    console.log(`  WS:   /ws, then first message {t:"auth",token,character}`);
+    console.log(`  WS:   /ws, then first message {t:"${ONLINE_WORLD_AUTH_TYPE}",token,character}`);
   });
 
+  // The CONCURRENTLY index builds run AFTER listen, deliberately. They
+  // serialize across every realm process on the schema advisory lock, and a
+  // build on a genuinely large table (bank_ledger) is two heap scans plus a
+  // wait for every transaction that could see it: before listen, a rolling
+  // restart paid that stall on every realm at once and none of them served
+  // players meanwhile. A slow build should delay the index, not the realm.
+  //
+  // Not awaited, and a failure is LOUD but not fatal: every entry is idempotent
+  // and drops its own INVALID carcass, so the next boot retries, and a realm
+  // that is already serving players must not be killed by an index build. The
+  // readers that depend on these indexes carry their own statement bounds, so a
+  // window without one degrades a query rather than the process.
+  void runConcurrentIndexMigrations().catch((err) => {
+    console.error(
+      'concurrent index migrations failed; the realm is serving WITHOUT them and the next boot will retry:',
+      err,
+    );
+  });
+
+  // Off-peak batched retention. The sweep self-clocks once per UTC day behind a
+  // database advisory lock, so with several processes exactly one sweeps; each
+  // primitive below is one bounded DELETE batch and the sweep drives iteration.
+  const retentionSweep = createRetentionSweep({
+    connect: () => pool.connect(),
+    utcHour: config.retentionSweepUtcHour,
+    maxRowsPerRun: config.retentionSweepMaxRowsPerRun,
+    batchSize: RETENTION_SWEEP_BATCH_SIZE,
+    // The persisted marker keeps a mid-day deploy or restart from re-running the
+    // sweep at peak: it is consulted under the advisory lock and written only
+    // after a completed sweep.
+    loadLastSweepDay: async () => {
+      const stored = await loadWorldState<{ day?: unknown }>('retention_sweep:last_run');
+      return typeof stored?.day === 'string' ? stored.day : null;
+    },
+    saveLastSweepDay: async (day) => {
+      await saveWorldState('retention_sweep:last_run', { day });
+    },
+    // bank_ledger is deliberately ABSENT from this table list: it is kept
+    // FOREVER. It is the anti-dupe audit trail for both containers, and the
+    // guild container (Guild Bank Phase 3) makes that non-negotiable: guild
+    // conservation replays the WHOLE per-guild history (items in-vs-out across
+    // officers, the treasury balance), so pruning any prefix would turn every
+    // later legitimate withdraw into a false negative_net/negative_treasury
+    // finding and erase the evidence trail a real dupe investigation needs.
+    // Growth is accepted: one row per successful op, insert-only. It carries
+    // three append-only indexes (bank_ledger_character, bank_ledger_created,
+    // and bank_ledger_container_recent), and as of the in-game guild bank
+    // ACTIVITY LOG it has one player-triggerable hot read: the officer-visible
+    // per-guild history (server/guild_bank_log.ts), which is why that third
+    // index exists and is PARTIAL to `container = 'guild'`. Anyone re-deciding
+    // whether unbounded growth is still acceptable should weigh that read: it
+    // is bounded (LIMIT 50, a backward index scan) and cached per guild, so it
+    // does not scale with table size, but it is no longer true that nothing
+    // reads this table hot.
+    tables: [
+      { name: 'chat_logs', pruneBatch: (n) => pruneChatLogsBatch(config.chatLogRetentionDays, n) },
+      {
+        name: 'client_perf_reports',
+        pruneBatch: (n) => pruneClientPerfReportsBatch(config.perfReportRetentionDays, n),
+      },
+      {
+        name: 'daily_reward_events',
+        pruneBatch: async (n) => {
+          // The reward day rolls at a configured UTC offset, not midnight, so the
+          // cutoff comes from the reward clock (null means retention is off).
+          const cutoff = await dailyRewardEventsCutoffDay(config.dailyRewardEventsRetentionDays);
+          if (cutoff === null) return 0;
+          return pruneDailyRewardEventsBatch(cutoff, n);
+        },
+      },
+      {
+        // The activity day is the UTC calendar day the metrics writers stamp,
+        // so the primitive derives its own UTC cutoff (no reward-clock helper).
+        name: 'player_activity_daily',
+        pruneBatch: (n) =>
+          prunePlayerActivityDailyBatch(pool, config.playerActivityRetentionDays, n),
+      },
+      {
+        name: 'admin_site_presence_samples',
+        pruneBatch: (n) => pruneSitePresenceSamplesBatch(config.sitePresenceRetentionDays, n),
+      },
+      {
+        name: 'site_presence_sessions',
+        pruneBatch: (n) => pruneSitePresenceSessionsBatch(config.sitePresenceRetentionDays, n),
+      },
+      // The play-session fold feeds account_ip_associations, so the feeder table
+      // is swept before the ager in the same run.
+      {
+        name: 'play_sessions',
+        pruneBatch: (n) => prunePlaySessionsBatch(pool, config.playSessionRetentionDays, n),
+      },
+      {
+        name: 'account_ip_associations',
+        pruneBatch: (n) =>
+          pruneAccountIpAssociationsBatch(pool, config.accountIpAssociationRetentionDays, n),
+      },
+      {
+        // The unstuck telemetry table (v0.32.0). It shipped as a boot-blocking
+        // one-shot plus a bare interval, the exact shape the sweep exists to
+        // retire; it rides the shared budget and batch size like every sibling.
+        name: 'unstuck_reports',
+        pruneBatch: (n) => pruneUnstuckReportsBatch(pool, config.unstuckReportRetentionDays, n),
+      },
+      {
+        name: 'password_reset_requests',
+        pruneBatch: (n) =>
+          prunePasswordResetRequestsBatch(config.passwordResetRequestRetentionDays, n),
+      },
+      {
+        name: 'email_change_requests',
+        pruneBatch: (n) => pruneEmailChangeRequestsBatch(config.emailChangeRequestRetentionDays, n),
+      },
+      {
+        name: 'email_log',
+        pruneBatch: (n) => pruneEmailLogBatch(config.emailLogRetentionDays, n),
+      },
+      {
+        // Only RESOLVED reports age out; moderationQueue and
+        // moderationReportsForAccount only ever surface status = 'open' rows,
+        // so pruning is safe (see prunePlayerReportsBatch).
+        name: 'player_reports',
+        pruneBatch: (n) => prunePlayerReportsBatch(config.playerReportRetentionDays, n),
+      },
+      {
+        // Every row can carry a screenshot up to ~900 KB (bug_report_db.ts
+        // BUG_SCREENSHOT_MAX), the fastest-growing of the report tables.
+        name: 'bug_reports',
+        pruneBatch: (n) => pruneBugReportsBatch(config.bugReportRetentionDays, n),
+      },
+      {
+        // The hard-word incident log; its only reader is already
+        // LIMIT-bounded per account (chatModerationForAccount).
+        name: 'chat_violations',
+        pruneBatch: (n) => pruneChatViolationsBatch(config.chatViolationRetentionDays, n),
+      },
+    ],
+    // The fold precondition makes sample pruning lossless; skip the whole group
+    // when retention is off so quiet configs write nothing to world_state.
+    onlineSamples:
+      config.onlineSamplesRetentionDays > 0
+        ? {
+            listRealms: () => distinctOnlineSampleRealms(),
+            foldPeak: (realm) => foldOnlinePeak(realm),
+            pruneBatch: (realm, n) =>
+              pruneOnlineSamplesBatch(realm, config.onlineSamplesRetentionDays, n),
+          }
+        : undefined,
+  });
+  retentionSweep.start();
+
   const shutdown = async () => {
+    // Flip readiness to draining FIRST so /readyz answers 503 and a load balancer
+    // sheds new traffic before we stop the loop and persist (in-flight requests and
+    // /livez keep working through the drain).
+    markDraining();
     console.log('shutting down: saving characters...');
+    // Stop the app-aggregate metric collectors so no refresh query races the pool
+    // close below (their intervals are unref()'d, but an in-flight tick could still
+    // fire before pool.end()).
+    await businessMetrics.stop();
+    game.beginShutdown();
+    // Same rationale for the retention sweep: an in-flight prune batch must not
+    // race the pool close below.
+    await retentionSweep.stop();
     game.stop();
     await game.saveAll('shutdown');
     await game.saveMarket();
+    await game.saveMail();
+    await game.saveRifts();
     await game.endAllPlaySessions();
+    // Drain any bank_ledger writes still queued on the FIFO tail BEFORE the lease
+    // sweep: once the leases drop, a replacement process can load the same character
+    // and write new ledger rows, and rows still queued here would flush after them
+    // with higher insertion ids, inverting the id order the offline audit replays by
+    // (false negative_net / purchased_regression alarms). A clean restart loses no
+    // audit rows this way (a crash still can; the audit tolerates that as a
+    // transient mismatch). Rejections log inside the writer, so the drain never
+    // throws.
+    await bankLedgerIdle();
+    // Drain the character_deeds FIFO too: saveAll above already persisted every
+    // blob, and an insert still queued here would be rejected by pool.end() and
+    // go missing until that character's next login (the join reconcile is the
+    // only heal). Rejections log inside the writer, so the drain never throws.
+    await deedRecordsIdle();
+    // Stop accepted /unstuck report intake and drain only to a finite deadline.
+    // Per-query timeouts bound an active write; deadline expiry aborts retry
+    // delays and drops queued telemetry before the shared pool closes.
+    const unstuckReportsDrained = await stopUnstuckRecords(UNSTUCK_RECORD_SHUTDOWN_DRAIN_MS);
+    if (!unstuckReportsDrained) console.warn('unstuck report drain deadline reached');
+    // Stop and drain each storefront mirror's in-memory push FIFO too (right
+    // after the deeds records they observe): an unlock still queued here would
+    // be lost on pool.end(), and the next reconcile (on link or on login) is
+    // its only replay. Each stop*Mirror flips its shutdown flag and races the
+    // drain tail against a 5s deadline, so a stuck upstream cannot hang the
+    // shutdown; failures are swallowed inside the worker, so this never
+    // throws. A no-op when that mirror is dark. Steam and Epic drain
+    // independently (D21) and CONCURRENTLY: the two stops share one 5s
+    // wall-clock budget, so a wedged Steam upstream cannot delay the Epic
+    // drain (or double the shutdown window) by serializing behind it.
+    await Promise.all([stopSteamMirror(5000), stopEpicMirror(5000)]);
+    // Drop every character load lease this process holds so a clean restart can
+    // reload its characters immediately instead of waiting out the lease TTL.
+    // Runs before pool.end(); a failure here must not abort the shutdown, so log
+    // and continue to close the pool.
+    await releaseAllCharacterLeases().catch((err) =>
+      console.error('lease release-all failed:', err),
+    );
+    await game.parseCapture.stop();
     await game.chatLog.stop();
     await pool.end();
     process.exit(0);
@@ -1785,17 +3513,29 @@ async function main(): Promise<void> {
   // Last-resort net: one player's request must never crash the process and
   // disconnect everyone. handleMessage already guards itself, but any future
   // uncaught throw in a timer or async path would otherwise be fatal. Log and
-  // keep serving — a live world staying up beats a clean crash-loop. Genuinely
-  // fatal startup errors are still handled by main().catch() below.
+  // keep serving: a live world staying up beats a clean crash-loop. Genuinely
+  // fatal startup errors are still handled by the entrypoint guard's
+  // startServer().catch() below.
   process.on('uncaughtException', (err) => {
     console.error('uncaughtException (kept alive):', err);
   });
   process.on('unhandledRejection', (reason) => {
     console.error('unhandledRejection (kept alive):', reason);
   });
+
+  return server;
 }
 
-main().catch((err) => {
-  console.error('fatal:', err);
-  process.exit(1);
-});
+// Boot only when this module is the process entrypoint, never on a bare import.
+// The server always runs as the esbuild CJS bundle (npm run server / npm run
+// realms, then node dist-server/server.cjs), where require.main === module marks
+// the entry. esbuild leaves import.meta empty under the cjs output format, so the
+// CJS entry check is the one that fires in the bundle; a Vitest import() of this
+// module matches neither a defined require nor require.main === module, so the
+// bare import stays inert (no socket bound, no DB connection).
+if (typeof require !== 'undefined' && require.main === module) {
+  startServer().catch((err) => {
+    console.error('fatal:', err);
+    process.exit(1);
+  });
+}

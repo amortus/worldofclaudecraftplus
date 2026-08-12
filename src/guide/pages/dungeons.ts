@@ -2,6 +2,10 @@
 // bands, party sizes) is generated from the sim DUNGEONS so it never drifts; the flavor
 // bodies are curated guide copy. Thematic only, no boss scripts, timers, or loot. The
 // endgame raid is teased without naming its boss (its sim name is withheld in the feed).
+// The Dungeon Finder section describes only what src/sim/social/dungeon_finder.ts and its
+// authored catalogue (src/sim/content/dungeon_finder.ts) actually do: it deliberately says
+// "the runs it queues for" rather than "every dungeon", because the catalogue does not cover
+// every live five-man. No proposal timers, cooldown lengths, or listing caps in the copy.
 
 import { esc } from '../../ui/esc';
 import { formatNumber, type TranslationKey, t } from '../../ui/i18n';
@@ -16,6 +20,7 @@ const BODY: Record<string, TranslationKey> = {
   sunken_bastion: 'guide.dungeonsPage.bastionBody',
   drowned_temple: 'guide.dungeonsPage.templeBody',
   gravewyrm_sanctum: 'guide.dungeonsPage.sanctumBody',
+  wildheart_basin: 'guide.dungeonsPage.wildheartBody',
   raid: 'guide.dungeonsPage.raidBody',
 };
 
@@ -32,7 +37,7 @@ function dungeonCard(d: GuideDungeon): string {
   const name = d.isRaid ? t('guide.dungeonsPage.raidName') : (d.name ?? '');
   const level = levelLabel(d);
   return `
-    <section class="guide-dungeon-card${d.isRaid ? ' guide-dungeon-raid' : ''}">
+    <section class="guide-dungeon-card${d.isRaid ? ' guide-dungeon-raid' : ''}" id="dungeon-${esc(d.id)}">
       <div class="guide-dungeon-head">
         <h2 class="guide-dungeon-name">${esc(name)}</h2>
         ${level ? `<span class="guide-badge guide-badge-level">${esc(level)}</span>` : ''}
@@ -52,13 +57,32 @@ export const dungeons: GuidePage = {
         <p>${esc(t('guide.dungeonsPage.party'))}</p>
         ${callout(esc(t('guide.dungeonsPage.soloLead')))}
         <div class="guide-dungeon-grid">${cards}</div>
+        ${callout(esc(t('guide.dungeonsPage.formatsNote')), { variant: 'note' })}
+        ${section(
+          'guide.dungeonsPage.finderTitle',
+          p('guide.dungeonsPage.finderBody') +
+            p('guide.dungeonsPage.finderRolesBody') +
+            p('guide.dungeonsPage.finderOfferBody') +
+            p('guide.dungeonsPage.finderBoardBody'),
+        )}
+        ${section(
+          'guide.dungeonsPage.heroicTitle',
+          p('guide.dungeonsPage.heroicBody') + p('guide.dungeonsPage.heroicHowBody'),
+        )}
+        ${section(
+          'guide.dungeonsPage.heroicRewardsTitle',
+          p('guide.dungeonsPage.heroicRewardsBody') + p('guide.dungeonsPage.heroicLockoutBody'),
+        )}
+        ${section('guide.dungeonsPage.resetTitle', p('guide.dungeonsPage.resetBody'))}
         ${section('guide.dungeonsPage.templeLoreTitle', p('guide.dungeonsPage.templeLoreBody'))}
         ${section('guide.dungeonsPage.cryptLeadTitle', p('guide.dungeonsPage.cryptLeadBody'))}
         ${related([
           { href: hrefFor('delves'), key: 'guide.nav.delves' },
+          { href: hrefFor('rifts'), key: 'guide.nav.rifts' },
           { href: hrefFor('world'), key: 'guide.nav.world' },
           { href: hrefFor('arena'), key: 'guide.nav.arena' },
           { href: hrefFor('classes'), key: 'guide.nav.classes' },
+          { href: hrefFor('deeds'), key: 'guide.nav.deeds' },
         ])}
       </article>`;
   },

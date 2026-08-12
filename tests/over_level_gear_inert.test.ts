@@ -4,10 +4,10 @@ import { characterDerivedStats, createPlayer, recalcPlayerStats } from '../src/s
 import { requiredLevelFor } from '../src/sim/item_level_req';
 
 // Gear above the wearer's level is INERT: it stays equipped (still worn and
-// rendered) but contributes no stats, armor, or weapon damage until the
-// character reaches its required level. This only arises for a character
-// loaded wearing gear that was equipped before the level gate existed; the
-// equip path itself blocks equipping over-level gear outright.
+// rendered) but contributes no stats, armor, spell power, set pieces, or weapon
+// damage until the character reaches its required level. This only arises for a
+// character loaded wearing gear that was equipped before the level gate existed;
+// the equip path itself blocks equipping over-level gear outright.
 
 type Equip = Parameters<typeof characterDerivedStats>[2];
 
@@ -22,7 +22,7 @@ const UNARMED = { min: 1, max: 2, speed: 2 };
 function warrior(level: number, equipment: Record<string, string>) {
   const e = createPlayer(0, 'warrior', { x: 0, y: 0, z: 0 }, 'Tester');
   e.level = level;
-  recalcPlayerStats(e, 'warrior', equipment as Equip);
+  recalcPlayerStats(e, 'warrior', equipment as Equip, undefined, {});
   return e;
 }
 
@@ -68,6 +68,17 @@ describe('over-level gear is inert', () => {
     expect(e.mainhandItemId).toBe(DAGGER);
     // ...but none of it applies.
     expect(e.weapon).toEqual(UNARMED);
+  });
+
+  it('set bonuses do not count over-level pieces', () => {
+    // Two epic deathlord plate pieces grant the 2-piece Strength bonus (+40 attack power).
+    const set = { legs: 'deathlord_legguards', chest: 'deathlord_warplate' };
+    const inert = warrior(1, set); // level 1: both pieces over-level -> fully inert
+    const bare = warrior(1, {});
+    expect(inert.attackPower).toBe(bare.attackPower); // no +40 set AP, no piece Strength
+    const active = warrior(20, set); // level 20: pieces eligible -> set bonus applies
+    const bareAt20 = warrior(20, {});
+    expect(active.attackPower).toBeGreaterThanOrEqual(bareAt20.attackPower + 40);
   });
 
   it('is deterministic (same inputs, same derived block)', () => {

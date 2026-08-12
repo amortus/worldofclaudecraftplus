@@ -1,510 +1,116 @@
-// Enchanting: break finished gear down into arcane materials, then spend those
-// materials to bake a permanent stat bonus into ONE SPECIFIC COPY of an item.
+// Enchanting profession: disenchant an eligible weapon/armor piece into arcane
+// materials, then spend those materials to apply a permanent stat bonus to a
+// SPECIFIC copy of an item (not the character, not the item id in the
+// abstract): a bagged copy, or, with a slot named, the copy WORN in that
+// equipment slot, enchanted in place. An enchanted piece is a non-stacking
+// instanced copy
+// (types.ts ItemInstancePayload.rolled.stats), so it survives equip/unequip
+// (src/sim/items.ts) and stays a distinct good, separate from a plain copy of
+// the same item id. sellItem/discardItem/trade's drop arm now prefer a
+// fungible copy over this one (items.ts removePreferFungible), and trade,
+// the World Market, and Ravenpost mail all carry the payload end to end
+// (#2049, then #2507 completed the anonymous pipes via
+// src/sim/item_instance_transfer.ts).
 //
-// The two halves and their draw contract:
+// Replacing an enchant (#2415): an already-enchanted copy is never silently
+// overwritten, but it is not locked forever either. The apply command carries
+// an explicit confirmReplace flag; with it set, the one-step replace arm
+// destroys the old enchant outright (no material refund: disenchanting is the
+// material faucet and enchanting the sink) and applies the new one
+// surgically: only the enchant layer changes, the signer, masterwork stats,
+// and boundTo/bindOnTrade flags carry through byte-identical
+// (replacedEnchantPayloadFor below). Without the flag the deny is the
+// dedicated already_enchanted reason, on both the bagged and the worn arm.
+// WITH the flag, re-applying the identical enchant id denies as same_enchant
+// on both arms, because its accept would be pure reagent loss with zero state
+// change. The order matters and is deliberate: the flag check precedes the id
+// compare, so an unconfirmed same-id apply reads already_enchanted, not
+// same_enchant. Replacement is just an apply: same shared action throttle, no
+// extra fee or skill gate.
 //
-//   - apply / replace an enchant: ZERO rng draws, ever. Every gate is a state
-//     check and the bonus is a fixed number off the enchant def, so nothing
-//     here can move the world's rng stream.
-//   - disenchant: EXACTLY ONE draw per success (the material bonus unit), zero
-//     on every denial, the same shape wave 1's harvest uses.
+// Layered on top of, not a replacement for, the existing everyone-can-salvage
+// system (./salvage.ts, issue #1300): salvage still yields the same generic
+// materials (bone_fragments/linen_scrap/spider_leg) for anyone, unconditionally.
+// disenchantItem here is the Enchanting-specific action: dedicated arcane
+// materials, scaling with the item's rarity (strictly better than plain
+// salvage from `rare` up; near-identical vendor value at `common`), and is
+// the intended reagent source for applyEnchant below.
 //
-// An enchant lands on an `ItemInstance` (`rolled.stats` plus the authoritative
-// `enchant` marker), so it belongs to that copy and not to the item id: an
-// enchanted piece is a distinct good from a plain copy of the same item, it
-// survives equip and unequip, and `recalcPlayerStats` already sums an equipped
-// instance's `rolled.stats` on top of the def's own.
+// Scope (v1): no skill-gate beyond the free-floor rule every other common-tier
+// craft action in this repo follows (crafting.ts, wheel.ts) - any player can
+// disenchant or apply an enchant regardless of craftSkills.enchanting. Both
+// actions DO gain flat 'enchanting' skill on success now (#1712 round-3
+// review point 3), so the specialization recharge discount (professions/
+// tools.ts) and the Enchanter archetype eventually engage; the archetype
+// output-quality ceiling crafting.ts's craftItem enforces is NOT wired in
+// here yet (this action has no rollable output quality to clamp), matching
+// how salvage.ts also does not participate in that half of the wheel. Wired
+// through the full stack in Professions 2.0: the disenchant_item /
+// apply_enchant WS commands, the IWorldProfessions + ClientWorld
+// disenchantItem / applyEnchant members, and the src/ui bag-item action menu
+// plus Apply Enchant picker (bag_item_action_menu.ts), the way craft_item /
+// harvest_node already are.
 //
-// Replacing an existing enchant is allowed but DESTRUCTIVE. It needs an
-// explicit `confirmReplace`; without it the deny is the honest
-// `already_enchanted` (never a silent overwrite), and `beginEnchant` still
-// reports the enchant that WOULD be destroyed plus the full reagent cost, which
-// is exactly what the confirmation dialog has to name. Re-applying the
-// identical enchant is refused outright even WITH the flag: accepting it would
-// burn materials for zero state change. The old materials are never refunded:
-// disenchanting is the faucet and enchanting is the sink.
-//
-// Pure and host-agnostic: no `Sim`, no `PlayerMeta`, no `ITEMS`, no content
-// import. Randomness arrives as an `Rng` parameter, never `Math.random`. The
-// only mutation is of the `InvSlot[]` handed in, through the sanctioned
-// `addToSlots` / `removeFromSlots` paths.
+// This module is `src/sim`-pure: no DOM/browser/Three.js imports, no
+// Math.random/Date.now (uses ctx.rng only), host-agnostic so it runs
+// offline, on the server, and in the headless RL env unchanged.
 
-import { addToSlots, cloneItemInstance, removeFromSlots } from '../item_instance';
+import { bagCapacity, consumeOneScratch, countFit, fitsAll, removeStacked } from '../bags';
+import { ENCHANTS, type EnchantDef } from '../content/enchants';
+import { ENCHANT_FAMILY_CAST_DURATION_SEC } from '../content/professions';
+import { ITEMS } from '../data';
+import { recalcPlayerStats } from '../entity';
+import { consumeSelectedInventorySlot, itemCopyPin } from '../item_copy_ref';
+import { requiredLevelFor } from '../item_level_req';
+import { forceDismount } from '../mounts';
 import type { Rng } from '../rng';
-import type { EquipSlot, InvSlot, ItemDef, ItemInstance } from '../types';
-import { countItemInSlots, CRAFT_MAX_SKILL, craftSkillGain, reagentStatusOf } from './crafting';
-import type { EnchantDef, EnchantStatBonus, DisenchantPlan, ReagentStatus } from './types';
+// Type-only import (the crafting.ts/commission.ts idiom): PlayerMeta is a
+// shape, never the Sim class, so this module stays host-agnostic.
+import type { PlayerMeta } from '../sim';
+import type { SimContext } from '../sim_context';
+import {
+  cloneItemInstancePayload,
+  DISENCHANT_CAST_ID,
+  ENCHANT_CAST_ID,
+  type Entity,
+  type EquipSlot,
+  type InventoryUnit,
+  type InvSlot,
+  type ItemDef,
+  type ItemInstancePayload,
+  isConsuming,
+} from '../types';
+import { enchantingGainMultiplier } from './archetype';
+import { DISENCHANT_MATERIAL_BY_QUALITY, typedSecondaryFor } from './disenchant_reagents';
+import { gainCraftSkill } from './wheel';
 
-// ---------------------------------------------------------------------------
-// The already-enchanted read
-// ---------------------------------------------------------------------------
+// #1712 round-3 review: neither action previously called gainCraftSkill, so
+// craftSkills.enchanting stayed 0 forever, permanently locking the
+// specialization recharge discount (professions/tools.ts) and the Enchanter
+// archetype's own craft out of any progression. This is now the
+// BASE gain, multiplied by enchantingGainMultiplier (archetype.ts): the
+// input's quality tier, soft-clamped to the archetype ceiling, run through
+// the four-state mastery curve, same shape as crafting.ts's
+// CRAFT_SKILL_GAIN * craftSkillGainMultiplier.
+export const ENCHANTING_SKILL_GAIN = 1;
 
-/**
- * The authoritative "this copy is already enchanted" test: the explicit
- * `enchant` marker.
- *
- * Upstream also treats bare `rolled.stats` WITHOUT `rolled.masterwork` as
- * enchanted, to catch legacy copies written before they had a marker. We have
- * no such legacy: wave 1 shipped `ItemInstance.enchant` as the marker on day
- * one and nothing has ever written `rolled.stats` without also setting
- * `masterwork`. Keying on the marker alone therefore has the same behavior with
- * none of the ambiguity, and it means a masterwork copy stays enchantable
- * exactly like a plain one.
- */
-export function isEnchantedInstance(instance: ItemInstance | undefined): boolean {
-  return instance?.enchant !== undefined;
-}
-
-// ---------------------------------------------------------------------------
-// Skill
-// ---------------------------------------------------------------------------
-
-// Enchanting rides the SAME four-state mastery curve and the same 125 ceiling
-// crafting does (`crafting.ts`), so nothing about the curve is restated here:
-// only the mapping from an action's difficulty onto the skillReq ladder is.
-//
-// Upstream scores an apply by the max item-def quality across the enchant's
-// reagents and a disenchant by the destroyed item's quality, then runs both
-// through their curve. We do the same, but read the enchant's declared GROUP
-// instead of re-deriving a tier from reagent qualities: the group IS the tier
-// in our table (base / runed / greater), it is authored rather than inferred,
-// and it cannot drift when a reagent is re-priced.
-
-/** The skillReq rung each enchant group sits on: base is the free floor, runed
- *  the mid rung, greater the top. Tiers 0 / 2 / 3 on the shared 25-point
- *  ladder, so a greater enchant still teaches a 75-skill enchanter at full
- *  rate and a base enchant grays out at 75, exactly like a rung-1 recipe. */
-export const ENCHANT_GROUP_SKILL_REQ = { base: 0, runed: 50, greater: 75 } as const;
-
-/** The skillReq rung a disenchant sits on, by the destroyed piece's quality.
- *  A grey/white piece is the free floor; an epic is the top rung. */
-export const DISENCHANT_QUALITY_SKILL_REQ: Readonly<
+// The gain tier each ItemQuality maps to (quality-tiered
+// enchanting gains): the input's rarity IS its difficulty, on the same
+// tier-index ladder the archetype ceilings use (common=0, uncommon=1,
+// rare=2, epic=3, legendary=4; poor has nothing arcane about it and scores
+// with common). Feeds enchantingGainMultiplier for both arms below: the
+// disenchanted item's def quality on the disenchant arm, the applied
+// enchant's reagent-derived tier (enchantGainTier) on the apply arm.
+export const ENCHANTING_GAIN_TIER_BY_QUALITY: Readonly<
   Record<NonNullable<ItemDef['quality']>, number>
 > = Object.freeze({
   poor: 0,
   common: 0,
-  uncommon: 25,
-  rare: 50,
-  epic: 75,
-  legendary: 75,
+  uncommon: 1,
+  rare: 2,
+  epic: 3,
+  legendary: 4,
 });
-
-/** Skill one apply teaches, already clamped against the 125 ceiling. */
-export function enchantSkillGain(skill: number, enchant: EnchantDef, maxSkill = CRAFT_MAX_SKILL) {
-  return craftSkillGain(skill, ENCHANT_GROUP_SKILL_REQ[enchant.group], maxSkill);
-}
-
-/** Skill one disenchant teaches, already clamped against the 125 ceiling. */
-export function disenchantSkillGain(
-  skill: number,
-  quality: ItemDef['quality'],
-  maxSkill = CRAFT_MAX_SKILL,
-) {
-  return craftSkillGain(skill, DISENCHANT_QUALITY_SKILL_REQ[quality ?? 'common'], maxSkill);
-}
-
-// ---------------------------------------------------------------------------
-// Targeting
-// ---------------------------------------------------------------------------
-
-/**
- * Which exact copy an enchant lands on.
- *
- * Upstream keys the command on an ITEM ID and then picks a victim by scanning
- * for the highest-index enchanted copy, which they document as racy (a copy
- * arriving between the dialog and the accept moves the pin). They also need
- * per-slot targeting on the worn arm because their `ring1`/`ring2` and
- * `mainhand`/`offhand` can each be wearing an identical copy of one item id.
- *
- * NEITHER problem exists here, and the shape below is why. Our `EquipSlot` has
- * exactly eight members with no ring, neck or offhand, and this repo has no
- * dual wield at all (verified: zero `offhand`/`dualWield` references in
- * `src/sim`, and every weapon declares `slot: 'mainhand'`), so a worn copy is
- * uniquely named by its SLOT. A bagged copy is uniquely named by its bag
- * INDEX. Naming the copy directly removes the victim-pinning heuristic and its
- * race outright rather than porting them.
- */
-export type EnchantTarget =
-  | { where: 'worn'; slot: EquipSlot }
-  | { where: 'bag'; index: number };
-
-/** What the host sees in one worn equipment slot. `itemId` is absent for an
- *  empty slot. */
-export interface WornSlotView {
-  itemId?: string;
-  instance?: ItemInstance;
-}
-
-// ---------------------------------------------------------------------------
-// Apply / replace
-// ---------------------------------------------------------------------------
-
-/** Why an enchant attempt was refused. Stable ids, never player text. */
-export type EnchantDenyReason =
-  | 'not_held'
-  | 'wrong_slot'
-  | 'insufficient_materials'
-  | 'already_enchanted'
-  | 'same_enchant';
-
-export interface EnchantAttempt {
-  enchant: EnchantDef;
-  target: EnchantTarget;
-  /** The bag. Reagents ALWAYS come from here, on both arms. `resolveEnchant`
-   *  mutates it; `beginEnchant` never does. */
-  inventory: InvSlot[];
-  /** The worn arm's view of the named slot. Ignored on the bag arm. */
-  worn?: WornSlotView;
-  /** The equip slot the TARGET item's own def declares, which is what the
-   *  enchant's `itemSlot` is checked against. Passed in rather than looked up,
-   *  so this module never imports `ITEMS`. Undefined for a non-equippable
-   *  target, which always fails the slot gate. */
-  targetItemSlot: EquipSlot | undefined;
-  /** The player's enchanting skill, for the gain report. */
-  skill: number;
-  /** Explicit consent to DESTROY an existing enchant. Strict boolean true: a
-   *  truthy non-boolean from an untrusted caller must never read as consent. */
-  confirmReplace?: boolean;
-}
-
-export interface EnchantStart {
-  ok: boolean;
-  enchantId: string;
-  /** The item id the target resolves to, when there is one. */
-  itemId?: string;
-  /** Every reagent line resolved against the bag, populated on EVERY arm,
-   *  including the `already_enchanted` deny: the replace confirmation has to
-   *  state the cost the player is about to pay. */
-  reagents: ReagentStatus[];
-  /** The enchant's own bonus, so the row can state it inline rather than as a
-   *  vague "Enchanted" badge. */
-  statBonus: EnchantStatBonus;
-  reason?: EnchantDenyReason;
-  /** True when the target already carries an enchant, so accepting destroys
-   *  it. Set on the `already_enchanted` deny AND on a confirmed success. */
-  replacing?: boolean;
-  /** The enchant id that would be (or was) destroyed. The confirmation names
-   *  THIS. Set whenever `replacing` is. */
-  replacedEnchantId?: string;
-  /** Skill this apply would teach, already clamped. */
-  skillGain: number;
-}
-
-/** The reagent rows for an arbitrary reagent list against a bag. */
-function reagentRows(
-  inventory: readonly InvSlot[],
-  reagents: readonly { itemId: string; count: number }[],
-): ReagentStatus[] {
-  return reagentStatusOf(inventory, reagents);
-}
-
-/** Resolve the target down to the item id and instance it names, or null when
- *  the target names nothing (an empty worn slot, an out-of-range bag index, an
- *  empty bag slot). Read-only. */
-function resolveTarget(
-  a: Pick<EnchantAttempt, 'target' | 'inventory' | 'worn'>,
-): { itemId: string; instance: ItemInstance | undefined } | null {
-  if (a.target.where === 'worn') {
-    const itemId = a.worn?.itemId;
-    if (itemId === undefined) return null;
-    return { itemId, instance: a.worn?.instance };
-  }
-  const index = a.target.index;
-  if (!Number.isInteger(index) || index < 0 || index >= a.inventory.length) return null;
-  const slot = a.inventory[index];
-  if (!slot || slot.count < 1) return null;
-  return { itemId: slot.itemId, instance: slot.instance };
-}
-
-/**
- * The gate half. Validates one apply attempt and reports everything the UI
- * needs to render the row, the confirmation, and the deny. Never mutates
- * anything and never draws.
- *
- * Gate order is deliberate and matches upstream: target exists, the enchant
- * targets this item's slot, then the already-enchanted arm (the consent check
- * BEFORE the identical-id compare, so an unconfirmed same-id apply reads
- * `already_enchanted` rather than `same_enchant`), then reagents.
- */
-export function beginEnchant(a: EnchantAttempt): EnchantStart {
-  const enchant = a.enchant;
-  const reagents = reagentRows(a.inventory, enchant.reagents);
-  const start: EnchantStart = {
-    ok: false,
-    enchantId: enchant.id,
-    reagents,
-    statBonus: { ...enchant.statBonus },
-    skillGain: enchantSkillGain(a.skill, enchant),
-  };
-
-  const target = resolveTarget(a);
-  if (!target) {
-    start.reason = 'not_held';
-    return start;
-  }
-  start.itemId = target.itemId;
-
-  // The slot gate. Our `EquipSlot` members are eight distinct kinds, so an
-  // item's declared slot and an enchant's `itemSlot` compare directly with no
-  // "either finger" indirection.
-  if (a.targetItemSlot === undefined || a.targetItemSlot !== enchant.itemSlot) {
-    start.reason = 'wrong_slot';
-    return start;
-  }
-  // A worn target must also actually be worn in the slot the enchant targets,
-  // or the client named a slot that cannot be holding this item.
-  if (a.target.where === 'worn' && a.target.slot !== enchant.itemSlot) {
-    start.reason = 'wrong_slot';
-    return start;
-  }
-
-  if (isEnchantedInstance(target.instance)) {
-    start.replacing = true;
-    start.replacedEnchantId = target.instance?.enchant;
-    if (a.confirmReplace !== true) {
-      start.reason = 'already_enchanted';
-      return start;
-    }
-    if (target.instance?.enchant === enchant.id) {
-      // Refused even WITH consent: the accept would burn the reagents and
-      // change nothing at all.
-      start.reason = 'same_enchant';
-      return start;
-    }
-  }
-
-  if (!reagents.every((r) => r.met)) {
-    start.reason = 'insufficient_materials';
-    return start;
-  }
-
-  start.ok = true;
-  return start;
-}
-
-/**
- * The exact instance one apply mints from the copy it targets: the target's
- * payload cloned, the enchant's bonus summed ADDITIVELY into `rolled.stats`,
- * and the marker set. A masterwork copy's baked bonus, the maker's signature,
- * `craftedRecipeId` and `boundTo` all ride through the clone untouched, so
- * enchanting a crafted or masterwork piece never erases what makes it that
- * piece. Never used on an already-enchanted copy (that is
- * `replacedEnchantInstanceFor`'s job), so it can never stack one enchant on
- * another.
- */
-export function enchantedInstanceFor(
-  target: ItemInstance | undefined,
-  enchant: EnchantDef,
-): ItemInstance {
-  const merged: ItemInstance = target ? cloneItemInstance(target) : {};
-  const stats: Record<string, number> = { ...merged.rolled?.stats };
-  for (const [stat, value] of Object.entries(enchant.statBonus)) {
-    if (value === undefined) continue;
-    stats[stat] = (stats[stat] ?? 0) + value;
-  }
-  merged.rolled = { ...merged.rolled, stats };
-  merged.enchant = enchant.id;
-  return merged;
-}
-
-/**
- * The exact instance the destructive replace mints: the victim cloned, the OLD
- * enchant's bonus subtracted per stat, and the new one added on top, so ONLY
- * the enchant layer changes and the signature, masterwork bonus,
- * `craftedRecipeId` and `boundTo` survive byte-identical.
- *
- * A stat that reaches zero is DELETED rather than kept at 0: a present
- * zero-valued key is structurally distinct from an absent one, so leaving
- * residue would make an otherwise identical copy compare differently. The
- * `<= 0` arm also swallows a corrupt over-large baked value instead of minting
- * a negative stat.
- *
- * `old` must be the resolved def of the victim's marker id. When it cannot be
- * resolved the caller must refuse rather than call this: subtracting nothing
- * would silently stack the old bonus under the new one.
- */
-export function replacedEnchantInstanceFor(
-  victim: ItemInstance,
-  old: EnchantDef,
-  next: EnchantDef,
-): ItemInstance {
-  const merged = cloneItemInstance(victim);
-  const stats: Record<string, number> = { ...merged.rolled?.stats };
-  for (const [stat, value] of Object.entries(old.statBonus)) {
-    if (value === undefined) continue;
-    const remain = (stats[stat] ?? 0) - value;
-    if (remain > 0) stats[stat] = remain;
-    else delete stats[stat];
-  }
-  for (const [stat, value] of Object.entries(next.statBonus)) {
-    if (value === undefined) continue;
-    stats[stat] = (stats[stat] ?? 0) + value;
-  }
-  merged.rolled = { ...merged.rolled, stats };
-  merged.enchant = next.id;
-  return merged;
-}
-
-export interface EnchantResolution {
-  ok: boolean;
-  enchantId: string;
-  itemId?: string;
-  reason?: EnchantDenyReason;
-  /** Which arm ran, so the caller knows where to put `instance`. */
-  applied?: 'worn' | 'bag';
-  /**
-   * The minted payload. On the BAG arm it has already been written into the
-   * bag; on the WORN arm the caller assigns it to `equipmentInstance[slot]`
-   * and re-bakes stats (this module never touches equipment, which is not its
-   * to hold).
-   */
-  instance?: ItemInstance;
-  /** True when an existing enchant was destroyed to make room. */
-  replaced?: boolean;
-  /** The enchant id that was destroyed. Set iff `replaced` is. */
-  replacedEnchantId?: string;
-  /** What the apply actually removed from the bag. */
-  consumed: { itemId: string; count: number }[];
-  skillGain: number;
-  nextSkill: number;
-}
-
-/**
- * Apply (or, with consent, replace) one enchant. Re-runs every gate, so a
- * denial here consumes nothing and mints nothing. DRAWS NOTHING on any path:
- * enchanting has no randomness at all.
- *
- * `resolveEnchantDef` resolves the victim's marker id when a replace is in
- * play. Returning `undefined` from it (a marker id that no longer names an
- * enchant, reachable only from a hand-edited save) refuses the replace rather
- * than stacking an unsubtractable bonus.
- */
-export function resolveEnchant(
-  a: EnchantAttempt,
-  resolveEnchantDef?: (id: string) => EnchantDef | undefined,
-): EnchantResolution {
-  const start = beginEnchant(a);
-  const base: EnchantResolution = {
-    ok: false,
-    enchantId: a.enchant.id,
-    itemId: start.itemId,
-    consumed: [],
-    skillGain: 0,
-    nextSkill: Math.max(0, a.skill),
-  };
-  if (!start.ok) return { ...base, reason: start.reason };
-
-  const target = resolveTarget(a);
-  // Unreachable: `beginEnchant` already proved the target resolves. Kept as
-  // the honest deny for a torn state rather than a crash.
-  if (!target) return { ...base, reason: 'not_held' };
-
-  // Resolve the replace victim's old def BEFORE anything is consumed.
-  let old: EnchantDef | undefined;
-  if (start.replacing) {
-    const oldId = target.instance?.enchant;
-    old = oldId !== undefined ? resolveEnchantDef?.(oldId) : undefined;
-    if (!old) return { ...base, reason: 'already_enchanted' };
-  }
-
-  const consumed: { itemId: string; count: number }[] = [];
-  for (const reagent of a.enchant.reagents) {
-    const removed = removeFromSlots(a.inventory, reagent.itemId, reagent.count);
-    consumed.push({ itemId: reagent.itemId, count: removed.removed });
-  }
-
-  const instance =
-    old !== undefined && target.instance
-      ? replacedEnchantInstanceFor(target.instance, old, a.enchant)
-      : enchantedInstanceFor(target.instance, a.enchant);
-
-  if (a.target.where === 'bag') {
-    // Take exactly the targeted copy out of exactly the targeted slot (never
-    // `removeFromSlots`, whose plain-stacks-first order would be free to pick a
-    // different copy of the same item id), then add the enchanted copy back.
-    // The instance is already a deep clone, so a surviving stack's payload is
-    // never aliased into the new copy.
-    //
-    // The index is re-read here rather than cached because the reagent
-    // consumption above may have spliced earlier slots out of the array. It is
-    // re-found by identity against the pre-consumption slot, which is exact.
-    removeOneAt(a.inventory, a.target.index, target.itemId);
-    addToSlots(a.inventory, target.itemId, 1, instance);
-  }
-
-  const skillGain = enchantSkillGain(a.skill, a.enchant);
-  const result: EnchantResolution = {
-    ok: true,
-    enchantId: a.enchant.id,
-    itemId: target.itemId,
-    applied: a.target.where,
-    instance,
-    consumed,
-    skillGain,
-    nextSkill: Math.max(0, a.skill) + skillGain,
-  };
-  if (start.replacing) {
-    result.replaced = true;
-    result.replacedEnchantId = start.replacedEnchantId;
-  }
-  return result;
-}
-
-/**
- * Remove ONE unit of `itemId` from the bag slot the caller targeted.
- *
- * The reagent consumption that runs before this can splice slots out of the
- * array, so `index` may no longer point at the intended slot. Rather than
- * cache a reference (which a splice does not invalidate but a stack merge
- * could), the walk re-finds the target: it prefers the original index when
- * that slot still holds `itemId`, and otherwise falls back to the last slot
- * holding it. A reagent list that contains the target item itself is the only
- * way the first arm misses, and in that case any remaining copy is equivalent
- * by construction.
- */
-function removeOneAt(inventory: InvSlot[], index: number, itemId: string): void {
-  let at = index >= 0 && index < inventory.length && inventory[index].itemId === itemId ? index : -1;
-  if (at < 0) {
-    for (let i = inventory.length - 1; i >= 0; i--) {
-      if (inventory[i].itemId === itemId) {
-        at = i;
-        break;
-      }
-    }
-  }
-  if (at < 0) return;
-  inventory[at].count -= 1;
-  if (inventory[at].count <= 0) inventory.splice(at, 1);
-}
-
-// ---------------------------------------------------------------------------
-// Disenchant
-// ---------------------------------------------------------------------------
-
-/** The universal ladder material a disenchant yields, keyed by the destroyed
- *  piece's quality. Ported from upstream unchanged. */
-export const DISENCHANT_MATERIAL_BY_QUALITY: Readonly<Record<string, string>> = Object.freeze({
-  poor: 'arcane_dust',
-  common: 'arcane_dust',
-  uncommon: 'arcane_dust',
-  rare: 'arcane_essence',
-  epic: 'arcane_shard',
-  legendary: 'arcane_shard',
-});
-
-/** Armor class -> its resonant weave. Ported from upstream unchanged. */
-export const ARMOR_SECONDARY_BY_CLASS: Readonly<Record<string, string>> = Object.freeze({
-  cloth: 'resonant_thread',
-  leather: 'resonant_hide',
-  mail: 'resonant_links',
-});
-
-/** The caster weapon weave and the melee one. */
-export const WEAPON_SECONDARY_CASTER = 'resonant_timber';
-export const WEAPON_SECONDARY_MELEE = 'resonant_steel';
-
-/** Typed secondaries only drop from these qualities. */
-const TYPED_SECONDARY_QUALITIES = new Set(['rare', 'epic', 'legendary']);
 
 const QUALITY_ORDER: readonly NonNullable<ItemDef['quality']>[] = [
   'poor',
@@ -515,230 +121,1235 @@ const QUALITY_ORDER: readonly NonNullable<ItemDef['quality']>[] = [
   'legendary',
 ];
 
-/** The def facts one disenchant needs. Passed in rather than looked up, so
- *  this module never imports `ITEMS`. */
-export interface DisenchantInput {
-  itemId: string;
-  kind: ItemDef['kind'];
-  quality?: ItemDef['quality'];
-  armorType?: ItemDef['armorType'];
-  /** The def's own stats, used to infer an armor class when `armorType` is
-   *  absent and to tell a caster weapon from a melee one. */
-  stats?: EnchantStatBonus;
-  /** The level the piece gates at (`requiredLevelFor` at the call site). The
-   *  yield scales with it. */
-  itemLevel: number;
-}
+// The universal arcane ladder now lives in the disenchant_reagents.ts pure
+// leaf (R39 made it a two-consumer table: the disenchant yield here AND the
+// tool-effect recharge price in tools.ts, which as a pure leaf must not
+// import this SimContext module). Re-exported so this module stays the
+// enchanting-facing home every existing importer knows.
+export { DISENCHANT_MATERIAL_BY_QUALITY };
 
-/** Eligible for disenchant: an equippable weapon or armor piece of at least
- *  `common` quality. Ported from upstream unchanged. */
-export function isDisenchantable(input: DisenchantInput): boolean {
+/** The authoritative already-enchanted read for one instance payload: the
+ *  explicit `enchant` marker (written by resolveApplyEnchant below), or, for
+ *  legacy enchanted copies that predate the marker, bare rolled.stats WITHOUT
+ *  rolled.masterwork (before the masterwork model, applyEnchant was
+ *  the ONLY writer of rolled.stats, so bare stats meant enchanted; a
+ *  masterwork copy carries rolled.stats without being enchanted and must stay
+ *  enchantable exactly like a plain copy). This is what the
+ *  countEnchantableItem/removeEnchantableItem guards (sim.ts) key on, so
+ *  double-enchant prevention holds for both legacy and marker-carrying
+ *  copies. */
+export function isEnchantedInstance(instance: ItemInstancePayload): boolean {
   return (
-    (input.kind === 'weapon' || input.kind === 'armor') &&
-    !!input.quality &&
-    input.quality !== 'poor'
+    instance.enchant !== undefined || (!!instance.rolled?.stats && !instance.rolled.masterwork)
   );
 }
 
-/**
- * The armor class of an armor piece.
- *
- * ADAPTED. Upstream reads `def.armorType` and gives up when it is absent. In
- * OUR content that field is set on eight items out of 271, so a pure
- * `armorType` read would leave the typed secondary essentially dead. What our
- * itemization DOES have, consistently across every set, is a stat signature per
- * armor class: cloth pieces carry int and/or spi, leather carries agi, and mail
- * carries only str and sta. The explicit field still wins wherever it is set;
- * the inference is the fallback that makes the rule apply to the whole
- * wardrobe rather than a handful of gloves.
- */
-export function armorClassFor(input: DisenchantInput): 'cloth' | 'leather' | 'mail' | null {
-  if (input.armorType) return input.armorType;
-  const stats = input.stats;
-  if (!stats) return null;
-  if ((stats.int ?? 0) > 0 || (stats.spi ?? 0) > 0) return 'cloth';
-  if ((stats.agi ?? 0) > 0) return 'leather';
-  if ((stats.str ?? 0) > 0 || (stats.sta ?? 0) > 0 || (stats.armor ?? 0) > 0) return 'mail';
-  return null;
+/** The pinned replace-victim choice (#2415): the HIGHEST-index bagged copy of
+ *  `itemId` that is already enchanted, matching the end-first walk every other
+ *  remover in this repo uses (removeItem, removeEnchantableItem, and the
+ *  #2340 disenchant fallback). The apply command is item-id-keyed, so when two
+ *  enchanted copies of one item id carry different enchants, this pin is what
+ *  decides the victim; the UI confirm dialog names the enchant of exactly this
+ *  copy (src/ui/enchant_apply_view.ts enchantTargets builds its replace rows
+ *  from this same function), so what the player confirms is what the sim
+ *  destroys. The pin re-resolves when the command lands, which is the accepted
+ *  trade of an id-keyed command with no per-copy token: an enchanted copy of
+ *  the same item id ARRIVING at a higher index between dialog and accept
+ *  moves the pin onto the newcomer. The loss stays the actor's own (no dupe,
+ *  no cross-player reach) and the window is one confirm click; carrying a
+ *  confirmed-enchant token on the wire was ruled out as not worth the surface.
+ *  Returns -1 when no enchanted copy is held. */
+export function replaceVictimIndex(inventory: readonly InvSlot[], itemId: string): number {
+  for (let i = inventory.length - 1; i >= 0; i--) {
+    const s = inventory[i];
+    if (s.itemId === itemId && s.instance && isEnchantedInstance(s.instance)) return i;
+  }
+  return -1;
 }
 
-/**
- * The typed secondary material one disenchant of this piece yields, or null
- * when the piece is below `rare` (sub-rare yields only the ladder material) or
- * carries no inferable type.
- *
- * Weapons split caster from melee. Upstream keys that off a weapon-family table
- * (staff / wand / bow / crossbow yield timber, everything else steel); we have
- * no weapon-family classification at all, only a `weapon.dagger` flag, so the
- * split reads the same stat signature the armor arm does: a weapon carrying int
- * is a staff or scepter and yields timber, anything else yields steel. That
- * reproduces upstream's partition exactly on our content, where every caster
- * weapon carries int and no melee weapon does.
- */
-export function typedSecondaryFor(input: DisenchantInput): string | null {
-  if (!input.quality || !TYPED_SECONDARY_QUALITIES.has(input.quality)) return null;
-  if (input.kind === 'armor') {
-    const armorClass = armorClassFor(input);
-    return armorClass ? ARMOR_SECONDARY_BY_CLASS[armorClass] : null;
-  }
-  if (input.kind === 'weapon') {
-    return (input.stats?.int ?? 0) > 0 ? WEAPON_SECONDARY_CASTER : WEAPON_SECONDARY_MELEE;
-  }
-  return null;
+/** Remove ONE unit of the pinned replace victim from `inventory` and return
+ *  its payload. ONE walk shared by the live removal and the #2350 scratch
+ *  capacity model (both call this exact function on their own slot array), so
+ *  the modeled victim can never drift from the consumed one (the #2139 rule).
+ *  Clone-on-survival, same contract as removeEnchantableItem: the caller
+ *  transforms the returned payload, so a surviving stack's shared payload is
+ *  never aliased out (gear is stack-cap 1 today, so the slot never survives in
+ *  practice; the rule is kept for the contract, not the current content).
+ *  Returns undefined when no enchanted copy is held. */
+export function consumeEnchantedVictim(
+  inventory: InvSlot[],
+  itemId: string,
+): InventoryUnit | undefined {
+  const i = replaceVictimIndex(inventory, itemId);
+  if (i < 0) return undefined;
+  const s = inventory[i];
+  const survives = s.count > 1;
+  const payload = survives && s.instance ? cloneItemInstancePayload(s.instance) : s.instance;
+  const craftedRecipeId = s.craftedRecipeId;
+  s.count -= 1;
+  if (s.count <= 0) inventory.splice(i, 1);
+  return { instance: payload, craftedRecipeId };
 }
 
-/**
- * The guaranteed number of ladder material a disenchant yields, before the one
- * bonus draw.
- *
- * Sub-rare rides upstream's `qualityIndex + floor(level / 10) + 1`, so a
- * level-20 uncommon breaks down into more dust than a level-1 common. Rare and
- * above is pinned at 1, upstream's rule and the thing that makes an essence and
- * a shard scarce: one epic disenchants to one shard, and a shard is the only
- * way to buy a Greater enchant.
- */
-export function baseDisenchantYield(quality: ItemDef['quality'], itemLevel: number): number {
-  const q = quality ?? 'common';
-  if (TYPED_SECONDARY_QUALITIES.has(q)) return 1;
-  const qualityIdx = Math.max(0, QUALITY_ORDER.indexOf(q));
-  const tierBonus = Math.floor(Math.max(0, itemLevel) / 10);
+/** Eligible for disenchant: same eligibility as plain salvage (an equippable
+ *  weapon or armor piece, at least `common` quality). */
+export function isDisenchantable(def: ItemDef | undefined): boolean {
+  return (
+    !!def &&
+    (def.kind === 'weapon' || def.kind === 'armor') &&
+    !!def.quality &&
+    def.quality !== 'poor'
+  );
+}
+
+/** The rarity/tier-scaled base yield the rng bonus rides on: the shared term
+ *  of disenchantYield and maxDisenchantYield, so the #2350 capacity gate's
+ *  worst case can never drift from the rolled grant. Exported so the UI's
+ *  disenchant-confirm yield preview (src/ui/disenchant_yield_view.ts) reads the
+ *  LOW end of the sub-rare range from this same term instead of restating it. */
+export function baseDisenchantYield(def: ItemDef): number {
+  const qualityIdx = Math.max(0, QUALITY_ORDER.indexOf(def.quality ?? 'common'));
+  const tierBonus = Math.floor(requiredLevelFor(def) / 10);
   return qualityIdx + tierBonus + 1;
 }
 
-/** How many typed secondaries a rare-or-better piece gives up. Draw-free, so
- *  the confirmation preview states an exact number rather than a range. */
-export function secondaryDisenchantCount(quality: ItemDef['quality']): number {
-  return quality === 'rare' ? 1 : 2;
+/** The arcane material yield for one disenchant of `def`: scales with rarity
+ *  and tier the same way salvage.ts's salvageYield does, plus one rng-rolled
+ *  bonus unit, but the material itself is the dedicated, more valuable
+ *  Enchanting tier (see DISENCHANT_MATERIAL_BY_QUALITY), not a generic junk
+ *  item. Pure aside from the rng draw. */
+export function disenchantYield(def: ItemDef, rng: Rng): number {
+  const bonus = rng.next() < 0.5 ? 0 : 1;
+  return baseDisenchantYield(def) + bonus;
 }
 
-/**
- * The full, draw-free preview of one disenchant, which is what the destructive
- * confirmation shows before the player agrees to break the item. Returns null
- * for a piece that cannot be disenchanted at all.
- */
-export function previewDisenchant(input: DisenchantInput): DisenchantPlan | null {
-  if (!isDisenchantable(input)) return null;
-  const quality = input.quality ?? 'common';
-  const materialItemId = DISENCHANT_MATERIAL_BY_QUALITY[quality] ?? 'arcane_dust';
-  const min = baseDisenchantYield(quality, input.itemLevel);
-  const plan: DisenchantPlan = { materialItemId, minCount: min, maxCount: min + 1 };
-  const secondaryItemId = typedSecondaryFor(input);
-  if (secondaryItemId) {
-    plan.secondaryItemId = secondaryItemId;
-    plan.secondaryCount = secondaryDisenchantCount(quality);
+/** The largest yield disenchantYield can roll (the +1 bonus arm): the count
+ *  the #2350 capacity gate pre-fits on the sub-rare arm, so a denial never
+ *  draws rng and a granted roll can never exceed what was checked. */
+export function maxDisenchantYield(def: ItemDef): number {
+  return baseDisenchantYield(def) + 1;
+}
+
+/** The gain tier of one enchant for the apply arm: EnchantDef carries no
+ *  tier/quality field of its own, so the existing tier notion is the
+ *  reagent ladder the two-layer table is built on (arcane_dust base,
+ *  arcane_essence mid, arcane_shard Greater): the MAX reagent item-def
+ *  quality, mapped through ENCHANTING_GAIN_TIER_BY_QUALITY (same
+ *  max-over-reagents convention as material_tier.ts). Today that reads
+ *  dust-only enchants as tier 0, essence-consuming ones as tier 1, and the
+ *  shard-consuming Greater tier as tier 2. */
+export function enchantGainTier(enchant: EnchantDef): number {
+  let tier = 0;
+  for (const reagent of enchant.reagents) {
+    const quality = ITEMS[reagent.itemId]?.quality;
+    if (quality) tier = Math.max(tier, ENCHANTING_GAIN_TIER_BY_QUALITY[quality]);
   }
-  return plan;
+  return tier;
 }
 
-export type DisenchantDenyReason = 'not_held' | 'not_disenchantable';
+// Alias of the shared types.ts InventoryUnit (see EquippedInventoryUnit in
+// items.ts): the disenchant victim walk reports the same two channels every
+// other remover does.
+type ConsumedDisenchantUnit = InventoryUnit;
 
-export interface DisenchantAttempt {
-  /** The def facts of the piece to destroy. */
-  item: DisenchantInput;
-  /** The bag slot holding it. Disenchanting is bag-only on purpose: destroying
-   *  the piece you are wearing is not an action a player should be one confirm
-   *  click away from, and unlike an enchant there is no in-place benefit to
-   *  reaching the worn copy. */
-  index: number;
-  inventory: InvSlot[];
-  /** The player's enchanting skill, for the gain report. */
-  skill: number;
+function isCraftedDisenchantVictim(consumed: ConsumedDisenchantUnit | undefined): boolean {
+  return (
+    consumed?.craftedRecipeId !== undefined ||
+    consumed?.instance?.craftedRecipeId !== undefined ||
+    !!consumed?.instance?.signer ||
+    !!consumed?.instance?.rolled?.masterwork
+  );
 }
 
-export interface DisenchantResolution {
+/** The shared post-success bookkeeping every skill-granting enchanting action
+ *  performs, in one place because all skill-granting arms do exactly this and
+ *  only the input tier differs: the quality-tiered 'enchanting' skill gain
+ *  (soft-clamped to the archetype ceiling and run through the four-state
+ *  mastery curve; a zero gray gain never blocks the action), and the deed
+ *  re-check the skill gain's craftSkill triggers need (the crafting.ts
+ *  craftItem contract: the gaining site marks the player dirty itself).
+ *  Craft Cast System Phase 4: no shared action-throttle stamp; pace is the
+ *  1.5 s cast, not a quota. */
+function grantEnchantingSkill(ctx: SimContext, meta: PlayerMeta, inputTier: number): void {
+  gainCraftSkill(
+    meta.craftSkills,
+    'enchanting',
+    ENCHANTING_SKILL_GAIN *
+      enchantingGainMultiplier(
+        meta.craftSkills,
+        meta.archetype.activeArchetype,
+        meta.archetype.pairedMajor,
+        meta.archetype.hobbyCraft,
+        inputTier,
+      ),
+  );
+  ctx.markDeedsDirty(meta.entityId);
+}
+
+export interface DisenchantResult {
   ok: boolean;
   itemId: string;
-  reason?: DisenchantDenyReason;
   materialItemId?: string;
   count?: number;
+  /** The typed, bind-on-trade secondary material a rare-or-better disenchant
+   *  also yields (disenchant_reagents.ts typedSecondaryFor). Set only on a
+   *  rare+ success whose piece has a typed material; absent on every sub-rare
+   *  success and on a rare+ piece with no typed material (jewelry). */
   secondaryItemId?: string;
+  /** How many copies of secondaryItemId were granted: exactly 1 for a rare
+   *  piece, 1 or 2 (one rng draw) for an epic/legendary piece. Set iff
+   *  secondaryItemId is. */
   secondaryCount?: number;
-  skillGain: number;
-  nextSkill: number;
+  /** True when the command admitted and started a DISENCHANT_CAST_ID cast
+   *  (no materials granted yet). Absent on complete resolves and denials. */
+  casting?: boolean;
+  reason?:
+    | 'unknown_item'
+    | 'not_disenchantable'
+    | 'not_held'
+    | 'throttled'
+    | 'no_bag_space'
+    | 'busy';
 }
 
-/**
- * Destroy one bagged copy and grant its materials. EXACTLY ONE `rng.next()` on
- * success (the ladder material's +0/+1 bonus unit), ZERO on every denial.
- *
- * The draw is unconditional on the success path and always at the same
- * position, so the count never depends on the piece's quality.
- *
- * Upstream draws for the SECONDARY count on an epic and not at all on a rare,
- * which makes their disenchant draw count quality-dependent. Ours is one draw,
- * always, on the primary; the typed secondary count is fixed. That keeps the
- * draw contract a single sentence (matching wave 1's one-draw-per-completed-
- * action rule) and makes the confirmation preview exact on the secondary line.
- */
-export function resolveDisenchant(a: DisenchantAttempt, rng: Rng): DisenchantResolution {
-  const item = a.item;
-  const base: DisenchantResolution = {
-    ok: false,
-    itemId: item.itemId,
-    skillGain: 0,
-    nextSkill: Math.max(0, a.skill),
+function consumePreferredDisenchantVictim(
+  inventory: InvSlot[],
+  itemId: string,
+): ConsumedDisenchantUnit | undefined {
+  const consumeAt = (index: number): ConsumedDisenchantUnit => {
+    const slot = inventory[index];
+    const instance =
+      slot.instance && slot.count > 1 ? cloneItemInstancePayload(slot.instance) : slot.instance;
+    const craftedRecipeId = slot.craftedRecipeId;
+    slot.count -= 1;
+    if (slot.count <= 0) inventory.splice(index, 1);
+    return { instance, craftedRecipeId };
   };
-  if (!isDisenchantable(item)) return { ...base, reason: 'not_disenchantable' };
-  const index = a.index;
-  if (!Number.isInteger(index) || index < 0 || index >= a.inventory.length) {
-    return { ...base, reason: 'not_held' };
+  for (let i = inventory.length - 1; i >= 0; i--) {
+    const slot = inventory[i];
+    if (slot.itemId === itemId && !slot.instance) return consumeAt(i);
   }
-  const slot = a.inventory[index];
-  if (!slot || slot.itemId !== item.itemId || slot.count < 1) {
-    return { ...base, reason: 'not_held' };
+  for (let i = inventory.length - 1; i >= 0; i--) {
+    const slot = inventory[i];
+    if (slot.itemId === itemId && slot.instance && !isEnchantedInstance(slot.instance)) {
+      return consumeAt(i);
+    }
   }
-  const plan = previewDisenchant(item);
-  // Unreachable: `isDisenchantable` already passed.
-  if (!plan) return { ...base, reason: 'not_disenchantable' };
-
-  slot.count -= 1;
-  if (slot.count <= 0) a.inventory.splice(index, 1);
-
-  const count = plan.minCount + (rng.next() < 0.5 ? 0 : 1);
-  addToSlots(a.inventory, plan.materialItemId, count);
-  if (plan.secondaryItemId && plan.secondaryCount) {
-    addToSlots(a.inventory, plan.secondaryItemId, plan.secondaryCount);
+  for (let i = inventory.length - 1; i >= 0; i--) {
+    if (inventory[i].itemId === itemId) return consumeAt(i);
   }
+  return undefined;
+}
 
-  const skillGain = disenchantSkillGain(a.skill, item.quality);
-  const result: DisenchantResolution = {
-    ok: true,
-    itemId: item.itemId,
-    materialItemId: plan.materialItemId,
-    count,
-    skillGain,
-    nextSkill: Math.max(0, a.skill) + skillGain,
-  };
-  if (plan.secondaryItemId && plan.secondaryCount) {
-    result.secondaryItemId = plan.secondaryItemId;
-    result.secondaryCount = plan.secondaryCount;
+/** Resolve one disenchant attempt: denies (no side effect) if the item id is
+ *  unknown, ineligible, or the player holds no copy of it at all. Consumes
+ *  exactly one held copy on success, preferring the least special first: a
+ *  plain fungible copy, then an instanced copy that has NOT itself been
+ *  enchanted (e.g. crafting.ts's single-copy rare+ craft grant; see
+ *  removeEnchantableItem), and only when every held copy is already enchanted
+ *  one of those, destroying the piece enchant and all (issue #2340: the
+ *  enchanted-copy exclusion protects apply-enchant from silently overwriting
+ *  an enchant, but disenchant destroys the item anyway, so gating on it here
+ *  only denied a held item with a wrong "not held" message). Grants the
+ *  rolled arcane material yield. */
+export function resolveDisenchant(
+  ctx: SimContext,
+  pid: number,
+  itemId: string,
+  slotIndex?: number,
+): DisenchantResult {
+  const def = ITEMS[itemId];
+  if (!def) return { ok: false, itemId, reason: 'unknown_item' };
+  if (!isDisenchantable(def)) return { ok: false, itemId, reason: 'not_disenchantable' };
+  if (ctx.countItem(itemId, pid) < 1) return { ok: false, itemId, reason: 'not_held' };
+  const meta = ctx.players.get(pid);
+  // The yield plan (pure def lookups, no rng): hoisted above the capacity
+  // gate so the gate can model the exact grants the success path mints below.
+  const quality = def.quality ?? 'common';
+  const materialItemId = DISENCHANT_MATERIAL_BY_QUALITY[quality] ?? 'arcane_dust';
+  const isRarePlus = quality === 'rare' || quality === 'epic' || quality === 'legendary';
+  const secondaryItemId = typedSecondaryFor(def);
+  // #2350 capacity gate: the materials must fit AFTER the disenchanted copy
+  // leaves, so consume it on a scratch copy using the same victim picker as
+  // the live path below and pre-fit the WORST-CASE grants: the +1 rng bonus
+  // arm on the sub-rare yield, and two secondaries on an epic/legendary
+  // piece. The denial draws nothing and has no side effect, like every other
+  // arm above; a granted roll can never exceed what was checked.
+  // Craft Cast System Phase 4: no shared action throttle; cast duration paces.
+  if (meta) {
+    const scratch = meta.inventory.map((s) => ({ ...s }));
+    if (consumeSelectedInventorySlot(scratch, itemId, slotIndex) === null) {
+      return { ok: false, itemId, reason: 'not_held' };
+    }
+    if (slotIndex === undefined) consumePreferredDisenchantVictim(scratch, itemId);
+    const adds: InvSlot[] = isRarePlus
+      ? [{ itemId: materialItemId, count: 1 }]
+      : [{ itemId: materialItemId, count: maxDisenchantYield(def) }];
+    if (isRarePlus && secondaryItemId) {
+      adds.push({
+        itemId: secondaryItemId,
+        count: quality === 'rare' ? 1 : 2,
+        instance: { bindOnTrade: true },
+      });
+    }
+    if (!fitsAll(scratch, bagCapacity(meta.bags), adds)) {
+      return { ok: false, itemId, reason: 'no_bag_space' };
+    }
+  }
+  // Preference order unchanged from before: plain fungible first, then an
+  // unenchanted instanced copy (removeEnchantableItem). The fallback arm is
+  // the #2340 fix: with only enchanted copies left, take the highest-index
+  // one (removeItem order; the UI confirm predicate in
+  // src/ui/bag_item_context_menu.ts mirrors this victim choice).
+  const selected = meta
+    ? consumeSelectedInventorySlot(meta.inventory, itemId, slotIndex)
+    : undefined;
+  if (selected === null) return { ok: false, itemId, reason: 'not_held' };
+  let consumed: ConsumedDisenchantUnit | undefined = selected === undefined ? undefined : selected;
+  if (slotIndex !== undefined && meta) ctx.onInventoryChangedForQuests(meta);
+  if (slotIndex === undefined) {
+    consumed = meta ? consumePreferredDisenchantVictim(meta.inventory, itemId) : undefined;
+    if (meta) ctx.onInventoryChangedForQuests(meta);
+  }
+  // Yield model: sub-rare (common/uncommon) stays byte-identical to
+  // today, a single rng draw (disenchantYield's +0/+1 bonus) over a rolled
+  // count of the universal ladder material, and NO secondary. Rare+ shifts to a
+  // FIXED single primary plus a typed, bind-on-trade secondary
+  // (disenchant_reagents.ts typedSecondaryFor): rare grants exactly one
+  // secondary with NO rng draw; epic/legendary grants one or two via ONE draw
+  // (the existing next() < 0.5 ? bonus idiom). The secondary rides
+  // ctx.addItemInstance with a { bindOnTrade: true } payload so a disenchant
+  // windfall cannot be freely resold; the universal primary stays a plain
+  // ctx.addItem (dust/essence/shard never bind). A rare+ piece with no typed
+  // material (jewelry: no armor class) yields only the primary and draws no rng.
+  let count: number;
+  let secondaryCount: number | undefined;
+  if (isRarePlus) {
+    count = 1;
+    if (secondaryItemId) {
+      secondaryCount = quality === 'rare' ? 1 : ctx.rng.next() < 0.5 ? 1 : 2;
+    }
+  } else {
+    count = disenchantYield(def, ctx.rng);
+  }
+  // silent + callerLogs on both grants below: the disenchantResult event owns
+  // BOTH halves of the player feedback. It fires its own dedicated cue
+  // (audio.disenchant in src/game/audio.ts), so the generic loot ding would
+  // stack on top of it, and it logs the yield-naming, item-linked disenchant
+  // line off materialItemId/count (plus secondaryItemId/secondaryCount), so
+  // the hub's "You receive:" lines would repeat what that line already says
+  // (#2430: an epic yield used to print FOUR lines for one action).
+  ctx.addItem(materialItemId, count, pid, { silent: true, callerLogs: true });
+  if (secondaryItemId && secondaryCount) {
+    // Still one grant call per unit (the shipped payload-aliasing contract):
+    // the per-unit loot events are elided by callerLogs, and the client
+    // renders ONE secondary line off disenchantResult.secondaryCount, so
+    // batching the grant would buy nothing player-visible and would move the
+    // per-grant discovery/quest hook cadence.
+    for (let i = 0; i < secondaryCount; i++) {
+      ctx.addItemInstance(secondaryItemId, { bindOnTrade: true }, pid, 1, {
+        silent: true,
+        callerLogs: true,
+      });
+    }
+  }
+  if (meta) {
+    // Quality-tiered gain: the disenchanted item's def quality is the input
+    // tier. Crafted-provenance copies still yield materials, but they do not
+    // teach enchanting, preventing a craft then disenchant loop from
+    // double-dipping profession progression. Phase 4: no throttle stamp.
+    if (!isCraftedDisenchantVictim(consumed)) {
+      grantEnchantingSkill(ctx, meta, ENCHANTING_GAIN_TIER_BY_QUALITY[quality]);
+    }
+  }
+  const result: DisenchantResult = { ok: true, itemId, materialItemId, count };
+  if (secondaryItemId && secondaryCount) {
+    result.secondaryItemId = secondaryItemId;
+    result.secondaryCount = secondaryCount;
   }
   return result;
 }
 
-// ---------------------------------------------------------------------------
-// Read helpers for the enchant picker
-// ---------------------------------------------------------------------------
-
-/** Every enchant that targets `slot`, grouped order first (base, runed,
- *  greater) then id-ascending, so the picker never reshuffles between runs. */
-export function enchantsForSlot(
-  slot: EquipSlot,
-  table: Readonly<Record<string, EnchantDef>>,
-): EnchantDef[] {
-  const groupRank = { base: 0, runed: 1, greater: 2 } as const;
-  return Object.values(table)
-    .filter((e) => e.itemSlot === slot)
-    .sort(
-      (x, y) =>
-        groupRank[x.group] - groupRank[y.group] || (x.id < y.id ? -1 : x.id > y.id ? 1 : 0),
-    );
+/** Pre-consume admission for a disenchant cast start (and complete re-check
+ *  still lives inside resolveDisenchant). No side effects, no rng. */
+export function evaluateDisenchantAdmission(
+  ctx: SimContext,
+  pid: number,
+  itemId: string,
+  slotIndex?: number,
+): DisenchantResult | null {
+  const def = ITEMS[itemId];
+  if (!def) return { ok: false, itemId, reason: 'unknown_item' };
+  if (!isDisenchantable(def)) return { ok: false, itemId, reason: 'not_disenchantable' };
+  if (ctx.countItem(itemId, pid) < 1) return { ok: false, itemId, reason: 'not_held' };
+  const meta = ctx.players.get(pid);
+  if (!meta) return null;
+  const quality = def.quality ?? 'common';
+  const materialItemId = DISENCHANT_MATERIAL_BY_QUALITY[quality] ?? 'arcane_dust';
+  const isRarePlus = quality === 'rare' || quality === 'epic' || quality === 'legendary';
+  const secondaryItemId = typedSecondaryFor(def);
+  const scratch = meta.inventory.map((s) => ({ ...s }));
+  if (consumeSelectedInventorySlot(scratch, itemId, slotIndex) === null) {
+    return { ok: false, itemId, reason: 'not_held' };
+  }
+  if (slotIndex === undefined) consumePreferredDisenchantVictim(scratch, itemId);
+  const adds: InvSlot[] = isRarePlus
+    ? [{ itemId: materialItemId, count: 1 }]
+    : [{ itemId: materialItemId, count: maxDisenchantYield(def) }];
+  if (isRarePlus && secondaryItemId) {
+    adds.push({
+      itemId: secondaryItemId,
+      count: quality === 'rare' ? 1 : 2,
+      instance: { bindOnTrade: true },
+    });
+  }
+  if (!fitsAll(scratch, bagCapacity(meta.bags), adds)) {
+    return { ok: false, itemId, reason: 'no_bag_space' };
+  }
+  return null;
 }
 
-/** Whether the bag holds every reagent an enchant requires. */
-export function hasEnchantReagents(
-  inventory: readonly InvSlot[],
+/** Canonical JSON with recursively sorted object keys, so two structurally
+ *  identical instance payloads fingerprint identically regardless of key
+ *  insertion order (a save round-trip can reorder keys). Pure, draw-free. */
+function beginEnchantFamilyCast(
+  ctx: SimContext,
+  p: Entity,
+  castId: typeof DISENCHANT_CAST_ID | typeof ENCHANT_CAST_ID,
+  session: {
+    itemId: string;
+    bagSlot: number;
+    enchantId: string;
+    equipSlot: string;
+    confirmReplace: boolean;
+    targetPin: string;
+  },
+): void {
+  if (p.sitting) ctx.standUp(p);
+  if (p.mountKey !== '') forceDismount(ctx, p);
+  if (p.mountCastKey !== '') {
+    p.mountCastRemaining = 0;
+    p.mountCastKey = '';
+  }
+  p.queuedCastAbility = null;
+  p.queuedCastAim = null;
+  const duration = ENCHANT_FAMILY_CAST_DURATION_SEC;
+  p.castingAbility = castId;
+  p.castTotal = duration;
+  p.castRemaining = duration;
+  p.castTargetId = null;
+  p.channeling = false;
+  p.enchantCastItemId = session.itemId;
+  // Stored 1-based (slotIndex + 1, 0 = not pin-selected) so the resting value
+  // is 0 and the parity sampler's default-omission drops it (a -1 rest value
+  // re-hashed every golden; see tests/parity/trace.ts canonical()).
+  p.enchantCastBagSlot = session.bagSlot + 1;
+  p.enchantCastEnchantId = session.enchantId;
+  p.enchantCastEquipSlot = session.equipSlot;
+  p.enchantCastConfirmReplace = session.confirmReplace;
+  p.enchantCastTargetPin = session.targetPin;
+  ctx.emit({
+    type: 'castStart',
+    entityId: p.id,
+    ability: castId,
+    time: duration,
+  });
+}
+
+function clearEnchantCastSession(p: Entity): {
+  itemId: string;
+  bagSlot: number;
+  enchantId: string;
+  equipSlot: string;
+  confirmReplace: boolean;
+  targetPin: string;
+} {
+  const session = {
+    itemId: p.enchantCastItemId,
+    // Decode the 1-based storage back to the -1-based session shape.
+    bagSlot: p.enchantCastBagSlot - 1,
+    enchantId: p.enchantCastEnchantId,
+    equipSlot: p.enchantCastEquipSlot,
+    confirmReplace: p.enchantCastConfirmReplace,
+    targetPin: p.enchantCastTargetPin,
+  };
+  p.enchantCastItemId = '';
+  p.enchantCastBagSlot = 0;
+  p.enchantCastEnchantId = '';
+  p.enchantCastEquipSlot = '';
+  p.enchantCastConfirmReplace = false;
+  p.enchantCastTargetPin = '';
+  return session;
+}
+
+/** Command entry point: validates and STARTS a DISENCHANT_CAST_ID cast.
+ *  Materials resolve only on completeDisenchantCast. Runs on the
+ *  deterministic tick the command arrives on, never off-tick. */
+export function disenchantItem(
+  ctx: SimContext,
+  itemId: string,
+  pid?: number,
+  slotIndex?: number,
+): DisenchantResult {
+  const r = ctx.resolve(pid);
+  if (!r) return { ok: false, itemId, reason: 'unknown_item' };
+  const { meta, e: p } = r;
+  if (p.castingAbility || isConsuming(p)) {
+    return { ok: false, itemId, reason: 'busy' };
+  }
+  const denial = evaluateDisenchantAdmission(ctx, meta.entityId, itemId, slotIndex);
+  if (denial) return denial;
+  beginEnchantFamilyCast(ctx, p, DISENCHANT_CAST_ID, {
+    itemId,
+    bagSlot: slotIndex === undefined ? -1 : slotIndex,
+    enchantId: '',
+    equipSlot: '',
+    confirmReplace: false,
+    // Pin the SELECTED copy's identity, not just its index: the complete-side
+    // re-check below is what stops a mid-cast bag splice from redirecting the
+    // destroy onto a different copy of the same item id.
+    targetPin: slotIndex === undefined ? '' : itemCopyPin(meta.inventory[slotIndex]),
+  });
+  return { ok: true, itemId, casting: true };
+}
+
+/** Completion of a running disenchant cast (updateCasting routes here).
+ *  Re-validates and applies resolveDisenchant; emits disenchantResult. */
+export function completeDisenchantCast(ctx: SimContext, p: Entity, meta: PlayerMeta): void {
+  const session = clearEnchantCastSession(p);
+  // Empty session: silent no-op (completeRechargeCast precedent). Unreachable
+  // from the live path (every start writes a non-empty id); a defensive deny
+  // here would emit a phantom unknown_item toast for a cast that never was.
+  if (session.itemId === '') return;
+  const slotIndex = session.bagSlot < 0 ? undefined : session.bagSlot;
+  // Pin re-check for a slot-selected disenchant: a mid-cast bag splice (move,
+  // destroy, sell, bank, sort) can shift a DIFFERENT copy of the same item id
+  // under the pinned index, and resolveDisenchant's id-only slot check would then
+  // destroy a copy the player never selected (the enchanted or masterwork
+  // one). Deny not_held instead; the player re-picks. Unpinned disenchants
+  // re-resolve their preferred victim fresh and need no pin.
+  if (slotIndex !== undefined && itemCopyPin(meta.inventory[slotIndex]) !== session.targetPin) {
+    const result: DisenchantResult = { ok: false, itemId: session.itemId, reason: 'not_held' };
+    meta.lastDisenchantResult = result;
+    ctx.emit({
+      type: 'disenchantResult',
+      ok: false,
+      itemId: session.itemId,
+      reason: 'not_held',
+      pid: meta.entityId,
+    });
+    return;
+  }
+  const result = resolveDisenchant(ctx, meta.entityId, session.itemId, slotIndex);
+  meta.lastDisenchantResult = result;
+  ctx.emit({
+    type: 'disenchantResult',
+    ok: result.ok,
+    itemId: result.itemId,
+    materialItemId: result.materialItemId,
+    count: result.count,
+    secondaryItemId: result.secondaryItemId,
+    secondaryCount: result.secondaryCount,
+    reason: result.reason,
+    pid: meta.entityId,
+  });
+}
+
+export interface ApplyEnchantResult {
+  ok: boolean;
+  itemId: string;
+  enchantId: string;
+  /** True when the command admitted and started an ENCHANT_CAST_ID cast
+   *  (no reagents consumed yet). Absent on complete resolves and denials. */
+  casting?: boolean;
+  reason?:
+    | 'unknown_item'
+    | 'unknown_enchant'
+    | 'wrong_slot'
+    | 'not_held'
+    | 'insufficient_materials'
+    | 'throttled'
+    | 'no_bag_space'
+    // #2415: the target copy is already enchanted and the command carried no
+    // confirmReplace flag (the honest deny that replaced the misleading
+    // not_held), and the identical-enchant-id re-apply, denied on every arm
+    // because its accept would be pure reagent loss with zero state change.
+    | 'already_enchanted'
+    | 'same_enchant'
+    | 'busy';
+}
+
+/** The exact instance payload an apply-enchant mints from the copy it
+ *  consumed: the consumed payload cloned (empty for a plain fungible copy),
+ *  the enchant's stat bonus summed ADDITIVELY into any existing rolled.stats
+ *  (a masterwork copy's baked bonus and the enchant's bonus must BOTH survive;
+ *  signer, rolled.masterwork, and legacy rolled.quality ride through the clone
+ *  untouched), and the explicit already-enchanted marker set (keyed on the
+ *  enchant itself rather than bare stats presence, so masterwork copies stay
+ *  enchantable while double-enchant stays blocked; see isEnchantedInstance).
+ *  A consumed copy is never already enchanted (removeEnchantableItem guards
+ *  on isEnchantedInstance), so this never stacks one enchant onto another.
+ *  Shared by resolveApplyEnchant's success path and its #2350 capacity gate,
+ *  so the modeled grant can never drift from the minted one. */
+export function enchantedPayloadFor(
+  consumed: ItemInstancePayload | undefined,
   enchant: EnchantDef,
-): boolean {
-  return enchant.reagents.every((r) => countItemInSlots(inventory, r.itemId) >= r.count);
+): ItemInstancePayload {
+  const merged: ItemInstancePayload = consumed
+    ? cloneItemInstancePayload(consumed)
+    : ({} as ItemInstancePayload);
+  const mergedStats: Record<string, number> = { ...merged.rolled?.stats };
+  for (const [stat, value] of Object.entries(enchant.statBonus)) {
+    if (value === undefined) continue;
+    mergedStats[stat] = (mergedStats[stat] ?? 0) + value;
+  }
+  merged.rolled = { ...merged.rolled, stats: mergedStats };
+  merged.enchant = enchant.id;
+  return merged;
+}
+
+/** The exact payload the #2415 replace arm mints from an already-enchanted
+ *  victim: the victim cloned, the OLD enchant peeled off surgically, and the
+ *  new one applied on top, so only the enchant layer changes: the signer,
+ *  rolled.masterwork, legacy rolled.quality, boundTo, and bindOnTrade all ride
+ *  through the clone byte-identical.
+ *
+ *  Marker copies (victim.enchant set): the old bonus is SUBTRACTED per stat,
+ *  exact because enchant magnitudes are frozen post-launch
+ *  (content/enchants.ts), and a key that reaches zero is DELETED rather than
+ *  kept at 0: item_instance_merge.ts's structural equality treats a present
+ *  zero-valued key as distinct from an absent one, so residue would stop the
+ *  replaced copy comparing equal to a fresh same-enchant peer. The <= 0 arm
+ *  also swallows a corrupt over-large baked value gracefully instead of
+ *  minting a negative stat.
+ *
+ *  One accepted asymmetry in that prune: a masterwork bake can itself contain
+ *  a ZERO-valued key (item_budget.ts normalizePrimaryStats writes out[k] =
+ *  base, and base floors to 0 when the exact share rounds down and the
+ *  leftover pass does not reach that axis). Bake {str:1, agi:0} plus an
+ *  agility enchant is {str:1, agi:2}; replacing it with a strength enchant
+ *  subtracts agi to 0 and PRUNES the key, giving {str:3}, while a fresh peer
+ *  off the same bake keeps {str:3, agi:0}. Stat-identical (a zero contributes
+ *  nothing to recalcPlayerStats), but structurallyEqual counts present-0 as
+ *  distinct from absent, so those two copies would not stack. Accepted: gear
+ *  is stack-cap 1, so no stack exists to lose, and preserving the zero would
+ *  cost the far more common zero-residue case its clean peer equality.
+ *  Legacy pre-marker copies (bare rolled.stats, no
+ *  masterwork): rolled.stats is replaced WHOLESALE, exact because applyEnchant
+ *  was the only writer of rolled.stats before the masterwork model, so on
+ *  such a copy the whole map IS the old enchant. Standing caution: that
+ *  sole-writer premise is what keeps the wipe safe, so any future system that
+ *  writes rolled.stats WITHOUT setting rolled.masterwork would hand its stats
+ *  to this arm for deletion (and to isEnchantedInstance for misclassification)
+ *  and must use the masterwork flag or a new marker instead.
+ *
+ *  Callers must resolve and validate the old enchant id BEFORE calling (the
+ *  same_enchant deny, and the defensive unknown-old-id deny): this function
+ *  assumes a marker id resolves. Shared by both replace arms' success paths
+ *  and the bagged arm's #2350 capacity gate, so the modeled grant never
+ *  drifts from the minted one. */
+export function replacedEnchantPayloadFor(
+  victim: ItemInstancePayload,
+  next: EnchantDef,
+): ItemInstancePayload {
+  const merged = cloneItemInstancePayload(victim);
+  const old = victim.enchant !== undefined ? ENCHANTS[victim.enchant] : undefined;
+  // Legacy arm: no marker means the whole stats map is the old enchant.
+  const stats: Record<string, number> =
+    victim.enchant !== undefined ? { ...merged.rolled?.stats } : {};
+  if (old) {
+    for (const [stat, value] of Object.entries(old.statBonus)) {
+      if (value === undefined) continue;
+      const remain = (stats[stat] ?? 0) - value;
+      if (remain > 0) stats[stat] = remain;
+      else delete stats[stat];
+    }
+  }
+  for (const [stat, value] of Object.entries(next.statBonus)) {
+    if (value === undefined) continue;
+    stats[stat] = (stats[stat] ?? 0) + value;
+  }
+  merged.rolled = { ...merged.rolled, stats };
+  merged.enchant = next.id;
+  return merged;
+}
+
+/** Resolve one apply-enchant attempt against the copy WORN in `slot`, enchanting
+ *  it in place (the classic behavior: no unequip / enchant / re-equip dance).
+ *  Every gate mirrors the bagged arm below one for one: the enchant must target
+ *  this item's slot (checked by the shared caller), the named slot must actually
+ *  be wearing this exact item id, the worn copy must NOT already be enchanted,
+ *  every reagent must be held IN THE BAGS (all-or-nothing), and the shared
+ *  action throttle applies. On success the merged payload (the SAME
+ *  enchantedPayloadFor the bagged arm mints, so signer / masterwork / legacy
+ *  rolled.quality survival is one contract, not two) is written straight onto
+ *  PlayerMeta.equipmentInstance[slot] and the stats are re-baked.
+ *
+ *  The discriminator is a SLOT, deliberately, and not an item id: ring1/ring2
+ *  and mainhand/offhand can each be wearing an identical copy of one item id,
+ *  and only the slot says which of the two the player aimed at. */
+function resolveApplyEnchantWorn(
+  ctx: SimContext,
+  pid: number,
+  itemId: string,
+  enchant: EnchantDef,
+  slot: EquipSlot,
+  confirmReplace?: boolean,
+): ApplyEnchantResult {
+  const enchantId = enchant.id;
+  const r = ctx.resolve(pid);
+  if (!r) return { ok: false, itemId, enchantId, reason: 'not_held' };
+  const { meta, e: p } = r;
+  // An empty slot, or a slot wearing something else, denies with the same
+  // not_held answer the bagged arm gives when no eligible copy is held.
+  // Untrusted input: the client names a slot, the sim decides what is in it.
+  if (meta.equipment[slot] !== itemId) {
+    return { ok: false, itemId, enchantId, reason: 'not_held' };
+  }
+  // An ABSENT payload is a plain worn copy, which is enchantable (exactly like
+  // a plain fungible bagged copy). A payload that isEnchantedInstance reads as
+  // already enchanted: without the explicit confirmReplace flag that denies
+  // with the dedicated already_enchanted reason (#2415: the honest message,
+  // not the old misleading not_held), and WITH it the worn copy is replaced in
+  // place. A signed or masterwork payload is neither, and stays eligible for
+  // the plain arm; the slot discriminator means the player named this exact
+  // copy, so the flag never has to pick a victim here.
+  const worn = meta.equipmentInstance?.[slot];
+  const replacing = worn !== undefined && isEnchantedInstance(worn);
+  if (replacing) {
+    // Strict boolean-true, the same house rule the dispatch and the bagged
+    // arm apply: the resolver is the authoritative re-validation layer, so a
+    // truthy non-boolean from any future non-WS caller must read as
+    // unconfirmed here too, never as consent to destroy.
+    if (confirmReplace !== true) {
+      return { ok: false, itemId, enchantId, reason: 'already_enchanted' };
+    }
+    // Re-applying the identical enchant id is denied outright rather than
+    // confirmed: its accept would be pure reagent loss with zero state change.
+    if (worn.enchant === enchantId) {
+      return { ok: false, itemId, enchantId, reason: 'same_enchant' };
+    }
+    // Defensive, unreachable on honest data (enchant ids are frozen
+    // content-as-code): a marker id that no longer resolves cannot be
+    // subtracted exactly, so the copy stays refused instead of stacking the
+    // old bonus under the new one. Only a hand-edited save can get here.
+    if (worn.enchant !== undefined && !ENCHANTS[worn.enchant]) {
+      return { ok: false, itemId, enchantId, reason: 'already_enchanted' };
+    }
+  }
+  for (const reagent of enchant.reagents) {
+    if (ctx.countItem(reagent.itemId, pid) < reagent.count) {
+      return { ok: false, itemId, enchantId, reason: 'insufficient_materials' };
+    }
+  }
+  // Craft Cast System Phase 4: no shared action throttle; cast duration paces.
+  // NO #2350 bag-capacity gate on this arm, deliberately: nothing enters the
+  // bags. The enchanted copy is rewritten in place on the worn slot and the
+  // reagents only leave, so this action can never need a free bag slot. The
+  // capacity gate belongs to the bagged arm alone, where the mint really does
+  // land in the inventory.
+  for (const reagent of enchant.reagents) ctx.removeItem(reagent.itemId, reagent.count, pid);
+  meta.equipmentInstance ??= {};
+  meta.equipmentInstance[slot] = replacing
+    ? // The replace mint: old enchant peeled off exactly, new one applied,
+      // every other payload layer byte-identical. The old enchant is destroyed
+      // outright, no material refund (#2415 ruling).
+      replacedEnchantPayloadFor(worn, enchant)
+    : enchantedPayloadFor(worn, enchant);
+  // Make the stat pipeline see it: recalcPlayerStats reads the per-slot
+  // rolled.stats off equipmentInstance (entity.ts), which is the same read
+  // items.ts equipItem re-bakes after moving a payload into that map, so an
+  // in-place enchant has to re-bake exactly the same way. That call also rebuilds
+  // the render mirror e.equippedInstances, which is what the server's `eqi`
+  // identity-diff (server/game.ts identityFields + the cache.idJson compare)
+  // picks up on the next snapshot: no extra dirty-marking is needed.
+  recalcPlayerStats(p, meta.cls, meta.equipment, ctx.playerMods(meta), meta.equipmentInstance);
+  // Same skill gain as the bagged arm: the applied enchant's reagent-derived tier.
+  grantEnchantingSkill(ctx, meta, enchantGainTier(enchant));
+  return { ok: true, itemId, enchantId };
+}
+
+/** The #2415 bagged replace arm: resolve one CONFIRMED apply onto the pinned
+ *  already-enchanted victim copy of `itemId` (replaceVictimIndex: the
+ *  highest-index enchanted copy, the same end-first order every remover in
+ *  this repo walks). Reached only from resolveApplyEnchant below, which has
+ *  already cleared the shared unknown_item/unknown_enchant/wrong_slot gates,
+ *  proven an enchanted copy is held, and seen the explicit confirmReplace
+ *  flag. Gate order mirrors the plain arm one for one: target validity
+ *  (same_enchant, plus the defensive unknown-old-marker refuse), reagents
+ *  all-or-nothing, the shared action throttle, then the #2350 capacity gate,
+ *  every deny side-effect-free. The gate and the live removal share ONE
+ *  victim walk (consumeEnchantedVictim) and ONE mint transform
+ *  (replacedEnchantPayloadFor), so neither can drift from what is actually
+ *  consumed and granted (#2139). The old enchant is destroyed outright, no
+ *  material refund; signer, masterwork stats, and boundTo/bindOnTrade carry
+ *  through byte-identical; the skill gain and throttle stamp are exactly the
+ *  plain apply's (replacement is just an apply: off-wheel, no fee ladder). */
+function resolveReplaceEnchantBagged(
+  ctx: SimContext,
+  pid: number,
+  itemId: string,
+  enchant: EnchantDef,
+): ApplyEnchantResult {
+  const enchantId = enchant.id;
+  // ctx.resolve, NOT ctx.players.get: this arm splices meta.inventory directly
+  // (consumeEnchantedVictim) but mints through ctx.addItemInstance, which
+  // no-ops unless resolve finds BOTH the meta and the entity. Guarding on the
+  // meta alone would let a meta-without-entity state destroy the victim and
+  // mint nothing. The plain arm cannot lose that way (its removal and its mint
+  // both fail through the same resolve), and the worn arm already resolves;
+  // this makes the third arm match. Unreachable on the shipped path, but
+  // resolveApplyEnchant is exported and called with a raw pid by tests and any
+  // future host.
+  const meta = ctx.resolve(pid)?.meta;
+  const victimIdx = meta ? replaceVictimIndex(meta.inventory, itemId) : -1;
+  const victim = meta && victimIdx >= 0 ? meta.inventory[victimIdx].instance : undefined;
+  // Unreachable (the caller proved an enchanted copy is held), kept as the
+  // honest deny for a torn intermediate state rather than a crash.
+  if (!meta || !victim) return { ok: false, itemId, enchantId, reason: 'not_held' };
+  // Re-applying the identical enchant id is denied outright rather than
+  // confirmed: its accept would be pure reagent loss with zero state change.
+  // A legacy pre-marker victim has no id to compare, so it never denies here.
+  if (victim.enchant === enchantId) {
+    return { ok: false, itemId, enchantId, reason: 'same_enchant' };
+  }
+  // Defensive, unreachable on honest data (enchant ids are frozen
+  // content-as-code): a marker id that no longer resolves cannot be
+  // subtracted exactly, so the copy stays refused instead of stacking the old
+  // bonus under the new one. Only a hand-edited save can get here.
+  if (victim.enchant !== undefined && !ENCHANTS[victim.enchant]) {
+    return { ok: false, itemId, enchantId, reason: 'already_enchanted' };
+  }
+  for (const reagent of enchant.reagents) {
+    if (ctx.countItem(reagent.itemId, pid) < reagent.count) {
+      return { ok: false, itemId, enchantId, reason: 'insufficient_materials' };
+    }
+  }
+  // Craft Cast System Phase 4: no shared action throttle; cast duration paces.
+  // #2350 capacity gate. Replacement is nearly always net-neutral (one copy
+  // out, one copy in, reagents only leave), but not provably: the victim can
+  // sit in a surviving multi-unit stack (identical enchanted copies merged),
+  // in which case the replaced copy needs its own home. Model the removals
+  // with the SAME walks the live path runs below and pre-fit the SAME mint.
+  const scratch = meta.inventory.map((s) => ({ ...s }));
+  // The `?? victim` arm is unreachable (scratch is a content-identical copy of
+  // the array the peek above found the victim in) and deliberately kept as the
+  // safe direction: were it ever taken, the gate would model the mint without
+  // modeling the removal, which under-counts free space and denies MORE.
+  const scratchVictim = consumeEnchantedVictim(scratch, itemId) ?? {
+    instance: victim,
+    craftedRecipeId: meta.inventory[victimIdx]?.craftedRecipeId,
+  };
+  for (const reagent of enchant.reagents) removeStacked(scratch, reagent.itemId, reagent.count);
+  if (
+    countFit(
+      scratch,
+      bagCapacity(meta.bags),
+      itemId,
+      1,
+      replacedEnchantPayloadFor(scratchVictim.instance ?? victim, enchant),
+      scratchVictim.craftedRecipeId,
+    ) < 1
+  ) {
+    return { ok: false, itemId, enchantId, reason: 'no_bag_space' };
+  }
+  const consumed = consumeEnchantedVictim(meta.inventory, itemId);
+  // Deny rather than mint when nothing was consumed. Note what this does and
+  // does NOT cover: consumeEnchantedVictim returns undefined ONLY from its
+  // no-victim-found arm, which is before it touches the array, so today this
+  // is a clean pre-mutation bail. It is NOT a guard against a future helper
+  // that mutates and then returns undefined: that shape would already have
+  // destroyed the copy by the time we get here, and this return would skip the
+  // mint, losing the item rather than duping it. Any such change has to keep
+  // the removal and the mint atomic here, not lean on this line.
+  if (!consumed?.instance) return { ok: false, itemId, enchantId, reason: 'not_held' };
+  ctx.onInventoryChangedForQuests(meta);
+  for (const reagent of enchant.reagents) ctx.removeItem(reagent.itemId, reagent.count, pid);
+  // silent + callerLogs, exactly like the plain apply mint below: the
+  // enchantResult event fires its own dedicated cue (audio.enchant in
+  // src/game/audio.ts) and logs the one enchant line. This mint re-grants the
+  // player's OWN copy, so the hub's "You receive:" line told them they had
+  // received an item that never left their bags (#2430).
+  // craftedRecipeId re-stamps the consumed slot's plain-stack craft marker onto
+  // the replacement: the payload transform above carries every `instance` field
+  // through, but the marker lives on the SLOT, so without this the replace arm
+  // would launder a self-crafted piece exactly as the plain apply arm did.
+  // movement: this re-mints the player's OWN copy in place, the same reason
+  // silent + callerLogs are set, so it is not a new acquisition for the
+  // Reliquary tally either (re-enchanting a relic must not raise its count).
+  ctx.addItemInstance(itemId, replacedEnchantPayloadFor(consumed.instance, enchant), pid, 1, {
+    silent: true,
+    callerLogs: true,
+    craftedRecipeId: consumed.craftedRecipeId,
+    movement: true,
+  });
+  // Quality-tiered gain: the applied enchant's reagent-derived tier, exactly
+  // like the plain arms (also stamps the shared throttle).
+  grantEnchantingSkill(ctx, meta, enchantGainTier(enchant));
+  return { ok: true, itemId, enchantId };
+}
+
+/** Resolve one apply-enchant attempt against a HELD (bagged, not currently
+ *  equipped) eligible copy of `itemId`: a plain fungible copy, or an
+ *  instanced copy that has NOT itself been enchanted yet (crafted rare+ gear;
+ *  see countEnchantableItem). Denies (no side effect) if the item or enchant
+ *  id is unknown, the enchant does not target this item's slot, the player
+ *  holds no eligible copy, or any reagent is short (all-or-nothing, same
+ *  reagent-availability discipline crafting.ts's craftItem uses).
+ *  On success: consumes exactly one eligible copy (removeEnchantableItem, so
+ *  an already-enchanted copy of the same item is never silently overwritten)
+ *  and every reagent, then grants a freshly-instanced copy carrying the
+ *  enchant's stat bonus (ctx.addItemInstance): equipping THAT copy is what
+ *  carries the bonus into recalcPlayerStats (see items.ts equipItem). If the
+ *  consumed copy was itself instanced (a crafted rare+ piece carrying a
+ *  signer payload, a masterwork copy carrying baked bonus stats, or a
+ *  legacy rolled.quality copy), that payload is merged into the new instance
+ *  rather than dropped (stats sum ADDITIVELY), so enchanting a crafted or
+ *  masterwork item does not erase its crafter attribution
+ *  (battlefield_xp.ts), its masterwork bonus, or legacy rolled.quality
+ *  (#1712 round-3 review).
+ *
+ *  `slot` selects the WORN arm instead (resolveApplyEnchantWorn above): the copy
+ *  equipped in that exact equipment slot is enchanted in place, so worn gear
+ *  needs no unequip / enchant / re-equip round trip. Omitted, this resolves
+ *  against the bags exactly as before.
+ *
+ *  `confirmReplace` (#2415) is the explicit consent that unlocks replacing an
+ *  EXISTING enchant: with it set and an already-enchanted copy held (worn, or
+ *  the pinned bagged victim), the old enchant is destroyed and the new one
+ *  applied surgically (resolveReplaceEnchantBagged / the worn replace arm).
+ *  Without it, an enchanted-only target denies with the dedicated
+ *  already_enchanted reason, never a silent overwrite. The flag is inert when
+ *  an unenchanted eligible copy exists and no enchanted one does: consent to
+ *  destroy is meaningless when nothing would be destroyed, so the plain arm
+ *  proceeds (this also keeps a confirmed command race-safe when the enchanted
+ *  copy left the bags between dialog and accept: it falls back to a deny or a
+ *  destroy-nothing apply, never a surprise overwrite of a different copy).
+ *  The converse is NOT symmetric and is deliberate: when BOTH an enchanted and
+ *  an unenchanted copy of the item id are held, the flag still routes to the
+ *  replace arm, so a confirmed command destroys the enchant rather than
+ *  quietly spending the free copy. The player asked for this specific copy in
+ *  the picker (the replace row is the only sender of the flag), and silently
+ *  redirecting a confirmed destroy onto a different copy would be the bigger
+ *  surprise. */
+export function resolveApplyEnchant(
+  ctx: SimContext,
+  pid: number,
+  itemId: string,
+  enchantId: string,
+  slot?: EquipSlot,
+  confirmReplace?: boolean,
+): ApplyEnchantResult {
+  const itemDef = ITEMS[itemId];
+  if (!itemDef) return { ok: false, itemId, enchantId, reason: 'unknown_item' };
+  const enchant = ENCHANTS[enchantId];
+  if (!enchant) return { ok: false, itemId, enchantId, reason: 'unknown_enchant' };
+  // The slot-kind gate is shared by both arms: an item declares its slot KIND
+  // ('ring' for either finger, 'mainhand' for a one-hand weapon worn in either
+  // hand), which is what an enchant's itemSlot names.
+  if (itemDef.slot !== enchant.itemSlot) {
+    return { ok: false, itemId, enchantId, reason: 'wrong_slot' };
+  }
+  if (slot) return resolveApplyEnchantWorn(ctx, pid, itemId, enchant, slot, confirmReplace);
+  // The bagged eligibility split (#2415): countItem sees every bagged copy,
+  // countEnchantableItem only the not-yet-enchanted ones, so the difference
+  // is the enchanted holding. Confirmed replace targets that holding; the
+  // no-flag deny names the real cause (already_enchanted vs not_held) instead
+  // of collapsing both into the old misleading not_held.
+  const enchantableHeld = ctx.countEnchantableItem(itemId, pid);
+  const enchantedHeld = ctx.countItem(itemId, pid) - enchantableHeld;
+  if (confirmReplace === true && enchantedHeld >= 1) {
+    return resolveReplaceEnchantBagged(ctx, pid, itemId, enchant);
+  }
+  if (enchantableHeld < 1) {
+    return {
+      ok: false,
+      itemId,
+      enchantId,
+      reason: enchantedHeld >= 1 ? 'already_enchanted' : 'not_held',
+    };
+  }
+  for (const reagent of enchant.reagents) {
+    if (ctx.countItem(reagent.itemId, pid) < reagent.count) {
+      return { ok: false, itemId, enchantId, reason: 'insufficient_materials' };
+    }
+  }
+  const meta = ctx.players.get(pid);
+  // Craft Cast System Phase 4: no shared action throttle; cast duration paces.
+  // #2350 capacity gate: the freshly-enchanted instance must fit AFTER the
+  // consumed copy and every reagent leave, so model all of it on a scratch
+  // copy: the victim via consumeOneScratch (the isEnchantedInstance exclusion
+  // mirrors removeEnchantableItem's victim order, and the not_held gate above
+  // already proved an eligible copy exists), the reagents via removeStacked
+  // (the removeItem walk), and the grant via the SAME enchantedPayloadFor the
+  // success path mints below, so a byte-equal enchanted stack with room still
+  // counts as fitting. Denies with no side effect and draws nothing.
+  // The mint below also re-stamps the victim's craftedRecipeId, which this
+  // model deliberately does NOT carry: consumeOneScratch reports the payload
+  // only, and countFit uses the marker solely to pick which dest stack a grant
+  // may merge into. Every enchantable item is equippable gear (an enchant
+  // declares an itemSlot), gear is stack-cap 1, so no mergeable dest stack can
+  // exist and the marker cannot change this answer. If a STACKABLE item ever
+  // becomes enchantable, that stops holding: widen consumeOneScratch to return
+  // an InventoryUnit and thread the marker through here, or the gate starts
+  // disagreeing with the grant about what merges.
+  if (meta) {
+    const scratch = meta.inventory.map((s) => ({ ...s }));
+    const victim = consumeOneScratch(scratch, itemId, isEnchantedInstance);
+    for (const reagent of enchant.reagents) removeStacked(scratch, reagent.itemId, reagent.count);
+    if (
+      countFit(scratch, bagCapacity(meta.bags), itemId, 1, enchantedPayloadFor(victim, enchant)) < 1
+    ) {
+      return { ok: false, itemId, enchantId, reason: 'no_bag_space' };
+    }
+  }
+  const [consumed] = ctx.removeEnchantableItem(itemId, 1, pid);
+  for (const reagent of enchant.reagents) ctx.removeItem(reagent.itemId, reagent.count, pid);
+  // The minted payload: the consumed copy's markers plus the enchant's
+  // additive bonus and marker (enchantedPayloadFor above, shared with the
+  // capacity gate).
+  const merged = enchantedPayloadFor(consumed?.instance, enchant);
+  // silent + callerLogs: the enchantResult event fires its own dedicated cue
+  // (audio.enchant in src/game/audio.ts) and logs the one enchant line. This
+  // mint re-grants the player's OWN copy, so the hub's "You receive:" line
+  // told them they had received an item that never left their bags (#2430).
+  // craftedRecipeId re-stamps the consumed slot's plain-stack craft marker: a
+  // COMMON crafted piece carries its provenance on the slot with no `instance`
+  // at all, so enchanting it used to hand back a copy indistinguishable from a
+  // found one, and disenchanting that copy then paid full Enchanting skill,
+  // reopening the anti-farm gate (professions/crafting.ts
+  // isCraftedDisenchantTrackedOutput) through a craft -> enchant -> disenchant
+  // loop the player runs entirely on their own gear.
+  // movement: the plain apply arm re-mints the player's own copy too (see the
+  // replace arm above), so it is a relocation, not an acquisition.
+  ctx.addItemInstance(itemId, merged, pid, 1, {
+    silent: true,
+    callerLogs: true,
+    craftedRecipeId: consumed?.craftedRecipeId,
+    movement: true,
+  });
+  // Quality-tiered gain: the applied enchant's reagent-derived tier.
+  if (meta) grantEnchantingSkill(ctx, meta, enchantGainTier(enchant));
+  return { ok: true, itemId, enchantId };
+}
+
+/**
+ * Pre-consume admission for an apply-enchant cast start. Mirrors the deny
+ * arms of resolveApplyEnchant (and its worn/replace sub-arms) without
+ * mutating inventory or equipment. confirmReplace must already be true to
+ * start a cast against an already-enchanted target (confirm dialog is the
+ * gate; the cast is only the pace).
+ */
+export function evaluateApplyEnchantAdmission(
+  ctx: SimContext,
+  pid: number,
+  itemId: string,
+  enchantId: string,
+  slot?: EquipSlot,
+  confirmReplace?: boolean,
+): ApplyEnchantResult | null {
+  const itemDef = ITEMS[itemId];
+  if (!itemDef) return { ok: false, itemId, enchantId, reason: 'unknown_item' };
+  const enchant = ENCHANTS[enchantId];
+  if (!enchant) return { ok: false, itemId, enchantId, reason: 'unknown_enchant' };
+  if (itemDef.slot !== enchant.itemSlot) {
+    return { ok: false, itemId, enchantId, reason: 'wrong_slot' };
+  }
+  const r = ctx.resolve(pid);
+  if (!r) return { ok: false, itemId, enchantId, reason: 'not_held' };
+  const { meta } = r;
+
+  if (slot) {
+    if (meta.equipment[slot] !== itemId) {
+      return { ok: false, itemId, enchantId, reason: 'not_held' };
+    }
+    const worn = meta.equipmentInstance?.[slot];
+    const replacing = worn !== undefined && isEnchantedInstance(worn);
+    if (replacing) {
+      if (confirmReplace !== true) {
+        return { ok: false, itemId, enchantId, reason: 'already_enchanted' };
+      }
+      if (worn.enchant === enchantId) {
+        return { ok: false, itemId, enchantId, reason: 'same_enchant' };
+      }
+      if (worn.enchant !== undefined && !ENCHANTS[worn.enchant]) {
+        return { ok: false, itemId, enchantId, reason: 'already_enchanted' };
+      }
+    }
+    for (const reagent of enchant.reagents) {
+      if (ctx.countItem(reagent.itemId, pid) < reagent.count) {
+        return { ok: false, itemId, enchantId, reason: 'insufficient_materials' };
+      }
+    }
+    return null;
+  }
+
+  const enchantableHeld = ctx.countEnchantableItem(itemId, pid);
+  const enchantedHeld = ctx.countItem(itemId, pid) - enchantableHeld;
+  if (confirmReplace === true && enchantedHeld >= 1) {
+    const victimIdx = replaceVictimIndex(meta.inventory, itemId);
+    const victim = victimIdx >= 0 ? meta.inventory[victimIdx].instance : undefined;
+    if (!victim) return { ok: false, itemId, enchantId, reason: 'not_held' };
+    if (victim.enchant === enchantId) {
+      return { ok: false, itemId, enchantId, reason: 'same_enchant' };
+    }
+    if (victim.enchant !== undefined && !ENCHANTS[victim.enchant]) {
+      return { ok: false, itemId, enchantId, reason: 'already_enchanted' };
+    }
+    for (const reagent of enchant.reagents) {
+      if (ctx.countItem(reagent.itemId, pid) < reagent.count) {
+        return { ok: false, itemId, enchantId, reason: 'insufficient_materials' };
+      }
+    }
+    const scratch = meta.inventory.map((s) => ({ ...s }));
+    const scratchVictim = consumeEnchantedVictim(scratch, itemId) ?? {
+      instance: victim,
+      craftedRecipeId: meta.inventory[victimIdx]?.craftedRecipeId,
+    };
+    for (const reagent of enchant.reagents) removeStacked(scratch, reagent.itemId, reagent.count);
+    if (
+      countFit(
+        scratch,
+        bagCapacity(meta.bags),
+        itemId,
+        1,
+        replacedEnchantPayloadFor(scratchVictim.instance ?? victim, enchant),
+        scratchVictim.craftedRecipeId,
+      ) < 1
+    ) {
+      return { ok: false, itemId, enchantId, reason: 'no_bag_space' };
+    }
+    return null;
+  }
+  if (enchantableHeld < 1) {
+    return {
+      ok: false,
+      itemId,
+      enchantId,
+      reason: enchantedHeld >= 1 ? 'already_enchanted' : 'not_held',
+    };
+  }
+  for (const reagent of enchant.reagents) {
+    if (ctx.countItem(reagent.itemId, pid) < reagent.count) {
+      return { ok: false, itemId, enchantId, reason: 'insufficient_materials' };
+    }
+  }
+  const scratch = meta.inventory.map((s) => ({ ...s }));
+  const victim = consumeOneScratch(scratch, itemId, isEnchantedInstance);
+  for (const reagent of enchant.reagents) removeStacked(scratch, reagent.itemId, reagent.count);
+  if (
+    countFit(scratch, bagCapacity(meta.bags), itemId, 1, enchantedPayloadFor(victim, enchant)) < 1
+  ) {
+    return { ok: false, itemId, enchantId, reason: 'no_bag_space' };
+  }
+  return null;
+}
+
+/** Command entry point: validates and STARTS an ENCHANT_CAST_ID cast.
+ *  Reagents and the enchant apply resolve only on completeApplyEnchantCast.
+ *  `slot` names a worn equipment slot; `confirmReplace` is #2415 consent
+ *  (required before start when the target is already enchanted). */
+export function applyEnchant(
+  ctx: SimContext,
+  itemId: string,
+  enchantId: string,
+  pid?: number,
+  slot?: EquipSlot,
+  confirmReplace?: boolean,
+): ApplyEnchantResult {
+  const r = ctx.resolve(pid);
+  if (!r) return { ok: false, itemId, enchantId, reason: 'unknown_item' };
+  const { meta, e: p } = r;
+  if (p.castingAbility || isConsuming(p)) {
+    return { ok: false, itemId, enchantId, reason: 'busy' };
+  }
+  const denial = evaluateApplyEnchantAdmission(
+    ctx,
+    meta.entityId,
+    itemId,
+    enchantId,
+    slot,
+    confirmReplace,
+  );
+  if (denial) return denial;
+  // #2415 consent pin: record WHICH existing enchant the confirmReplace
+  // consent was given against ('' when the target is unenchanted), so a
+  // mid-cast copy swap cannot spend the consent destroying a different one.
+  let targetPin = '';
+  if (confirmReplace === true) {
+    if (slot) {
+      targetPin = meta.equipmentInstance?.[slot]?.enchant ?? '';
+    } else {
+      const victimIdx = replaceVictimIndex(meta.inventory, itemId);
+      targetPin = victimIdx >= 0 ? (meta.inventory[victimIdx].instance?.enchant ?? '') : '';
+    }
+  }
+  beginEnchantFamilyCast(ctx, p, ENCHANT_CAST_ID, {
+    itemId,
+    bagSlot: -1,
+    enchantId,
+    equipSlot: slot ?? '',
+    confirmReplace: confirmReplace === true,
+    targetPin,
+  });
+  return { ok: true, itemId, enchantId, casting: true };
+}
+
+/** Completion of a running apply-enchant cast. Re-validates and applies
+ *  resolveApplyEnchant; emits enchantResult. */
+export function completeApplyEnchantCast(ctx: SimContext, p: Entity, meta: PlayerMeta): void {
+  const session = clearEnchantCastSession(p);
+  // Empty session: silent no-op (completeRechargeCast precedent).
+  if (session.itemId === '') return;
+  const equipSlot = session.equipSlot ? (session.equipSlot as EquipSlot) : undefined;
+  // #2415 consent staleness re-check: with replace consent armed, if the
+  // target NOW carries a different enchant than the one consented to (a
+  // mid-cast equip or bag swap), deny with already_enchanted so the player
+  // confirms against what is actually there. A target that lost its enchant
+  // mid-cast falls through to the plain arm (nothing is destroyed), so only
+  // a present-but-different enchant denies.
+  if (session.confirmReplace) {
+    let current = '';
+    if (equipSlot) {
+      current = meta.equipmentInstance?.[equipSlot]?.enchant ?? '';
+    } else {
+      const victimIdx = replaceVictimIndex(meta.inventory, session.itemId);
+      current = victimIdx >= 0 ? (meta.inventory[victimIdx].instance?.enchant ?? '') : '';
+    }
+    if (current !== '' && current !== session.targetPin) {
+      const result: ApplyEnchantResult = {
+        ok: false,
+        itemId: session.itemId,
+        enchantId: session.enchantId,
+        reason: 'already_enchanted',
+      };
+      meta.lastEnchantResult = result;
+      ctx.emit({
+        type: 'enchantResult',
+        ok: false,
+        itemId: session.itemId,
+        enchantId: session.enchantId,
+        reason: 'already_enchanted',
+        pid: meta.entityId,
+      });
+      return;
+    }
+  }
+  const result = resolveApplyEnchant(
+    ctx,
+    meta.entityId,
+    session.itemId,
+    session.enchantId,
+    equipSlot,
+    session.confirmReplace,
+  );
+  meta.lastEnchantResult = result;
+  ctx.emit({
+    type: 'enchantResult',
+    ok: result.ok,
+    itemId: result.itemId,
+    enchantId: result.enchantId,
+    reason: result.reason,
+    pid: meta.entityId,
+  });
 }

@@ -2,11 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { Sim } from '../src/sim/sim';
 import type { SimEvent } from '../src/sim/types';
 
-// Dev quest-completion cheats (completeQuestForDev / completeCurrentQuestsForDev),
-// reachable in play only via /dev quest and /dev quests behind devCommands /
-// ALLOW_DEV_COMMANDS, or the dev_complete_quest WS command. They force a tracked
-// quest's objectives ready and route through the SAME turn-in core as a normal
-// NPC hand-in, so rewards and the completion log cannot drift.
 function makeWorld() {
   return new Sim({ seed: 42, playerClass: 'warrior', noPlayer: true });
 }
@@ -31,7 +26,6 @@ describe('dev quest completion commands', () => {
     expect(meta.questLog.has('q_boars')).toBe(false);
     expect(meta.questsDone.has('q_boars')).toBe(true);
     expect(meta.counters.questsCompleted).toBe(completedBefore + 1);
-    // the completer never conjures the collect items, it only forces the objective ready
     expect(sim.countItem('boar_hide', pid)).toBe(0);
     expect(sim.events).toContainEqual({ type: 'questDone', questId: 'q_boars', pid });
   });
@@ -57,9 +51,8 @@ describe('dev quest completion commands', () => {
     sim.tick();
     sim.events = [];
 
-    // q_greyjaw requires q_wolves first, so it is not available to a fresh player
     expect(sim.completeQuestForDev('no_such_quest', pid)).toBe(false);
-    expect(sim.completeQuestForDev('q_greyjaw', pid)).toBe(false);
+    expect(sim.completeQuestForDev('q_bandits', pid)).toBe(false);
     expect(eventTexts(sim.events, 'error')).toEqual([
       'That quest is not available.',
       'That quest is not available.',
@@ -79,17 +72,47 @@ describe('dev quest completion commands', () => {
     expect(meta.questsDone.has('q_wolves')).toBe(true);
     expect(meta.questsDone.has('q_boars')).toBe(true);
     expect(meta.questLog.size).toBe(0);
-    expect(meta.questsDone.has('q_greyjaw')).toBe(false);
-    expect(meta.questLog.has('q_greyjaw')).toBe(false);
+    expect(meta.questsDone.has('q_bandits')).toBe(false);
+    expect(meta.questLog.has('q_bandits')).toBe(false);
   });
+});
 
-  it('reports an empty log when there is nothing to complete', () => {
+// D8: the cheat tops a collect objective up to its required count, and it has
+// to count the same grades the real credit path counts (quest_credit.ts).
+// Otherwise it mints plain copies on top of a bag that already satisfies the
+// objective, and the player's own tracker and the cheat disagree about what
+// "satisfied" means.
+describe('dev collect satisfier spans material grades', () => {
+  it('spends the fine copies it already holds instead of minting plain ones', () => {
     const sim = makeWorld();
     const pid = sim.addPlayer('warrior', 'Aleph');
+    const meta = sim.meta(pid)!;
     sim.tick();
-    sim.events = [];
+    // q_prof_workorder_forge collects copper_ore x8, an eastbrook material, so
+    // this is the bag of a player who out-tooled the zone.
+    for (let i = 0; i < 8; i++) sim.addItem('fine_copper_ore', 1, pid);
 
-    expect(sim.completeCurrentQuestsForDev(pid)).toBe(0);
-    expect(eventTexts(sim.events, 'error')).toEqual(['Your quest log is empty.']);
+    // completeQuestForDev auto-accepts, tops the objective up, then turns in.
+    expect(sim.completeQuestForDev('q_prof_workorder_forge', pid)).toBe(true);
+    expect(meta.questsDone.has('q_prof_workorder_forge')).toBe(true);
+
+    // The decisive pair. Grade-aware: the satisfier saw the objective already
+    // covered, minted nothing, and the turn-in spent the fine copies. Blind to
+    // grades: it would have minted 8 plain, base-first consumption would have
+    // spent THOSE, and the 8 fine copies would still be sitting here.
+    expect(sim.countItem('fine_copper_ore', pid)).toBe(0);
+    expect(sim.countItem('copper_ore', pid)).toBe(0);
+  });
+
+  it('still tops up when the bag holds neither grade', () => {
+    // The control: the satisfier is not simply inert. Without this the case
+    // above would pass on a cheat that had stopped granting anything at all.
+    const sim = makeWorld();
+    const pid = sim.addPlayer('warrior', 'Aleph');
+    const meta = sim.meta(pid)!;
+    sim.tick();
+
+    expect(sim.completeQuestForDev('q_prof_workorder_forge', pid)).toBe(true);
+    expect(meta.questsDone.has('q_prof_workorder_forge')).toBe(true);
   });
 });

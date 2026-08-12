@@ -1,27 +1,99 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { clickMoveButtonLabel, normalizeClickMoveButton, Settings, SETTING_RANGES } from '../src/game/settings';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  clickMoveButtonLabel,
+  normalizeClickMoveButton,
+  SETTING_RANGES,
+  Settings,
+} from '../src/game/settings';
 
 function installStorage(): void {
   const map = new Map<string, string>();
-  (globalThis as any).localStorage = {
-    getItem: (k: string) => (map.has(k) ? map.get(k)! : null),
-    setItem: (k: string, v: string) => { map.set(k, v); },
-    removeItem: (k: string) => { map.delete(k); },
+  const storage: Storage = {
+    get length() {
+      return map.size;
+    },
+    key: (index: number) => Array.from(map.keys())[index] ?? null,
+    getItem: (k: string) => map.get(k) ?? null,
+    setItem: (k: string, v: string) => {
+      map.set(k, v);
+    },
+    removeItem: (k: string) => {
+      map.delete(k);
+    },
     clear: () => map.clear(),
   };
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: storage,
+  });
 }
 
-beforeEach(() => installStorage());
+function installTouchDefault(matches: boolean): void {
+  if (typeof window === 'undefined') {
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      value: {},
+    });
+  }
+  if (typeof document !== 'undefined') document.body.classList.remove('native-app');
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    value: (query: string) =>
+      ({
+        matches,
+        media: query,
+        onchange: null,
+        addEventListener: () => undefined,
+        removeEventListener: () => undefined,
+        addListener: () => undefined,
+        removeListener: () => undefined,
+        dispatchEvent: () => false,
+      }) as MediaQueryList,
+  });
+}
+
+beforeEach(() => {
+  installStorage();
+  installTouchDefault(false);
+});
 
 describe('Settings', () => {
-  it('defaults fresh sessions to medium graphics preset (device-aware first-run sets the actual tier)', () => {
+  it('defaults fresh sessions and initial logins to the medium graphics preset', () => {
     const s = new Settings();
 
     expect(localStorage.getItem('woc_settings')).toBeNull();
-    // def is now MEDIUM (2): the Reset target and the fallback when device detection is inconclusive.
-    // main.ts probes the device on first boot and persists the appropriate tier over this default.
+    // def is MEDIUM (the Reset target + the pre-probe value); first-run device detection in
+    // main.ts persists a device-appropriate preset over it (see resolveDefaultGraphicsPreset).
     expect(SETTING_RANGES.graphicsPreset.def).toBe(2);
     expect(s.get('graphicsPreset')).toBe(2);
+  });
+
+  it('remembers the camera zoom distance across sessions, clamped to the zoom range (issue 1657)', () => {
+    // Range mirrors Input.zoomBy's clamp so a persisted value is always applicable; def 12 is the
+    // shipped starting distance.
+    expect(SETTING_RANGES.cameraZoom).toEqual({ min: 3, max: 22, def: 12 });
+    const s = new Settings();
+    expect(s.get('cameraZoom')).toBe(12);
+    expect(s.set('cameraZoom', 100)).toBe(22); // clamped to max
+    expect(s.set('cameraZoom', 1)).toBe(3); // clamped to min
+    expect(s.set('cameraZoom', 8)).toBe(8);
+    // Persisted like every other setting: a fresh Settings (next session) reads the saved value.
+    expect(new Settings().get('cameraZoom')).toBe(8);
+  });
+
+  it('keeps graphicsDefaultApplied false through an unrelated save and clears it on reset', () => {
+    const s = new Settings();
+    expect(s.get('graphicsDefaultApplied')).toBe(false);
+    // save() persists the whole values object; an unrelated write must NOT flip the marker
+    // (that is what would silently defeat first-run device detection, since firstRunGraphicsPreset
+    // gates on this marker and never on the def-filled graphicsPreset key).
+    s.set('showFps', true);
+    expect(new Settings().get('graphicsDefaultApplied')).toBe(false);
+    // a conclusive detection sets it; reset() restores it to false so Reset re-detects.
+    s.set('graphicsDefaultApplied', true);
+    expect(new Settings().get('graphicsDefaultApplied')).toBe(true);
+    s.reset();
+    expect(s.get('graphicsDefaultApplied')).toBe(false);
   });
 
   it('starts at the documented defaults (camera calmer than the old 1.0)', () => {
@@ -41,6 +113,13 @@ describe('Settings', () => {
     expect(s.get('cameraFov')).toBe(SETTING_RANGES.cameraFov.def);
     expect(s.get('cameraFov')).toBe(60); // unchanged from the shipped look by default
     expect(s.get('mouseCamera')).toBe(false);
+    // walk-by autoloot is opt-in: auto-grabbing loot by walking past can feel jarring.
+    expect(s.get('walkByAutoloot')).toBe(false);
+    // both unit frames ship at their stock size; the scale sliders are opt-in tuning.
+    expect(s.get('playerFrameScale')).toBe(1);
+    expect(s.get('targetFrameScale')).toBe(1);
+    // the classic top-right aura corner stays the default; frame-anchoring is opt-in.
+    expect(s.get('aurasOnPlayerFrame')).toBe(false);
     expect(s.get('joystickDeadzone')).toBe(SETTING_RANGES.joystickDeadzone.def);
     // Interface Mode defaults to Auto (0): detect desktop vs touch from the device.
     expect(s.get('interfaceMode')).toBe(SETTING_RANGES.interfaceMode.def);
@@ -127,6 +206,60 @@ describe('Settings', () => {
     expect(b.get('leftHandedTouch')).toBe(true);
   });
 
+  it('defaults the mobile camera joystick off and persists enabling it across instances', () => {
+    const a = new Settings();
+    expect(a.get('mobileCameraJoystick')).toBe(false);
+    a.set('mobileCameraJoystick', true);
+    const b = new Settings();
+    expect(b.get('mobileCameraJoystick')).toBe(true);
+  });
+
+  it('defaults the own nameplate on for a fresh player and preserves an existing off choice', () => {
+    const fresh = new Settings();
+    expect(fresh.get('showOwnNameplate')).toBe(true);
+
+    fresh.set('showOwnNameplate', false);
+    expect(new Settings().get('showOwnNameplate')).toBe(false);
+  });
+
+  it('defaults Time Played revealed and persists concealing it across instances', () => {
+    // The character sheet's privacy eye and the Options row both write this
+    // per-device display preference; a blob saved before the setting existed
+    // resolves the same default-on path.
+    const fresh = new Settings();
+    expect(fresh.get('showPlaytime')).toBe(true);
+
+    fresh.set('showPlaytime', false);
+    expect(new Settings().get('showPlaytime')).toBe(false);
+  });
+
+  it('defaults other-player nameplates off for fresh mobile sessions', () => {
+    installTouchDefault(true);
+
+    const fresh = new Settings();
+
+    expect(localStorage.getItem('woc_settings')).toBeNull();
+    expect(fresh.get('showPlayerNameplates')).toBe(false);
+  });
+
+  it('keeps other-player nameplates on by default for fresh desktop sessions', () => {
+    const fresh = new Settings();
+
+    expect(localStorage.getItem('woc_settings')).toBeNull();
+    expect(fresh.get('showPlayerNameplates')).toBe(true);
+  });
+
+  it('lets saved other-player nameplate preferences override the device default', () => {
+    installTouchDefault(true);
+    localStorage.setItem('woc_settings', JSON.stringify({ showPlayerNameplates: true }));
+    expect(new Settings().get('showPlayerNameplates')).toBe(true);
+
+    installStorage();
+    installTouchDefault(false);
+    localStorage.setItem('woc_settings', JSON.stringify({ showPlayerNameplates: false }));
+    expect(new Settings().get('showPlayerNameplates')).toBe(false);
+  });
+
   it('defaults footstep sounds off and persists re-enabling across instances', () => {
     const a = new Settings();
     expect(a.get('footstepSfx')).toBe(false);
@@ -164,6 +297,7 @@ describe('Settings', () => {
     s.set('shadowQuality', 0);
     s.set('fullscreen', 0);
     s.set('mouseCamera', true);
+    s.set('mobileCameraJoystick', true);
     s.reset();
     expect(s.get('cameraSpeed')).toBe(SETTING_RANGES.cameraSpeed.def);
     expect(s.get('renderScale')).toBe(SETTING_RANGES.renderScale.def);
@@ -175,6 +309,47 @@ describe('Settings', () => {
     expect(s.get('fullscreen')).toBe(SETTING_RANGES.fullscreen.def);
     expect(s.get('clickToMoveButton')).toBe(SETTING_RANGES.clickToMoveButton.def);
     expect(s.get('mouseCamera')).toBe(false);
+    expect(s.get('mobileCameraJoystick')).toBe(false);
+  });
+
+  // Issue 2341: the Esc options menu's Graphics/Audio/Controller sub-views each
+  // have a "Reset to Defaults" button, but they used to share the same no-arg
+  // reset(), which wiped EVERY setting (all panels), not just the ones the
+  // player was looking at. reset(keys) scopes the restore to only the keys
+  // passed, so a sub-view can reset itself without touching the rest.
+  it('reset(keys) restores only the given keys, leaving out-of-scope settings untouched', () => {
+    const s = new Settings();
+    // In-scope for this call: one numeric key and one bool key.
+    s.set('sfxVolume', 0.1);
+    s.set('voiceEnabled', false);
+    // Out of scope: settings a different sub-view owns (graphics + interface).
+    s.set('graphicsPreset', 4);
+    s.set('uiScale', 1.3);
+    s.set('reduceMotion', true);
+
+    s.reset(['sfxVolume', 'voiceEnabled']);
+
+    expect(s.get('sfxVolume')).toBe(SETTING_RANGES.sfxVolume.def);
+    expect(s.get('voiceEnabled')).toBe(true); // BOOL_SETTINGS.voiceEnabled.def
+    // Untouched: these custom values must survive a reset scoped elsewhere.
+    expect(s.get('graphicsPreset')).toBe(4);
+    expect(s.get('uiScale')).toBe(1.3);
+    expect(s.get('reduceMotion')).toBe(true);
+
+    // The scoped restore also persists, like the full reset does.
+    expect(new Settings().get('sfxVolume')).toBe(SETTING_RANGES.sfxVolume.def);
+    expect(new Settings().get('graphicsPreset')).toBe(4);
+  });
+
+  it('reset() with no arguments still does a full reset (other callers keep their behavior)', () => {
+    const s = new Settings();
+    s.set('sfxVolume', 0.1);
+    s.set('graphicsPreset', 4);
+    s.set('reduceMotion', true);
+    s.reset();
+    expect(s.get('sfxVolume')).toBe(SETTING_RANGES.sfxVolume.def);
+    expect(s.get('graphicsPreset')).toBe(SETTING_RANGES.graphicsPreset.def);
+    expect(s.get('reduceMotion')).toBe(false);
   });
 
   it('action button scale defaults to 1.0 and clamps to its slider bounds', () => {
@@ -190,6 +365,41 @@ describe('Settings', () => {
     const snap = s.all();
     snap.cameraSpeed = 99;
     expect(s.get('cameraSpeed')).not.toBe(99);
+  });
+
+  it('patches multiple validated settings atomically with one persistence write', () => {
+    const s = new Settings();
+    const write = vi.spyOn(localStorage, 'setItem');
+
+    const applied = s.patch({
+      graphicsPreset: 99,
+      terrainDetail: -1,
+      showFps: true,
+    });
+
+    expect(applied.graphicsPreset).toBe(SETTING_RANGES.graphicsPreset.max);
+    expect(applied.terrainDetail).toBe(SETTING_RANGES.terrainDetail.min);
+    expect(applied.showFps).toBe(true);
+    expect(s.all()).toEqual(applied);
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(new Settings().get('graphicsPreset')).toBe(SETTING_RANGES.graphicsPreset.max);
+  });
+
+  it('rejects an invalid patch without changing memory or persistence', () => {
+    const s = new Settings();
+    const before = s.all();
+    const write = vi.spyOn(localStorage, 'setItem');
+
+    expect(() =>
+      s.patch({
+        cameraSpeed: 0.4,
+        showFps: 'yes' as unknown as boolean,
+      }),
+    ).toThrow(TypeError);
+
+    expect(s.all()).toEqual(before);
+    expect(write).not.toHaveBeenCalled();
+    expect(new Settings().all()).toEqual(before);
   });
 });
 
@@ -208,7 +418,23 @@ describe('Interface & Comfort settings pack', () => {
     expect(s.get('showFps')).toBe(false);
     expect(s.get('showWalletOnCharacterScreen')).toBe(true);
     expect(s.get('showWalletOnPlayerCard')).toBe(true);
+    expect(s.get('showDevBadges')).toBe(true);
+    expect(s.get('showDailyRewardsChest')).toBe(true);
+    expect(s.get('showSecondaryActionBar')).toBe(false);
+    expect(s.get('showThirdActionBar')).toBe(false);
+    expect(s.get('hideUnusedActionSlots')).toBe(false);
     expect(s.get('invertLookY')).toBe(false);
+  });
+
+  // Issue 2429: hide the empty-slot chrome (background/border/keybind label) on
+  // desktop action-bar slots with no ability or item bound. Off by default (the
+  // classic look, unchanged out of the box).
+  it('defaults hideUnusedActionSlots off and persists enabling it across instances', () => {
+    const a = new Settings();
+    expect(a.get('hideUnusedActionSlots')).toBe(false);
+    a.set('hideUnusedActionSlots', true);
+    const b = new Settings();
+    expect(b.get('hideUnusedActionSlots')).toBe(true);
   });
 
   it('clamps the comfort sliders to their documented bounds', () => {
@@ -229,16 +455,19 @@ describe('Interface & Comfort settings pack', () => {
     s.set('frostedPanels', true);
     s.set('showWalletOnCharacterScreen', false);
     s.set('showWalletOnPlayerCard', false);
+    s.set('showDevBadges', false);
     // a fresh instance reads the same backing store
     expect(new Settings().get('reduceMotion')).toBe(true);
     expect(new Settings().get('showFps')).toBe(true);
     expect(new Settings().get('showWalletOnCharacterScreen')).toBe(false);
     expect(new Settings().get('showWalletOnPlayerCard')).toBe(false);
+    expect(new Settings().get('showDevBadges')).toBe(false);
     s.reset();
     expect(s.get('reduceMotion')).toBe(false);
     expect(s.get('showFps')).toBe(false);
     expect(s.get('showWalletOnCharacterScreen')).toBe(true);
     expect(s.get('showWalletOnPlayerCard')).toBe(true);
+    expect(s.get('showDevBadges')).toBe(true);
     expect(s.get('invertLookY')).toBe(false);
     expect(s.get('frostedPanels')).toBe(false);
   });

@@ -5,9 +5,8 @@ import { type RovingOrientation, rovingTarget } from '../src/ui/roving_index';
 // rovingTarget is a PURE core: it reads NO IWorld, only primitives (key, current index,
 // count, orientation), so the ClientWorld-vs-Sim parity row is N/A for it
 // (exactly like dropdown_nav.ts). The contract that applies is same-input-same-output,
-// asserted below, plus an equivalence check against the three canonical roving-tabindex
-// arithmetic patterns (tablist, radiogroup, flyout) it implements, so the core is proven
-// byte-faithful to the standard pattern and not merely plausible.
+// asserted below, plus an equivalence check against the three inline talents handlers it
+// folds, so the extraction is proven byte-faithful and not merely plausible.
 
 const ORIENTATIONS: RovingOrientation[] = ['horizontal', 'both'];
 
@@ -53,11 +52,11 @@ describe('rovingTarget: same input -> same output', () => {
   });
 });
 
-describe('rovingTarget: equivalence with the three canonical roving patterns', () => {
-  // The exact inline arithmetic of the three canonical roving-tabindex handlers,
-  // reproduced here so the core is proven byte-faithful across a small index grid.
+describe('rovingTarget: equivalence with the three folded talents handlers', () => {
+  // The exact inline arithmetic each handler computed before they were folded onto the
+  // core, reproduced here so the fold is proven byte-faithful across a small index grid.
 
-  // Horizontal tablist: ArrowRight/ArrowLeft/Home/End only.
+  // talents_window tablist (horizontal): ArrowRight/ArrowLeft/Home/End only.
   const oldTablist = (key: string, i: number, n: number): number | null => {
     if (key !== 'ArrowRight' && key !== 'ArrowLeft' && key !== 'Home' && key !== 'End') return null;
     return key === 'Home'
@@ -67,7 +66,7 @@ describe('rovingTarget: equivalence with the three canonical roving patterns', (
         : (i + (key === 'ArrowRight' ? 1 : n - 1)) % n;
   };
 
-  // Spec radiogroup (both): ArrowDown/ArrowRight/ArrowUp/ArrowLeft/Home/End.
+  // talents_window spec radiogroup (both): ArrowDown/ArrowRight/ArrowUp/ArrowLeft/Home/End.
   const oldRadiogroup = (key: string, i: number, n: number): number | null => {
     if (
       key !== 'ArrowDown' &&
@@ -87,8 +86,8 @@ describe('rovingTarget: equivalence with the three canonical roving patterns', (
           : (i - 1 + n) % n;
   };
 
-  // Choice flyout (both): focusOpt normalizes ((idx % n) + n) % n for each of i + 1
-  // (Down/Right), i - 1 (Up/Left), 0 (Home), n - 1 (End).
+  // talents_window choice flyout (both): focusOpt normalizes ((idx % n) + n) % n for each
+  // of i + 1 (Down/Right), i - 1 (Up/Left), 0 (Home), n - 1 (End).
   const oldFlyout = (key: string, i: number, n: number): number | null => {
     const norm = (idx: number) => ((idx % n) + n) % n;
     if (key === 'ArrowDown' || key === 'ArrowRight') return norm(i + 1);

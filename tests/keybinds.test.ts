@@ -1,5 +1,7 @@
+import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  ACTION_BAR_SLOTS,
   actionAllowsShared,
   actionKind,
   BIND_ACTIONS,
@@ -9,6 +11,7 @@ import {
   isModifierCode,
   isReservedCode,
   Keybinds,
+  keyCapLabel,
   keyLabel,
   makeCombo,
 } from '../src/game/keybinds';
@@ -44,6 +47,22 @@ describe('keyLabel', () => {
   });
 });
 
+describe('keyCapLabel', () => {
+  it('lowercases and compacts modifier words to one-letter prefixes', () => {
+    expect(keyCapLabel('Shift+Z')).toBe('s-z');
+    expect(keyCapLabel('Ctrl+1')).toBe('c-1');
+    expect(keyCapLabel('Alt+Q')).toBe('a-q');
+    expect(keyCapLabel('Meta+1')).toBe('m-1');
+    expect(keyCapLabel('Ctrl+Alt+A')).toBe('c-a-a');
+  });
+
+  it('leaves unmodified labels as plain lowercase', () => {
+    expect(keyCapLabel('L')).toBe('l');
+    expect(keyCapLabel('Esc')).toBe('esc');
+    expect(keyCapLabel('')).toBe('');
+  });
+});
+
 describe('registry', () => {
   it('classifies movement as held and the rest as edge', () => {
     expect(actionKind('forward')).toBe('held');
@@ -55,10 +74,72 @@ describe('registry', () => {
     expect(actionKind('nope')).toBe(null);
   });
 
-  it('covers the expected categories and 12 action-bar slots', () => {
+  it('covers attack plus three rows of 11 configurable action-bar slots', () => {
     expect(BIND_CATEGORIES).toContain('Movement');
     expect(BIND_CATEGORIES).toContain('Action Bar');
-    expect(BIND_ACTIONS.filter((a) => a.category === 'Action Bar').length).toBe(12);
+    expect(ACTION_BAR_SLOTS).toBe(34);
+    expect(BIND_ACTIONS.filter((a) => a.category === 'Action Bar').length).toBe(34);
+    // The secondary bar's slots exist and default to the numpad row.
+    expect(BIND_ACTIONS.find((a) => a.id === 'slot12')?.defaults).toEqual(['Numpad1']);
+    expect(BIND_ACTIONS.find((a) => a.id === 'slot22')?.defaults).toEqual(['NumpadDecimal']);
+    // The third row uses shifted numpad bindings so it remains distinct.
+    const thirdRowDefaults = [
+      'Shift+Numpad1',
+      'Shift+Numpad2',
+      'Shift+Numpad3',
+      'Shift+Numpad4',
+      'Shift+Numpad5',
+      'Shift+Numpad6',
+      'Shift+Numpad7',
+      'Shift+Numpad8',
+      'Shift+Numpad9',
+      'Shift+Numpad0',
+      'Shift+NumpadDecimal',
+    ];
+    expect(
+      BIND_ACTIONS.filter((a) => a.category === 'Action Bar')
+        .slice(23)
+        .map(({ id, label, defaults }) => ({ id, label, defaults })),
+    ).toEqual(
+      thirdRowDefaults.map((code, index) => ({
+        id: `slot${index + 23}`,
+        label: `Third Bar ${index + 1}`,
+        defaults: [code],
+      })),
+    );
+    // Discord is a rebindable Interface window toggle (default U).
+    const discord = BIND_ACTIONS.find((a) => a.id === 'discord');
+    expect(discord?.category).toBe('Interface');
+    expect(discord?.kind).toBe('edge');
+    expect(discord?.defaults).toEqual(['KeyU']);
+    const metersIndex = BIND_ACTIONS.findIndex((a) => a.id === 'meters');
+    const targetAuras = BIND_ACTIONS[metersIndex + 1];
+    expect(targetAuras).toMatchObject({
+      id: 'targetAuras',
+      label: 'Target Buffs and Debuffs',
+      category: 'Interface',
+      kind: 'edge',
+      defaults: ['Shift+KeyJ'],
+    });
+    // The Vale Cup window is a rebindable Interface toggle (default T; J and
+    // G are taken by targetFriendlyNext and the arena on this branch).
+    const valecup = BIND_ACTIONS.find((a) => a.id === 'valecup');
+    expect(valecup?.category).toBe('Interface');
+    expect(valecup?.kind).toBe('edge');
+    expect(valecup?.defaults).toEqual(['KeyY']);
+    // The Book of Deeds is a rebindable Interface toggle on the shifted layer of
+    // KeyZ, like Damage Meters does on H and the Shift+digit secondary bar.
+    const deeds = BIND_ACTIONS.find((a) => a.id === 'deeds');
+    expect(deeds?.category).toBe('Interface');
+    expect(deeds?.kind).toBe('edge');
+    expect(deeds?.defaults).toEqual(['Shift+KeyZ']);
+    // Sheathe/unsheathe weapon is a rebindable Interface toggle (default Z, the
+    // classic sheathe key and the last free bare letter). It shares the physical
+    // key with deeds, which sits on the SHIFTED layer: the two never collide.
+    const sheathe = BIND_ACTIONS.find((a) => a.id === 'sheathe');
+    expect(sheathe?.category).toBe('Interface');
+    expect(sheathe?.kind).toBe('edge');
+    expect(sheathe?.defaults).toEqual(['KeyZ']);
   });
 });
 
@@ -85,7 +166,17 @@ describe('Keybinds defaults', () => {
     expect(kb.actionForCode('Equal')).toBe('slot11');
     expect(kb.actionForCode('KeyH')).toBe('targetFriendly');
     expect(kb.actionForCode('KeyJ')).toBe('targetFriendlyNext');
-    expect(kb.actionForCode('KeyZ')).toBe(null);
+    expect(kb.actionForCode('KeyU')).toBe('discord');
+    expect(kb.actionForCode('KeyT')).toBe('crafting');
+    expect(kb.actionForCode('KeyY')).toBe('valecup');
+    // Bare Z sheathes; the Book of Deeds ships on the shifted layer of the same key.
+    expect(kb.actionForCode('KeyZ')).toBe('sheathe');
+    expect(kb.actionForCode('Shift+KeyZ')).toBe('deeds');
+    expect(kb.actionForCode('Backquote')).toBe('mount');
+    for (let index = 0; index < 11; index++) {
+      const suffix = index < 9 ? index + 1 : index === 9 ? 0 : 'Decimal';
+      expect(kb.actionForCode(`Shift+Numpad${suffix}`)).toBe(`slot${index + 23}`);
+    }
   });
 
   it('exposes primary/secondary codes and labels', () => {
@@ -123,10 +214,10 @@ describe('binding', () => {
 
   it('binds a secondary key without disturbing the primary', () => {
     const kb = new Keybinds();
-    expect(kb.bind('slot1', 1, 'KeyZ')).toBe(true);
+    expect(kb.bind('slot1', 1, 'Semicolon')).toBe(true);
     expect(kb.codeAt('slot1', 0)).toBe('Digit2');
-    expect(kb.codeAt('slot1', 1)).toBe('KeyZ');
-    expect(kb.actionForCode('KeyZ')).toBe('slot1');
+    expect(kb.codeAt('slot1', 1)).toBe('Semicolon');
+    expect(kb.actionForCode('Semicolon')).toBe('slot1');
   });
 
   it('rejects the reserved Escape key', () => {
@@ -158,6 +249,67 @@ describe('binding', () => {
     kb.reset();
     expect(kb.actionForCode('Digit1')).toBe('slot0');
     expect(kb.actionForCode('Space')).toBe('jump');
+  });
+});
+
+describe('resetSlots (action-bar-only reset)', () => {
+  it('restores the first bar to its defaults and clears the secondary/third bars', () => {
+    const kb = new Keybinds();
+    kb.bind('slot0', 0, 'KeyR'); // rebind Attack off "1"
+    kb.bind('slot1', 0, 'Semicolon'); // rebind a primary-bar ability slot
+    kb.bind('slot12', 0, 'KeyG'); // rebind a secondary-bar slot off its numpad default
+    kb.bind('slot23', 0, 'KeyF'); // rebind a third-bar slot off its shifted-numpad default
+    kb.resetSlots();
+    expect(kb.codeAt('slot0', 0)).toBe('Digit1');
+    expect(kb.codeAt('slot1', 0)).toBe('Digit2');
+    expect(kb.codeAt('slot12', 0)).toBeNull(); // unbound, not reverted to Numpad1
+    expect(kb.codeAt('slot23', 0)).toBeNull(); // unbound, not reverted to Shift+Numpad1
+    expect(kb.actionForCode('KeyR')).toBeNull();
+    expect(kb.actionForCode('Semicolon')).toBeNull();
+    expect(kb.actionForCode('KeyG')).toBeNull();
+    expect(kb.actionForCode('KeyF')).toBeNull();
+  });
+
+  it('leaves every non-action-bar binding untouched', () => {
+    const kb = new Keybinds();
+    kb.bind('jump', 0, 'KeyJ');
+    kb.bind('bags', 0, 'KeyN');
+    kb.resetSlots();
+    expect(kb.codeAt('jump', 0)).toBe('KeyJ');
+    expect(kb.codeAt('bags', 0)).toBe('KeyN');
+  });
+
+  it('evicts a conflicting non-slot binding that now collides with a restored primary default', () => {
+    const kb = new Keybinds();
+    kb.bind('slot0', 0, 'KeyR'); // free up Digit1
+    kb.bind('bags', 0, 'Digit1'); // bags borrows it
+    expect(kb.actionForCode('Digit1')).toBe('bags');
+    kb.resetSlots();
+    // slot0 reclaims its default; bags loses the code it borrowed, preserving
+    // the one-code-per-action invariant.
+    expect(kb.actionForCode('Digit1')).toBe('slot0');
+    expect(kb.codeAt('bags', 0)).toBeNull();
+  });
+
+  it('preserves the one-code-per-action invariant secondary/tertiary defaults do not steal back', () => {
+    // A player rebinds a secondary-bar slot onto a primary-bar default key.
+    // resetSlots() must leave that borrowed key alone (it did not come from a
+    // restored primary default), only the primary-bar codes get restored.
+    const kb = new Keybinds();
+    kb.bind('slot12', 0, 'Digit3'); // steals slot2's default
+    kb.resetSlots();
+    expect(kb.codeAt('slot2', 0)).toBe('Digit3');
+    expect(kb.codeAt('slot12', 0)).toBeNull();
+  });
+
+  it('persists across instances like every other bind()/reset() mutation', () => {
+    const a = new Keybinds();
+    a.bind('slot0', 0, 'KeyR');
+    a.bind('slot12', 0, 'KeyG');
+    a.resetSlots();
+    const b = new Keybinds();
+    expect(b.codeAt('slot0', 0)).toBe('Digit1');
+    expect(b.codeAt('slot12', 0)).toBeNull();
   });
 });
 
@@ -224,7 +376,9 @@ describe('persistence', () => {
     expect(kb.actionForCode('KeyH')).toBe('targetFriendly');
     expect(kb.actionForCode('Enter')).toBe('chat');
     expect(kb.actionForCode('Equal')).toBe('slot11');
-    expect(kb.actionForCode('KeyY')).toBe(null);
+    // sheathe postdates this save: it keeps its default Z, not unbound.
+    expect(kb.actionForCode('KeyZ')).toBe('sheathe');
+    expect(kb.actionForCode('Backquote')).toBe('mount');
   });
 
   it('drops a retained default that a stored binding already claimed', () => {
@@ -272,16 +426,16 @@ describe('persistence', () => {
 describe('per-character scope', () => {
   it('keeps two character scopes independent', () => {
     const alice = new Keybinds('char:alice');
-    alice.bind('jump', 0, 'KeyZ'); // KeyZ is unbound by default
+    alice.bind('jump', 0, 'Semicolon'); // Semicolon is unbound by default
     const bob = new Keybinds('char:bob');
     // Bob never inherits Alice's change; he starts from defaults.
-    expect(bob.actionForCode('KeyZ')).toBe(null);
+    expect(bob.actionForCode('Semicolon')).toBe(null);
     expect(bob.codeAt('jump', 0)).toBe('Space');
-    bob.bind('jump', 0, 'KeyU'); // also unbound by default
+    bob.bind('jump', 0, 'KeyY');
     // Reloading each scope reads back only its own profile.
-    expect(new Keybinds('char:alice').actionForCode('KeyZ')).toBe('jump');
-    expect(new Keybinds('char:bob').actionForCode('KeyU')).toBe('jump');
-    expect(new Keybinds('char:bob').actionForCode('KeyZ')).toBe(null);
+    expect(new Keybinds('char:alice').actionForCode('Semicolon')).toBe('jump');
+    expect(new Keybinds('char:bob').actionForCode('KeyY')).toBe('jump');
+    expect(new Keybinds('char:bob').actionForCode('Semicolon')).toBe(null);
   });
 
   it('writes to a namespaced key, not the legacy global key', () => {
@@ -334,22 +488,24 @@ describe('per-character scope', () => {
   it('uses the production char:<numeric id> scope shape', () => {
     // Online scope is `char:${c.id}` where c.id is the numeric DB character id.
     const kb = new Keybinds('char:1729');
-    kb.bind('jump', 0, 'KeyZ');
+    kb.bind('jump', 0, 'Backquote');
     expect(localStorage.getItem('woc_keybinds:char:1729')).not.toBeNull();
-    expect(new Keybinds('char:1729').actionForCode('KeyZ')).toBe('jump');
+    expect(new Keybinds('char:1729').actionForCode('Backquote')).toBe('jump');
   });
 
   it('namespaces the offline scope (offline:<class>:<name>) per character', () => {
     // Offline scope is `offline:${playerClass}:${name}` (the only stable handle).
     const aldric = new Keybinds('offline:warrior:Aldric');
-    aldric.bind('jump', 0, 'KeyZ');
+    aldric.bind('jump', 0, 'Semicolon');
     expect(localStorage.getItem('woc_keybinds:offline:warrior:Aldric')).not.toBeNull();
     expect(localStorage.getItem('woc_keybinds')).toBeNull();
-    // A different offline character starts from defaults, not Aldric's binding.
-    expect(new Keybinds('offline:mage:Brenna').actionForCode('KeyZ')).toBe(null);
+    // A different offline character starts from defaults, not Aldric's binding
+    // (KeyZ is sheathe's default, so Brenna resolves it to sheathe, not jump).
+    expect(new Keybinds('offline:mage:Brenna').actionForCode('KeyZ')).toBe('sheathe');
+    expect(new Keybinds('offline:mage:Brenna').actionForCode('Semicolon')).toBe(null);
     expect(new Keybinds('offline:mage:Brenna').codeAt('jump', 0)).toBe('Space');
     // The same scope reads back its own profile.
-    expect(new Keybinds('offline:warrior:Aldric').actionForCode('KeyZ')).toBe('jump');
+    expect(new Keybinds('offline:warrior:Aldric').actionForCode('Semicolon')).toBe('jump');
   });
 
   it('shares one store across same-class same-name offline characters', () => {
@@ -358,35 +514,135 @@ describe('per-character scope', () => {
     // profile. A different name does not.
     new Keybinds('offline:warrior:Aldric').bind('jump', 0, 'KeyZ');
     expect(new Keybinds('offline:warrior:Aldric').actionForCode('KeyZ')).toBe('jump');
-    expect(new Keybinds('offline:warrior:Borin').actionForCode('KeyZ')).toBe(null);
+    expect(new Keybinds('offline:warrior:Borin').actionForCode('KeyZ')).toBe('sheathe');
   });
 
   it('seeds from the legacy blob when the scoped value is corrupt JSON', () => {
-    localStorage.setItem('woc_keybinds', JSON.stringify({ jump: ['KeyZ', null] }));
+    localStorage.setItem('woc_keybinds', JSON.stringify({ jump: ['Backquote', null] }));
     localStorage.setItem('woc_keybinds:char:alice', '{not valid json');
     // A corrupt scoped value behaves like an absent one: still seed from legacy,
     // do not drop to bare defaults.
-    expect(new Keybinds('char:alice').actionForCode('KeyZ')).toBe('jump');
+    expect(new Keybinds('char:alice').actionForCode('Backquote')).toBe('jump');
+  });
+
+  it('repairs the Q/E strafe overhaul signature on a scoped profile', () => {
+    // The reverted interface overhaul (1d2678f58, reverted by #1788) saved a
+    // scoped profile with slot10/slot11 holding Q/E and Strafe Left/Right
+    // unbound. Loading it must restore the current defaults (Q/E strafe,
+    // Minus/Equal on the two slots), not keep pressing Q/E driving the slots.
+    localStorage.setItem(
+      'woc_keybinds:char:alice',
+      JSON.stringify({
+        strafeLeft: [null, null],
+        strafeRight: [null, null],
+        slot10: ['KeyQ', 'Minus'],
+        slot11: ['KeyE', 'Equal'],
+      }),
+    );
+    const fresh = new Keybinds('char:alice');
+    expect(fresh.codeAt('strafeLeft', 0)).toBe('KeyQ');
+    expect(fresh.codeAt('strafeRight', 0)).toBe('KeyE');
+    expect(fresh.codeAt('slot10', 0)).toBe('Minus');
+    expect(fresh.codeAt('slot11', 0)).toBe('Equal');
+    expect(fresh.actionForCode('KeyQ')).toBe('strafeLeft');
+    expect(fresh.actionForCode('KeyE')).toBe('strafeRight');
+  });
+
+  it('repairs a stale v0.24.0-window meters:KeyZ binding and its collateral Sheathe eviction', () => {
+    // The v0.24.0 overhaul window also persisted Damage Meters on KeyZ alongside
+    // the Q/E strafe signature. meters is processed before sheathe in
+    // BIND_ACTIONS, so an unrepaired stored meters:['KeyZ', null] claims KeyZ
+    // first and the load-time uniqueness sweep silently evicts Sheathe/Unsheathe
+    // Weapon's untouched default down to unbound.
+    localStorage.setItem(
+      'woc_keybinds:char:alice',
+      JSON.stringify({
+        strafeLeft: [null, null],
+        strafeRight: [null, null],
+        slot10: ['KeyQ', 'Minus'],
+        slot11: ['KeyE', 'Equal'],
+        meters: ['KeyZ', null],
+      }),
+    );
+    const fresh = new Keybinds('char:alice');
+    expect(fresh.codeAt('meters', 0)).toBe('Shift+KeyH');
+    expect(fresh.codeAt('sheathe', 0)).toBe('KeyZ');
+    expect(fresh.actionForCode('KeyZ')).toBe('sheathe');
+  });
+
+  it('re-seeds an evicted meters binding to Shift+KeyH on a scoped profile', () => {
+    // A profile saved while targetFriendly and meters both defaulted to KeyH
+    // persisted meters as [null, null] (the sweep gave KeyH to targetFriendly).
+    // meters now defaults to Shift+KeyH; the stored null must not keep it
+    // unbound for the players the collision already emptied.
+    localStorage.setItem(
+      'woc_keybinds:char:alice',
+      JSON.stringify({ meters: [null, null], targetFriendly: ['KeyH', null] }),
+    );
+    const fresh = new Keybinds('char:alice');
+    expect(fresh.codeAt('targetFriendly', 0)).toBe('KeyH');
+    expect(fresh.codeAt('meters', 0)).toBe('Shift+KeyH');
+  });
+
+  it('does not revert a deliberate slot0/slot1 swap on load', () => {
+    // A deliberate remap that merely looks unusual carries no version marker;
+    // the loader must keep it verbatim rather than treating it as corruption.
+    localStorage.setItem(
+      'woc_keybinds:char:alice',
+      JSON.stringify({ slot0: ['Digit2', null], slot1: ['Digit1', null] }),
+    );
+    const fresh = new Keybinds('char:alice');
+    expect(fresh.codeAt('slot0', 0)).toBe('Digit2');
+    expect(fresh.codeAt('slot1', 0)).toBe('Digit1');
+    expect(fresh.actionForCode('Digit2')).toBe('slot0');
+    expect(fresh.actionForCode('Digit1')).toBe('slot1');
+  });
+
+  it('still imports a genuine legacy customization that does not collide with a current default', () => {
+    // A real remap (interact moved off F onto an otherwise-unused function
+    // key) must still come through on first seed.
+    localStorage.setItem('woc_keybinds', JSON.stringify({ interact: ['F1', null] }));
+    const fresh = new Keybinds('char:alice');
+    expect(fresh.codeAt('interact', 0)).toBe('F1');
+  });
+
+  it('gives targetFriendly and meters distinct default keys instead of colliding on KeyH', () => {
+    const kb = new Keybinds();
+    expect(kb.codeAt('targetFriendly', 0)).toBe('KeyH');
+    expect(kb.codeAt('meters', 0)).toBe('Shift+KeyH');
+    expect(kb.actionForCode('KeyH')).toBe('targetFriendly');
+    expect(kb.edgeActionForCombo('Shift+KeyH')).toBe('meters');
+  });
+
+  it('gives sheathe and deeds the two layers of KeyZ instead of colliding', () => {
+    const kb = new Keybinds();
+    expect(kb.codeAt('sheathe', 0)).toBe('KeyZ');
+    expect(kb.codeAt('deeds', 0)).toBe('Shift+KeyZ');
+    // Production edge dispatch matches the FULL chord, so the shifted layer never
+    // sheathes and the bare key never opens the Book of Deeds.
+    expect(kb.edgeActionForCombo('KeyZ')).toBe('sheathe');
+    expect(kb.edgeActionForCombo('Shift+KeyZ')).toBe('deeds');
   });
 
   it('seeds from the legacy blob when the scoped value is not a plain object', () => {
-    localStorage.setItem('woc_keybinds', JSON.stringify({ jump: ['KeyZ', null] }));
+    localStorage.setItem('woc_keybinds', JSON.stringify({ jump: ['Backquote', null] }));
     // A JSON array is typeof 'object' but is not a valid profile; it must seed.
     localStorage.setItem('woc_keybinds:char:alice', JSON.stringify(['garbage']));
-    expect(new Keybinds('char:alice').actionForCode('KeyZ')).toBe('jump');
+    expect(new Keybinds('char:alice').actionForCode('Backquote')).toBe('jump');
     // A JSON scalar likewise.
     localStorage.setItem('woc_keybinds:char:bob', JSON.stringify(42));
-    expect(new Keybinds('char:bob').actionForCode('KeyZ')).toBe('jump');
+    expect(new Keybinds('char:bob').actionForCode('Backquote')).toBe('jump');
   });
 
   it('reset() persists to the scoped key and leaves the legacy blob untouched', () => {
     localStorage.setItem('woc_keybinds', JSON.stringify({ jump: ['KeyJ', null] }));
     const alice = new Keybinds('char:alice');
-    alice.bind('jump', 0, 'KeyZ'); // KeyZ is unbound by default
+    alice.bind('jump', 0, 'KeyZ'); // steals Z from sheathe in this scope
     alice.reset();
     // Alice's scoped profile is back to defaults...
     expect(new Keybinds('char:alice').codeAt('jump', 0)).toBe('Space');
-    expect(new Keybinds('char:alice').actionForCode('KeyZ')).toBe(null);
+    expect(new Keybinds('char:alice').actionForCode('KeyZ')).toBe('sheathe');
+    expect(new Keybinds('char:alice').actionForCode('Backquote')).toBe('mount');
     // ...and reset never wrote the legacy key.
     expect(JSON.parse(localStorage.getItem('woc_keybinds')!).jump).toEqual(['KeyJ', null]);
   });
@@ -511,5 +767,94 @@ describe('modifiers and held (movement) actions', () => {
     expect(kb.heldActionForCode('Space')).toBe('jump');
     // edge keys are not held
     expect(kb.heldActionForCode('Digit1')).toBe(null);
+  });
+});
+
+describe('mouse buttons as bindable keys', () => {
+  it('binds a mouse pseudo-code to an action-bar slot and labels it as a keycap', () => {
+    const kb = new Keybinds();
+    expect(kb.bind('slot3', 0, 'Mouse4')).toBe(true);
+    expect(kb.edgeActionForCombo('Mouse4')).toBe('slot3');
+    expect(kb.primaryLabel('slot3')).toBe('M4');
+    expect(keyCapLabel(kb.primaryLabel('slot3'))).toBe('m4');
+  });
+
+  it('binds a mouse button to a held (movement) action so the per-frame poll matches', () => {
+    const kb = new Keybinds();
+    expect(kb.bind('strafeLeft', 0, 'Mouse5')).toBe(true);
+    expect(kb.heldActionForCode('Mouse5')).toBe('strafeLeft');
+  });
+
+  it('keeps a mouse chord distinct from the bare button, like a key chord', () => {
+    const kb = new Keybinds();
+    expect(kb.bind('slot4', 0, 'Shift+Mouse4')).toBe(true);
+    expect(kb.bind('slot5', 0, 'Mouse4')).toBe(true);
+    expect(kb.edgeActionForCombo('Shift+Mouse4')).toBe('slot4');
+    expect(kb.edgeActionForCombo('Mouse4')).toBe('slot5');
+    expect(kb.primaryLabel('slot4')).toBe('Shift+M4');
+  });
+
+  it('refuses the left and right buttons, which the camera and click-picking own', () => {
+    const kb = new Keybinds();
+    expect(isReservedCode('Mouse1')).toBe(true);
+    expect(isReservedCode('Mouse2')).toBe(true);
+    expect(isReservedCode('Shift+Mouse2')).toBe(true); // a chord on them is reserved too
+    expect(isReservedCode('Mouse3')).toBe(false);
+    expect(kb.bind('slot3', 0, 'Mouse1')).toBe(false);
+    expect(kb.bind('slot3', 0, 'Mouse2')).toBe(false);
+    // the refused binds left the slot on its default, not unbound or overwritten
+    expect(kb.codeAt('slot3', 0)).toBe('Digit4');
+  });
+
+  it('evicts a mouse binding when its button is reassigned, like any other code', () => {
+    const kb = new Keybinds();
+    kb.bind('slot3', 0, 'Mouse4');
+    kb.bind('slot7', 0, 'Mouse4');
+    expect(kb.codeAt('slot3', 0)).toBe(null);
+    expect(kb.edgeActionForCombo('Mouse4')).toBe('slot7');
+  });
+
+  it('persists a mouse binding across reloads, and drops a stored reserved one', () => {
+    const kb = new Keybinds();
+    kb.bind('slot3', 0, 'Mouse4');
+    expect(new Keybinds().codeAt('slot3', 0)).toBe('Mouse4');
+    // A hand-edited / legacy blob holding a reserved button must not load: the
+    // camera button would otherwise fire an ability on every click.
+    localStorage.setItem('woc_keybinds', JSON.stringify({ slot3: ['Mouse1', null] }));
+    const reloaded = new Keybinds();
+    expect(reloaded.codeAt('slot3', 0)).toBe(null);
+    expect(reloaded.edgeActionForCombo('Mouse1')).toBe(null);
+  });
+});
+
+// Every bindable action's Key Bindings row must localize. actionDisplayName
+// (src/ui/options_window.ts) resolves a row's label through BIND_ACTION_LABEL_KEYS
+// and falls back to the RAW ENGLISH BindAction.label when the id is absent, so a
+// missing entry ships hard-coded English in all 22 locales and silently orphans the
+// catalog key someone added for it. Nothing else catches that: the i18n gates check
+// that keys EXIST, not that a key is reachable, and every keybind test before this
+// one asserted on codes rather than labels. Scanned from source because the map is
+// module-private in a DOM window module this Node suite cannot import.
+describe('every bind action has a localized label key', () => {
+  const optionsWindowSrc = readFileSync(
+    new URL('../src/ui/options_window.ts', import.meta.url),
+    'utf8',
+  );
+  const mapBody = optionsWindowSrc.slice(
+    optionsWindowSrc.indexOf('const BIND_ACTION_LABEL_KEYS'),
+    optionsWindowSrc.indexOf('};', optionsWindowSrc.indexOf('const BIND_ACTION_LABEL_KEYS')),
+  );
+
+  it('reads a non-empty map (the scan would pass vacuously on a rename)', () => {
+    expect(mapBody).toContain('BIND_ACTION_LABEL_KEYS');
+    expect(mapBody.split('\n').filter((l) => /^\s+\w+:\s+'/.test(l)).length).toBeGreaterThan(30);
+  });
+
+  // Action-bar slots resolve through their own numeric branch in actionDisplayName,
+  // never the map, so they are the one exempt family.
+  const mapped = BIND_ACTIONS.filter((a) => !a.id.startsWith('slot'));
+
+  it.each(mapped.map((a) => [a.id] as const))('%s is in BIND_ACTION_LABEL_KEYS', (id) => {
+    expect(new RegExp(`^\\s+${id}:\\s+'`, 'm').test(mapBody)).toBe(true);
   });
 });

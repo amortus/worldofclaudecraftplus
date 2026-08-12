@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { lootSettingsView } from '../src/ui/loot_settings_view';
+import { lootSettingsView } from '../src/ui/hud/loot/loot_settings_view';
 import type { PartyInfo, PartyMemberInfo } from '../src/world_api';
 
 const member = (pid: number, name: string): PartyMemberInfo => ({
   pid,
   name,
   cls: 'warrior',
-  level: 20,
+  level: 40,
   hp: 100,
   mhp: 100,
   res: 100,
@@ -41,7 +41,10 @@ describe('lootSettingsView', () => {
   });
 
   it('marks a non-leader read-only and resolves a named looter', () => {
-    const m = lootSettingsView(info({ master: { enabled: true, looter: 2, threshold: 'epic' } }), 2);
+    const m = lootSettingsView(
+      info({ master: { enabled: true, looter: 2, threshold: 'epic' } }),
+      2,
+    );
     expect(m.isLeader).toBe(false);
     expect(m.looterName).toBe('Thrall');
     expect(m.threshold).toBe('epic');

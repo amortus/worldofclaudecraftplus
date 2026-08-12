@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ITEMS } from '../src/sim/data';
-import { itemSourceLevel } from '../src/sim/item_source_level';
+import { itemSourceLevel } from '../src/sim/item_level';
 import { meetsLevelRequirement, requiredLevelFor } from '../src/sim/item_level_req';
 import type { ItemDef } from '../src/sim/types';
 import { MAX_LEVEL } from '../src/sim/types';

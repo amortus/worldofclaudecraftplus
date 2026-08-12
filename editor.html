@@ -6,10 +6,9 @@
 <meta name="color-scheme" content="dark" />
 <meta name="theme-color" content="#0c0f14" />
 <meta name="robots" content="noindex, nofollow" />
-<!-- Dev-only marker map editor: an authoring aid served at /editor. It reads the
-     built-in world content and emits a paste-back patch; it never feeds the sim,
-     touches the server, or ships in the game/native bundle. -->
-<title>Map Editor - World of ClaudeCraft (dev)</title>
+<!-- Static first-paint title; src/editor/main.ts rewrites it via t() after the
+     locale loads (mirrors the guide's lang/dir handling). -->
+<title>Map Editor - World of ClaudeCraft</title>
 </head>
 <body>
 <div id="editor-app"></div>

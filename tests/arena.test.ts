@@ -1,28 +1,66 @@
 import { describe, expect, it } from 'vitest';
-import { Sim, eloDelta } from '../src/sim/sim';
+import { lineOfSightClear, resolveMovement } from '../src/sim/colliders';
+import { AFFLICTION_EYE_DEATH_GAIN, doomValue } from '../src/sim/combat/affliction';
+import {
+  ARENA_SLOT_COUNT,
+  ARENA_X_MIN,
+  arenaOrigin,
+  BUILTIN_WORLD,
+  dungeonAt,
+  instanceOrigin,
+  isArenaPos,
+} from '../src/sim/data';
+import {
+  ARENA_LAYOUT,
+  ARENA_SPAWNS_A_2v2,
+  ARENA_SPAWNS_B_2v2,
+  DUNGEON_WALL_HW,
+  DUNGEON_WALL_X,
+  layoutColliders,
+  NYTHRAXIS_LAYOUT,
+} from '../src/sim/dungeon_layout';
+import { PLAYER_BODY_RADIUS } from '../src/sim/pathfind';
+import { eloDelta, Sim } from '../src/sim/sim';
+import { ARENA_MIN_LEVEL, addArenaResult, arenaStanding } from '../src/sim/social/arena';
+import type { PlayerClass, WorldContent } from '../src/sim/types';
 import { groundHeight } from '../src/sim/world';
-import { isArenaPos } from '../src/sim/data';
-import type { PlayerClass } from '../src/sim/types';
+
+// Arena assertions exercise players and the private arena band. Spawning every
+// ambient realm mob makes each countdown tick scan unrelated overworld AI.
+const ARENA_TEST_WORLD: WorldContent = {
+  ...BUILTIN_WORLD,
+  camps: [],
+  npcs: {},
+  groundObjects: [],
+};
 
 function makeWorld() {
-  return new Sim({ seed: 42, playerClass: 'warrior', noPlayer: true });
+  return new Sim({ seed: 42, playerClass: 'warrior', noPlayer: true, world: ARENA_TEST_WORLD });
 }
 
 function teleport(sim: Sim, pid: number, x: number, z: number) {
   const e = sim.entities.get(pid)!;
-  e.pos.x = x; e.pos.z = z;
+  e.pos.x = x;
+  e.pos.z = z;
   e.pos.y = groundHeight(x, z, sim.cfg.seed);
   e.prevPos = { ...e.pos };
   (sim as any).rebucket(e);
 }
 
 // Queue two players and advance one tick so matchmaking seats them.
-function queueDuo(aClass: PlayerClass = 'warrior', bClass: PlayerClass = 'mage'): { sim: Sim; a: number; b: number } {
+function queueDuo(
+  aClass: PlayerClass = 'warrior',
+  bClass: PlayerClass = 'mage',
+  beforeQueue?: (sim: Sim, a: number, b: number) => void,
+): { sim: Sim; a: number; b: number } {
   const sim = makeWorld();
   const a = sim.addPlayer(aClass, 'Aleph');
   const b = sim.addPlayer(bClass, 'Bet');
+  sim.setPlayerLevel(ARENA_MIN_LEVEL, a);
+  sim.setPlayerLevel(ARENA_MIN_LEVEL, b);
   teleport(sim, a, 0, -40);
   teleport(sim, b, 6, -40);
+  beforeQueue?.(sim, a, b);
   sim.arenaQueueJoin(a);
   sim.arenaQueueJoin(b);
   sim.tick(); // updateArena() matchmakes the pair
@@ -38,8 +76,11 @@ function face(sim: Sim, pid: number, targetId: number) {
 function finishCast(sim: Sim, pid: number) {
   for (let i = 0; i < 20 * 4; i++) {
     sim.tick();
-    if (!sim.entities.get(pid)!.castingAbility) return;
+    if (!sim.entities.get(pid)!.castingAbility) break;
   }
+  // A spell's effects land when its projectile reaches the target (projectile_travel),
+  // a few ticks after the cast bar empties: tick until the in-flight bolt resolves.
+  for (let i = 0; i < 20 * 3 && (sim as any).pendingProjectiles.length > 0; i++) sim.tick();
 }
 
 // Run the countdown out so the bout goes live.
@@ -65,6 +106,7 @@ describe('arena: queue + matchmaking', () => {
   it('a lone contender waits; a second one triggers a match', () => {
     const sim = makeWorld();
     const a = sim.addPlayer('warrior', 'Aleph');
+    sim.setPlayerLevel(ARENA_MIN_LEVEL, a);
     teleport(sim, a, 0, -40);
     sim.arenaQueueJoin(a);
     sim.tick();
@@ -72,6 +114,7 @@ describe('arena: queue + matchmaking', () => {
     expect(sim.arenaInfoFor(a)!.queued).toBe(true);
 
     const b = sim.addPlayer('rogue', 'Bet');
+    sim.setPlayerLevel(ARENA_MIN_LEVEL, b);
     teleport(sim, b, 6, -40);
     sim.arenaQueueJoin(b);
     sim.tick();
@@ -83,6 +126,7 @@ describe('arena: queue + matchmaking', () => {
   it('leaving the queue cancels matchmaking', () => {
     const sim = makeWorld();
     const a = sim.addPlayer('warrior', 'Aleph');
+    sim.setPlayerLevel(ARENA_MIN_LEVEL, a);
     teleport(sim, a, 0, -40);
     sim.arenaQueueJoin(a);
     expect(sim.arenaQueue1v1).toContain(a);
@@ -93,6 +137,7 @@ describe('arena: queue + matchmaking', () => {
   it('cannot queue a second bracket while already queued', () => {
     const sim = makeWorld();
     const a = sim.addPlayer('warrior', 'Aleph');
+    sim.setPlayerLevel(ARENA_MIN_LEVEL, a);
     teleport(sim, a, 0, -40);
     sim.arenaQueueJoin(a);
     const errsBefore = sim.events.filter((e) => e.type === 'error').length;
@@ -107,7 +152,10 @@ describe('arena: queue + matchmaking', () => {
     const a = sim.addPlayer('warrior', 'Aleph');
     const b = sim.addPlayer('mage', 'Bet');
     const c = sim.addPlayer('rogue', 'Gimel');
-    for (const pid of [a, b, c]) teleport(sim, pid, 0, -40);
+    for (const pid of [a, b, c]) {
+      sim.setPlayerLevel(ARENA_MIN_LEVEL, pid);
+      teleport(sim, pid, 0, -40);
+    }
     sim.meta(a)!.arenaRating = 1500;
     sim.meta(b)!.arenaRating = 1800; // far from Aleph
     sim.meta(c)!.arenaRating = 1510; // closest to Aleph
@@ -130,6 +178,110 @@ describe('arena: queue + matchmaking', () => {
     sim.enterCrypt(a); // now standing in a far-off instance
     sim.arenaQueueJoin(a);
     expect(sim.arenaQueue1v1).not.toContain(a);
+  });
+});
+
+describe('arena: ranked minimum-level gate', () => {
+  it('rejects a below-level solo 1v1 join with no rating advantage from twinking down', () => {
+    const sim = makeWorld();
+    const a = sim.addPlayer('warrior', 'Aleph'); // default level 1
+    teleport(sim, a, 0, -40);
+    sim.arenaQueueJoin(a);
+    expect(sim.arenaQueue1v1).not.toContain(a);
+    expect(sim.events.some((e) => e.type === 'error')).toBe(true);
+  });
+
+  it('accepts a solo 1v1 join once the character reaches the minimum level', () => {
+    const sim = makeWorld();
+    const a = sim.addPlayer('warrior', 'Aleph');
+    sim.setPlayerLevel(ARENA_MIN_LEVEL, a);
+    teleport(sim, a, 0, -40);
+    sim.arenaQueueJoin(a);
+    expect(sim.arenaQueue1v1).toContain(a);
+  });
+
+  it('rejects a below-level solo 2v2 join', () => {
+    const sim = makeWorld();
+    const a = sim.addPlayer('warrior', 'Aleph');
+    teleport(sim, a, 0, -40);
+    sim.arenaQueueJoin(a, '2v2');
+    expect(sim.arenaQueue2v2.length).toBe(0);
+  });
+
+  it('rejects an at-level leader queueing 2v2 with a below-level party member', () => {
+    const sim = makeWorld();
+    const leader = sim.addPlayer('warrior', 'Aleph');
+    const member = sim.addPlayer('mage', 'Bet'); // stays at default level 1
+    sim.setPlayerLevel(ARENA_MIN_LEVEL, leader);
+    teleport(sim, leader, 0, -40);
+    teleport(sim, member, 3, -40);
+    sim.partyInvite(member, leader);
+    sim.partyAccept(member);
+    sim.arenaQueueJoin(leader, '2v2');
+    expect(sim.arenaQueue2v2.length).toBe(0);
+    expect(sim.events.some((e) => e.type === 'error' && e.text.includes('Bet'))).toBe(true);
+  });
+
+  it('does not gate Fiesta: a fresh level-1 character can still queue it', () => {
+    const sim = makeWorld();
+    const a = sim.addPlayer('warrior', 'Aleph'); // default level 1
+    teleport(sim, a, 0, -40);
+    sim.arenaQueueJoin(a, 'fiesta');
+    expect(sim.arenaQueueFiesta.some((u) => u.pids.includes(a))).toBe(true);
+  });
+});
+
+describe('arena: queue auto-prune notifies survivors', () => {
+  it('notifies a still-connected 1v1 queuer pruned for walking into an instance', () => {
+    const sim = makeWorld();
+    const a = sim.addPlayer('warrior', 'Aleph');
+    sim.setPlayerLevel(ARENA_MIN_LEVEL, a);
+    teleport(sim, a, 0, -40);
+    sim.arenaQueueJoin(a);
+    expect(sim.arenaQueue1v1).toContain(a);
+    sim.drainEvents();
+
+    teleport(sim, a, 80, 88);
+    sim.enterCrypt(a); // walks into an instance while still queued
+    const events = sim.tick(); // matchmakeArena1v1's prune drops them
+
+    expect(sim.arenaQueue1v1).not.toContain(a);
+    expect(events).toContainEqual({ type: 'arenaUnqueued', pid: a });
+    expect(
+      events.some((e) => e.type === 'log' && e.text === 'You leave the Ashen Coliseum queue.'),
+    ).toBe(true);
+  });
+
+  it('notifies the still-connected teammate when the other half of a 2v2 premade is pruned', () => {
+    const sim = makeWorld();
+    const leader = sim.addPlayer('warrior', 'Aleph');
+    const member = sim.addPlayer('mage', 'Bet');
+    sim.setPlayerLevel(ARENA_MIN_LEVEL, leader);
+    sim.setPlayerLevel(ARENA_MIN_LEVEL, member);
+    teleport(sim, leader, 0, -40);
+    teleport(sim, member, 3, -40);
+    sim.partyInvite(member, leader);
+    sim.partyAccept(member);
+    sim.arenaQueueJoin(leader, '2v2');
+    expect(sim.arenaQueue2v2.some((u) => u.pids.includes(member))).toBe(true);
+    sim.drainEvents();
+
+    // The leader dies mid-queue; the whole premade unit is pruned even though
+    // the member is untouched and still standing where they queued.
+    const leaderEntity = sim.entities.get(leader)!;
+    leaderEntity.dead = true;
+    const events = sim.tick();
+
+    expect(sim.arenaQueue2v2.length).toBe(0);
+    expect(events).toContainEqual({ type: 'arenaUnqueued', pid: member });
+    expect(
+      events.some(
+        (e) =>
+          e.type === 'log' &&
+          e.text === 'You leave the Ashen Coliseum 2v2 queue.' &&
+          e.pid === member,
+      ),
+    ).toBe(true);
   });
 });
 
@@ -178,6 +330,85 @@ describe('arena: a full bout', () => {
     sim.targetEntity(null, a);
     sim.targetNearestEnemy(a);
     expect(sim.entities.get(a)!.targetId).toBe(b);
+  });
+
+  it('keeps an opponent targeted during the countdown across the fight-start reset', () => {
+    const { sim, a, b } = queueDuo();
+    expect(sim.arenaMatchFor(a)!.state).toBe('countdown');
+    sim.targetEntity(b, a);
+    expect(sim.entities.get(a)!.targetId).toBe(b);
+
+    startBout(sim);
+
+    expect(sim.arenaMatchFor(a)!.state).toBe('active');
+    expect(sim.entities.get(a)!.targetId).toBe(b);
+    // only the selection persists: auto-attack still starts off at the gates
+    expect(sim.entities.get(a)!.autoAttack).toBe(false);
+  });
+
+  it('a self-target made during the countdown also survives the fight-start reset', () => {
+    const { sim, a } = queueDuo();
+    sim.targetEntity(a, a);
+    expect(sim.entities.get(a)!.targetId).toBe(a);
+
+    startBout(sim);
+
+    expect(sim.arenaMatchFor(a)!.state).toBe('active');
+    expect(sim.entities.get(a)!.targetId).toBe(a);
+  });
+
+  it('resets a target pointing outside the match to null at fight start', () => {
+    const { sim, a } = queueDuo();
+    const outsider = sim.addPlayer('rogue', 'Gimel');
+    expect(sim.arenaMatchFor(a)!.state).toBe('countdown');
+    sim.entities.get(a)!.targetId = outsider;
+
+    startBout(sim);
+
+    expect(sim.arenaMatchFor(a)!.state).toBe('active');
+    expect(sim.entities.get(a)!.targetId).toBe(null);
+  });
+
+  it('a fighter with no target during the countdown still starts the fight untargeted', () => {
+    const { sim, a } = queueDuo();
+    expect(sim.entities.get(a)!.targetId).toBe(null);
+
+    startBout(sim);
+
+    expect(sim.arenaMatchFor(a)!.state).toBe('active');
+    expect(sim.entities.get(a)!.targetId).toBe(null);
+  });
+
+  it('the match-creation reset still clears a target carried into the arena', () => {
+    const { sim, a } = queueDuo('warrior', 'mage', (sim, a, b) => {
+      sim.entities.get(a)!.targetId = b;
+    });
+    expect(sim.arenaMatchFor(a)!.state).toBe('countdown');
+    expect(sim.entities.get(a)!.targetId).toBe(null);
+  });
+
+  it('a 2v2 teammate target survives the fight-start reset', () => {
+    const sim = makeWorld();
+    const classes: PlayerClass[] = ['warrior', 'mage', 'rogue', 'priest'];
+    const names = ['Aleph', 'Bet', 'Gimel', 'Dalet'];
+    const pids = classes.map((cls, i) => sim.addPlayer(cls, names[i]));
+    pids.forEach((pid, i) => {
+      sim.setPlayerLevel(ARENA_MIN_LEVEL, pid);
+      teleport(sim, pid, i * 3, -40);
+    });
+    for (const pid of pids) sim.arenaQueueJoin(pid, '2v2');
+    sim.tick(); // matchmake seats the four solos into one 2v2 match
+    const match = sim.arenaMatchFor(pids[0])!;
+    expect(match.format).toBe('2v2');
+    expect(match.state).toBe('countdown');
+    const [me, mate] = match.teamA;
+    sim.targetEntity(mate, me);
+    expect(sim.entities.get(me)!.targetId).toBe(mate);
+
+    startBout(sim);
+
+    expect(match.state).toBe('active');
+    expect(sim.entities.get(me)!.targetId).toBe(mate);
   });
 
   it('does not cancel auto-attack when retargeting an active arena opponent', () => {
@@ -237,11 +468,49 @@ describe('arena: a full bout', () => {
     expect(sim.arenaMatchFor(b)).toBe(null);
     expect(isArenaPos(ea.pos.x)).toBe(false);
     expect(isArenaPos(eb.pos.x)).toBe(false);
-    expect(Math.hypot(ea.pos.x - 0, ea.pos.z - (-40))).toBeLessThan(3);
-    expect(Math.hypot(eb.pos.x - 6, eb.pos.z - (-40))).toBeLessThan(3);
+    expect(Math.hypot(ea.pos.x - 0, ea.pos.z - -40)).toBeLessThan(3);
+    expect(Math.hypot(eb.pos.x - 6, eb.pos.z - -40)).toBeLessThan(3);
     expect(ea.hp).toBe(ea.maxHp);
     expect(eb.hp).toBe(eb.maxHp);
     expect(eb.dead).toBe(false);
+  });
+
+  it('pays an Affliction Eye death through ranked-arena elimination', () => {
+    const { sim, a, b } = queueDuo('warlock', 'warrior', (world, warlockId) => {
+      world.setPlayerLevel(20, warlockId);
+      expect(world.setSpec('affliction', warlockId)).toBe(true);
+    });
+    startBout(sim);
+    const warlock = sim.entities.get(a)!;
+    const target = sim.entities.get(b)!;
+    target.auras.push({
+      id: 'evil_eye',
+      name: 'Evil Eye',
+      kind: 'affliction_eye',
+      remaining: 3600,
+      duration: 3600,
+      value: 1,
+      sourceId: a,
+      school: 'shadow',
+    });
+    sim.drainEvents();
+
+    (sim as any).dealDamage(warlock, target, 99999, false, 'shadow', 'Test', 'hit');
+    const events = sim.drainEvents();
+
+    expect(target.dead).toBe(true);
+    // objectContaining: the aura gain event also carries the parse-fidelity
+    // attribution fields (sourceId/abilityId/stacks) since v0.35.0.
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: 'aura',
+        targetId: a,
+        name: 'Condemnation',
+        gained: true,
+      }),
+    );
+    expect(AFFLICTION_EYE_DEATH_GAIN).toBe(10);
+    expect(doomValue(warlock)).toBe(0);
   });
 
   it('a slot frees up after the bout so the arena can host again', () => {
@@ -332,10 +601,14 @@ describe('arena: forfeit + persistence', () => {
   });
 });
 
-function queue2v2(classes: PlayerClass[] = ['warrior', 'mage', 'rogue', 'priest']): { sim: Sim; pids: number[] } {
+function queue2v2(classes: PlayerClass[] = ['warrior', 'mage', 'rogue', 'priest']): {
+  sim: Sim;
+  pids: number[];
+} {
   const sim = makeWorld();
   const names = ['Aleph', 'Bet', 'Gimel', 'Dalet'];
   const pids = classes.map((cls, i) => sim.addPlayer(cls, names[i]));
+  for (const pid of pids) sim.setPlayerLevel(ARENA_MIN_LEVEL, pid);
   for (let i = 0; i < pids.length; i++) teleport(sim, pids[i], i * 3, -40);
   for (const pid of pids) sim.arenaQueueJoin(pid, '2v2');
   sim.tick();
@@ -366,7 +639,10 @@ describe('arena: 2v2 queue + matchmaking', () => {
     const a2 = sim.addPlayer('paladin', 'Bet');
     const b1 = sim.addPlayer('mage', 'Gimel');
     const b2 = sim.addPlayer('rogue', 'Dalet');
-    for (const pid of [a1, a2, b1, b2]) teleport(sim, pid, 0, -40);
+    for (const pid of [a1, a2, b1, b2]) {
+      sim.setPlayerLevel(ARENA_MIN_LEVEL, pid);
+      teleport(sim, pid, 0, -40);
+    }
     sim.meta(a1)!.arena2v2Rating = 1500;
     sim.meta(a2)!.arena2v2Rating = 1500;
     sim.meta(b1)!.arena2v2Rating = 1800;
@@ -390,7 +666,10 @@ describe('arena: 2v2 queue + matchmaking', () => {
     const p2 = sim.addPlayer('paladin', 'Bet');
     const s1 = sim.addPlayer('mage', 'Gimel');
     const s2 = sim.addPlayer('rogue', 'Dalet');
-    for (const pid of [p1, p2, s1, s2]) teleport(sim, pid, 0, -40);
+    for (const pid of [p1, p2, s1, s2]) {
+      sim.setPlayerLevel(ARENA_MIN_LEVEL, pid);
+      teleport(sim, pid, 0, -40);
+    }
     sim.partyInvite(p2, p1);
     sim.partyAccept(p2);
     sim.arenaQueueJoin(p1, '2v2');
@@ -407,6 +686,8 @@ describe('arena: 2v2 queue + matchmaking', () => {
     const sim = makeWorld();
     const leader = sim.addPlayer('warrior', 'Aleph');
     const member = sim.addPlayer('mage', 'Bet');
+    sim.setPlayerLevel(ARENA_MIN_LEVEL, leader);
+    sim.setPlayerLevel(ARENA_MIN_LEVEL, member);
     teleport(sim, leader, 0, -40);
     teleport(sim, member, 3, -40);
     sim.partyInvite(member, leader);
@@ -415,14 +696,19 @@ describe('arena: 2v2 queue + matchmaking', () => {
     sim.arenaQueueJoin(member, '2v2');
     expect(sim.arenaQueue2v2.length).toBe(before);
     sim.arenaQueueJoin(leader, '2v2');
-    expect(sim.arenaQueue2v2.some((u) => u.pids.includes(leader) && u.pids.includes(member))).toBe(true);
+    expect(sim.arenaQueue2v2.some((u) => u.pids.includes(leader) && u.pids.includes(member))).toBe(
+      true,
+    );
   });
 
   it('leaving queue removes the whole premade unit', () => {
     const sim = makeWorld();
     const leader = sim.addPlayer('warrior', 'Aleph');
     const member = sim.addPlayer('mage', 'Bet');
-    for (const pid of [leader, member]) teleport(sim, pid, 0, -40);
+    for (const pid of [leader, member]) {
+      sim.setPlayerLevel(ARENA_MIN_LEVEL, pid);
+      teleport(sim, pid, 0, -40);
+    }
     sim.partyInvite(member, leader);
     sim.partyAccept(member);
     sim.arenaQueueJoin(leader, '2v2');
@@ -490,7 +776,15 @@ describe('arena: 2v2 combat', () => {
     one.sim.meta(one.a)!.arena2v2Rating = 1666;
     one.sim.meta(one.a)!.arena2v2Wins = 4;
     one.sim.meta(one.a)!.arena2v2Losses = 3;
-    (one.sim as any).dealDamage(one.sim.entities.get(one.a)!, one.sim.entities.get(one.b)!, 99999, false, 'physical', null, 'hit');
+    (one.sim as any).dealDamage(
+      one.sim.entities.get(one.a)!,
+      one.sim.entities.get(one.b)!,
+      99999,
+      false,
+      'physical',
+      null,
+      'hit',
+    );
     one.sim.tick();
     expect(one.sim.meta(one.a)!.arenaWins).toBe(1);
     expect(one.sim.meta(one.a)!.arena2v2Rating).toBe(1666);
@@ -512,7 +806,15 @@ describe('arena: 2v2 combat', () => {
       losses: two.sim.meta(pid)!.arenaLosses,
     }));
     for (const pid of [b1, b2]) {
-      (two.sim as any).dealDamage(two.sim.entities.get(a1)!, two.sim.entities.get(pid)!, 99999, false, 'physical', null, 'hit');
+      (two.sim as any).dealDamage(
+        two.sim.entities.get(a1)!,
+        two.sim.entities.get(pid)!,
+        99999,
+        false,
+        'physical',
+        null,
+        'hit',
+      );
       two.sim.tick();
     }
     expect(two.sim.meta(a1)!.arena2v2Wins).toBe(1);
@@ -599,10 +901,41 @@ describe('arena: crowd control diminishing returns', () => {
 });
 
 describe('arena: class ability target filters', () => {
-  const aoeCases: Array<{ cls: PlayerClass; ability: string; level: number; setup?: (sim: Sim, pid: number) => void }> = [
-    { cls: 'warrior', ability: 'thunder_clap', level: 20 },
-    { cls: 'mage', ability: 'arcane_explosion', level: 20 },
-    { cls: 'paladin', ability: 'consecration', level: 20 },
+  const aoeCases: Array<{
+    cls: PlayerClass;
+    ability: string;
+    level: number;
+    beforeQueue?: (sim: Sim, pid: number) => void;
+    setup?: (sim: Sim, pid: number) => void;
+  }> = [
+    {
+      cls: 'warrior',
+      ability: 'thunder_clap',
+      level: 20,
+      beforeQueue: (sim, pid) => {
+        sim.setPlayerLevel(20, pid);
+        expect(sim.setSpec('prot', pid)).toBe(true);
+      },
+    },
+    {
+      cls: 'mage',
+      ability: 'arcane_explosion',
+      level: 20,
+      // Aetherburst is arcane-spec kit now (the mage rework spec-gated it).
+      beforeQueue: (sim, pid) => {
+        sim.setPlayerLevel(20, pid);
+        expect(sim.setSpec('arcane', pid)).toBe(true);
+      },
+    },
+    {
+      cls: 'paladin',
+      ability: 'consecration',
+      level: 20,
+      beforeQueue: (sim, pid) => {
+        sim.setPlayerLevel(20, pid);
+        expect(sim.setSpec('protection', pid)).toBe(true);
+      },
+    },
     {
       cls: 'druid',
       ability: 'swipe',
@@ -616,21 +949,240 @@ describe('arena: class ability target filters', () => {
     },
   ];
 
-  it.each(aoeCases)('lets $cls $ability hit active arena opponents', ({ cls, ability, level, setup }) => {
-    const { sim, a, b } = queueDuo(cls, 'warrior');
+  it.each(aoeCases)(
+    'lets $cls $ability hit active arena opponents',
+    ({ cls, ability, level, beforeQueue, setup }) => {
+      const { sim, a, b } = queueDuo(cls, 'warrior', (world, a) => beforeQueue?.(world, a));
+      const caster = sim.entities.get(a)!;
+      const target = sim.entities.get(b)!;
+      sim.setPlayerLevel(level, a);
+      sim.setPlayerLevel(level, b);
+      setup?.(sim, a);
+      startBout(sim);
+      teleport(sim, b, caster.pos.x, caster.pos.z + 3);
+      caster.resource = caster.maxResource;
+      caster.gcdRemaining = 0;
+
+      const startHp = target.hp;
+      sim.castAbility(ability, a);
+
+      expect(target.hp).toBeLessThan(startHp);
+    },
+  );
+});
+
+describe('arena: enclosing walls', () => {
+  it('classifies the complete arena footprint without claiming the neighboring raid', () => {
+    const o = arenaOrigin(0);
+    const xExtents = layoutColliders(ARENA_LAYOUT).flatMap((collider) => {
+      if (collider.type === 'circle') {
+        return [collider.x - collider.r, collider.x + collider.r];
+      }
+      const xRadius =
+        Math.abs(Math.cos(collider.rot)) * collider.hw +
+        Math.abs(Math.sin(collider.rot)) * collider.hd;
+      return [collider.x - xRadius, collider.x + xRadius];
+    });
+    const westOuterFace = o.x + Math.min(...xExtents);
+    const eastOuterFace = o.x + Math.max(...xExtents);
+    const westBandEdge = westOuterFace - 1;
+
+    expect(ARENA_X_MIN).toBe(westBandEdge);
+    expect(isArenaPos(westBandEdge)).toBe(true);
+    expect(isArenaPos(westOuterFace)).toBe(true);
+    expect(isArenaPos(eastOuterFace)).toBe(true);
+
+    const raidOrigin = instanceOrigin(5, 0);
+    const raidEastOuterFace =
+      raidOrigin.x + (NYTHRAXIS_LAYOUT.wallX ?? DUNGEON_WALL_X) + DUNGEON_WALL_HW;
+    expect(isArenaPos(raidEastOuterFace)).toBe(false);
+    expect(dungeonAt(raidEastOuterFace)?.id).toBe('nythraxis_boss_arena');
+  });
+
+  it('classifies every 2v2 combatant spawn as arena space', () => {
+    const o = arenaOrigin(0);
+    for (const spawn of [...ARENA_SPAWNS_A_2v2, ...ARENA_SPAWNS_B_2v2]) {
+      expect(isArenaPos(o.x + spawn.x)).toBe(true);
+    }
+  });
+
+  it('stops live player movement symmetrically at both side walls', () => {
+    const { sim, a, b } = queueDuo();
     startBout(sim);
-    const caster = sim.entities.get(a)!;
+    const match = sim.arenaMatchFor(a);
+    expect(match?.state).toBe('active');
+    const o = arenaOrigin(match?.slot ?? 0);
+    const startDistance = DUNGEON_WALL_X - 2;
+    teleport(sim, a, o.x - startDistance, o.z);
+    teleport(sim, b, o.x + startDistance, o.z);
+    sim.entities.get(a)!.facing = -Math.PI / 2;
+    sim.entities.get(b)!.facing = Math.PI / 2;
+    sim.meta(a)!.moveInput.forward = true;
+    sim.meta(b)!.moveInput.forward = true;
+
+    for (let i = 0; i < 20; i++) sim.tick();
+
+    const expectedStop = DUNGEON_WALL_X - DUNGEON_WALL_HW - PLAYER_BODY_RADIUS;
+    const westDistance = o.x - sim.entities.get(a)!.pos.x;
+    const eastDistance = sim.entities.get(b)!.pos.x - o.x;
+    expect(westDistance).toBeGreaterThan(startDistance);
+    expect(eastDistance).toBeGreaterThan(startDistance);
+    expect(westDistance).toBeCloseTo(expectedStop, 5);
+    expect(eastDistance).toBeCloseTo(expectedStop, 5);
+    expect(westDistance).toBeCloseTo(eastDistance, 5);
+  });
+
+  it.each(Array.from({ length: ARENA_SLOT_COUNT }, (_, slot) => slot))(
+    'sweeps high-speed movement against all four walls in slot %s',
+    (slot) => {
+      const sim = makeWorld();
+      const o = arenaOrigin(slot);
+      const xLimit = DUNGEON_WALL_X - DUNGEON_WALL_HW - PLAYER_BODY_RADIUS;
+      const zMinLimit = ARENA_LAYOUT.zMin + DUNGEON_WALL_HW + PLAYER_BODY_RADIUS;
+      const zMaxLimit = ARENA_LAYOUT.zMax - DUNGEON_WALL_HW - PLAYER_BODY_RADIUS;
+      // Sweep lanes are obstacle-free rows/columns of the SLOT'S map (even
+      // slots Coliseum, odd slots Drowned Court): the z row dodges each map's
+      // cover (screens/posts vs colonnades) and the x+19 column runs outside
+      // every pillar, stub, and reliquary, so each sweep exercises the WALL
+      // collider, not interior cover (pinned in tests/arena_layout.test.ts).
+      const rowZ = slot % 2 === 1 ? -2 : -6;
+      const cases = [
+        {
+          from: { x: o.x, z: o.z + rowZ },
+          to: { x: o.x - DUNGEON_WALL_X - 10, z: o.z + rowZ },
+          inside: (x: number, _z: number) => x >= o.x - xLimit - 1e-6,
+        },
+        {
+          from: { x: o.x, z: o.z + rowZ },
+          to: { x: o.x + DUNGEON_WALL_X + 10, z: o.z + rowZ },
+          inside: (x: number, _z: number) => x <= o.x + xLimit + 1e-6,
+        },
+        {
+          from: { x: o.x + 19, z: o.z + 2 },
+          to: { x: o.x + 19, z: o.z + ARENA_LAYOUT.zMin - 10 },
+          inside: (_x: number, z: number) => z >= o.z + zMinLimit - 1e-6,
+        },
+        {
+          from: { x: o.x + 19, z: o.z + 2 },
+          to: { x: o.x + 19, z: o.z + ARENA_LAYOUT.zMax + 10 },
+          inside: (_x: number, z: number) => z <= o.z + zMaxLimit + 1e-6,
+        },
+      ];
+
+      for (const testCase of cases) {
+        const result = resolveMovement(
+          sim.cfg.seed,
+          testCase.from.x,
+          testCase.from.z,
+          testCase.to.x,
+          testCase.to.z,
+          PLAYER_BODY_RADIUS,
+        );
+        expect(testCase.inside(result.x, result.z)).toBe(true);
+        expect(result).not.toEqual(testCase.to);
+      }
+    },
+  );
+
+  it('blocks line of sight through both side walls', () => {
+    const sim = makeWorld();
+    const o = arenaOrigin(0);
+    for (const side of [-1, 1]) {
+      const inside = {
+        x: o.x + side * (DUNGEON_WALL_X - 1.5),
+        z: o.z,
+      };
+      const outside = {
+        x: o.x + side * (DUNGEON_WALL_X + 1.5),
+        z: o.z,
+      };
+      expect(lineOfSightClear(sim.cfg.seed, inside, outside)).toBe(false);
+    }
+  });
+
+  it('melee auto-attack cannot land through the arena side wall', () => {
+    const { sim, a, b } = queueDuo();
+    startBout(sim);
+    const attacker = sim.entities.get(a)!;
     const target = sim.entities.get(b)!;
-    sim.setPlayerLevel(level, a);
-    sim.setPlayerLevel(level, b);
-    teleport(sim, b, caster.pos.x, caster.pos.z + 3);
-    caster.resource = caster.maxResource;
-    caster.gcdRemaining = 0;
-    setup?.(sim, a);
-
+    const slot = sim.arenaMatchFor(a)!.slot ?? 0;
+    const o = arenaOrigin(slot);
+    // attacker just inside the +x wall, target just outside it, close enough
+    // to be within MELEE_RANGE but with the wall between them.
+    teleport(sim, a, o.x + DUNGEON_WALL_X - 1.5, o.z);
+    teleport(sim, b, o.x + DUNGEON_WALL_X + 1.5, o.z);
+    face(sim, a, b);
+    sim.targetEntity(b, a);
+    sim.startAutoAttack(a);
     const startHp = target.hp;
-    sim.castAbility(ability, a);
+    for (let i = 0; i < 20 * 3; i++) sim.tick();
+    // stays toggled on (mirrors the ranged LOS gate) but never lands a swing
+    expect(target.hp).toBe(startHp);
+  });
 
-    expect(target.hp).toBeLessThan(startHp);
+  it('melee auto-attack cannot land through an approach screen', () => {
+    // The screens are Coliseum cover: force the rotation's preferred parity
+    // even (before matchmaking runs) so the bout seats on a Coliseum slot.
+    const { sim, a, b } = queueDuo('warrior', 'mage', (world) => {
+      world.ctx.nextArenaMatchId = 2;
+    });
+    startBout(sim);
+    const target = sim.entities.get(b)!;
+    const slot = sim.arenaMatchFor(a)!.slot ?? 0;
+    expect(slot % 2).toBe(0);
+    const o = arenaOrigin(slot);
+    // fighters on opposite faces of the west spawn-A approach screen, within
+    // MELEE_RANGE of each other but with the screen's full height between.
+    const screen = ARENA_LAYOUT.stubs.find((s) => s.x === -5 && s.z === -10)!;
+    expect(screen).toBeTruthy();
+    teleport(sim, a, o.x + screen.x, o.z + screen.z - screen.hd - 1.2);
+    teleport(sim, b, o.x + screen.x, o.z + screen.z + screen.hd + 1.2);
+    face(sim, a, b);
+    sim.targetEntity(b, a);
+    sim.startAutoAttack(a);
+    const startHp = target.hp;
+    for (let i = 0; i < 20 * 3; i++) sim.tick();
+    expect(target.hp).toBe(startHp);
+  });
+});
+
+describe('arena: a drawn bout is recorded as a draw', () => {
+  // addArenaResult took `won: boolean | null` and did nothing on null, so a
+  // drawn bout moved the rating and then vanished from the record. The same
+  // gap the battleground had; both are now the D of W-L-D.
+  const meta = (sim: Sim, pid: number) => sim.ctx.players.get(pid)!;
+
+  it('counts a draw in the bracket it was played in, and only there', () => {
+    const sim = new Sim({ seed: 5, playerClass: 'warrior', noPlayer: true });
+    const pid = sim.addPlayer('warrior', 'Drawer');
+    const m = meta(sim, pid);
+
+    addArenaResult(m, '1v1', 0, null);
+    expect(m.arenaDraws).toBe(1);
+    expect(m.arenaWins).toBe(0);
+    expect(m.arenaLosses).toBe(0);
+    // The 2v2 bracket is fully independent and must not have moved.
+    expect(m.arena2v2Draws).toBe(0);
+
+    addArenaResult(m, '2v2', 0, null);
+    expect(m.arena2v2Draws).toBe(1);
+    expect(m.arenaDraws).toBe(1);
+  });
+
+  it('still counts wins and losses the way it always did', () => {
+    const sim = new Sim({ seed: 5, playerClass: 'warrior', noPlayer: true });
+    const m = meta(sim, sim.addPlayer('warrior', 'Mixed'));
+    addArenaResult(m, '1v1', 10, true);
+    addArenaResult(m, '1v1', -10, false);
+    addArenaResult(m, '1v1', 0, null);
+    expect([m.arenaWins, m.arenaLosses, m.arenaDraws]).toEqual([1, 1, 1]);
+  });
+
+  it('reports the draw through arenaStanding, which the record renders from', () => {
+    const sim = new Sim({ seed: 5, playerClass: 'warrior', noPlayer: true });
+    const m = meta(sim, sim.addPlayer('warrior', 'Standing'));
+    addArenaResult(m, '1v1', 0, null);
+    expect(arenaStanding(m, '1v1').draws).toBe(1);
+    expect(arenaStanding(m, '2v2').draws).toBe(0);
   });
 });
