@@ -189,7 +189,8 @@ const DEFAULT_PORT = 8787;
 const DEFAULT_TURNSTILE_SECRET = '';
 const DEFAULT_MAX_WS_PER_IP_HARD = 20;
 const DEFAULT_MAX_PLAYERS_PER_REALM = 5000;
-const DEFAULT_GITHUB_REPO = 'levy-street/world-of-claudecraft';
+// Fork default: this deployment's own repo (see server/github_contributors.ts).
+const DEFAULT_GITHUB_REPO = 'amortus/worldofclaudecraftplus';
 const DEFAULT_GITHUB_TOKEN = '';
 const DEFAULT_CHAT_LOG_RETENTION_DAYS = 90;
 const DEFAULT_UNSTUCK_REPORT_RETENTION_DAYS = 90;

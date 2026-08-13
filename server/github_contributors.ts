@@ -24,7 +24,10 @@ import { LEADERBOARD_MAX } from '../src/sim/leaderboard_page';
 import type { DevLeaderboardEntry } from '../src/world_api';
 import { recordUsageCacheEvent, recordUsageMetric, setUsageCacheSize } from './provider_usage';
 
-const DEFAULT_GITHUB_REPO = 'levy-street/world-of-claudecraft';
+// Fork default: this deployment's own repo. GITHUB_REPO overrides it. Left at
+// upstream's slug, an unset env makes the in-game News panel show UPSTREAM's
+// releases and the developer badge credit UPSTREAM's contributors.
+const DEFAULT_GITHUB_REPO = 'amortus/worldofclaudecraftplus';
 const GITHUB_API_HOST = 'api.github.com';
 
 // The repo slug + optional token, INJECTED at boot (server/main.ts wires these from
