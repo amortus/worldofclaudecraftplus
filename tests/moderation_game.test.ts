@@ -8,6 +8,7 @@ const moderation = vi.hoisted(() => ({
 }));
 
 vi.mock('../server/db', () => ({
+  loadAccountFlair: vi.fn(async () => ({ ai: false, streamer: false, links: {} })),
   pool: { query: vi.fn(async () => ({ rows: [] })) },
   saveCharacterState: vi.fn(async () => {}),
   // leave() flushes character + market in one call; without this export the

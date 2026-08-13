@@ -61,6 +61,7 @@ const ev = sim.tick();  // tick() RETURNS SimEvent[]; assert on e.type ('death',
 
 ## Server tests (snapshots/bandwidth/xp/interest/admin/...)
 Postgres is mocked at the top: `vi.mock('../server/db', () => ({ pool, saveCharacterState, ... }))`
+  loadAccountFlair: vi.fn(async () => ({ ai: false, streamer: false, links: {} })),
 (hoisted; keep it ABOVE the `server/game` import). Drive `new GameServer()` with a
 fake socket: `fakeWs()` collects `JSON.parse`'d sends; `server.join(...)`,
 `server.handleMessage(session, JSON.stringify({t:'cmd',...}))`, `(server as any).broadcastSnapshots()`.

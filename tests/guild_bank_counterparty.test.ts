@@ -57,6 +57,7 @@ const dbMock = vi.hoisted(() => ({
 const guildMemberRows: { id: number; rank: string }[] = [];
 
 vi.mock('../server/db', () => ({
+  loadAccountFlair: vi.fn(async () => ({ ai: false, streamer: false, links: {} })),
   pool: {
     query: vi.fn(async (text: string) =>
       text.includes('FROM guild_members gm JOIN characters c')

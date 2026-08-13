@@ -24,6 +24,7 @@ const dbMock = vi.hoisted(() => ({
 }));
 
 vi.mock('../server/db', () => ({
+  loadAccountFlair: vi.fn(async () => ({ ai: false, streamer: false, links: {} })),
   pool: { query: vi.fn(async () => ({ rows: [] })) },
   GUILD_BANK_ROW_MAX_BYTES: 262144,
   saveCharacterState: dbMock.saveCharacterState,

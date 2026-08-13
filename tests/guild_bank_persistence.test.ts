@@ -28,6 +28,7 @@ const dbMock = vi.hoisted(() => ({
 const dbGuildMembers = new Map<number, { id: number; rank: string }[]>();
 
 vi.mock('../server/db', () => ({
+  loadAccountFlair: vi.fn(async () => ({ ai: false, streamer: false, links: {} })),
   pool: {
     query: vi.fn(async (text: string, values?: unknown[]) => {
       // The one statement these tests answer for real: PgSocialDb.guildMembers.

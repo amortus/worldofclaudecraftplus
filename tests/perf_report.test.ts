@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../server/db', () => ({
+  loadAccountFlair: vi.fn(async () => ({ ai: false, streamer: false, links: {} })),
   accountAndScopeForToken: vi.fn(),
   getCharacter: vi.fn(),
   insertClientPerfReport: vi.fn(async () => {}),

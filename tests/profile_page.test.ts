@@ -16,6 +16,7 @@ import { hudChromeStrings } from '../src/ui/i18n.catalog/hud_chrome';
 const mockGetCharacterById = vi.fn();
 
 vi.mock('../server/db', () => ({
+  loadAccountFlair: vi.fn(async () => ({ ai: false, streamer: false, links: {} })),
   findCharacterReportTargetByName: vi.fn(async (name: string) =>
     name === 'Hilda' ? { characterId: 42 } : null,
   ),

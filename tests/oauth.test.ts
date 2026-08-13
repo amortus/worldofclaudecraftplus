@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // db.ts and oauth_db.ts touch Postgres; mock both so we exercise the OAuth
 // handler logic (PKCE, one-time codes, device grant) with no DB.
 vi.mock('../server/db', () => ({
+  loadAccountFlair: vi.fn(async () => ({ ai: false, streamer: false, links: {} })),
   pool: {},
   saveToken: vi.fn(async () => {}),
   accountAndScopeForToken: vi.fn(async () => ({ accountId: 5, scope: 'full' })),
