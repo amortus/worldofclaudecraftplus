@@ -25,7 +25,7 @@ const {
   ALLOWED_PERMISSIONS,
 } = require('./shell_guards.cjs');
 const { rangeContentType, rangedFileResponse } = require('./media_range.cjs');
-const { resolveDesktopConfig, walletConnectionSupported } = require('./desktop_config.cjs');
+const { resolveDesktopConfig } = require('./desktop_config.cjs');
 const { createSteamShell } = require('./steam.cjs');
 const { createEpicShell } = require('./epic.cjs');
 const { PRODUCTION_API_ORIGIN } = require('./update_guard.cjs');
@@ -46,10 +46,6 @@ const {
   relaunchForLinuxPrime,
   summarizeGpuDevices,
 } = require('./gpu_preference.cjs');
-const {
-  buildWalletHandoffBrowserUrl,
-  parseWalletHandoffDeepLink,
-} = require('./wallet_handoff.cjs');
 
 // On a Linux hybrid-graphics laptop, the PRIME render-offload env vars (DRI_PRIME,
 // __NV_PRIME_RENDER_OFFLOAD, etc; see electron/gpu_preference.cjs) only reach the GPU
@@ -79,7 +75,6 @@ const appOrigins = appNavigationOrigins(APP_ORIGIN, devServerUrl);
 const deepLinkProtocol = 'worldofclaudecraft';
 let mainWindow = null;
 let pendingLoginCode = null;
-let pendingWalletHandoffCode = null;
 // Session cap counter for the renderer console mirror (used by the
 // 'console-message' handler in createMainWindow).
 let consoleLinesMirrored = 0;
@@ -401,10 +396,6 @@ function openDesktopLogin() {
   shell.openExternal(url.toString());
 }
 
-function openDesktopWalletHandoff(code) {
-  return shell.openExternal(buildWalletHandoffBrowserUrl(apiOrigin, code));
-}
-
 function deliverLoginCode(code) {
   pendingLoginCode = code;
   if (!mainWindow) return;
@@ -413,21 +404,7 @@ function deliverLoginCode(code) {
   mainWindow.focus();
 }
 
-function deliverWalletHandoffCode(code) {
-  pendingWalletHandoffCode = code;
-  if (process.platform === 'darwin') app.focus({ steal: true });
-  if (!mainWindow) return;
-  mainWindow.webContents.send('desktop-wallet-handoff-code', code);
-  if (mainWindow.isMinimized()) mainWindow.restore();
-  mainWindow.focus();
-}
-
 function handleDeepLink(url) {
-  const walletHandoff = parseWalletHandoffDeepLink(url);
-  if (walletHandoff) {
-    deliverWalletHandoffCode(walletHandoff.code);
-    return;
-  }
   let parsed;
   try {
     parsed = new URL(url);
@@ -516,13 +493,6 @@ ipcMain.handle('desktop-epic-capability', (event) => {
   return epicShell.enabled;
 });
 
-// WalletConnect is available in the website-distributed desktop shell but is
-// intentionally absent from Steam until that distribution enables it.
-ipcMain.handle('desktop-wallet-capability', (event) => {
-  if (!trustedSender(event)) return false;
-  return walletConnectionSupported(desktopConfig);
-});
-
 ipcMain.handle('desktop-login-open-browser', (event) => {
   if (!trustedSender(event)) return null;
   openDesktopLogin();
@@ -533,23 +503,6 @@ ipcMain.handle('desktop-login-take-code', (event) => {
   if (!trustedSender(event)) return null;
   const code = pendingLoginCode;
   pendingLoginCode = null;
-  return code;
-});
-
-ipcMain.handle('desktop-wallet-open-browser', async (event, code) => {
-  if (!trustedSender(event)) return false;
-  try {
-    await openDesktopWalletHandoff(code);
-    return true;
-  } catch {
-    return false;
-  }
-});
-
-ipcMain.handle('desktop-wallet-take-code', (event) => {
-  if (!trustedSender(event)) return null;
-  const code = pendingWalletHandoffCode;
-  pendingWalletHandoffCode = null;
   return code;
 });
 

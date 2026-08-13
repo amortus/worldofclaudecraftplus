@@ -283,15 +283,9 @@ export function resetRateLimits(): void {
 }
 
 export const CARD_UPLOAD_MAX_PER_MINUTE = 10;
-export const WALLET_LINK_MAX_PER_MINUTE = 10;
-export const SEEKER_SPIN_VERIFY_MAX_PER_MINUTE = 5;
 
 const cardUploadIpAttempts = new Map<string, number[]>();
 const cardUploadAccountAttempts = new Map<number, number[]>();
-const walletLinkIpAttempts = new Map<string, number[]>();
-const walletLinkAccountAttempts = new Map<number, number[]>();
-const seekerSpinVerifyIpAttempts = new Map<string, number[]>();
-const seekerSpinVerifyAccountAttempts = new Map<number, number[]>();
 
 function recordSlidingWindowAttempt<K>(
   attemptsByKey: Map<K, number[]>,
@@ -417,10 +411,9 @@ export function resetAssetUploadRateLimits(): void {
   assetUploadAccountAttempts.clear();
 }
 
-// Steam link attempts get their own per-IP AND per-account bucket, mirroring
-// the wallet-link throttle: every allowed attempt costs an upstream
-// AuthenticateUserTicket call, so the budget is deliberately tighter than the
-// wallet's, and a link flood can never burn a player's login budget.
+// Steam link attempts get their own per-IP AND per-account bucket: every
+// allowed attempt costs an upstream AuthenticateUserTicket call, so the budget
+// is deliberately tight, and a link flood can never burn a player's login budget.
 export const STEAM_LINK_MAX_PER_MINUTE = 5;
 const steamLinkIpAttempts = new Map<string, number[]>();
 const steamLinkAccountAttempts = new Map<number, number[]>();
@@ -477,53 +470,6 @@ export function epicLinkRateLimited(
 export function resetEpicLinkRateLimits(): void {
   epicLinkIpAttempts.clear();
   epicLinkAccountAttempts.clear();
-}
-
-export function walletLinkRateLimited(
-  req: http.IncomingMessage,
-  accountId: number,
-): RateLimitOutcome {
-  const ip = recordSlidingWindowAttempt(
-    walletLinkIpAttempts,
-    requestIp(req),
-    WALLET_LINK_MAX_PER_MINUTE,
-  );
-  const account = recordSlidingWindowAttempt(
-    walletLinkAccountAttempts,
-    accountId,
-    WALLET_LINK_MAX_PER_MINUTE,
-  );
-  return mergeFusedOutcomes(ip, account);
-}
-
-/** Reset wallet-link verification throttles. Test-only: keeps scoped buckets isolated. */
-export function resetWalletLinkRateLimits(): void {
-  walletLinkIpAttempts.clear();
-  walletLinkAccountAttempts.clear();
-}
-
-/** Bound native SGT ownership RPC work independently from wallet-link attempts. */
-export function seekerSpinVerifyRateLimited(
-  req: http.IncomingMessage,
-  accountId: number,
-): RateLimitOutcome {
-  const ip = recordSlidingWindowAttempt(
-    seekerSpinVerifyIpAttempts,
-    requestIp(req),
-    SEEKER_SPIN_VERIFY_MAX_PER_MINUTE,
-  );
-  const account = recordSlidingWindowAttempt(
-    seekerSpinVerifyAccountAttempts,
-    accountId,
-    SEEKER_SPIN_VERIFY_MAX_PER_MINUTE,
-  );
-  return mergeFusedOutcomes(ip, account);
-}
-
-/** Reset Seeker spin verification throttles. Test-only. */
-export function resetSeekerSpinVerifyRateLimits(): void {
-  seekerSpinVerifyIpAttempts.clear();
-  seekerSpinVerifyAccountAttempts.clear();
 }
 
 // Discord link/status/reward endpoints share one dedicated bucket (per IP AND

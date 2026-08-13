@@ -353,11 +353,6 @@ export class ApiError extends Error {
   }
 }
 
-export interface SeekerEntitlementStatus {
-  entitled: boolean;
-  mint: string | null;
-}
-
 // Builds the ApiError for a non-ok JSON response, capturing the stable `code` and
 // the body params when the server sent them (both problem+json and the migrated
 // legacy `{ error, code, ... }` bodies carry a top-level `code`).
@@ -574,71 +569,6 @@ export class Api {
     const data = await this.post('/api/desktop-login/exchange', { code });
     this.token = data.token;
     this.username = data.username;
-  }
-
-  async createDesktopWalletHandoff(
-    action: { kind: 'link' } | { kind: 'transaction'; reference: string; expectedAddress: string },
-  ): Promise<{ code: string; expiresInMs: number }> {
-    const data = await this.post(
-      '/api/desktop-wallet/create',
-      action,
-      DESKTOP_API_ORIGIN || this.base,
-    );
-    return {
-      code: typeof data.code === 'string' ? data.code : '',
-      expiresInMs: typeof data.expiresInMs === 'number' ? data.expiresInMs : 0,
-    };
-  }
-
-  async desktopWalletHandoffResult(code: string): Promise<
-    | { status: 'missing' | 'pending' }
-    | {
-        status: 'complete';
-        result:
-          | { kind: 'link'; address: string; nonce: string; signature: string }
-          | { kind: 'transaction'; address: string; signature: string };
-      }
-  > {
-    const data = await this.post(
-      '/api/desktop-wallet/result',
-      { code },
-      DESKTOP_API_ORIGIN || this.base,
-    );
-    if (data.status !== 'complete' || !data.result || typeof data.result !== 'object') {
-      return { status: data.status === 'pending' ? 'pending' : 'missing' };
-    }
-    const result = data.result as Record<string, unknown>;
-    if (
-      result.kind === 'link' &&
-      typeof result.address === 'string' &&
-      typeof result.nonce === 'string' &&
-      typeof result.signature === 'string'
-    ) {
-      return {
-        status: 'complete',
-        result: {
-          kind: 'link',
-          address: result.address,
-          nonce: result.nonce,
-          signature: result.signature,
-        },
-      };
-    }
-    if (
-      result.kind === 'transaction' &&
-      typeof result.address === 'string' &&
-      typeof result.signature === 'string'
-    ) {
-      return {
-        status: 'complete',
-        result: {
-          kind: 'transaction',
-          address: result.address,
-          signature: result.signature,
-        },
-      };
-    }
-    return { status: 'missing' };
   }
 
   // ── Persistent session (home-page account portal) ──────────────────────────
@@ -919,43 +849,6 @@ export class Api {
     } catch {
       return [];
     }
-  }
-
-  // ── Non-custodial Solana wallet linking ───────────────────────────────────
-  // Step 1: ask the server for the exact message to sign for this address.
-  async walletLinkChallenge(address: string): Promise<{ nonce: string; message: string }> {
-    return this.post('/api/wallet/link/challenge', { address });
-  }
-
-  // Step 2: submit the wallet's signature; server verifies + persists the link.
-  async linkWallet(address: string, signature: string, nonce: string): Promise<{ pubkey: string }> {
-    return this.post('/api/wallet/link', { address, signature, nonce });
-  }
-
-  // Current account's linked wallet (null when none).
-  async linkedWallet(): Promise<{ pubkey: string; linkedAt: string } | null> {
-    const data = await this.get('/api/wallet');
-    return data.wallet ?? null;
-  }
-
-  async unlinkWallet(): Promise<void> {
-    await this.delete('/api/wallet/link', {});
-  }
-
-  async seekerEntitlement(): Promise<SeekerEntitlementStatus> {
-    const data = await this.get('/api/seeker/entitlement');
-    return {
-      entitled: data.entitled === true,
-      mint: typeof data.mint === 'string' ? data.mint : null,
-    };
-  }
-
-  async claimSeekerEntitlement(nativeAttestation: unknown): Promise<SeekerEntitlementStatus> {
-    const data = await this.post('/api/seeker/entitlement', { nativeAttestation });
-    return {
-      entitled: data.entitled === true,
-      mint: typeof data.mint === 'string' ? data.mint : null,
-    };
   }
 
   // ── Discord link/login + status ────────────────────────────────────────────

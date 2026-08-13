@@ -756,13 +756,6 @@ import { ValeCupIndicator } from './vale_cup_indicator';
 import { buildVcupIndicatorView } from './vale_cup_indicator_view';
 import { ValeCupWindow, vcupNationName } from './vale_cup_window';
 import { nextVoicedYell, type VoicedYellState, voicedYellGain } from './voice_events';
-import {
-  onWalletUiChange,
-  walletConnectionView,
-  walletUiEnabled,
-  wocBalance,
-  wocBalanceVerified,
-} from './wallet_balance';
 import { type WeaponProcEffectDesc, weaponProcLines } from './weapon_proc_view';
 import { weaponTypeLabelKey } from './weapon_type_label';
 import { promptWikiVisit } from './wiki_link';
@@ -798,10 +791,6 @@ export interface OptionsHooks {
   // fans out woc:languagechange). onStatus receives localized progress/error text for an
   // aria-live element. Resolves false if the locale failed to load (active locale kept).
   changeLanguage(lang: SupportedLanguage, onStatus?: (msg: string) => void): Promise<boolean>;
-  // Re-fetch the connected/linked wallet's $WOC balance (server cache-bypassed) so the
-  // bag footer and player card reflect on-chain token changes. No-op when the wallet
-  // feature is off or no wallet is connected/linked.
-  refreshWocBalance(): void;
   // Account deed-broadcast opt-out seam (accounts.deed_broadcasts): whether a
   // marquee deed unlock fans out to guildmates and followers, and whether the
   // Discord activity feed posts the account's deed and masterwork cards (R58).
@@ -2281,11 +2270,6 @@ export class Hud {
       preview: () => this.charPreview,
       openFocusTrap: (root) => this.focusManager.open({ root }),
       options: {
-        refreshBalance: () => this.optionsHooks?.refreshWocBalance(),
-        showWallet: () => this.optionsHooks?.settings.get('showWalletOnPlayerCard') ?? true,
-        setShowWallet: (show) => {
-          this.optionsHooks?.onSettingChange('showWalletOnPlayerCard', show);
-        },
         showDevBadges: () => this.optionsHooks?.settings.get('showDevBadges') ?? true,
       },
       slotName: itemSlotName,
@@ -2373,16 +2357,6 @@ export class Hud {
     this.refreshKeybindLabels();
     this.buildXpTicks();
     document.addEventListener('woc:languagechange', () => this.refreshLocalizedDynamicUi());
-    // re-render the bag footer (and re-composite an open player card) when the
-    // connected wallet's $WOC balance changes
-    onWalletUiChange(() => {
-      // Footer-only, as this comment always claimed: the balance lands asynchronously
-      // with no user action behind it, so a full rebuild would drop the bag-search
-      // caret and strand a hovered tooltip. Cold-load-safe gate (#1538) too.
-      if (bagsWindowShown($('#bags').style.display)) this.bagsWindow.refreshMoneyRow();
-      this.playerCard.refresh();
-      this.claudiumWindow.onWalletChanged();
-    });
     $('#pf-name').textContent = sim.player.name;
     this.drawPlayerFramePortrait();
     // Character GLBs preload after the HUD mounts; once the real 3D portraits are
@@ -4646,10 +4620,8 @@ export class Hud {
     ...this.presentationBag,
     root: () => $('#bags'),
     world: () => this.sim,
-    wocBalanceHtml: () => this.wocBalanceHtml(),
     claudiumLauncherHtml: () => this.claudiumLauncherHtml(),
     openClaudium: () => this.toggleClaudium(),
-    openWallet: () => window.dispatchEvent(new CustomEvent('woc:wallet-verify')),
     hideTooltip: () => this.hideTooltip(),
     consumePeek: () => this.peekGuard.consume(),
     cancelPetFeed: () => this.cancelPetFeed(),
@@ -5171,9 +5143,6 @@ export class Hud {
       this.applyDailyRewardsLauncherStatus(status);
     },
     onClose: () => this.refreshDailyRewardsLauncher(true),
-    onWalletConnect: () => {
-      window.dispatchEvent(new CustomEvent('woc:wallet-verify'));
-    },
     storeEnabled: () => this.claudiumHooks !== null,
     storeSnapshot: async () => {
       const snapshot = await this.claudiumHooks?.storeSnapshot();
@@ -5243,10 +5212,6 @@ export class Hud {
       return snapshot;
     },
     buy: (rail, sku) => this.claudiumHooks?.buy(rail, sku) ?? Promise.resolve(),
-    onWalletConnect: () => {
-      window.dispatchEvent(new CustomEvent('woc:wallet-verify'));
-    },
-    walletState: () => walletConnectionView(),
     ...this.windowFocus('#claudium-window'),
     onVisibilityChange: () => this.syncAnyWindowOpenState(),
   });
@@ -5421,33 +5386,6 @@ export class Hud {
     if (parts.silver > 0 || parts.gold > 0) html += coin(parts.silver, 's', 'itemUi.money.silver');
     html += coin(parts.copper, 'c', 'itemUi.money.copper');
     return `<span class="money-inline" aria-label="${esc(formatLocalizedMoney(copper, 'long'))}">${html}</span>`;
-  }
-
-  // The connected wallet's $WOC balance, shown left of the coins in the bag.
-  // Unlinked balances are a local preview; verified balances belong to the
-  // account-linked wallet and may drive public holder claims elsewhere.
-  private wocBalanceHtml(): string {
-    if (!walletUiEnabled()) return '';
-    const state = walletConnectionView();
-    const bal = wocBalance();
-    if (bal === null) {
-      const label =
-        state.kind === 'linked_disconnected'
-          ? t('wallet.bagReconnect')
-          : state.kind === 'connected_unlinked' || state.kind === 'mismatched'
-            ? t('wallet.bagLink')
-            : t('wallet.bagConnect');
-      return `<button type="button" class="woc-balance woc-wallet-action" data-wallet-action aria-label="${esc(label)}"><span class="woc-coin" aria-hidden="true"></span>${esc(label)}</button>`;
-    }
-    const amount = formatNumber(bal, { maximumFractionDigits: 2 });
-    const balance = t('wallet.balanceAmount', { amount });
-    const verified = wocBalanceVerified();
-    const title = verified ? t('wallet.balanceTitle') : t('wallet.balancePreviewTitle');
-    const aria = verified
-      ? t('wallet.balanceAria', { balance })
-      : t('wallet.balancePreviewAria', { balance });
-    const tag = verified ? 'span' : 'button type="button" data-wallet-action';
-    return `<${tag} class="woc-balance ${verified ? 'is-verified' : 'is-preview'}" title="${esc(title)}" aria-label="${esc(aria)}"><span class="woc-coin" aria-hidden="true"></span>${esc(balance)}</${verified ? 'span' : 'button'}>`;
   }
 
   private claudiumLauncherHtml(): string {
@@ -16517,11 +16455,6 @@ export class Hud {
     // Dock the char-sheet pairing when its companion opens (the touch cluster).
     this.syncCharBagsPairing();
     audio.bagOpen();
-    // Pull a fresh on-chain $WOC balance for the footer; the async result repaints
-    // the footer (not the whole bag) via the onWalletUiChange listener wired in the
-    // ctor. The display is set to 'flex' above precisely so that listener's
-    // bagsWindowShown gate sees an open window when the balance lands.
-    this.optionsHooks?.refreshWocBalance();
   }
 
   // Called when an authoritative inventory delta lands (online snapshots

@@ -15,7 +15,7 @@
 // The functions mirror the service SDK v1 surface; they do NOT recompute any
 // value, they only pass through what the service returns.
 
-import { DESKTOP_WALLET_HANDOFF_TTL_MS, desktopWalletHandoffs } from './desktop_wallet_handoff';
+import { randomBytes as nodeRandomBytes } from 'node:crypto';
 
 const SERVICE_TIMEOUT_MS = 5000;
 const NATIVE_CONFIRM_TIMEOUT_MS = 60_000;
@@ -451,6 +451,231 @@ export async function claudiumPurchase(input: {
     reason: null,
   };
 }
+
+// ---------------------------------------------------------------------------
+// The native-quote handoff store. This used to live in server/desktop_wallet_handoff.ts
+// alongside the wallet-link handoff; that module went away with the wallet surface,
+// so the transaction half moved here, the one place that still uses it. Same TTL,
+// same single-use semantics: a code is bound to the creating account and browser IP,
+// expires with the quote, and cannot be claimed or completed twice.
+// ---------------------------------------------------------------------------
+
+export const DESKTOP_WALLET_HANDOFF_TTL_MS = 5 * 60 * 1000;
+const HANDOFF_CODE_BYTES = 32;
+const MAX_ACTIVE_HANDOFFS = 2_000;
+
+export interface DesktopWalletTransactionAuthorization {
+  reference: string;
+  transactionBase64: string;
+  expectedAddress: string;
+  rail: ClaudiumNativeRail;
+  amountBase: string | null;
+  destination: string | null;
+  expiresAtMs: number;
+}
+
+export type DesktopWalletHandoffAction = {
+  kind: 'transaction';
+} & Omit<DesktopWalletTransactionAuthorization, 'expiresAtMs'>;
+
+export type DesktopWalletHandoffResult = {
+  kind: 'transaction';
+  address: string;
+  signature: string;
+};
+
+export type DesktopWalletHandoffStatus =
+  | { status: 'missing' }
+  | { status: 'pending' }
+  | { status: 'complete'; result: DesktopWalletHandoffResult };
+
+interface HandoffEntry {
+  accountId: number;
+  ip: string;
+  createdAt: number;
+  expiresAtMs: number;
+  action: DesktopWalletHandoffAction;
+  result: DesktopWalletHandoffResult | null;
+}
+
+interface StoreOptions {
+  now?: () => number;
+  randomBytes?: (size: number) => Uint8Array;
+}
+
+interface HandoffCreated {
+  code: string;
+  expiresInMs: number;
+}
+
+export interface DesktopWalletHandoffStore {
+  authorizeTransaction(
+    accountId: number,
+    authorization: DesktopWalletTransactionAuthorization,
+  ): void;
+  createTransaction(
+    accountId: number,
+    ip: string,
+    request: { reference: string; expectedAddress: string },
+  ): HandoffCreated;
+  claim(code: unknown, ip: string): DesktopWalletHandoffAction;
+  complete(code: unknown, ip: string, result: DesktopWalletHandoffResult): void;
+  result(accountId: number, code: unknown): DesktopWalletHandoffStatus;
+  clear(): void;
+}
+
+interface AuthorizedTransaction extends DesktopWalletTransactionAuthorization {
+  accountId: number;
+}
+
+function encodeBase64Url(bytes: Uint8Array): string {
+  return Buffer.from(bytes).toString('base64url');
+}
+
+function validCode(code: unknown): code is string {
+  return typeof code === 'string' && /^[A-Za-z0-9_-]{43}$/.test(code);
+}
+
+function handoffError(message: string): Error {
+  const error = new Error(message);
+  error.name = 'DesktopWalletHandoffError';
+  return error;
+}
+
+export function createDesktopWalletHandoffStore(
+  options: StoreOptions = {},
+): DesktopWalletHandoffStore {
+  const now = options.now ?? Date.now;
+  const randomBytes = options.randomBytes ?? nodeRandomBytes;
+  const entries = new Map<string, HandoffEntry>();
+  const authorizedTransactions = new Map<string, AuthorizedTransaction>();
+
+  const transactionKey = (accountId: number, reference: string): string =>
+    `${accountId}:${reference}`;
+
+  const prune = (): void => {
+    const currentTime = now();
+    for (const [code, entry] of entries) {
+      if (entry.expiresAtMs <= currentTime) entries.delete(code);
+    }
+    for (const [key, authorization] of authorizedTransactions) {
+      if (authorization.expiresAtMs <= currentTime) authorizedTransactions.delete(key);
+    }
+  };
+
+  const createEntry = (
+    accountId: number,
+    ip: string,
+    action: DesktopWalletHandoffAction,
+    absoluteExpiryMs?: number,
+  ): HandoffCreated => {
+    prune();
+    if (entries.size >= MAX_ACTIVE_HANDOFFS) {
+      throw handoffError('too many active wallet handoffs');
+    }
+    const createdAt = now();
+    const expiresAtMs = Math.min(
+      createdAt + DESKTOP_WALLET_HANDOFF_TTL_MS,
+      absoluteExpiryMs ?? Number.POSITIVE_INFINITY,
+    );
+    if (expiresAtMs <= createdAt) throw handoffError('invalid or expired wallet handoff');
+    const code = encodeBase64Url(randomBytes(HANDOFF_CODE_BYTES));
+    entries.set(code, { accountId, ip, createdAt, expiresAtMs, action, result: null });
+    return { code, expiresInMs: expiresAtMs - createdAt };
+  };
+
+  const browserEntry = (code: unknown, ip: string): HandoffEntry => {
+    if (!validCode(code)) throw handoffError('invalid or expired wallet handoff');
+    const entry = entries.get(code);
+    if (!entry || entry.ip !== ip || entry.expiresAtMs <= now()) {
+      if (entry) entries.delete(code);
+      throw handoffError('invalid or expired wallet handoff');
+    }
+    return entry;
+  };
+
+  return {
+    authorizeTransaction(accountId, authorization) {
+      prune();
+      if (authorizedTransactions.size >= MAX_ACTIVE_HANDOFFS) {
+        throw handoffError('too many active wallet handoffs');
+      }
+      if (
+        !authorization.reference ||
+        authorization.reference.length > 256 ||
+        !authorization.transactionBase64 ||
+        authorization.transactionBase64.length > 16_384 ||
+        !Number.isFinite(authorization.expiresAtMs) ||
+        authorization.expiresAtMs <= now()
+      ) {
+        throw handoffError('invalid Claudium transaction authorization');
+      }
+      authorizedTransactions.set(transactionKey(accountId, authorization.reference), {
+        accountId,
+        ...authorization,
+      });
+    },
+
+    createTransaction(accountId, ip, request) {
+      prune();
+      const authorization = authorizedTransactions.get(
+        transactionKey(accountId, request.reference),
+      );
+      if (
+        !authorization ||
+        authorization.expectedAddress !== request.expectedAddress ||
+        authorization.expiresAtMs <= now()
+      ) {
+        throw handoffError('transaction is not backed by an authorized Claudium quote');
+      }
+      return createEntry(
+        accountId,
+        ip,
+        {
+          kind: 'transaction',
+          reference: authorization.reference,
+          transactionBase64: authorization.transactionBase64,
+          expectedAddress: authorization.expectedAddress,
+          rail: authorization.rail,
+          amountBase: authorization.amountBase,
+          destination: authorization.destination,
+        },
+        authorization.expiresAtMs,
+      );
+    },
+
+    claim(code, ip) {
+      const entry = browserEntry(code, ip);
+      if (entry.result) throw handoffError('wallet handoff is already complete');
+      return entry.action;
+    },
+
+    complete(code, ip, result) {
+      const entry = browserEntry(code, ip);
+      if (entry.result) throw handoffError('wallet handoff is already complete');
+      if (entry.action.expectedAddress !== result.address) {
+        throw handoffError('wallet does not match the linked account wallet');
+      }
+      entry.result = result;
+    },
+
+    result(accountId, code) {
+      prune();
+      if (!validCode(code)) return { status: 'missing' };
+      const entry = entries.get(code);
+      if (!entry || entry.accountId !== accountId) return { status: 'missing' };
+      if (!entry.result) return { status: 'pending' };
+      return { status: 'complete', result: entry.result };
+    },
+
+    clear() {
+      entries.clear();
+      authorizedTransactions.clear();
+    },
+  };
+}
+
+export const desktopWalletHandoffs = createDesktopWalletHandoffStore();
 
 export async function claudiumNativeQuote(input: {
   accountId: number;

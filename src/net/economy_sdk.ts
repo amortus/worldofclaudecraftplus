@@ -451,7 +451,7 @@ export async function startClaudiumPurchase(
   }
 
   if (!signers.nativeSignAndSend) return OFF_NATIVE_QUOTE;
-  const payer = signers.nativePayer ?? (await import('./wallet')).currentWallet().address;
+  const payer = signers.nativePayer;
   if (!payer) return OFF_NATIVE_QUOTE;
   const quote = await client.nativeQuote({ rail, sku, payer });
   if (!quote.ok || !quote.reference || !quote.transactionBase64) return quote;

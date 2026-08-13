@@ -156,12 +156,9 @@ export interface BagsWindowDeps extends PainterHostPresentation {
   root(): HTMLElement;
   /** The live world (offline Sim or online ClientWorld mirror). */
   world(): IWorld;
-  /** Localized $WOC on-chain balance markup for the money footer. */
-  wocBalanceHtml(): string;
   /** Localized launcher for the Claudium store, empty when the feature is not available. */
   claudiumLauncherHtml(): string;
   openClaudium(): void;
-  openWallet(): void;
   hideTooltip(): void;
   /** True when this click is the release of a long-press tooltip peek, so the
    *  stack's action (use / sell / deposit / feed) must be SUPPRESSED. Wired to the
@@ -349,12 +346,9 @@ export class BagsWindow {
    *  from isModalOpen(), so canUseGameKeys() stays true and Tab is swallowed by
    *  target-nearest, which means keyboard focus never lands in here to begin with. */
   private paintMoneyRow(row: HTMLElement, copper: number): void {
-    row.innerHTML = `${this.deps.wocBalanceHtml()}${this.deps.claudiumLauncherHtml()}${this.deps.moneyHtml(copper)}`;
+    row.innerHTML = `${this.deps.claudiumLauncherHtml()}${this.deps.moneyHtml(copper)}`;
     row.querySelector('[data-claudium-launcher]')?.addEventListener('click', () => {
       this.deps.openClaudium();
-    });
-    row.querySelector('[data-wallet-action]')?.addEventListener('click', () => {
-      this.deps.openWallet();
     });
     this.lastMoneyCopper = copper;
   }

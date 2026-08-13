@@ -314,8 +314,6 @@ import {
   recordAuthFailure,
   requestIp,
   setRateLimitTier2Store,
-  walletLinkRateLimited,
-  wocBalanceRateLimited,
 } from './ratelimit';
 import { createPgRateLimitStore } from './ratelimit_db';
 import { isPublicCorsPath, publicOriginFromRequest, REALM, REALM_DIRECTORY } from './realm';
@@ -348,19 +346,8 @@ import {
   assetsListMineCore,
   assetUploadCore,
 } from './user_assets_routes';
-import {
-  configureWalletRuntime,
-  handleDesktopWalletHandoffClaim,
-  handleDesktopWalletHandoffComplete,
-  handleDesktopWalletHandoffCreate,
-  handleDesktopWalletHandoffResult,
-  handleWalletChallenge,
-  handleWalletGet,
-  handleWalletLink,
-  handleWalletUnlink,
-} from './wallet';
+import { configureWalletRuntime } from './wallet';
 import { allowedCorsOrigin, isWebClientRequest } from './web_login_guard';
-import { handleWocBalance, parseWocBalanceQuery } from './woc_balance';
 import { createWsAuth } from './ws_auth';
 import { bufferHandshakeMessages } from './ws_buffer';
 
@@ -410,8 +397,6 @@ const STATIC_PAGE_ALIASES = new Map([
   ['/social-media-links/', '/links.html'],
   ['/play', '/play.html'],
   ['/play/', '/play.html'],
-  ['/wallet-handoff', '/wallet-handoff.html'],
-  ['/wallet-handoff/', '/wallet-handoff.html'],
   ['/privacy', '/privacy.html'],
   ['/privacy/', '/privacy.html'],
   ['/terms', '/terms.html'],
@@ -2353,48 +2338,6 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
       const token = new URL(req.url ?? '', 'http://localhost').searchParams.get('token') ?? '';
       return handleEmailUnsubscribe(res, token);
     }
-    // Non-custodial Solana wallet linking, all account-scoped.
-    if (req.method === 'POST' && url === '/api/desktop-wallet/create') {
-      const accountId = await bearerActiveAccount(req, res);
-      if (accountId === null) return;
-      if (!walletLinkRateLimited(req, accountId).allowed) {
-        return json(res, 429, { error: 'rate limited' });
-      }
-      return handleDesktopWalletHandoffCreate(req, res, accountId);
-    }
-    if (req.method === 'POST' && url === '/api/desktop-wallet/claim') {
-      if (!publicReadRateLimited(req).allowed) return json(res, 429, { error: 'rate_limited' });
-      return handleDesktopWalletHandoffClaim(req, res);
-    }
-    if (req.method === 'POST' && url === '/api/desktop-wallet/complete') {
-      if (!publicReadRateLimited(req).allowed) return json(res, 429, { error: 'rate_limited' });
-      return handleDesktopWalletHandoffComplete(req, res);
-    }
-    if (req.method === 'POST' && url === '/api/desktop-wallet/result') {
-      const accountId = await bearerActiveAccount(req, res);
-      if (accountId === null) return;
-      return handleDesktopWalletHandoffResult(req, res, accountId);
-    }
-    if (req.method === 'POST' && url === '/api/wallet/link/challenge') {
-      const accountId = await bearerActiveAccount(req, res);
-      if (accountId === null) return;
-      return handleWalletChallenge(req, res, accountId);
-    }
-    if (req.method === 'POST' && url === '/api/wallet/link') {
-      const accountId = await bearerActiveAccount(req, res);
-      if (accountId === null) return;
-      return handleWalletLink(req, res, accountId);
-    }
-    if (req.method === 'DELETE' && url === '/api/wallet/link') {
-      const accountId = await bearerActiveAccount(req, res);
-      if (accountId === null) return;
-      return handleWalletUnlink(req, res, accountId);
-    }
-    if (req.method === 'GET' && url === '/api/wallet') {
-      const accountId = await bearerActiveAccount(req, res);
-      if (accountId === null) return;
-      return handleWalletGet(req, res, accountId);
-    }
     if (req.method === 'POST' && url === '/api/auth/apple') {
       return handleAppleLogin(req, res, await readBody(req));
     }
@@ -2491,18 +2434,6 @@ async function handleApi(req: http.IncomingMessage, res: http.ServerResponse): P
       if (!githubRateLimited(req, accountId).allowed)
         return json(res, 429, { error: 'rate limited' });
       return handleGitHubUnlink(req, res, accountId);
-    }
-    // $WOC balance proxy, keeps the Solana RPC endpoint (and any key in it)
-    // server-side so it never ships in the client bundle. Public (on-chain
-    // balances are public) but narrow + IP rate-limited + per-wallet cached.
-    if (req.method === 'GET' && url === '/api/woc/balance') {
-      if (!wocBalanceRateLimited(req).allowed) {
-        recordUsageMetric('woc.balance.rate_limited');
-        return json(res, 429, { error: 'rate limited' });
-      }
-      // `fresh=1` is parsed AFTER the IP rate-limit above, so it can't be used to hammer the RPC.
-      const { owner, fresh } = parseWocBalanceQuery(req.url ?? '');
-      return handleWocBalance(res, owner, fresh);
     }
     if (url.startsWith('/api/daily-rewards')) {
       const accountId = await bearerActiveAccount(req, res);
@@ -2784,11 +2715,11 @@ configureAccountRuntime({
   disconnectAccount: (id, reason) => liveGame().disconnectAccount(id, reason),
 });
 
-// Inject the one main.ts-local singleton the ported wallet handlers
-// (server/wallet.ts) need but cannot import without a cycle: the live
+// Inject the one main.ts-local singleton the ported card handler
+// (server/wallet.ts) needs but cannot import without a cycle: the live
 // authoritative Sim level the /api/card publish reads for an online character.
 // This is the exact (characterId) => game.liveLevelForCharacter(characterId) the
-// legacy /api/card arm passed to handleCardUpload; the legacy wallet/card/referral
+// legacy /api/card arm passed to handleCardUpload; the legacy card/referral
 // arms stay intact as the flag-off rollback path.
 configureWalletRuntime({
   liveLevelForCharacter: (characterId) => liveGame().liveLevelForCharacter(characterId),
