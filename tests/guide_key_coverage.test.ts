@@ -188,6 +188,12 @@ const RETIRED_KEYS: string[] = [
   'guide.abilityHook.stormsurge',
   'guide.abilityHook.tidecall',
   'guide.abilityHook.veilbound_march',
+
+  // Retired with the crypto removal: this fork deleted the Solana wallet surface, so the
+  // settings row it documented (whether your wallet shows on the character screen) no
+  // longer exists in src/guide/pages/settings.ts. The English source and its translations
+  // stay behind untouched, exactly like every other entry in this list.
+  'guide.settingsPage.ifWallet',
 ];
 
 /**

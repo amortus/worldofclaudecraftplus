@@ -23,7 +23,7 @@ describe('apiOriginKey', () => {
   it('normalizes equivalent spellings to one origin', () => {
     expect(apiOriginKey('https://worldofclaudecraft.com.br')).toBe('https://worldofclaudecraft.com.br');
     expect(apiOriginKey('https://worldofclaudecraft.com.br/')).toBe('https://worldofclaudecraft.com.br');
-    expect(apiOriginKey('HTTPS://WorldOfClaudeCraft.COM')).toBe('https://worldofclaudecraft.com.br');
+    expect(apiOriginKey('HTTPS://WorldOfClaudeCraft.COM.BR')).toBe('https://worldofclaudecraft.com.br');
     expect(apiOriginKey('http://localhost:8787')).toBe('http://localhost:8787');
   });
 
