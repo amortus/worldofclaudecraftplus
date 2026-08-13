@@ -82,21 +82,13 @@ describe('Daily Rewards ban query enforcement', () => {
     expect(view).not.toContain('OR EXISTS');
   });
 
-  it('filters banned accounts from current leaderboard reads and pending payouts', async () => {
+  it('filters banned accounts from current leaderboard reads', async () => {
     mocks.query.mockResolvedValue({ rows: [] });
-    const db = new PgDailyRewardDb();
 
-    await db.leaderboardTotal('2026-07-11');
-    await db.pendingPayouts(20);
+    await new PgDailyRewardDb().leaderboardTotal('2026-07-11');
 
     expect(mocks.query.mock.calls[0][0]).toContain('NOT EXISTS');
     expect(mocks.query.mock.calls[0][0]).toContain('daily_reward_excluded_accounts');
-    expect(mocks.query.mock.calls[1][0]).toContain('NOT EXISTS');
-    expect(mocks.query.mock.calls[1][0]).toContain('daily_reward_excluded_accounts');
-    // Pay-time recheck: a ban or suspension landing after finalization still
-    // blocks the payout row.
-    expect(mocks.query.mock.calls[1][0]).toContain(ELIGIBLE_ACCOUNT_SQL);
-    expect(mocks.query.mock.calls[1][0]).toContain('a.id = p.account_id');
   });
 
   it('filters banned accounts from the board-cache snapshot read', async () => {
@@ -137,30 +129,6 @@ describe('Daily Rewards ban query enforcement', () => {
     // leaderboardPage issues the total read then the page read.
     const pageSql = String(mocks.query.mock.calls[2][0]);
     expect(occurrences(pageSql)).toBe(2);
-  });
-
-  it('filters banned accounts while selecting end-of-day winners', async () => {
-    const query = vi
-      .fn()
-      .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [{ '?column?': 1 }], rowCount: 1 })
-      .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValue({ rows: [] });
-    const release = vi.fn();
-    mocks.connect.mockResolvedValue({ query, release });
-
-    await new PgDailyRewardDb().finalizeDay('2026-07-11', 150, [1]);
-
-    const winnerQuery = query.mock.calls.find(([sql]) =>
-      String(sql).includes('FROM daily_reward_scores s'),
-    );
-    expect(winnerQuery?.[0]).toContain('NOT EXISTS');
-    expect(winnerQuery?.[0]).toContain('daily_reward_excluded_accounts');
-    // Winner selection uses the same account-eligibility predicate as the
-    // displayed board, so the payout ranks match what players see.
-    expect(winnerQuery?.[0]).toContain(ELIGIBLE_ACCOUNT_SQL);
-    expect(winnerQuery?.[0]).toContain('a.id = s.account_id');
-    expect(release).toHaveBeenCalledOnce();
   });
 
   it('prevents point and spin writes after a ban races an eligibility check', async () => {
@@ -255,25 +223,6 @@ describe('Daily Rewards finalize read and score writes', () => {
     expect(statements.some((sql) => sql.includes('daily_reward_spins'))).toBe(false);
   });
 
-  it('reads the finalized flag using the realm argument, not the module realm', async () => {
-    mocks.query.mockResolvedValue({ rows: [{ ok: 1 }], rowCount: 1 });
-
-    const finalized = await new PgDailyRewardDb().dayFinalized('2026-07-01', 'other-realm');
-
-    expect(finalized).toBe(true);
-    expect(mocks.query.mock.calls[0][0]).toContain('finalized_at IS NOT NULL');
-    // The bound params come from the arguments, never the mocked module REALM
-    // ('test-realm'), so the guard's realm and the query's realm cannot diverge.
-    expect(mocks.query.mock.calls[0][1]).toEqual(['2026-07-01', 'other-realm']);
-  });
-
-  it('reports a day with no finalized row as not finalized', async () => {
-    mocks.query.mockResolvedValue({ rows: [], rowCount: 0 });
-    await expect(new PgDailyRewardDb().dayFinalized('2026-07-01', 'test-realm')).resolves.toBe(
-      false,
-    );
-  });
-
   it('refreshes the score updated_at only when the incoming points are nonzero', async () => {
     const query = vi
       .fn()
@@ -325,35 +274,16 @@ describe('Daily Rewards finalize read and score writes', () => {
     expect(statements).toContain('COMMIT');
   });
 
-  it('stops rewriting the prize pool once the day is finalized', async () => {
+  it('seeds the day row idempotently', async () => {
     mocks.query.mockResolvedValue({ rows: [], rowCount: 1 });
 
-    await new PgDailyRewardDb().ensureDay('2026-07-11', 150, 0.5);
+    await new PgDailyRewardDb().ensureDay('2026-07-11');
 
     const sql = String(mocks.query.mock.calls[0][0]);
-    // The conflict update is fenced on the unfinalized day: after finalizeDay
-    // stamps finalized_at, a straggler previous-day event can no longer drift
-    // the announced prize pool away from its finalize-time value.
-    expect(sql).toContain('ON CONFLICT (day, realm) DO UPDATE');
-    expect(sql).toContain('WHERE daily_reward_days.finalized_at IS NULL');
-    expect(mocks.query.mock.calls[0][1]).toEqual(['2026-07-11', 'test-realm', 150, 0.5]);
-  });
-
-  it('makes finalization a conditional one-time database transition', async () => {
-    const query = vi
-      .fn()
-      .mockResolvedValueOnce({ rows: [] }) // BEGIN
-      .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // already finalized
-      .mockResolvedValueOnce({ rows: [] }); // COMMIT
-    mocks.connect.mockResolvedValue({ query, release: vi.fn() });
-
-    await expect(new PgDailyRewardDb().finalizeDay('2026-07-11', 150, [1])).resolves.toBe(
-      'already_finalized',
-    );
-    const statements = query.mock.calls.map(([sql]) => String(sql));
-    expect(statements[1]).toContain('finalized_at IS NULL');
-    expect(statements[1]).toContain('RETURNING 1');
-    expect(statements.some((sql) => sql.includes('FROM daily_reward_scores'))).toBe(false);
+    // The row is what the ledger and spin writes share-lock, so seeding it is
+    // the whole job; there is nothing left on it to update once it exists.
+    expect(sql).toContain('ON CONFLICT (day, realm) DO NOTHING');
+    expect(mocks.query.mock.calls[0][1]).toEqual(['2026-07-11', 'test-realm']);
   });
 
   it('rejects score writes after the day has finalized', async () => {

@@ -335,8 +335,7 @@ Required: `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_GUILD_ID`,
 `DISCORD_VOICE_CHANNEL_ID` (featured voice room), `DISCORD_TEST_CHANNEL_ID`
 (one-time startup announcement), `DISCORD_RELAY_CHANNEL_ID` (falls back to test),
 `DISCORD_ACTIVITY_CHANNEL_ID` (falls back to relay, then test),
-`DISCORD_DAILY_REWARDS_CHANNEL_ID`, `DISCORD_SYNC_NICKNAMES` (`0` disables, default
-on). Governor knobs (all optional, safe defaults): `DISCORD_MAX_RPS`,
+`DISCORD_SYNC_NICKNAMES` (`0` disables, default on). Governor knobs (all optional, safe defaults): `DISCORD_MAX_RPS`,
 `DISCORD_BAN_PAUSE_MS`, `DISCORD_BREAKER_LIMIT`, `DISCORD_FORBIDDEN_TTL_MS`. Loop
 cadences (D13, all optional): `DISCORD_ROLE_SYNC_INTERVAL_MS`,
 `DISCORD_PRESENCE_DEBOUNCE_MS`, `DISCORD_OUTBOX_POLL_MS`, `DISCORD_OUTBOX_IDLE_MS`,

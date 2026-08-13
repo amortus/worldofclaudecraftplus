@@ -1,6 +1,6 @@
 // The consolidated outbox poll: the breaker gate, the per-stream fan-out, the
-// announce-then-mark ordering, the didWork signal that decides the cadence, and
-// the channel routing the factory binds.
+// didWork signal that decides the cadence, and the channel routing the factory
+// binds.
 //
 // All of it runs over the injected IO seam with plain closures, so there is no
 // network, no Discord token and no clock. The two cases that need a clock drive
@@ -9,10 +9,8 @@
 // used (see that helper's header), and a lower bound like `>= 3000` would also
 // pass for a loop that waited ten minutes.
 import { describe, expect, it } from 'vitest';
-import type { ActivityItem, DailyRewardWinnersDay, RelayItem } from '../bot/logic';
+import type { ActivityItem, RelayItem } from '../bot/logic';
 import {
-  ANNOUNCED_DAYS_MAX,
-  freshOutboxPollState,
   OutboxChannelUnsetError,
   type OutboxIo,
   outboxIoFor,
@@ -52,27 +50,6 @@ function activityItem(name = 'Annthar'): ActivityItem {
   };
 }
 
-function winnersDay(day: string): DailyRewardWinnersDay {
-  return {
-    day,
-    taskName: 'gather',
-    nextTaskName: 'delve',
-    realm: 'Eastbrook',
-    prizePoolUsd: 100,
-    finalizedAt: null,
-    payouts: [
-      {
-        rank: 1,
-        username: 'ann',
-        points: 42,
-        prizePercent: 0.5,
-        prizeUsd: 50,
-        status: 'paid',
-      },
-    ],
-  };
-}
-
 function linkChange(discordUserId: string): OutboxLinkChangeItem {
   return {
     accountId: 7,
@@ -88,7 +65,6 @@ function envelope(streams: Partial<OutboxEnvelope> = {}): OutboxEnvelope {
   return {
     relay: { items: [] },
     activity: { items: [] },
-    winners: { days: [] },
     linkChanges: { items: [] },
     ...streams,
   };
@@ -100,8 +76,6 @@ interface Recorder {
   calls: string[];
   relay: RelayItem[];
   activity: ActivityItem[];
-  winners: DailyRewardWinnersDay[];
-  marks: string[];
   links: OutboxLinkChangeItem[][];
   errors: { where: string; message: string }[];
 }
@@ -118,8 +92,6 @@ function recorder(
     envelope?: OutboxEnvelope | null;
     failRelay?: (item: RelayItem) => boolean;
     failActivity?: (item: ActivityItem) => boolean;
-    failWinners?: (day: DailyRewardWinnersDay) => boolean;
-    markResult?: (day: string) => unknown;
   } = {},
 ): Recorder {
   const calls: string[] = [];
@@ -127,8 +99,6 @@ function recorder(
     calls,
     relay: [],
     activity: [],
-    winners: [],
-    marks: [],
     links: [],
     errors: [],
     io: {
@@ -147,16 +117,6 @@ function recorder(
         calls.push(`activity:${item.kind}`);
         rec.activity.push(item);
         if (options.failActivity?.(item)) throw new Error(`activity ${item.kind} refused`);
-      },
-      postWinnersDay: async (day) => {
-        calls.push(`winners:${day.day}`);
-        rec.winners.push(day);
-        if (options.failWinners?.(day)) throw new Error(`winners ${day.day} refused`);
-      },
-      markWinnersDay: async (day) => {
-        calls.push(`mark:${day}`);
-        rec.marks.push(day);
-        return options.markResult ? options.markResult(day) : { ok: true };
       },
       applyLinkChanges: (items) => {
         calls.push(`links:${items.length}`);
@@ -208,13 +168,11 @@ describe('outbox poll fan-out', () => {
   it('delivers each stream to its own handler, by value', async () => {
     const relay = relayItem('c1');
     const activity = activityItem();
-    const day = winnersDay('2026-07-31');
     const link = linkChange('u9');
     const rec = recorder({
       envelope: envelope({
         relay: { items: [relay] },
         activity: { items: [activity] },
-        winners: { days: [day] },
         linkChanges: { items: [link] },
       }),
     });
@@ -226,9 +184,7 @@ describe('outbox poll fan-out', () => {
     // routed the activity item through postRelay, has to fail here.
     expect(rec.relay).toEqual([relayItem('c1')]);
     expect(rec.activity).toEqual([activityItem()]);
-    expect(rec.winners).toEqual([winnersDay('2026-07-31')]);
     expect(rec.links).toEqual([[linkChange('u9')]]);
-    expect(rec.marks).toEqual(['2026-07-31']);
   });
 
   it('keeps one refused item from costing the rest of the drain', async () => {
@@ -277,162 +233,6 @@ describe('outbox poll fan-out', () => {
   });
 });
 
-describe('outbox winners announce-then-mark', () => {
-  it('announces BEFORE it marks', async () => {
-    // The order is the whole at-least-once contract: the day stays unannounced
-    // server-side until the mark lands, so marking first would make a day nobody
-    // saw disappear. Asserted as an ordered call log rather than as two
-    // presence checks, which would pass in either order.
-    const rec = recorder({ envelope: envelope({ winners: { days: [winnersDay('2026-07-31')] } }) });
-
-    await runOutboxPoll(rec.io);
-
-    expect(rec.calls).toEqual(['drain', 'links:0', 'winners:2026-07-31', 'mark:2026-07-31']);
-  });
-
-  it('never marks a day whose announcement failed, and still handles the next one', async () => {
-    // Two days with the FIRST failing, so a mark that WOULD have happened is the
-    // thing being asserted absent: a case with only one failing day cannot tell
-    // "skipped the mark" from "stopped the loop", and one that failed the LAST
-    // day would pass with the skip deleted.
-    const rec = recorder({
-      envelope: envelope({
-        winners: { days: [winnersDay('2026-07-30'), winnersDay('2026-07-31')] },
-      }),
-      failWinners: (day) => day.day === '2026-07-30',
-    });
-
-    expect(await runOutboxPoll(rec.io)).toBe(true);
-
-    expect(rec.calls).toEqual([
-      'drain',
-      'links:0',
-      'winners:2026-07-30',
-      'winners:2026-07-31',
-      'mark:2026-07-31',
-    ]);
-    // Exactly the second day, so the failed one is genuinely left for the server
-    // to re-serve on the next poll.
-    expect(rec.marks).toEqual(['2026-07-31']);
-    expect(rec.errors).toEqual([{ where: 'winners', message: 'winners 2026-07-30 refused' }]);
-  });
-
-  it('reports a failed mark without retrying it in-run, and counts no progress', async () => {
-    // ServerClient answers null for a failed call rather than throwing, so the
-    // RETURN VALUE is the only signal there is; `undefined` counts too, since a
-    // success envelope carrying no data comes back verbatim. Neither may be read
-    // as a mark that landed, and neither may be retried here: the retry is the
-    // same request that just failed, and the day is re-served next poll anyway.
-    // No progress either: the mark is the event that stops the re-serve, so a
-    // day whose mark keeps failing must decay the cadence, not hold it.
-    for (const result of [null, undefined]) {
-      const rec = recorder({
-        envelope: envelope({ winners: { days: [winnersDay('2026-07-31')] } }),
-        markResult: () => result,
-      });
-
-      expect(await runOutboxPoll(rec.io)).toBe(false);
-      expect(rec.calls).toEqual(['drain', 'links:0', 'winners:2026-07-31', 'mark:2026-07-31']);
-      expect(rec.errors).toEqual([
-        { where: 'winners-mark', message: 'day 2026-07-31 was posted but not marked' },
-      ]);
-    }
-  });
-
-  it('never re-announces a day it already posted: the memo skips straight to the mark retry', async () => {
-    // The item that can never succeed: a mark endpoint that keeps failing. The
-    // server re-serves the day on every poll, and without the announced-days
-    // memo each re-serve would duplicate the winners post in the channel (about
-    // twenty a minute at the active cadence). With a shared state the re-served
-    // day goes straight to the mark retry.
-    const state = freshOutboxPollState();
-    const days = { winners: { days: [winnersDay('2026-07-31')] } };
-    const first = recorder({ envelope: envelope(days), markResult: () => null });
-    expect(await runOutboxPoll(first.io, state)).toBe(false);
-    expect(first.calls).toEqual(['drain', 'links:0', 'winners:2026-07-31', 'mark:2026-07-31']);
-
-    const second = recorder({ envelope: envelope(days), markResult: () => null });
-    expect(await runOutboxPoll(second.io, state)).toBe(false);
-    // No winners post this time; only the mark was retried.
-    expect(second.calls).toEqual(['drain', 'links:0', 'mark:2026-07-31']);
-
-    // The retry that finally lands is progress, and it clears the memo entry,
-    // so a future day with the same key (a fresh server row after an ops
-    // reset) would be announced again rather than silently swallowed.
-    const third = recorder({ envelope: envelope(days) });
-    expect(await runOutboxPoll(third.io, state)).toBe(true);
-    expect(third.calls).toEqual(['drain', 'links:0', 'mark:2026-07-31']);
-    expect(state.announcedDays.size).toBe(0);
-  });
-
-  it('re-announces after a restart: the memo is process-local by design', async () => {
-    // A fresh state per process is the documented at-least-once cost: the one
-    // duplicate follows a restart, never a steady-state poll.
-    const days = { winners: { days: [winnersDay('2026-07-31')] } };
-    const first = recorder({ envelope: envelope(days), markResult: () => null });
-    await runOutboxPoll(first.io, freshOutboxPollState());
-    const second = recorder({ envelope: envelope(days), markResult: () => null });
-    await runOutboxPoll(second.io, freshOutboxPollState());
-
-    expect(first.winners.map((d) => d.day)).toEqual(['2026-07-31']);
-    expect(second.winners.map((d) => d.day)).toEqual(['2026-07-31']);
-  });
-
-  it('bounds the announced-days memo AT its cap, evicting the oldest entry', async () => {
-    // The bound is reached, not merely respected: one more day than the cap,
-    // every mark failing, must leave exactly ANNOUNCED_DAYS_MAX entries with
-    // the OLDEST evicted, so the memo can never grow for the life of a process
-    // whose marks are broken. The evicted day's observable consequence is a
-    // re-announce on its next re-serve; the survivors skip theirs.
-    const state = freshOutboxPollState();
-    const dayKeys = Array.from({ length: ANNOUNCED_DAYS_MAX + 1 }, (_, i) => {
-      return `2026-06-${String(i + 1).padStart(2, '0')}`;
-    });
-    const rec = recorder({
-      envelope: envelope({ winners: { days: dayKeys.map((d) => winnersDay(d)) } }),
-      markResult: () => null,
-    });
-    await runOutboxPoll(rec.io, state);
-
-    expect(state.announcedDays.size).toBe(ANNOUNCED_DAYS_MAX);
-    expect([...state.announcedDays]).toEqual(dayKeys.slice(1));
-    expect(state.announcedDays.has(dayKeys[0])).toBe(false);
-  });
-
-  it('survives a mark that REJECTS, so the link changes still land', async () => {
-    // The wired client answers nullish rather than rejecting, so this arm is
-    // defensive. It is worth having because of what an escaping throw would
-    // skip: the remaining winner days, and (before the apply moved ahead of the
-    // posts) the link-change beliefs; the apply-first order is pinned by the
-    // ordered call logs above, this arm keeps the catch honest.
-    const rec = recorder({
-      envelope: envelope({
-        winners: { days: [winnersDay('2026-07-31')] },
-        linkChanges: { items: [linkChange('u9')] },
-      }),
-      markResult: () => {
-        throw new Error('mark exploded');
-      },
-    });
-
-    expect(await runOutboxPoll(rec.io)).toBe(true);
-    expect(rec.errors).toEqual([{ where: 'winners-mark', message: 'mark exploded' }]);
-    expect(rec.links).toEqual([[linkChange('u9')]]);
-  });
-
-  it('says nothing when the mark succeeded', async () => {
-    // The complement of the case above: a truthy answer is a landed mark, and
-    // reporting it would turn every ordinary announcement into an error line.
-    const rec = recorder({
-      envelope: envelope({ winners: { days: [winnersDay('2026-07-31')] } }),
-      markResult: () => ({ ok: true }),
-    });
-
-    await runOutboxPoll(rec.io);
-    expect(rec.errors).toEqual([]);
-  });
-});
-
 describe('outbox poll didWork signal', () => {
   it('answers false for a failed poll and for an empty one', async () => {
     // Both are "no work", and they are different failures. A null drain means
@@ -465,13 +265,12 @@ describe('outbox poll didWork signal', () => {
   });
 
   it('answers true for each stream ON ITS OWN', async () => {
-    // One case per stream, because a didWork built from three of the four reads
-    // as work-aware and silently backs the loop off to 15 seconds on the one it
+    // One case per stream, because a didWork built from all but one reads as
+    // work-aware and silently backs the loop off to 15 seconds on the one it
     // forgot. The link-change stream is the likeliest omission: it posts nothing.
     const cases: { name: string; streams: Partial<OutboxEnvelope> }[] = [
       { name: 'relay', streams: { relay: { items: [relayItem('c1')] } } },
       { name: 'activity', streams: { activity: { items: [activityItem()] } } },
-      { name: 'winners', streams: { winners: { days: [winnersDay('2026-07-31')] } } },
       { name: 'linkChanges', streams: { linkChanges: { items: [linkChange('u9')] } } },
     ];
     for (const oneCase of cases) {
@@ -499,61 +298,6 @@ describe('outbox poll didWork signal', () => {
     expect(await runOutboxPoll(rec.io)).toBe(true);
   });
 
-  it('backs off when the only stream is a winners day that cannot post', async () => {
-    // The winners stream is a re-served READ, not a drained queue: the server
-    // answers the SAME unannounced day on every poll until a mark lands. So a
-    // day that cannot post (an unset channel, a durable 403) must read as no
-    // work, or it pins the whole consolidated loop at the 3 s active cadence
-    // for the life of the process. Found by the Phase 6 QA gate; the unset
-    // daily-rewards channel is the common deployment, not a corner case.
-    const unset = recorder({
-      envelope: envelope({ winners: { days: [winnersDay('2026-07-31')] } }),
-    });
-    unset.io.postWinnersDay = async () => {
-      throw new OutboxChannelUnsetError('dailyRewards');
-    };
-    expect(await runOutboxPoll(unset.io)).toBe(false);
-    // The day was never marked, so the server keeps it; nothing is lost.
-    expect(unset.marks).toEqual([]);
-
-    // Same signal for an ordinary durable failure (a 403 on the channel). The
-    // attempted-announce pin is what separates "backed off after trying" from
-    // "stopped consuming the winners stream", which the unset-channel arm above
-    // cannot see (its stub records nothing).
-    const refused = recorder({
-      envelope: envelope({ winners: { days: [winnersDay('2026-07-31')] } }),
-      failWinners: () => true,
-    });
-    expect(await runOutboxPoll(refused.io)).toBe(false);
-    expect(refused.winners.map((d) => d.day)).toEqual(['2026-07-31']);
-    expect(refused.marks).toEqual([]);
-  });
-
-  it('counts winners progress by the MARK, never by the announce alone', async () => {
-    // Progress is the mark, the event that stops the re-serve. An announced day
-    // whose mark failed is re-served next poll, so counting the announce would
-    // hold the fast cadence for as long as the mark endpoint stays broken (the
-    // same unpostable-item shape the Phase 6 QA gate found on the post side).
-    const rec = recorder({
-      envelope: envelope({ winners: { days: [winnersDay('2026-07-31')] } }),
-      markResult: () => null,
-    });
-    expect(await runOutboxPoll(rec.io)).toBe(false);
-    expect(rec.winners.map((d) => d.day)).toEqual(['2026-07-31']);
-
-    // A drained stream beside a failed winners day must still count: the two
-    // signals stay independent.
-    const mixed = recorder({
-      envelope: envelope({
-        relay: { items: [relayItem('c9')] },
-        winners: { days: [winnersDay('2026-08-01')] },
-      }),
-      failWinners: () => true,
-    });
-    expect(await runOutboxPoll(mixed.io)).toBe(true);
-    expect(mixed.relay.map((i) => i.commandId)).toEqual(['c9']);
-  });
-
   it('tolerates a payload that omits a stream entirely', async () => {
     // Network input, whatever the types say: an older server build or a proxy
     // that trimmed the body would otherwise throw inside the loop, and by then
@@ -574,26 +318,20 @@ describe('outbox channel routing', () => {
   }
 
   function factoryIo(
-    channels: { relay: string; activity: string; dailyRewards: string },
+    channels: { relay: string; activity: string },
     drained: OutboxEnvelope,
   ): {
     io: OutboxIo;
     sent: Sent[];
-    marks: string[];
     missing: string[];
     errors: string[];
   } {
     const sent: Sent[] = [];
-    const marks: string[] = [];
     const missing: string[] = [];
     const errors: string[] = [];
     const io = outboxIoFor({
       createMessage: async (channelId, payload) => {
         sent.push({ channelId, payload });
-      },
-      markDailyRewardWinners: async (day) => {
-        marks.push(day);
-        return { ok: true };
       },
       channels,
       gameUrl: 'https://game.test',
@@ -603,30 +341,29 @@ describe('outbox channel routing', () => {
       onError: (_error, where) => errors.push(where),
       onMissingChannel: (channel) => missing.push(channel),
     });
-    return { io, sent, marks, missing, errors };
+    return { io, sent, missing, errors };
   }
 
-  const CHANNELS = { relay: 'relay-1', activity: 'activity-1', dailyRewards: 'daily-1' };
+  const CHANNELS = { relay: 'relay-1', activity: 'activity-1' };
 
   it('sends each stream to its OWN channel, shaped by its OWN builder', async () => {
     // The one mutation this exists for is a swapped channel id, which type-checks
     // and deploys and would put the activity feed in the relay channel. Every id
     // is distinct, so the swap cannot pass, and each payload is asserted through
     // a value only its own builder produces (the relay respond link carries the
-    // game URL and the character name; the activity title carries the level; the
-    // winners title carries the day), so a swapped builder fails too.
+    // game URL and the character name; the activity title carries the level), so
+    // a swapped builder fails too.
     const wired = factoryIo(
       CHANNELS,
       envelope({
         relay: { items: [relayItem('c1', 'Annthar')] },
         activity: { items: [activityItem('Annthar')] },
-        winners: { days: [winnersDay('2026-07-31')] },
       }),
     );
 
     await runOutboxPoll(wired.io);
 
-    expect(wired.sent.map((s) => s.channelId)).toEqual(['relay-1', 'activity-1', 'daily-1']);
+    expect(wired.sent.map((s) => s.channelId)).toEqual(['relay-1', 'activity-1']);
 
     const relayPayload = wired.sent[0].payload;
     expect(relayPayload.content).toBe('<@u1>');
@@ -635,13 +372,6 @@ describe('outbox channel routing', () => {
 
     const activityEmbed = (wired.sent[1].payload.embeds as { title: string }[])[0];
     expect(activityEmbed.title).toBe('Annthar hit level 20!');
-
-    const winnersEmbed = (
-      wired.sent[2].payload.embeds as { title: string; description: string }[]
-    )[0];
-    expect(winnersEmbed.title).toBe('Top 1 Winners - 2026-07-31');
-
-    expect(wired.marks).toEqual(['2026-07-31']);
   });
 
   it('drops an unknown-kind activity item at the io seam, never posting an empty embed', async () => {
@@ -678,23 +408,16 @@ describe('outbox channel routing', () => {
     expect(unset.errors).toEqual([]);
   });
 
-  it('marks the announced day through the server client, by day string', async () => {
-    const wired = factoryIo(CHANNELS, envelope({ winners: { days: [winnersDay('2026-07-30')] } }));
-    await runOutboxPoll(wired.io);
-    expect(wired.marks).toEqual(['2026-07-30']);
-  });
-
   it('skips a stream whose channel is unset, reporting it exactly once', async () => {
     // An unset channel must not become a POST to `/channels//messages`: that is a
     // 404 per item against the governor's invalid-request breaker. It reports
     // once per channel rather than once per poll, or a deployment that never set
     // one would log a line every 3 seconds for the life of the process.
     const wired = factoryIo(
-      { relay: '', activity: '', dailyRewards: '' },
+      { relay: '', activity: '' },
       envelope({
         relay: { items: [relayItem('c1'), relayItem('c2')] },
         activity: { items: [activityItem()] },
-        winners: { days: [winnersDay('2026-07-31')] },
       }),
     );
 
@@ -702,39 +425,33 @@ describe('outbox channel routing', () => {
     await runOutboxPoll(wired.io);
 
     expect(wired.sent).toEqual([]);
-    expect(wired.missing).toEqual(['relay', 'activity', 'dailyRewards']);
-    // The day is NOT marked: there was nowhere to announce it, so it stays
-    // unannounced and the server re-serves it once a channel is configured.
-    expect(wired.marks).toEqual([]);
+    expect(wired.missing).toEqual(['relay', 'activity']);
     // And the unset channel is not re-reported through onError either, which is
     // what would restore the per-poll log line by another door.
     expect(wired.errors).toEqual([]);
   });
 
-  it('posts the streams whose channel IS set while skipping the one that is not', async () => {
-    // The complement: an unset daily-rewards channel is the common deployment,
-    // and it must not take the relay and activity feeds down with it.
+  it('posts the stream whose channel IS set while skipping the one that is not', async () => {
+    // The complement: one unset channel must not take the other feed down with it.
     const wired = factoryIo(
-      { ...CHANNELS, dailyRewards: '' },
+      { ...CHANNELS, activity: '' },
       envelope({
         relay: { items: [relayItem('c1')] },
         activity: { items: [activityItem()] },
-        winners: { days: [winnersDay('2026-07-31')] },
       }),
     );
 
     await runOutboxPoll(wired.io);
 
-    expect(wired.sent.map((s) => s.channelId)).toEqual(['relay-1', 'activity-1']);
-    expect(wired.missing).toEqual(['dailyRewards']);
-    expect(wired.marks).toEqual([]);
+    expect(wired.sent.map((s) => s.channelId)).toEqual(['relay-1']);
+    expect(wired.missing).toEqual(['activity']);
   });
 
   it('throws OutboxChannelUnsetError rather than resolving, so nothing reads it as sent', async () => {
     // Stated directly on the seam, because the whole no-mark behavior above
     // depends on it: a post that resolved quietly would be indistinguishable
     // from a successful announcement and the day would be marked.
-    const wired = factoryIo({ relay: '', activity: '', dailyRewards: '' }, envelope());
+    const wired = factoryIo({ relay: '', activity: '' }, envelope());
     await expect(wired.io.postRelay(relayItem('c1'))).rejects.toBeInstanceOf(
       OutboxChannelUnsetError,
     );
@@ -752,8 +469,7 @@ describe('outbox factory pass-through seams', () => {
     let drains = 0;
     const io = outboxIoFor({
       createMessage: async () => {},
-      markDailyRewardWinners: async () => ({ ok: true }),
-      channels: { relay: 'r', activity: 'a', dailyRewards: 'd' },
+      channels: { relay: 'r', activity: 'a' },
       gameUrl: 'https://game.test',
       breakerState: () => 'open',
       drain: async () => {
@@ -773,8 +489,7 @@ describe('outbox factory pass-through seams', () => {
     const applied: OutboxLinkChangeItem[][] = [];
     const io = outboxIoFor({
       createMessage: async () => {},
-      markDailyRewardWinners: async () => ({ ok: true }),
-      channels: { relay: 'r', activity: 'a', dailyRewards: 'd' },
+      channels: { relay: 'r', activity: 'a' },
       gameUrl: 'https://game.test',
       breakerState: () => 'closed',
       drain: async () => envelope({ linkChanges: { items: [linkChange('u9')] } }),
@@ -791,8 +506,7 @@ describe('outbox factory pass-through seams', () => {
       createMessage: async () => {
         throw new Error('post refused');
       },
-      markDailyRewardWinners: async () => ({ ok: true }),
-      channels: { relay: 'r', activity: 'a', dailyRewards: 'd' },
+      channels: { relay: 'r', activity: 'a' },
       gameUrl: 'https://game.test',
       breakerState: () => 'closed',
       drain: async () => envelope({ relay: { items: [relayItem('c1')] } }),
