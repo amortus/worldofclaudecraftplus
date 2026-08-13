@@ -314,7 +314,14 @@ import {
   setRateLimitTier2Store,
 } from './ratelimit';
 import { createPgRateLimitStore } from './ratelimit_db';
-import { isPublicCorsPath, publicOriginFromRequest, REALM, REALM_DIRECTORY } from './realm';
+import { isRedirectableRequest, planCanonicalRedirect } from './canonical_host';
+import {
+  isPublicCorsPath,
+  publicOriginFromRequest,
+  REALM,
+  REALM_DIRECTORY,
+  REALM_PUBLIC_ORIGIN,
+} from './realm';
 import { configureReliquaryRuntime } from './reliquary';
 import { reliquaryRarityCounts } from './reliquary_rarity_db';
 import { resolveReportTarget } from './report_target';
@@ -2939,6 +2946,18 @@ export function routeHttpRequest(req: http.IncomingMessage, res: http.ServerResp
   withSecurityHeaders(req, res);
   const url = req.url ?? '';
   const path = url.split('?')[0];
+  // Canonical host, ahead of CORS: a document served from www.<apex> would call the
+  // apex API and die in the preflight, because the CORS allowlist is exactly the realm
+  // URLs. Redirecting the NAVIGATION (never /api, never the WS upgrade) keeps one
+  // origin, which also keeps one localStorage and so one session. See canonical_host.ts.
+  if (isRedirectableRequest(req.method, path)) {
+    const location = planCanonicalRedirect(req.headers.host, url, REALM_PUBLIC_ORIGIN);
+    if (location) {
+      res.writeHead(301, { Location: location, 'Cache-Control': 'no-store' });
+      res.end();
+      return;
+    }
+  }
   const isApi = url.startsWith('/api/') || url.startsWith('/admin/api/');
   // Public read surfaces (/api/public/..., /avatar/...) are CORS-open to any
   // origin so browser-origin companion apps can call them client-side; every
