@@ -81,7 +81,16 @@ const SUPPORTED_SET: ReadonlySet<string> = new Set(SUPPORTED_LANGUAGES);
 // locale. Everything downstream already handles a non-en boot language: the
 // module-eval prefetchLocale() below puts the pt_BR chunk in flight immediately
 // and startGame awaits ensureLocaleLoaded before the first localized paint.
-let currentLanguage: SupportedLanguage = 'pt_BR';
+// The boot locale is overridable through a global so the adopted upstream test
+// suite (which asserts English copy and en-US number formatting) can pin 'en'
+// without changing what a visitor gets. Set only by tests/i18n_boot_locale_setup.ts;
+// nothing in the client, server, or any build sets it, and an unsupported value
+// is ignored rather than trusted.
+const bootLocaleOverride = (globalThis as { __WOC_BOOT_LOCALE__?: unknown }).__WOC_BOOT_LOCALE__;
+let currentLanguage: SupportedLanguage =
+  typeof bootLocaleOverride === 'string' && isSupportedLanguage(bootLocaleOverride)
+    ? bootLocaleOverride
+    : 'pt_BR';
 
 // --- en_XA dev-only pseudo-locale --------------------------------------
 //

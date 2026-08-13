@@ -498,7 +498,13 @@ export default defineConfig({
     // Runs per test file (unlike globalSetup, which runs once outside any
     // DOM environment). Needed on Node 22+ for jsdom and happy-dom files;
     // no-op when `window` is absent (default node env). See the file.
-    setupFiles: ['./tests/svelte_testing_setup.ts', './tests/jsdom_local_storage_setup.ts'],
+    setupFiles: [
+      './tests/svelte_testing_setup.ts',
+      './tests/jsdom_local_storage_setup.ts',
+      // Must run before the test file's imports so src/ui/i18n.ts boots in English;
+      // see the file for why the fork default stays pt_BR in the product.
+      './tests/i18n_boot_locale_setup.ts',
+    ],
     // Two kinds of exclusion, kept together:
     // - agent-runtime directories may contain local worktree copies, and their tracked
     //   config or instruction files are not product test sources. Excluding them keeps a
