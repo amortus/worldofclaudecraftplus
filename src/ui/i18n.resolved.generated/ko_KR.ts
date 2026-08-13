@@ -3899,21 +3899,8 @@ export const ko_KR: EnTranslations = {
       "account_taken": "해당 Epic 계정은 이미 다른 계정에 연결되어 있습니다.",
       "upstream": "Epic이 응답하지 않습니다. 잠시 후 다시 시도해 주세요."
     },
-    "wallet": {
-      "handoff_invalid": "지갑 인증이 만료되었거나 확인할 수 없습니다. 다시 시도해 주세요."
-    },
     "ota_updates": {
       "invalid_input": "입력이 올바르지 않습니다."
-    },
-    "seeker": {
-      "native_only": "Seeker 자격은 네이티브 앱에서만 사용할 수 있습니다.",
-      "attestation_failed": "기기 인증에 실패했습니다. 다시 시도해 주세요.",
-      "solana_artifact_required": "Solana Store 앱을 사용하여 계속해 주세요.",
-      "wallet_required": "먼저 지갑을 연결하고 인증하세요.",
-      "genesis_token_required": "인증된 Seeker Genesis Token이 필요합니다.",
-      "genesis_token_claimed": "해당 Seeker Genesis Token은 이미 등록되었습니다.",
-      "entitlement_required": "인증된 Seeker 자격이 필요합니다.",
-      "current_ownership_required": "현재 Seeker Genesis Token을 보유해야 합니다."
     }
   },
   "guide": {

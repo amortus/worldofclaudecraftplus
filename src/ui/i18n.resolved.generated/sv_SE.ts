@@ -3899,21 +3899,8 @@ export const sv_SE: EnTranslations = {
       "account_taken": "Det Epic-kontot är redan länkat till ett annat konto.",
       "upstream": "Epic svarade inte. Försök igen om en stund."
     },
-    "wallet": {
-      "handoff_invalid": "Den plånboksbehörigheten har gått ut eller kunde inte verifieras. Försök igen."
-    },
     "ota_updates": {
       "invalid_input": "Ogiltig indata."
-    },
-    "seeker": {
-      "native_only": "Seeker-behörighet är endast tillgänglig i appen.",
-      "attestation_failed": "Enhetsverifieringen misslyckades. Försök igen.",
-      "solana_artifact_required": "Använd appen Solana Store för att fortsätta.",
-      "wallet_required": "Länka och verifiera en plånbok först.",
-      "genesis_token_required": "En verifierad Seeker Genesis Token krävs.",
-      "genesis_token_claimed": "Denna Seeker Genesis Token har redan hämtats.",
-      "entitlement_required": "Verifierad Seeker-behörighet krävs.",
-      "current_ownership_required": "Du måste fortfarande äga din Seeker Genesis Token."
     }
   },
   "guide": {

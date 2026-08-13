@@ -1428,15 +1428,6 @@ export const pt_BR: Partial<Record<TranslationKey, string>> = {
   'apiError.epic.invalid_token':
     'A Epic não conseguiu verificar esta solicitação de vinculação. Tente novamente pelo aplicativo para computador.',
   'apiError.epic.upstream': 'A Epic não respondeu. Tente novamente em instantes.',
-  'apiError.seeker.native_only': 'O benefício Seeker está disponível apenas no aplicativo nativo.',
-  'apiError.seeker.attestation_failed': 'A verificação do dispositivo falhou. Tente novamente.',
-  'apiError.seeker.solana_artifact_required': 'Use o app da Solana Store para continuar.',
-  'apiError.seeker.wallet_required': 'Vincule e verifique uma carteira primeiro.',
-  'apiError.seeker.genesis_token_required': 'É necessário um Seeker Genesis Token verificado.',
-  'apiError.seeker.genesis_token_claimed': 'Esse Seeker Genesis Token já foi resgatado.',
-  'apiError.seeker.entitlement_required': 'É necessário ter o benefício Seeker verificado.',
-  'apiError.seeker.current_ownership_required':
-    'É necessário possuir atualmente o Seeker Genesis Token.',
   'guide.professions.archetypeSwitchBody':
     'Uma declaração também não é sentença perpétua. Um par que você nunca teve é simplesmente uma nova missão de sintonização, enquanto voltar a um par do qual você se afastou pede que você faça reparações antes: cinco tarefas na primeira vez, e mais três somadas a cada retorno que você já tenha feito (assumir um par inédito nunca aumenta a conta). A escolha continua significativa sem jamais trancar uma porta para sempre.',
   'guide.professions.whatBody':
@@ -1947,8 +1938,6 @@ export const pt_BR: Partial<Record<TranslationKey, string>> = {
   'hud.prompts.resurrectionOffer': '{name} quer devolvê-lo à vida. Aceita?',
   'questUi.dialog.profIntroHint': 'Fale com {name} para "{quest}".',
   'itemUi.stats.parry': 'Aparar',
-  'apiError.wallet.handoff_invalid':
-    'Essa autorização de carteira expirou ou não pôde ser verificada. Tente novamente.',
   'cardDuel.close': 'Fechar',
   'cardDuel.counts': 'Baralho: {deck} · Descarte: {discard}',
   'cardDuel.forfeit': 'Desistir',

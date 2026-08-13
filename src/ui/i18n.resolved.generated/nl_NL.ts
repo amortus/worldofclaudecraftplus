@@ -3899,21 +3899,8 @@ export const nl_NL: EnTranslations = {
       "account_taken": "Dat Epic-account is al gekoppeld aan een ander account.",
       "upstream": "Epic reageerde niet. Probeer het zo meteen opnieuw."
     },
-    "wallet": {
-      "handoff_invalid": "Die portemonnee-autorisatie is verlopen of kon niet worden geverifieerd. Probeer het opnieuw."
-    },
     "ota_updates": {
       "invalid_input": "Ongeldige invoer."
-    },
-    "seeker": {
-      "native_only": "Seeker-rechten zijn alleen beschikbaar in de native app.",
-      "attestation_failed": "Apparaatverificatie mislukt. Probeer het opnieuw.",
-      "solana_artifact_required": "Gebruik de Solana Store-app om verder te gaan.",
-      "wallet_required": "Koppel en verifieer eerst een portemonnee.",
-      "genesis_token_required": "Een geverifieerd Seeker Genesis Token is vereist.",
-      "genesis_token_claimed": "Dat Seeker Genesis Token is al geclaimd.",
-      "entitlement_required": "Geverifieerde Seeker-rechten zijn vereist.",
-      "current_ownership_required": "Actueel bezit van het Seeker Genesis Token is vereist."
     }
   },
   "guide": {

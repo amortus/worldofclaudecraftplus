@@ -3899,21 +3899,8 @@ export const tr_TR: EnTranslations = {
       "account_taken": "Bu Epic hesabı zaten başka bir hesaba bağlı.",
       "upstream": "Epic yanıt vermedi. Birazdan tekrar deneyin."
     },
-    "wallet": {
-      "handoff_invalid": "Cüzdan yetkilendirmesi süresi dolmuş veya doğrulanamadı. Tekrar dene."
-    },
     "ota_updates": {
       "invalid_input": "Geçersiz girdi."
-    },
-    "seeker": {
-      "native_only": "Seeker hakkı yalnızca yerel uygulamada kullanılabilir.",
-      "attestation_failed": "Cihaz doğrulaması başarısız oldu. Lütfen tekrar deneyin.",
-      "solana_artifact_required": "Devam etmek için Solana Store uygulamasını kullanın.",
-      "wallet_required": "Önce bir cüzdan bağlayıp doğrulayın.",
-      "genesis_token_required": "Doğrulanmış bir Seeker Genesis Token gerekir.",
-      "genesis_token_claimed": "Bu Seeker Genesis Token zaten talep edilmiş.",
-      "entitlement_required": "Doğrulanmış bir Seeker hakkı gerekir.",
-      "current_ownership_required": "Seeker Genesis Token'a şu anda sahip olmanız gerekir."
     }
   },
   "guide": {

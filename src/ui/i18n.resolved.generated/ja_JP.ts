@@ -3899,21 +3899,8 @@ export const ja_JP: EnTranslations = {
       "account_taken": "そのEpicアカウントは既に別のアカウントに連携されています。",
       "upstream": "Epicから応答がありません。しばらくしてからもう一度お試しください。"
     },
-    "wallet": {
-      "handoff_invalid": "ウォレット認証の有効期限が切れたか、確認できませんでした。もう一度お試しください。"
-    },
     "ota_updates": {
       "invalid_input": "入力が無効です。"
-    },
-    "seeker": {
-      "native_only": "Seeker資格はネイティブアプリでのみ利用できます。",
-      "attestation_failed": "端末の検証に失敗しました。もう一度お試しください。",
-      "solana_artifact_required": "Solana Store版アプリを使用して続行してください。",
-      "wallet_required": "先にウォレットを連携して検証してください。",
-      "genesis_token_required": "検証済みのSeeker Genesis Tokenが必要です。",
-      "genesis_token_claimed": "そのSeeker Genesis Tokenはすでに取得されています。",
-      "entitlement_required": "検証済みのSeeker資格が必要です。",
-      "current_ownership_required": "現在Seeker Genesis Tokenを所有している必要があります。"
     }
   },
   "guide": {

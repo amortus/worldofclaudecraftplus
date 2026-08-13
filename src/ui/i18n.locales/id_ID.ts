@@ -1408,16 +1408,6 @@ export const id_ID: Partial<Record<TranslationKey, string>> = {
   'apiError.epic.invalid_token':
     'Epic tidak dapat memverifikasi permintaan penautan ini. Coba lagi dari aplikasi desktop.',
   'apiError.epic.upstream': 'Epic tidak merespons. Coba lagi sebentar lagi.',
-  'apiError.seeker.native_only': 'Hak akses Seeker hanya tersedia di aplikasi native.',
-  'apiError.seeker.attestation_failed': 'Verifikasi perangkat gagal. Silakan coba lagi.',
-  'apiError.seeker.solana_artifact_required':
-    'Gunakan aplikasi versi Solana Store untuk melanjutkan.',
-  'apiError.seeker.wallet_required': 'Tautkan dan verifikasi dompet terlebih dahulu.',
-  'apiError.seeker.genesis_token_required': 'Diperlukan Seeker Genesis Token yang terverifikasi.',
-  'apiError.seeker.genesis_token_claimed': 'Seeker Genesis Token itu sudah diklaim.',
-  'apiError.seeker.entitlement_required': 'Diperlukan hak akses Seeker yang terverifikasi.',
-  'apiError.seeker.current_ownership_required':
-    'Diperlukan kepemilikan Seeker Genesis Token saat ini.',
   'guide.professions.archetypeSwitchBody':
     'Sebuah deklarasi juga bukan hukuman seumur hidup. Pasangan yang belum pernah kamu pegang hanyalah misi penyelarasan yang baru, sementara kembali ke pasangan yang pernah kamu tinggalkan menuntutmu menebus diri lebih dulu: lima tugas pada kali pertama, dan tiga tugas tambahan untuk setiap kepulangan yang sudah pernah kamu lakukan (mengambil pasangan yang benar-benar baru tidak pernah menaikkan hitungan itu). Pilihan itu tetap bermakna tanpa pernah mengunci pintu selamanya.',
   'guide.professions.whatBody':
@@ -1927,8 +1917,6 @@ export const id_ID: Partial<Record<TranslationKey, string>> = {
   'hud.prompts.resurrectionOffer': '{name} ingin menghidupkanmu kembali. Apakah kamu menerima?',
   'questUi.dialog.profIntroHint': 'Temui {name} untuk "{quest}".',
   'itemUi.stats.parry': 'Tangkis',
-  'apiError.wallet.handoff_invalid':
-    'Otorisasi dompet itu telah kedaluwarsa atau tidak dapat diverifikasi. Coba lagi.',
   'cardDuel.close': 'Tutup',
   'cardDuel.counts': 'Dek: {deck} · Buang: {discard}',
   'cardDuel.forfeit': 'Menyerah',

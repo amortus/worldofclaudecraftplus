@@ -1433,17 +1433,6 @@ export const de_DE: Partial<Record<TranslationKey, string>> = {
   'apiError.epic.invalid_token':
     'Epic konnte diese Verknüpfungsanfrage nicht bestätigen. Versuche es erneut über die Desktop-App.',
   'apiError.epic.upstream': 'Epic hat nicht geantwortet. Versuche es gleich noch einmal.',
-  'apiError.seeker.native_only': 'Die Seeker-Berechtigung ist nur in der nativen App verfügbar.',
-  'apiError.seeker.attestation_failed':
-    'Geräteverifizierung fehlgeschlagen. Bitte versuche es erneut.',
-  'apiError.seeker.solana_artifact_required': 'Nutze die Solana Store App, um fortzufahren.',
-  'apiError.seeker.wallet_required': 'Verknüpfe und verifiziere zuerst eine Wallet.',
-  'apiError.seeker.genesis_token_required':
-    'Ein verifizierter Seeker Genesis Token ist erforderlich.',
-  'apiError.seeker.genesis_token_claimed': 'Dieser Seeker Genesis Token wurde bereits beansprucht.',
-  'apiError.seeker.entitlement_required': 'Eine verifizierte Seeker-Berechtigung ist erforderlich.',
-  'apiError.seeker.current_ownership_required':
-    'Der Seeker Genesis Token muss sich aktuell in deinem Besitz befinden.',
   'guide.professions.archetypeSwitchBody':
     'Eine Erklärung ist auch kein lebenslanges Urteil. Ein Paar, das du nie gehalten hast, ist schlicht eine frische Abstimmungsquest, während die Rückkehr zu einem Paar, das du verlassen hast, zuerst Sühne verlangt: fünf Aufgaben beim ersten Mal und drei weitere für jede Rückkehr, die du bereits hinter dir hast (ein brandneues Paar aufzunehmen erhöht die Zahl nie). Die Wahl bleibt bedeutsam, ohne je eine Tür für immer zu verschließen.',
   'guide.professions.whatBody':
@@ -1956,8 +1945,6 @@ export const de_DE: Partial<Record<TranslationKey, string>> = {
   'hud.prompts.resurrectionOffer': '{name} möchte dich ins Leben zurückrufen. Nimmst du an?',
   'questUi.dialog.profIntroHint': 'Sprich mit {name} wegen "{quest}".',
   'itemUi.stats.parry': 'Parieren',
-  'apiError.wallet.handoff_invalid':
-    'Diese Wallet-Autorisierung ist abgelaufen oder konnte nicht verifiziert werden. Bitte versuche es erneut.',
   'cardDuel.close': 'Schließen',
   'cardDuel.counts': 'Deck: {deck} · Ablagestapel: {discard}',
   'cardDuel.forfeit': 'Aufgeben',

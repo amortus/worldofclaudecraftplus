@@ -1442,17 +1442,6 @@ export const fr_FR: Partial<Record<TranslationKey, string>> = {
   'apiError.epic.invalid_token':
     'Epic n’a pas pu vérifier cette demande de liaison. Réessayez depuis l’application de bureau.',
   'apiError.epic.upstream': 'Epic n’a pas répondu. Réessayez dans un instant.',
-  'apiError.seeker.native_only':
-    "Les droits Seeker ne sont disponibles que dans l'application native.",
-  'apiError.seeker.attestation_failed':
-    "Échec de la vérification de l'appareil. Veuillez réessayer.",
-  'apiError.seeker.solana_artifact_required': "Utilisez l'application Solana Store pour continuer.",
-  'apiError.seeker.wallet_required': "Liez et vérifiez d'abord un portefeuille.",
-  'apiError.seeker.genesis_token_required': 'Un Seeker Genesis Token vérifié est requis.',
-  'apiError.seeker.genesis_token_claimed': 'Ce Seeker Genesis Token a déjà été réclamé.',
-  'apiError.seeker.entitlement_required': 'Des droits Seeker vérifiés sont requis.',
-  'apiError.seeker.current_ownership_required':
-    "La possession actuelle d'un Seeker Genesis Token est requise.",
   'guide.professions.archetypeSwitchBody':
     "Une déclaration n'est pas non plus une condamnation à perpétuité. Une paire que vous n'avez jamais tenue est simplement une nouvelle quête d'harmonisation, tandis que revenir à une paire que vous avez quittée vous demande d'abord de faire amende honorable : cinq tâches la première fois, et trois de plus ajoutées pour chaque retour que vous avez déjà effectué (prendre une paire toute neuve n'augmente jamais ce compte). Le choix reste lourd de sens sans jamais fermer une porte pour de bon.",
   'guide.professions.whatBody':
@@ -1965,8 +1954,6 @@ export const fr_FR: Partial<Record<TranslationKey, string>> = {
   'hud.prompts.resurrectionOffer': '{name} souhaite vous ramener à la vie. Acceptez-vous ?',
   'questUi.dialog.profIntroHint': 'Voir {name} pour "{quest}".',
   'itemUi.stats.parry': 'Parade',
-  'apiError.wallet.handoff_invalid':
-    "Cette autorisation de portefeuille a expiré ou n'a pas pu être vérifiée. Réessayez.",
   'cardDuel.close': 'Fermer',
   'cardDuel.counts': 'Deck : {deck} · Défausse : {discard}',
   'cardDuel.forfeit': 'Abandonner',

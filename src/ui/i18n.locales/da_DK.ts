@@ -1406,15 +1406,6 @@ export const da_DK: Partial<Record<TranslationKey, string>> = {
   'apiError.epic.invalid_token':
     'Epic kunne ikke bekræfte denne tilknytningsanmodning. Prøv igen fra skrivebordsappen.',
   'apiError.epic.upstream': 'Epic svarede ikke. Prøv igen om et øjeblik.',
-  'apiError.seeker.native_only': 'Seeker-rettigheder er kun tilgængelige i den installerede app.',
-  'apiError.seeker.attestation_failed': 'Enhedsverificeringen mislykkedes. Prøv venligst igen.',
-  'apiError.seeker.solana_artifact_required': 'Brug Solana Store-appen for at fortsætte.',
-  'apiError.seeker.wallet_required': 'Tilknyt og verificer en pung først.',
-  'apiError.seeker.genesis_token_required': 'Der kræves et verificeret Seeker Genesis Token.',
-  'apiError.seeker.genesis_token_claimed': 'Det Seeker Genesis Token er allerede indløst.',
-  'apiError.seeker.entitlement_required': 'Der kræves en verificeret Seeker-rettighed.',
-  'apiError.seeker.current_ownership_required':
-    'Der kræves aktuelt ejerskab af et Seeker Genesis Token.',
   'guide.professions.archetypeSwitchBody':
     'En erklæring er heller ikke en livstidsdom. Et par, du aldrig har holdt, er blot en frisk afstemningsopgave, mens en tilbagevenden til et par, du gik fra, kræver, at du først gør bod: fem opgaver første gang, og tre mere lagt til for hver tilbagevenden, du allerede har foretaget (at tage et helt nyt par op hæver aldrig tallet). Valget forbliver meningsfuldt uden nogensinde at låse en dør for altid.',
   'guide.professions.whatBody':
@@ -1918,8 +1909,6 @@ export const da_DK: Partial<Record<TranslationKey, string>> = {
   'hud.prompts.resurrectionOffer': '{name} vil gerne bringe dig tilbage til livet. Accepterer du?',
   'questUi.dialog.profIntroHint': 'Se {name} for "{quest}".',
   'itemUi.stats.parry': 'Parering',
-  'apiError.wallet.handoff_invalid':
-    'Den pung-godkendelse udløb eller kunne ikke bekræftes. Prøv igen.',
   'cardDuel.close': 'Luk',
   'cardDuel.counts': 'Bunke: {deck} - Kasserede: {discard}',
   'cardDuel.forfeit': 'Giv op',

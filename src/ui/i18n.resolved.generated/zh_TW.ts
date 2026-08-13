@@ -3899,21 +3899,8 @@ export const zh_TW: EnTranslations = {
       "account_taken": "該 Epic 帳號已連結到另一個帳號。",
       "upstream": "Epic 未回應。請稍後重試。"
     },
-    "wallet": {
-      "handoff_invalid": "錢包授權已過期或無法驗證。請再試一次。"
-    },
     "ota_updates": {
       "invalid_input": "輸入無效。"
-    },
-    "seeker": {
-      "native_only": "Seeker 權益僅可在原生應用程式中使用。",
-      "attestation_failed": "裝置驗證失敗。請再試一次。",
-      "solana_artifact_required": "請使用 Solana Store 版應用程式繼續。",
-      "wallet_required": "請先連結並驗證錢包。",
-      "genesis_token_required": "需要已驗證的 Seeker Genesis Token。",
-      "genesis_token_claimed": "該 Seeker Genesis Token 已被領取。",
-      "entitlement_required": "需要已驗證的 Seeker 權益。",
-      "current_ownership_required": "需要目前持有 Seeker Genesis Token。"
     }
   },
   "guide": {

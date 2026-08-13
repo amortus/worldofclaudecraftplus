@@ -1416,15 +1416,6 @@ export const nl_NL: Partial<Record<TranslationKey, string>> = {
   'apiError.epic.invalid_token':
     'Epic kon dit koppelingsverzoek niet verifiëren. Probeer het opnieuw vanuit de desktop-app.',
   'apiError.epic.upstream': 'Epic reageerde niet. Probeer het zo meteen opnieuw.',
-  'apiError.seeker.native_only': 'Seeker-rechten zijn alleen beschikbaar in de native app.',
-  'apiError.seeker.attestation_failed': 'Apparaatverificatie mislukt. Probeer het opnieuw.',
-  'apiError.seeker.solana_artifact_required': 'Gebruik de Solana Store-app om verder te gaan.',
-  'apiError.seeker.wallet_required': 'Koppel en verifieer eerst een portemonnee.',
-  'apiError.seeker.genesis_token_required': 'Een geverifieerd Seeker Genesis Token is vereist.',
-  'apiError.seeker.genesis_token_claimed': 'Dat Seeker Genesis Token is al geclaimd.',
-  'apiError.seeker.entitlement_required': 'Geverifieerde Seeker-rechten zijn vereist.',
-  'apiError.seeker.current_ownership_required':
-    'Actueel bezit van het Seeker Genesis Token is vereist.',
   'guide.professions.archetypeSwitchBody':
     'Een verklaring is bovendien geen levenslange straf. Een paar dat je nooit hebt gehad is gewoon een nieuwe afstemmingsquest, terwijl terugkeren naar een paar dat je hebt verlaten je eerst om boete vraagt: vijf opdrachten de eerste keer, en drie extra voor elke terugkeer die je al hebt gemaakt (een gloednieuw paar opnemen verhoogt dat aantal nooit). De keuze blijft betekenisvol zonder ooit een deur voorgoed op slot te doen.',
   'guide.professions.whatBody':
@@ -1937,8 +1928,6 @@ export const nl_NL: Partial<Record<TranslationKey, string>> = {
   'hud.prompts.resurrectionOffer': '{name} wil je terugbrengen tot leven. Aanvaarden?',
   'questUi.dialog.profIntroHint': 'Zie {name} voor "{quest}".',
   'itemUi.stats.parry': 'Pareren',
-  'apiError.wallet.handoff_invalid':
-    'Die portemonnee-autorisatie is verlopen of kon niet worden geverifieerd. Probeer het opnieuw.',
   'cardDuel.close': 'Sluiten',
   'cardDuel.counts': 'Deck: {deck} - Aflegstapel: {discard}',
   'cardDuel.forfeit': 'Opgeven',

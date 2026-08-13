@@ -1432,16 +1432,6 @@ export const es: Partial<Record<TranslationKey, string>> = {
   'apiError.epic.invalid_token':
     'Epic no pudo verificar esta solicitud de vinculación. Inténtalo de nuevo desde la aplicación de escritorio.',
   'apiError.epic.upstream': 'Epic no respondió. Inténtalo de nuevo en un momento.',
-  'apiError.seeker.native_only':
-    'El derecho de acceso Seeker solo está disponible en la aplicación nativa.',
-  'apiError.seeker.attestation_failed': 'No se pudo verificar el dispositivo. Inténtalo de nuevo.',
-  'apiError.seeker.solana_artifact_required': 'Usa la aplicación Solana Store para continuar.',
-  'apiError.seeker.wallet_required': 'Primero vincula y verifica una cartera.',
-  'apiError.seeker.genesis_token_required': 'Se requiere un Seeker Genesis Token verificado.',
-  'apiError.seeker.genesis_token_claimed': 'Ese Seeker Genesis Token ya se ha reclamado.',
-  'apiError.seeker.entitlement_required': 'Se requiere un derecho de acceso Seeker verificado.',
-  'apiError.seeker.current_ownership_required':
-    'Se requiere ser el propietario actual del Seeker Genesis Token.',
   'guide.professions.archetypeSwitchBody':
     'Una declaración tampoco es una condena de por vida. Un par que nunca has tenido es simplemente una nueva misión de sintonización, mientras que volver a un par del que te alejaste te pide primero hacer enmiendas: cinco tareas la primera vez, y tres más añadidas por cada regreso que ya hayas hecho (tomar un par completamente nuevo nunca sube la cuenta). La elección sigue siendo significativa sin cerrar jamás una puerta para siempre.',
   'guide.professions.whatBody':
@@ -2040,8 +2030,6 @@ export const es: Partial<Record<TranslationKey, string>> = {
   'hud.prompts.resurrectionOffer': '{name} quiere devolverte a la vida. ¿Aceptas?',
   'questUi.dialog.profIntroHint': 'Habla con {name} para "{quest}".',
   'itemUi.stats.parry': 'Parada',
-  'apiError.wallet.handoff_invalid':
-    'La autorización de la cartera ha caducado o no se ha podido verificar. Inténtalo de nuevo.',
   'cardDuel.close': 'Cerrar',
   'cardDuel.counts': 'Mazo: {deck} · Descarte: {discard}',
   'cardDuel.forfeit': 'Rendirse',

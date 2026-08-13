@@ -1439,15 +1439,6 @@ export const it_IT: Partial<Record<TranslationKey, string>> = {
   'apiError.epic.invalid_token':
     'Epic non ha potuto verificare questa richiesta di collegamento. Riprova dall’app desktop.',
   'apiError.epic.upstream': 'Epic non ha risposto. Riprova tra un momento.',
-  'apiError.seeker.native_only': "L'abilitazione Seeker è disponibile solo nell'app nativa.",
-  'apiError.seeker.attestation_failed': 'Verifica del dispositivo non riuscita. Riprova.',
-  'apiError.seeker.solana_artifact_required': "Usa l'app del Solana Store per continuare.",
-  'apiError.seeker.wallet_required': 'Prima collega e verifica un portafoglio.',
-  'apiError.seeker.genesis_token_required': 'È richiesto un Seeker Genesis Token verificato.',
-  'apiError.seeker.genesis_token_claimed': 'Quel Seeker Genesis Token è già stato riscattato.',
-  'apiError.seeker.entitlement_required': "È richiesta un'abilitazione Seeker verificata.",
-  'apiError.seeker.current_ownership_required':
-    'È richiesto il possesso attuale del Seeker Genesis Token.',
   'guide.professions.archetypeSwitchBody':
     'Una dichiarazione non è nemmeno un ergastolo. Una coppia che non hai mai avuto è semplicemente una nuova missione di sintonizzazione, mentre tornare a una coppia che hai abbandonato ti chiede prima di fare ammenda: cinque compiti la prima volta, e tre in più aggiunti per ogni ritorno che hai già compiuto (prendere una coppia del tutto nuova non alza mai il conteggio). La scelta resta significativa senza mai chiudere per sempre una porta.',
   'guide.professions.whatBody':
@@ -1961,8 +1952,6 @@ export const it_IT: Partial<Record<TranslationKey, string>> = {
   'hud.prompts.resurrectionOffer': '{name} vuole riportarti in vita. Accetti?',
   'questUi.dialog.profIntroHint': 'Vai da {name} per "{quest}".',
   'itemUi.stats.parry': 'Parata',
-  'apiError.wallet.handoff_invalid':
-    "L'autorizzazione del portafoglio è scaduta o non ha potuto essere verificata. Riprova.",
   'cardDuel.close': 'Chiudi',
   'cardDuel.counts': 'Mazzo: {deck} - Scarti: {discard}',
   'cardDuel.forfeit': 'Abbandona',

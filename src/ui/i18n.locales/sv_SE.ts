@@ -1406,15 +1406,6 @@ export const sv_SE: Partial<Record<TranslationKey, string>> = {
   'apiError.epic.invalid_token':
     'Epic kunde inte verifiera den här länkningsbegäran. Försök igen från skrivbordsappen.',
   'apiError.epic.upstream': 'Epic svarade inte. Försök igen om en stund.',
-  'apiError.seeker.native_only': 'Seeker-behörighet är endast tillgänglig i appen.',
-  'apiError.seeker.attestation_failed': 'Enhetsverifieringen misslyckades. Försök igen.',
-  'apiError.seeker.solana_artifact_required': 'Använd appen Solana Store för att fortsätta.',
-  'apiError.seeker.wallet_required': 'Länka och verifiera en plånbok först.',
-  'apiError.seeker.genesis_token_required': 'En verifierad Seeker Genesis Token krävs.',
-  'apiError.seeker.genesis_token_claimed': 'Denna Seeker Genesis Token har redan hämtats.',
-  'apiError.seeker.entitlement_required': 'Verifierad Seeker-behörighet krävs.',
-  'apiError.seeker.current_ownership_required':
-    'Du måste fortfarande äga din Seeker Genesis Token.',
   'guide.professions.archetypeSwitchBody':
     'En deklaration är heller inget livstidsstraff. Ett par du aldrig hållit är helt enkelt ett nytt inriktningsuppdrag, medan en återkomst till ett par du vandrat ifrån kräver att du gör bot först: fem uppgifter första gången, och tre till för varje återkomst du redan gjort (att ta upp ett helt nytt par höjer aldrig antalet). Valet förblir betydelsefullt utan att någonsin låsa en dörr för gott.',
   'guide.professions.whatBody':
@@ -1921,8 +1912,6 @@ export const sv_SE: Partial<Record<TranslationKey, string>> = {
   'hud.prompts.resurrectionOffer': '{name} vill återge dig livet. Accepterar du?',
   'questUi.dialog.profIntroHint': 'Se {name} angående "{quest}".',
   'itemUi.stats.parry': 'Parering',
-  'apiError.wallet.handoff_invalid':
-    'Den plånboksbehörigheten har gått ut eller kunde inte verifieras. Försök igen.',
   'cardDuel.close': 'Stäng',
   'cardDuel.counts': 'Kortlek: {deck} · Kasserad: {discard}',
   'cardDuel.forfeit': 'Ge upp',

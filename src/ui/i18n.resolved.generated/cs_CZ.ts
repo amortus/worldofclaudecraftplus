@@ -3899,21 +3899,8 @@ export const cs_CZ: EnTranslations = {
       "account_taken": "Tento účet Epic je již propojen s jiným účtem.",
       "upstream": "Epic neodpověděl. Zkus to za chvíli znovu."
     },
-    "wallet": {
-      "handoff_invalid": "Toto oprávnění peněženky vypršelo nebo je neověřitelné. Zkus to znovu."
-    },
     "ota_updates": {
       "invalid_input": "Neplatný vstup."
-    },
-    "seeker": {
-      "native_only": "Oprávnění Seeker je dostupné jen v nativní aplikaci.",
-      "attestation_failed": "Ověření zařízení selhalo. Zkus to prosím znovu.",
-      "solana_artifact_required": "Pro pokračování použij aplikaci Solana Store.",
-      "wallet_required": "Nejdřív propoj a ověř peněženku.",
-      "genesis_token_required": "Je vyžadován ověřený Seeker Genesis Token.",
-      "genesis_token_claimed": "Tento Seeker Genesis Token už byl uplatněn.",
-      "entitlement_required": "Je vyžadováno ověřené oprávnění Seeker.",
-      "current_ownership_required": "Je vyžadováno aktuální vlastnictví Seeker Genesis Token."
     }
   },
   "guide": {

@@ -3899,21 +3899,8 @@ export const da_DK: EnTranslations = {
       "account_taken": "Denne Epic-konto er allerede knyttet til en anden konto.",
       "upstream": "Epic svarede ikke. Prøv igen om et øjeblik."
     },
-    "wallet": {
-      "handoff_invalid": "Den pung-godkendelse udløb eller kunne ikke bekræftes. Prøv igen."
-    },
     "ota_updates": {
       "invalid_input": "Ugyldig indtastning."
-    },
-    "seeker": {
-      "native_only": "Seeker-rettigheder er kun tilgængelige i den installerede app.",
-      "attestation_failed": "Enhedsverificeringen mislykkedes. Prøv venligst igen.",
-      "solana_artifact_required": "Brug Solana Store-appen for at fortsætte.",
-      "wallet_required": "Tilknyt og verificer en pung først.",
-      "genesis_token_required": "Der kræves et verificeret Seeker Genesis Token.",
-      "genesis_token_claimed": "Det Seeker Genesis Token er allerede indløst.",
-      "entitlement_required": "Der kræves en verificeret Seeker-rettighed.",
-      "current_ownership_required": "Der kræves aktuelt ejerskab af et Seeker Genesis Token."
     }
   },
   "guide": {

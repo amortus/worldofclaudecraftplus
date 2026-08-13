@@ -1416,15 +1416,6 @@ export const pl_PL: Partial<Record<TranslationKey, string>> = {
   'apiError.epic.invalid_token':
     'Epic nie mógł zweryfikować tej prośby o powiązanie. Spróbuj ponownie z aplikacji na komputer.',
   'apiError.epic.upstream': 'Epic nie odpowiedział. Spróbuj ponownie za chwilę.',
-  'apiError.seeker.native_only': 'Uprawnienie Seeker jest dostępne tylko w aplikacji natywnej.',
-  'apiError.seeker.attestation_failed':
-    'Weryfikacja urządzenia nie powiodła się. Spróbuj ponownie.',
-  'apiError.seeker.solana_artifact_required': 'Aby kontynuować, użyj aplikacji Solana Store.',
-  'apiError.seeker.wallet_required': 'Najpierw powiąż i zweryfikuj portfel.',
-  'apiError.seeker.genesis_token_required': 'Wymagany jest zweryfikowany Seeker Genesis Token.',
-  'apiError.seeker.genesis_token_claimed': 'Ten Seeker Genesis Token został już odebrany.',
-  'apiError.seeker.entitlement_required': 'Wymagane jest zweryfikowane uprawnienie Seeker.',
-  'apiError.seeker.current_ownership_required': 'Musisz obecnie posiadać Seeker Genesis Token.',
   'guide.professions.archetypeSwitchBody':
     'Deklaracja to też nie wyrok dożywocia. Para, której nigdy nie miałeś, to po prostu świeże zadanie dostrojenia, natomiast powrót do pary, którą porzuciłeś, wymaga od ciebie najpierw zadośćuczynienia: pięć zadań pojednania za pierwszym razem i trzy kolejne doliczane za każdy powrót, którego już dokonałeś (podjęcie zupełnie nowej pary nigdy nie podnosi tej liczby). Wybór pozostaje znaczący, nie zamykając na zawsze żadnych drzwi.',
   'guide.professions.whatBody':
@@ -1929,8 +1920,6 @@ export const pl_PL: Partial<Record<TranslationKey, string>> = {
   'hud.prompts.resurrectionOffer': '{name} chce przywrócić cię do życia. Czy akceptujesz?',
   'questUi.dialog.profIntroHint': 'Porozmawiaj z {name} o "{quest}".',
   'itemUi.stats.parry': 'Parowanie',
-  'apiError.wallet.handoff_invalid':
-    'Autoryzacja portfela wygasła lub nie mogła zostać zweryfikowana. Spróbuj ponownie.',
   'cardDuel.close': 'Zamknij',
   'cardDuel.counts': 'Talia: {deck} · Odrzucone: {discard}',
   'cardDuel.forfeit': 'Poddaj się',

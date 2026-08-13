@@ -1405,16 +1405,6 @@ export const tr_TR: Partial<Record<TranslationKey, string>> = {
   'apiError.epic.invalid_token':
     'Epic bu bağlantı isteğini doğrulayamadı. Masaüstü uygulamasından tekrar deneyin.',
   'apiError.epic.upstream': 'Epic yanıt vermedi. Birazdan tekrar deneyin.',
-  'apiError.seeker.native_only': 'Seeker hakkı yalnızca yerel uygulamada kullanılabilir.',
-  'apiError.seeker.attestation_failed': 'Cihaz doğrulaması başarısız oldu. Lütfen tekrar deneyin.',
-  'apiError.seeker.solana_artifact_required':
-    'Devam etmek için Solana Store uygulamasını kullanın.',
-  'apiError.seeker.wallet_required': 'Önce bir cüzdan bağlayıp doğrulayın.',
-  'apiError.seeker.genesis_token_required': 'Doğrulanmış bir Seeker Genesis Token gerekir.',
-  'apiError.seeker.genesis_token_claimed': 'Bu Seeker Genesis Token zaten talep edilmiş.',
-  'apiError.seeker.entitlement_required': 'Doğrulanmış bir Seeker hakkı gerekir.',
-  'apiError.seeker.current_ownership_required':
-    "Seeker Genesis Token'a şu anda sahip olmanız gerekir.",
   'guide.professions.archetypeSwitchBody':
     'Bir beyan ömür boyu hüküm de değildir. Hiç sahip olmadığınız bir çift yalnızca yeni bir uyum görevidir; bırakıp gittiğiniz bir çifte dönmek ise önce barışı tesis etmenizi ister: ilk seferinde beş görev ve daha önce yaptığınız her dönüş için üç görev daha eklenir (yepyeni bir çifti benimsemek bu sayıyı asla artırmaz). Seçim, hiçbir kapıyı temelli kilitlemeden anlamlı kalır.',
   'guide.professions.whatBody':
@@ -1921,8 +1911,6 @@ export const tr_TR: Partial<Record<TranslationKey, string>> = {
   'hud.prompts.resurrectionOffer': '{name} seni hayata döndürmek istiyor. Kabul ediyor musun?',
   'questUi.dialog.profIntroHint': "{quest} görevi için {name}'e git.",
   'itemUi.stats.parry': 'Savuşturma',
-  'apiError.wallet.handoff_invalid':
-    'Cüzdan yetkilendirmesi süresi dolmuş veya doğrulanamadı. Tekrar dene.',
   'cardDuel.close': 'Kapat',
   'cardDuel.counts': 'Deste: {deck} · Atılan: {discard}',
   'cardDuel.forfeit': 'Teslim Ol',

@@ -1333,14 +1333,6 @@ export const vi_VN: Partial<Record<TranslationKey, string>> = {
   'apiError.epic.invalid_token':
     'Epic không thể xác minh yêu cầu liên kết này. Hãy thử lại từ ứng dụng máy tính.',
   'apiError.epic.upstream': 'Epic không phản hồi. Hãy thử lại sau giây lát.',
-  'apiError.seeker.native_only': 'Quyền lợi Seeker chỉ khả dụng trong ứng dụng gốc.',
-  'apiError.seeker.attestation_failed': 'Xác minh thiết bị thất bại. Vui lòng thử lại.',
-  'apiError.seeker.solana_artifact_required': 'Hãy dùng ứng dụng Solana Store để tiếp tục.',
-  'apiError.seeker.wallet_required': 'Hãy liên kết và xác minh một ví trước.',
-  'apiError.seeker.genesis_token_required': 'Cần có một Seeker Genesis Token đã được xác minh.',
-  'apiError.seeker.genesis_token_claimed': 'Seeker Genesis Token đó đã được nhận rồi.',
-  'apiError.seeker.entitlement_required': 'Cần có quyền lợi Seeker đã được xác minh.',
-  'apiError.seeker.current_ownership_required': 'Bạn phải đang sở hữu Seeker Genesis Token.',
   'guide.professions.archetypeSwitchBody': 'Một lời tuyên bố cũng không phải bản án chung thân. Một cặp bạn chưa từng theo thì chỉ đơn giản là một nhiệm vụ thụ ngộ mới, còn quay lại một cặp bạn đã rời bỏ thì đòi bạn chuộc lỗi trước: năm nhiệm vụ ở lần đầu, và cộng thêm ba nhiệm vụ cho mỗi lần quay lại mà bạn đã thực hiện trước đó (nhận một cặp hoàn toàn mới không bao giờ làm tăng con số ấy). Lựa chọn vẫn giữ được sức nặng mà không bao giờ khóa hẳn một cánh cửa nào.',
   'guide.professions.whatBody': 'Nghề nghiệp là đời sống lao động của thế giới này: bốn nghề thu thập kéo nguyên liệu thô thẳng ra khỏi đất, và một vòng gồm mười nghề thủ công biến chúng thành trang bị, bữa ăn, thuốc, và công cụ. Ở đây mọi thứ đều nuôi một thứ khác. Quặng bạn khai thác trở thành một lưỡi kiếm, lưỡi kiếm nhận một pháp khắc, và pháp khắc lại cần bụi phá ra từ trang bị cũ, nên người thu thập, người chế tác, và người mày mò máy móc đều là những mắt xích trong cùng một sợi dây.\n\nKhông có giới hạn số nghề nào để bạn phải đau đầu. Mỗi nhân vật đều có thể nâng bảy trong tám nghề thủ công có nội dung hôm nay cùng cả bốn nghề thu thập song song với nhau (Cơ Khí là ngoại lệ duy nhất: mọi công thức của nó đều bắt đầu trên cái trần miễn phí, nên cái thang của nó phải chờ lời thề của Chuyên Gia Nổ); lựa chọn độc quyền duy nhất là hình mẫu của bạn, cái danh tính mà rốt cuộc bạn sẽ thề theo, dù một khi đã thụ ngộ thì những nghề rơi vào trạng thái ngủ phía sau nó chỉ còn leo được trên các công thức phổ thông của chúng, và quá kỹ năng 75 thì không leo được nữa. Kỹ năng không bao giờ tụt xuống, và không thứ gì bạn đã học bị lấy đi.',
   'guide.professions.archetypesBody': 'Mười nghề thủ công nằm trên một bánh xe cố định, và vị trí trên bánh xe ấy có ý nghĩa. Cứ hai nghề kề nhau lại tạo thành một cặp có tên: Thợ Rèn cho Rèn Vũ Khí và Rèn Giáp, Thợ Trang Phục cho Thuộc Da và May Vá, Dược Sĩ cho Giả Kim và Nấu Ăn, Chuyên Gia Nổ cho Cơ Khí và Giả Kim, cùng sáu cặp nữa quanh vòng.\n\nThụ ngộ với một cặp là một nhiệm vụ, không phải một cú nhấn trong menu. Hôm nay có bốn cặp có thể gia nhập (Thợ Rèn, Thợ Trang Phục, Dược Sĩ, và Chuyên Gia Nổ), mỗi cặp neo vào một bậc thầy thường trú ở Eastbrook mà nhiệm vụ tiếp nhận của họ nêu rõ toàn bộ giao kèo ngay từ đầu trước khi bạn nhận. Cho tới lúc bạn tuyên bố, mọi nghề thủ công đều tiến lên thoải mái trên các công thức tới hết bậc hiếm (bất kỳ công thức nào đòi kỹ năng 74 trở xuống), nên bạn có thể thử gần như mọi thứ trước khi chọn (riêng Cơ Khí không có công thức nào thấp đến thế, nên con số của nó phải chờ).\n\nMột khi bạn đã thụ ngộ, hai nghề trong cặp trở thành nghề chuyên ngành của bạn, không có trần nào ngoài chính giới hạn tối đa. Phần còn lại của bánh xe không tắt hẳn: một nghề nằm đối diện các nghề chuyên ngành vẫn sáng như một sở thích và tiếp tục leo qua hết bậc hiếm (một nhiệm vụ lặp lại được tại lò rèn của Thợ Rèn Haldren cho phép bạn đổi xem đó là nghề nào), và mọi nghề khác thì ngủ yên. Một nghề đang ngủ vẫn giữ kỹ năng và các công thức phổ thông của nó, những công thức ấy vẫn dạy nó theo đường cong bình thường cho tới khi chúng chuyển xám ở 75; mọi thứ trên bậc phổ thông ngừng trả điểm ngay lập tức, và một nghề đang ngủ không bao giờ cho ra kiệt tác trong lúc nó nghỉ.',
@@ -1793,8 +1785,6 @@ export const vi_VN: Partial<Record<TranslationKey, string>> = {
   'hud.prompts.resurrectionOffer': '{name} muốn đưa bạn trở lại cõi sống. Bạn có chấp nhận không?',
   'questUi.dialog.profIntroHint': 'Gặp {name} để nhận "{quest}".',
   'itemUi.stats.parry': 'Đỡ Đòn',
-  'apiError.wallet.handoff_invalid':
-    'Quyền ủy quyền ví đó đã hết hạn hoặc không thể xác minh. Hãy thử lại.',
   'cardDuel.close': 'Đóng',
   'cardDuel.counts': 'Bộ bài: {deck} · Thải bài: {discard}',
   'cardDuel.forfeit': 'Bỏ Cuộc',

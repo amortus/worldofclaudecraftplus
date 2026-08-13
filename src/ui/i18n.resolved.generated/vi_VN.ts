@@ -3899,21 +3899,8 @@ export const vi_VN: EnTranslations = {
       "account_taken": "Tài khoản Epic đó đã được liên kết với một tài khoản khác.",
       "upstream": "Epic không phản hồi. Hãy thử lại sau giây lát."
     },
-    "wallet": {
-      "handoff_invalid": "Quyền ủy quyền ví đó đã hết hạn hoặc không thể xác minh. Hãy thử lại."
-    },
     "ota_updates": {
       "invalid_input": "Dữ liệu nhập không hợp lệ."
-    },
-    "seeker": {
-      "native_only": "Quyền lợi Seeker chỉ khả dụng trong ứng dụng gốc.",
-      "attestation_failed": "Xác minh thiết bị thất bại. Vui lòng thử lại.",
-      "solana_artifact_required": "Hãy dùng ứng dụng Solana Store để tiếp tục.",
-      "wallet_required": "Hãy liên kết và xác minh một ví trước.",
-      "genesis_token_required": "Cần có một Seeker Genesis Token đã được xác minh.",
-      "genesis_token_claimed": "Seeker Genesis Token đó đã được nhận rồi.",
-      "entitlement_required": "Cần có quyền lợi Seeker đã được xác minh.",
-      "current_ownership_required": "Bạn phải đang sở hữu Seeker Genesis Token."
     }
   },
   "guide": {

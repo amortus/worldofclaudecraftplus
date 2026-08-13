@@ -211,6 +211,7 @@ export const ERROR_CODES = deepFreeze({
   'epic.account_taken': { params: [] },
   // The Epic / EOS upstream could not be reached or is not provisioned (503).
   'epic.upstream': { params: [] },
+  'ota_updates.invalid_input': { params: [] },
 } as const);
 
 /** A stable error code: one of the keys of ERROR_CODES. */

@@ -3899,21 +3899,8 @@ export const ru_RU: EnTranslations = {
       "account_taken": "Этот аккаунт Epic уже привязан к другому аккаунту.",
       "upstream": "Epic не отвечает. Повторите попытку чуть позже."
     },
-    "wallet": {
-      "handoff_invalid": "Срок действия авторизации кошелька истек или ее не удалось проверить. Повторите попытку."
-    },
     "ota_updates": {
       "invalid_input": "Недопустимые данные."
-    },
-    "seeker": {
-      "native_only": "Права Seeker доступны только в нативном приложении.",
-      "attestation_failed": "Не удалось подтвердить устройство. Повторите попытку.",
-      "solana_artifact_required": "Продолжите в версии приложения из Solana Store.",
-      "wallet_required": "Сначала привяжите и подтвердите кошелек.",
-      "genesis_token_required": "Требуется подтвержденный Seeker Genesis Token.",
-      "genesis_token_claimed": "Этот Seeker Genesis Token уже был зарегистрирован.",
-      "entitlement_required": "Требуются подтвержденные права Seeker.",
-      "current_ownership_required": "Требуется текущее владение Seeker Genesis Token."
     }
   },
   "guide": {

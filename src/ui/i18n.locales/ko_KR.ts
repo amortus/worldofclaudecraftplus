@@ -8315,16 +8315,6 @@ export const ko_KR: Partial<Record<TranslationKey, string>> = {
   'apiError.deeds.invalid_input': '입력이 올바르지 않습니다.',
   'apiError.ota_updates.invalid_input': '입력이 올바르지 않습니다.',
   'apiError.steam.disabled': '현재 Steam 연동을 사용할 수 없습니다.',
-  'apiError.wallet.handoff_invalid':
-    '지갑 인증이 만료되었거나 확인할 수 없습니다. 다시 시도해 주세요.',
-  'apiError.seeker.native_only': 'Seeker 자격은 네이티브 앱에서만 사용할 수 있습니다.',
-  'apiError.seeker.attestation_failed': '기기 인증에 실패했습니다. 다시 시도해 주세요.',
-  'apiError.seeker.solana_artifact_required': 'Solana Store 앱을 사용하여 계속해 주세요.',
-  'apiError.seeker.wallet_required': '먼저 지갑을 연결하고 인증하세요.',
-  'apiError.seeker.genesis_token_required': '인증된 Seeker Genesis Token이 필요합니다.',
-  'apiError.seeker.genesis_token_claimed': '해당 Seeker Genesis Token은 이미 등록되었습니다.',
-  'apiError.seeker.entitlement_required': '인증된 Seeker 자격이 필요합니다.',
-  'apiError.seeker.current_ownership_required': '현재 Seeker Genesis Token을 보유해야 합니다.',
   'apiError.steam.invalid_ticket':
     'Steam이 이 연동 요청을 확인하지 못했습니다. 데스크톱 앱에서 다시 시도해 주세요.',
   'apiError.steam.banned': '해당 Steam 계정은 연동할 수 없습니다.',

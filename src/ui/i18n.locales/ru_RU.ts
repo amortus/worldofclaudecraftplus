@@ -8454,16 +8454,6 @@ export const ru_RU: Partial<Record<TranslationKey, string>> = {
   'apiError.deeds.invalid_input': 'Недопустимые данные.',
   'apiError.ota_updates.invalid_input': 'Недопустимые данные.',
   'apiError.steam.disabled': 'Привязка Steam сейчас недоступна.',
-  'apiError.wallet.handoff_invalid':
-    'Срок действия авторизации кошелька истек или ее не удалось проверить. Повторите попытку.',
-  'apiError.seeker.native_only': 'Права Seeker доступны только в нативном приложении.',
-  'apiError.seeker.attestation_failed': 'Не удалось подтвердить устройство. Повторите попытку.',
-  'apiError.seeker.solana_artifact_required': 'Продолжите в версии приложения из Solana Store.',
-  'apiError.seeker.wallet_required': 'Сначала привяжите и подтвердите кошелек.',
-  'apiError.seeker.genesis_token_required': 'Требуется подтвержденный Seeker Genesis Token.',
-  'apiError.seeker.genesis_token_claimed': 'Этот Seeker Genesis Token уже был зарегистрирован.',
-  'apiError.seeker.entitlement_required': 'Требуются подтвержденные права Seeker.',
-  'apiError.seeker.current_ownership_required': 'Требуется текущее владение Seeker Genesis Token.',
   'apiError.steam.invalid_ticket':
     'Steam не смог подтвердить этот запрос на привязку. Повторите попытку из настольного приложения.',
   'apiError.steam.banned': 'Этот аккаунт Steam нельзя привязать.',

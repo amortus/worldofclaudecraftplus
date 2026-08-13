@@ -1403,15 +1403,6 @@ export const cs_CZ: Partial<Record<TranslationKey, string>> = {
   'apiError.epic.invalid_token':
     'Epic nemohl ověřit tento požadavek na propojení. Zkus to znovu z desktopové aplikace.',
   'apiError.epic.upstream': 'Epic neodpověděl. Zkus to za chvíli znovu.',
-  'apiError.seeker.native_only': 'Oprávnění Seeker je dostupné jen v nativní aplikaci.',
-  'apiError.seeker.attestation_failed': 'Ověření zařízení selhalo. Zkus to prosím znovu.',
-  'apiError.seeker.solana_artifact_required': 'Pro pokračování použij aplikaci Solana Store.',
-  'apiError.seeker.wallet_required': 'Nejdřív propoj a ověř peněženku.',
-  'apiError.seeker.genesis_token_required': 'Je vyžadován ověřený Seeker Genesis Token.',
-  'apiError.seeker.genesis_token_claimed': 'Tento Seeker Genesis Token už byl uplatněn.',
-  'apiError.seeker.entitlement_required': 'Je vyžadováno ověřené oprávnění Seeker.',
-  'apiError.seeker.current_ownership_required':
-    'Je vyžadováno aktuální vlastnictví Seeker Genesis Token.',
   'guide.professions.archetypeSwitchBody':
     'Ani prohlášení není doživotní trest. Pár, který jsi nikdy nedržel, je prostě nový úkol na naladění, zatímco návrat k páru, od kterého jsi odešel, po tobě chce nejdřív nápravu: pět úkolů poprvé a další tři přičtené za každý návrat, který jsi už udělal (převzetí zbrusu nového páru počet nikdy nezvyšuje). Volba zůstává významná, aniž by kdy nadobro zavřela dveře.',
   'guide.professions.whatBody':
@@ -1919,8 +1910,6 @@ export const cs_CZ: Partial<Record<TranslationKey, string>> = {
   'hud.prompts.resurrectionOffer': '{name} tě chce vrátit k životu. Přijímáš?',
   'questUi.dialog.profIntroHint': 'Viz {name} pro "{quest}".',
   'itemUi.stats.parry': 'Odražení',
-  'apiError.wallet.handoff_invalid':
-    'Toto oprávnění peněženky vypršelo nebo je neověřitelné. Zkus to znovu.',
   'cardDuel.close': 'Zavřít',
   'cardDuel.counts': 'Balíček: {deck} · Odložiště: {discard}',
   'cardDuel.forfeit': 'Vzdát se',

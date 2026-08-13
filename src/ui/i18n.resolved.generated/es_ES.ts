@@ -3899,21 +3899,8 @@ export const es_ES: EnTranslations = {
       "account_taken": "Esa cuenta de Epic ya está vinculada a otra cuenta.",
       "upstream": "Epic no respondió. Inténtalo de nuevo en un momento."
     },
-    "wallet": {
-      "handoff_invalid": "La autorización de la cartera ha caducado o no se ha podido verificar. Inténtalo de nuevo."
-    },
     "ota_updates": {
       "invalid_input": "Entrada no válida."
-    },
-    "seeker": {
-      "native_only": "El derecho de acceso Seeker solo está disponible en la aplicación nativa.",
-      "attestation_failed": "No se pudo verificar el dispositivo. Inténtalo de nuevo.",
-      "solana_artifact_required": "Usa la aplicación Solana Store para continuar.",
-      "wallet_required": "Primero vincula y verifica una cartera.",
-      "genesis_token_required": "Se requiere un Seeker Genesis Token verificado.",
-      "genesis_token_claimed": "Ese Seeker Genesis Token ya se ha reclamado.",
-      "entitlement_required": "Se requiere un derecho de acceso Seeker verificado.",
-      "current_ownership_required": "Se requiere ser el propietario actual del Seeker Genesis Token."
     }
   },
   "guide": {

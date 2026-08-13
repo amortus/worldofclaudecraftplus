@@ -3899,21 +3899,8 @@ export const id_ID: EnTranslations = {
       "account_taken": "Akun Epic tersebut sudah tertaut ke akun lain.",
       "upstream": "Epic tidak merespons. Coba lagi sebentar lagi."
     },
-    "wallet": {
-      "handoff_invalid": "Otorisasi dompet itu telah kedaluwarsa atau tidak dapat diverifikasi. Coba lagi."
-    },
     "ota_updates": {
       "invalid_input": "Masukan tidak valid."
-    },
-    "seeker": {
-      "native_only": "Hak akses Seeker hanya tersedia di aplikasi native.",
-      "attestation_failed": "Verifikasi perangkat gagal. Silakan coba lagi.",
-      "solana_artifact_required": "Gunakan aplikasi versi Solana Store untuk melanjutkan.",
-      "wallet_required": "Tautkan dan verifikasi dompet terlebih dahulu.",
-      "genesis_token_required": "Diperlukan Seeker Genesis Token yang terverifikasi.",
-      "genesis_token_claimed": "Seeker Genesis Token itu sudah diklaim.",
-      "entitlement_required": "Diperlukan hak akses Seeker yang terverifikasi.",
-      "current_ownership_required": "Diperlukan kepemilikan Seeker Genesis Token saat ini."
     }
   },
   "guide": {
