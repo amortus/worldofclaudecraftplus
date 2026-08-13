@@ -1,4 +1,6 @@
 include ':app'
+// Play Asset Delivery pack for the content-hashed media set (see android/mediapack).
+include ':mediapack'
 include ':capacitor-cordova-android-plugins'
 project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
 

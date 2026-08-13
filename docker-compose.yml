@@ -47,6 +47,39 @@ services:
     environment:
       DATABASE_URL: postgres://eastbrook:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env. See .env.example.}@postgres:5432/eastbrook
       PORT: "8787"
+      # ---------------------------------------------------------------------
+      # Realm identity and the browser-login gate. THIS BLOCK IS LOAD-BEARING:
+      # upstream's compose passed none of it, and without REALMS every browser
+      # /api/login and /api/register on this deployment answers 403.
+      #
+      # Why: the Dockerfile sets NODE_ENV=production, so webLoginEnforced() is on
+      # and isWebClientRequest (server/web_login_guard.ts) must recognise the
+      # Origin. Its same-host fallback compares the Origin's host against the
+      # Host / X-Forwarded-Host header, and our Cloudflare Worker (worker.js)
+      # REBUILDS the request against the backend URL, so Host becomes the
+      # sslip.io backend name while Origin stays https://worldofclaudecraft.com.br.
+      # The two never match and the fallback can never fire.
+      #
+      # REALMS is the fix, and it is strictly better than WEB_ORIGINS because one
+      # value satisfies three separate checks at once: the login gate
+      # (REALM_ORIGINS feeds isWebClientRequest), CORS (allowedCorsOrigin), and
+      # the origin-check middleware allowlist. It also fills the client's realm
+      # list. Format: Name=https://origin=Type, comma separated.
+      #   REALMS=Claudemoon=https://worldofclaudecraft.com.br=Normal
+      # WEB_ORIGINS stays available as a narrower escape hatch (login gate only).
+      REALMS: ${REALMS:-}
+      REALM_NAME: ${REALM_NAME:-}
+      REALM_TYPE: ${REALM_TYPE:-}
+      REALM_RESET_TZ: ${REALM_RESET_TZ:-}
+      WEB_ORIGINS: ${WEB_ORIGINS:-}
+      # Escape hatch for the gate itself: unset means "on in production", 0 forces
+      # it off (never do that on a public host), 1 forces it on outside production.
+      REQUIRE_WEB_LOGIN: ${REQUIRE_WEB_LOGIN:-}
+      # Rate limiting reads the client IP from X-Forwarded-For only for sources on
+      # this list. Behind the Cloudflare Worker every request arrives from a
+      # Cloudflare edge address, so leaving this unset makes the whole internet
+      # share one rate-limit bucket. See .env.example.
+      TRUSTED_PROXY_IPS: ${TRUSTED_PROXY_IPS:-}
       # Runtime: node flags for the game process, chiefly the V8 heap ceiling
       # (--max-old-space-size). Node sizes its default old-space from TOTAL SYSTEM
       # memory, not from the container's cgroup limit, so on a box larger than
@@ -89,7 +122,10 @@ services:
       NATIVE_ATTESTATION_REQUIRED: ${NATIVE_ATTESTATION_REQUIRED:-}
       GOOGLE_PLAY_INTEGRITY_SERVICE_ACCOUNT_JSON: ${GOOGLE_PLAY_INTEGRITY_SERVICE_ACCOUNT_JSON:-}
       GOOGLE_PLAY_INTEGRITY_SIGNING_PEM: ${GOOGLE_PLAY_INTEGRITY_SIGNING_PEM:-}
-      GOOGLE_PLAY_INTEGRITY_PACKAGE_NAME: ${GOOGLE_PLAY_INTEGRITY_PACKAGE_NAME:-com.worldofclaudecraft}
+      # This fork's Play listing is com.worldofclaudecraft.brasil (see
+      # capacitor.config.ts and android/app/build.gradle). A mismatch here makes
+      # native attestation reject every Android client.
+      GOOGLE_PLAY_INTEGRITY_PACKAGE_NAME: ${GOOGLE_PLAY_INTEGRITY_PACKAGE_NAME:-com.worldofclaudecraft.brasil}
       GOOGLE_PLAY_INTEGRITY_CERT_DIGESTS: ${GOOGLE_PLAY_INTEGRITY_CERT_DIGESTS:-}
       GOOGLE_PLAY_INTEGRITY_DEVICE_VERDICT: ${GOOGLE_PLAY_INTEGRITY_DEVICE_VERDICT:-MEETS_DEVICE_INTEGRITY}
       # Solana Store (Seeker) artifact allowlist: fail-closed while unset, so the

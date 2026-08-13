@@ -1,7 +1,10 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.worldofclaudecraft',
+  // This fork publishes under its own Play listing. Keep in lockstep with
+  // android/app/build.gradle applicationId and the server's
+  // GOOGLE_PLAY_INTEGRITY_PACKAGE_NAME, or native attestation fails closed.
+  appId: 'com.worldofclaudecraft.brasil',
   appName: 'World of ClaudeCraft',
   webDir: 'dist',
   server: {
