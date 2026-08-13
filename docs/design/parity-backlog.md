@@ -1,5 +1,21 @@
 # Upstream parity backlog
 
+> **HISTORICAL, as of the v0.36.0 migration. Do not work from this file.**
+>
+> This document records the piecemeal port of upstream features into this fork,
+> wave by wave. That programme is over: the decision was to adopt upstream's
+> codebase wholesale and re-point the infrastructure at ours, so every "still to
+> port" item below is moot and every "we diverged here" note describes a tree
+> that no longer exists.
+>
+> What survives from it is the reasoning, which is still worth reading before
+> anyone re-introduces a divergence: why upstream's premise is often false in a
+> fork, why sim-to-UI event names are string contracts that `tsc` cannot check,
+> and why content can be unreachable and still pass every test. The "Deliberately
+> excluded" section is also partly superseded: the Claudium storefront and the
+> Electron client came across with the adoption and were deliberately kept; only
+> the crypto and wallet surface was removed.
+
 What is left to port from `github.com/levy-street/world-of-claudecraft`, why each item is
 shaped the way it is, and the traps already mapped. Written so the next session can start
 work without re-doing the investigation.
