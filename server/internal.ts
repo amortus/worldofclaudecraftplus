@@ -2,7 +2,6 @@ import { timingSafeEqual } from 'node:crypto';
 import type * as http from 'node:http';
 import { specialRoleByKey } from '../src/sim/discord_roles';
 import { DISCORD_REWARD_GRANTS, discordStatusIndexForPoints } from '../src/sim/discord_tier';
-import { dailyRewardService } from './daily_rewards';
 import { pool } from './db';
 import { discordFlexForAccount, discordFlexForAccounts, setDiscordPresenceCache } from './discord';
 import { drainActivity, type QueuedActivity, requeueActivity } from './discord_activity';

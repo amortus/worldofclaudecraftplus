@@ -2959,9 +2959,9 @@ export function routeHttpRequest(req: http.IncomingMessage, res: http.ServerResp
   else if (req.method === 'GET' && path === '/metrics')
     void handleMetricsGate(req, res, httpMetrics, activeConfig().metricsToken);
   else if (url.startsWith('/internal/')) {
-    // The flag-gated internal dispatcher; its delegate is the exact pre-migration
-    // composite (daily-rewards ops tried first, then handleInternalApi), so the
-    // 'legacy' mode and every unmatched path stay byte-identical.
+    // The flag-gated internal dispatcher; its delegate is the retained legacy
+    // handleInternalApi ladder, so the 'legacy' mode and every unmatched path
+    // stay byte-identical.
     void internalApiEntry(req, res);
   } else if (url.startsWith('/admin/api/')) void adminApiEntry(req, res);
   else if (url.startsWith('/api/')) void apiEntry(req, res);
