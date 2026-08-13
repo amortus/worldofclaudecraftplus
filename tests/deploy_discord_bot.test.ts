@@ -389,8 +389,11 @@ describe('Discord bot DEPLOY.md contract', () => {
     for (const m of stripped.matchAll(/process\.env\.([A-Z_0-9]+)/g)) keys.add(m[1]);
     for (const m of stripped.matchAll(/required\('([A-Z_0-9]+)'\)/g)) keys.add(m[1]);
     // Vacuity floor at the real count: a scrape that quietly stopped matching
-    // would otherwise assert nothing.
-    expect(keys.size).toBeGreaterThanOrEqual(26);
+    // would otherwise assert nothing. 25, not upstream's 26: this fork removed
+    // DISCORD_DAILY_REWARDS_CHANNEL_ID with the winners stream, which announced
+    // the on-chain payouts the crypto removal deleted. The daily reward itself
+    // stays; only the money and its announcement went.
+    expect(keys.size).toBeGreaterThanOrEqual(25);
     // The TABLE ROW form, not a bare backticked mention: several keys also
     // appear in prose (incident guidance, the runbook), so a deleted row would
     // otherwise stay green on its prose echo (proved by mutation: dropping the
