@@ -61,8 +61,9 @@ const ev = sim.tick();  // tick() RETURNS SimEvent[]; assert on e.type ('death',
 
 ## Server tests (snapshots/bandwidth/xp/interest/admin/...)
 Postgres is mocked at the top: `vi.mock('../server/db', () => ({ pool, saveCharacterState, ... }))`
-  loadAccountFlair: vi.fn(async () => ({ ai: false, streamer: false, links: {} })),
-(hoisted; keep it ABOVE the `server/game` import). Drive `new GameServer()` with a
+(hoisted; keep it ABOVE the `server/game` import). A suite that drives `GameServer` must also
+declare `loadAccountFlair` in that factory (`server/game.ts` imports it, so Vitest refuses a
+mock without the key); the shape is `async () => ({ ai: false, streamer: false, links: {} })`. Drive `new GameServer()` with a
 fake socket: `fakeWs()` collects `JSON.parse`'d sends; `server.join(...)`,
 `server.handleMessage(session, JSON.stringify({t:'cmd',...}))`, `(server as any).broadcastSnapshots()`.
 For the online client path, build a `ClientWorld` without the WebSocket plumbing by importing
