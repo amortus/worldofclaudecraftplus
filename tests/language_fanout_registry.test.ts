@@ -384,12 +384,6 @@ const NOT_A_LANGUAGE_GATE: ReadonlyArray<{
   readonly reason: string;
 }> = [
   {
-    file: 'claudium_window.ts',
-    memos: ['paintedWalletMarkup'],
-    reason:
-      'paintedWalletMarkup retains the RESOLVED wallet markup and is compared against a freshly built walletConnectionHtml(), so a locale change moves both sides of the comparison and the repaint happens by itself. It is a write-elision memo, not a data signature.',
-  },
-  {
     file: 'daily_rewards_window.ts',
     memos: ['paintedStoreBody', 'paintedStoreMarkup'],
     reason:
@@ -683,7 +677,7 @@ describe('language fan-out: half 2, every signature-gated src/ui surface is clas
       // no text); fillGrid rebuilds every cell unconditionally and the
       // existing bags fan-out arm repaints the window wholesale on a locale
       // switch.
-    ).toBe(8);
+    ).toBe(7);
   });
 
   it('gives every relocalize() in src/ui a caller in the fan-out', () => {

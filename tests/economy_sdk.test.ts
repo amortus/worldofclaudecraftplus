@@ -6,10 +6,6 @@ import {
   startClaudiumPurchase,
 } from '../src/net/economy_sdk';
 
-vi.mock('../src/net/wallet', () => ({
-  currentWallet: () => ({ address: 'wallet-owner', isConnected: true }),
-}));
-
 afterEach(() => {
   vi.unstubAllGlobals();
 });
@@ -291,6 +287,7 @@ describe('startClaudiumPurchase', () => {
     const signer = vi.fn(async () => 'usdc-signature');
 
     const result = await startClaudiumPurchase(client, 'usdc', 'claudium_500', {
+      nativePayer: 'wallet-owner',
       nativeSignAndSend: signer,
     });
 

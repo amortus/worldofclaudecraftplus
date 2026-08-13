@@ -56,7 +56,7 @@ describe('Android immersive mode', () => {
     // flavor extending BridgeActivity directly would ship without immersive mode while
     // this suite stayed green over a surface that no longer matched it.
     const flavors = flavorActivities();
-    expect(flavors.map((f) => f.flavor).sort()).toEqual(['play', 'solanaStore']);
+    expect(flavors.map((f) => f.flavor).sort()).toEqual(['play']);
     for (const { flavor, source } of flavors) {
       expect(source, `${flavor} MainActivity must inherit the immersive base`).toMatch(
         /class MainActivity extends BaseMainActivity/,

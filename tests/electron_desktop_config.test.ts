@@ -5,7 +5,6 @@ import {
   resolveDesktopOrigins,
   resolveDistribution,
   updaterAllowed,
-  walletConnectionSupported,
 } from '../electron/desktop_config.cjs';
 
 const steamStamp = { wocDesktop: { distribution: 'steam' } };
@@ -122,15 +121,6 @@ describe('updaterAllowed (the store / dev double gate)', () => {
   it('never allows an unpackaged checkout, even forced to website', () => {
     expect(updaterAllowed({ distribution: 'website', isPackaged: false })).toBe(false);
     expect(updaterAllowed({ distribution: 'website', isPackaged: undefined })).toBe(false);
-  });
-});
-
-describe('walletConnectionSupported', () => {
-  it('allows the website shell and keeps Steam and Epic fail-closed', () => {
-    expect(walletConnectionSupported({ distribution: 'website' })).toBe(true);
-    expect(walletConnectionSupported({ distribution: 'steam' })).toBe(false);
-    expect(walletConnectionSupported({ distribution: 'epic' })).toBe(false);
-    expect(walletConnectionSupported({ distribution: 'unknown' })).toBe(false);
   });
 });
 

@@ -181,13 +181,7 @@ describe('WOC Store window contract', () => {
       hud.indexOf('// Spellbook window painter'),
     );
     expect(claudiumDeps).toContain("root: () => $('#claudium-window')");
-    expect(claudiumDeps).toContain('walletState: () => walletConnectionView()');
     expect(claudiumDeps).toContain('onVisibilityChange: () => this.syncAnyWindowOpenState()');
-    const walletUiSubscription = hud.slice(
-      hud.indexOf('onWalletUiChange(() => {'),
-      hud.indexOf("$('#pf-name').textContent"),
-    );
-    expect(walletUiSubscription).toContain('this.claudiumWindow.onWalletChanged();');
     // No conditional GPU promotion on the store windows: the old
     // body.store-stack-open will-change rule dropped the promotion in the same
     // frame a window's inline display flipped, racing Chromium's layer
@@ -232,7 +226,6 @@ describe('WOC Store window contract', () => {
   });
 
   it('keeps the store and Claudium out of native builds while gating Daily Rewards by wallet capability', () => {
-    expect(main).toContain('dailyRewardsEnabled: NATIVE_APP ? await walletCapabilityReady : true');
     expect(main).toContain('devCommandsEnabled: import.meta.env.DEV');
     const economyWiring = main.slice(
       main.indexOf('if (!NATIVE_APP) {', main.indexOf('const claudiumHooks')),

@@ -78,11 +78,6 @@ describe('navigationAllowed', () => {
     expect(navigationAllowed(turnstile, true, main)).toBe(false);
     expect(navigationAllowed(turnstile, false, main)).toBe(true);
   });
-  it('allows WalletConnect verification only as an embedded subframe', () => {
-    const verify = 'https://verify.walletconnect.com/session';
-    expect(navigationAllowed(verify, true, main)).toBe(false);
-    expect(navigationAllowed(verify, false, main)).toBe(true);
-  });
   it('denies a malformed navigation URL', () => {
     expect(navigationAllowed('::: not a url', true, main)).toBe(false);
   });
@@ -189,15 +184,6 @@ describe('buildContentSecurityPolicy', () => {
     expect(csp).toContain("font-src 'self' https://fonts.gstatic.com");
     expect(csp).toContain("worker-src 'self' blob:");
     expect(csp).toContain('frame-src https://challenges.cloudflare.com');
-  });
-
-  it('allows only the WalletConnect transport, modal images, fonts, and verification frames', () => {
-    expect(directive('connect-src')).toContain('https://*.walletconnect.com');
-    expect(directive('connect-src')).toContain('wss://*.walletconnect.com');
-    expect(directive('connect-src')).toContain('https://api.web3modal.org');
-    expect(directive('img-src')).toContain('https://secure.walletconnect.com');
-    expect(directive('font-src')).toContain('https://fonts.reown.com');
-    expect(directive('frame-src')).toContain('https://verify.walletconnect.com');
   });
 
   // Desktop is the only host that ships a CSP. Linked Discord avatars load from

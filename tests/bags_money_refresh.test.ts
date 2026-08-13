@@ -333,15 +333,6 @@ describe('async balance reads repaint the FOOTER, not the whole window', () => {
   // with a moving purse hit it roughly twice a minute). Pinned per SITE, because a
   // whole-file assertion would be satisfied by either one alone.
 
-  it('the wallet UI change listener repaints only the money row', () => {
-    expect(hud).toMatch(/onWalletUiChange\(\(\) => \{[^}]*this\.bagsWindow\.refreshMoneyRow\(\);/);
-    // ONLY. A toMatch on the new call says nothing about the old one: re-adding
-    // `this.renderBags();` on the next line satisfies every affirmative pin here
-    // while restoring the exact teardown this block is named after. Scoped to the
-    // block, not the file, because ~7 other sites call renderBags() legitimately.
-    expect(hud).not.toMatch(/onWalletUiChange\(\(\) => \{[^}]*this\.renderBags\(\);/);
-  });
-
   // The Claudium balance itself no longer lives here to be pattern-matched. Its
   // state, its 30s read, the in-flight and stale-response guards and the changed-only
   // converge moved to src/ui/claudium_launcher_balance_core.ts (issues #2411, #2414),
@@ -412,12 +403,12 @@ describe('async balance reads repaint the FOOTER, not the whole window', () => {
     // `!== 'none'` reads a never-opened window as shown (#1538), so the old form
     // would paint a window the player has never opened on every balance read.
     const sites = hud.match(/this\.bagsWindow\.refreshMoneyRow\(\);/g) ?? [];
-    expect(sites).toHaveLength(2);
+    expect(sites).toHaveLength(1);
     const guarded =
       hud.match(
         /if \(bagsWindowShown\(\$\('#bags'\)\.style\.display\)\) this\.bagsWindow\.refreshMoneyRow\(\);/g,
       ) ?? [];
-    expect(guarded).toHaveLength(2);
+    expect(guarded).toHaveLength(1);
   });
 });
 

@@ -146,7 +146,6 @@ describe('buildBankView: bonus projection', () => {
         bonusSources: [
           { id: 'email', slots: 2, maxSlots: 2 }, // earned
           { id: 'discord', slots: 0, maxSlots: 2 }, // unearned
-          { id: 'wallet', slots: 0, maxSlots: 2 }, // unearned
         ],
       }),
       lookup,
@@ -157,7 +156,6 @@ describe('buildBankView: bonus projection', () => {
     expect(view.bonus.rows).toEqual([
       { id: 'email', slots: 2, maxSlots: 2, earned: true, count: undefined, cap: undefined },
       { id: 'discord', slots: 0, maxSlots: 2, earned: false, count: undefined, cap: undefined },
-      { id: 'wallet', slots: 0, maxSlots: 2, earned: false, count: undefined, cap: undefined },
     ]);
   });
 

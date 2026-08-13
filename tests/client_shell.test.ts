@@ -909,25 +909,9 @@ describe('client HTML shell', () => {
 
   it('excludes wallet surfaces from unverified native and Steam builds while allowing Seeker', () => {
     expect(hudCss).toContain('body.native-app #nav-btn-download,');
-    expect(hudCss).toContain(
-      'body.native-app:not(.seeker-wallet-enabled) .cs-wallet,\n  body.native-app:not(.seeker-wallet-enabled) .cs-wallet-hidden-note,\n  body.native-app:not(.seeker-wallet-enabled) .account-wallet-card',
-    );
-    expect(hudCss).not.toContain('body.native-app .cs-wallet,');
     expect(hudCss).toContain('body.native-app #performance-tip,');
     expect(hudCss).toContain('body.desktop-app #token-ca,\n  body.desktop-app .official-site-copy');
-    expect(hudCss).not.toContain('body.desktop-app .cs-wallet');
-    expect(html).toContain('<section class="account-card account-wallet-card">');
     expect(mainTs).toContain("document.body.classList.toggle('desktop-app', DESKTOP_APP);");
-    expect(mainTs).toContain('const walletCapabilityReady = resolveWalletCapability({');
-    expect(mainTs).toContain('nativeApp: NATIVE_APP,');
-    expect(mainTs).toContain('desktopApp: DESKTOP_APP,');
-    expect(mainTs).toContain('bridge: DESKTOP_APP ? desktopBridge() : null,');
-    expect(mainTs).toContain("document.querySelector('.cs-wallet')?.remove();");
-    expect(mainTs).toContain("document.querySelector('.account-wallet-card')?.remove();");
-    expect(mainTs).toContain("disconnectBtn.className = 'wallet-mini wallet-picker-disconnect';");
-    expect(mainTs).toContain("closeWalletPicker({ action: 'disconnect' });");
-    expect(mainTs).toContain('await openDesktopWalletManager();');
-    expect(shellCss).toContain('.wallet-picker-disconnect {');
   });
 
   it('skips the web mobile preflight in native builds and hard-gates portrait gameplay', () => {

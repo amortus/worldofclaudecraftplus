@@ -34,12 +34,9 @@ import {
   resetAuthFailures,
   resetCardUploadRateLimits,
   resetRateLimits,
-  resetWalletLinkRateLimits,
   resetWocBalanceRateLimits,
   trackedIpCount,
-  WALLET_LINK_MAX_PER_MINUTE,
   WOC_BALANCE_MAX_PER_MINUTE,
-  walletLinkRateLimited,
   wocBalanceRateLimited,
 } from '../server/ratelimit';
 import { passesTurnstile } from '../server/turnstile';
@@ -169,7 +166,6 @@ describe('rate-limit client IP selection', () => {
   beforeEach(() => {
     resetRateLimits();
     resetCardUploadRateLimits();
-    resetWalletLinkRateLimits();
     resetWocBalanceRateLimits();
   });
 
@@ -264,36 +260,6 @@ describe('rate-limit client IP selection', () => {
     }
     expect(
       cardUploadRateLimited(fakeReq({ 'x-forwarded-for': ip }, '172.18.0.1'), 2000).allowed,
-    ).toBe(false);
-  });
-
-  it('rate-limits wallet link/challenge attempts by account across client IPs', () => {
-    const accountId = 77;
-    for (let i = 0; i < WALLET_LINK_MAX_PER_MINUTE; i++) {
-      expect(
-        walletLinkRateLimited(
-          fakeReq({ 'x-forwarded-for': `203.0.114.${i + 1}` }, '172.18.0.1'),
-          accountId,
-        ).allowed,
-      ).toBe(true);
-    }
-    expect(
-      walletLinkRateLimited(
-        fakeReq({ 'x-forwarded-for': '203.0.114.250' }, '172.18.0.1'),
-        accountId,
-      ).allowed,
-    ).toBe(false);
-  });
-
-  it('rate-limits wallet link/challenge attempts by client IP across accounts', () => {
-    const ip = '203.0.114.220';
-    for (let i = 0; i < WALLET_LINK_MAX_PER_MINUTE; i++) {
-      expect(
-        walletLinkRateLimited(fakeReq({ 'x-forwarded-for': ip }, '172.18.0.1'), 1000 + i).allowed,
-      ).toBe(true);
-    }
-    expect(
-      walletLinkRateLimited(fakeReq({ 'x-forwarded-for': ip }, '172.18.0.1'), 2000).allowed,
     ).toBe(false);
   });
 
