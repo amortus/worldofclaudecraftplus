@@ -213,8 +213,8 @@ describe('createRouter: real multi-method paths (OPTIONS/405 Allow synthesis)', 
     route('POST', '/api/account/companion-token'),
     route('GET', '/api/account/companion-token'),
     route('DELETE', '/api/account/companion-token'),
-    route('POST', '/api/wallet/link'),
-    route('DELETE', '/api/wallet/link'),
+    route('POST', '/api/steam/link'),
+    route('DELETE', '/api/steam/link'),
     route('GET', '/api/discord'),
     route('DELETE', '/api/discord'),
   ]);
@@ -228,7 +228,7 @@ describe('createRouter: real multi-method paths (OPTIONS/405 Allow synthesis)', 
   });
 
   it('405s a wrong method on a POST+DELETE path with the right Allow set', () => {
-    const m = r.match('GET', '/api/wallet/link');
+    const m = r.match('GET', '/api/steam/link');
     expect(m.kind).toBe('methodNotAllowed');
     if (m.kind === 'methodNotAllowed') expect(m.allow).toEqual(['POST', 'DELETE', 'OPTIONS']);
   });

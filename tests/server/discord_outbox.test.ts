@@ -4,8 +4,8 @@
 // Consolidating four bot polls into one means one response now carries what four
 // used to, and every stream feeding it is bounded for exactly that reason. This
 // file drives the endpoint at the worst case those bounds admit (relay 50,
-// activity 100, link changes OUTBOX_LINK_CHANGE_PAGE, one reward day with a full
-// ten-payout table) and asserts the serialized payload stays under a stated byte
+// activity 100, link changes OUTBOX_LINK_CHANGE_PAGE) and asserts the serialized
+// payload stays under a stated byte
 // bound. A page or cap raised without checking what it does to the response size
 // fails here. Note the link-change bound is the PAGE, not the feed's cap: what a
 // backlog past the page costs is another poll, not a bigger response, which is
@@ -56,15 +56,11 @@ vi.mock('../../server/discord_relay', async (importOriginal) => ({
   drainRelay: vi.fn(),
   requeueRelay: vi.fn(),
 }));
-vi.mock('../../server/daily_rewards', () => ({
-  dailyRewardService: {
-    discordWinnerAnnouncements: vi.fn(),
-    markDiscordWinnersAnnounced: vi.fn(),
-  },
-}));
+// server/internal.ts still imports dailyRewardService; server/db is fully mocked
+// here, so stub the module rather than load the real one against the fake pool.
+vi.mock('../../server/daily_rewards', () => ({ dailyRewardService: {} }));
 
 import type * as http from 'node:http';
-import { dailyRewardService } from '../../server/daily_rewards';
 import type { QueuedActivity } from '../../server/discord_activity';
 import { ACTIVITY_MAX_QUEUE, drainActivity } from '../../server/discord_activity';
 import type { DiscordOutboxLinkRow } from '../../server/discord_db';
@@ -96,16 +92,16 @@ const ACTIVITY_CAP = ACTIVITY_MAX_QUEUE;
 
 /**
  * The bound on the serialized `data` payload, in bytes. The worst-case fixture
- * below measured 287,100 bytes (0.2 ms of JSON.stringify; 290,671 before the
- * #2791 narrowing dropped the unused winner-row fields, 279,891 before the
- * activity fixture moved to the wider deed item shape) when the drain moved to
- * a 1000-item link-change page and a one-day winners ask; the bound is roughly
+ * below measured 286,310 bytes (0.7 ms of JSON.stringify; 287,100 while the
+ * envelope still carried a one-day winners ask, 279,891 before the activity
+ * fixture moved to the wider deed item shape) when the drain moved to a
+ * 1000-item link-change page; the bound is roughly
  * 1.5x that, rounded to a clean number, so ordinary drift in the fixtures does
  * not red it while a page raise or a new per-item field does. The test logs its
  * own measurement, so re-deriving the headroom never means guessing at the size.
  *
- * The earlier figure was 979,051 bytes, at a whole-cap 5,000-item drain and five
- * winner days: the page and the minimized winners ask are what moved it.
+ * The earlier figure was 979,051 bytes, at a whole-cap 5,000-item drain: the
+ * page is what moved it.
  */
 const PAYLOAD_BOUND_BYTES = 420_000;
 
@@ -182,28 +178,6 @@ function activityItem(index: number, accountIds: number[]): QueuedActivity {
   };
 }
 
-/** One finalized reward day with the full ten-rank payout table, in the
- *  announcement-narrow winner-row shape the service serves since #2791 (no
- *  txSignature, wallet pubkey, or voided_by_* operator identity). */
-function winnerDay(dayIndex: number): unknown {
-  return {
-    day: `2026-06-${String(20 + dayIndex).padStart(2, '0')}`,
-    realm: 'Claudemoon',
-    prizePoolUsd: 150,
-    finalizedAt: '2026-06-30T22:00:00.000Z',
-    taskName: 'Complete quests today. Points increase with time spent online.',
-    nextTaskName: 'Win an arena match.',
-    payouts: Array.from({ length: 10 }, (_, rank) => ({
-      rank: rank + 1,
-      username: `Adventurer${rank + 1}`,
-      points: 4200 - rank * 100,
-      prizePercent: 0.2,
-      prizeUsd: 30,
-      status: 'paid',
-    })),
-  };
-}
-
 const ORIGINAL_DISCORD_SECRET = process.env.DISCORD_BOT_SECRET;
 
 beforeEach(() => {
@@ -247,11 +221,6 @@ describe('discord/outbox payload size at the full-cap drain', () => {
     ]);
     vi.mocked(discordLinksForAccounts).mockResolvedValue([...mentioned].map(linkRow));
 
-    // ONE day, which is the ceiling of what the handler asks for now.
-    vi.mocked(dailyRewardService.discordWinnerAnnouncements).mockResolvedValue({
-      days: [winnerDay(0)],
-    });
-
     const r = await runOutbox();
     expect(r.status).toBe(200);
 
@@ -270,13 +239,11 @@ describe('discord/outbox payload size at the full-cap drain', () => {
     const payload = data as {
       relay: { items: unknown[] };
       activity: { items: unknown[] };
-      winners: { days: unknown[] };
       linkChanges: { items: unknown[] };
     };
     expect(payload.relay.items).toHaveLength(RELAY_CAP);
     expect(payload.activity.items).toHaveLength(ACTIVITY_CAP);
     expect(payload.linkChanges.items).toHaveLength(OUTBOX_LINK_CHANGE_PAGE);
-    expect(payload.winners.days).toHaveLength(1);
 
     // Reported so the bound can be re-derived without re-measuring by hand.
     console.info(
@@ -297,7 +264,6 @@ describe('discord/outbox payload size at the full-cap drain', () => {
       enqueueLinkChange({ accountId: i, kinds: ['flex'], discordId: `du${i}` }, 1000);
     }
     vi.mocked(discordLinksForAccounts).mockResolvedValue([]);
-    vi.mocked(dailyRewardService.discordWinnerAnnouncements).mockResolvedValue({ days: [] });
 
     const first = await runOutbox();
     const second = await runOutbox();
@@ -328,7 +294,6 @@ describe('discord/outbox payload size at the full-cap drain', () => {
       enqueueLinkChange({ accountId: i, kinds: ['flex'], discordId: `du${i}` }, 1000 + i);
     }
     vi.mocked(discordLinksForAccounts).mockResolvedValue([]);
-    vi.mocked(dailyRewardService.discordWinnerAnnouncements).mockResolvedValue({ days: [] });
 
     const r = await runOutbox();
 

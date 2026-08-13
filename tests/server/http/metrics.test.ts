@@ -242,10 +242,10 @@ describe('createHttpMetrics: the four attack-signal counters', () => {
 
   it('pgLimiterWrite increments pg_limiter_writes_total by policy', async () => {
     const metrics = createHttpMetrics();
-    metrics.attackSignals.pgLimiterWrite('wallet_link');
-    metrics.attackSignals.pgLimiterWrite('wallet_link');
+    metrics.attackSignals.pgLimiterWrite('card_upload');
+    metrics.attackSignals.pgLimiterWrite('card_upload');
     const text = await metrics.metricsText();
-    expect(sampleValue(text, /^pg_limiter_writes_total\{policy="wallet_link"\} (\d+)$/m)).toBe('2');
+    expect(sampleValue(text, /^pg_limiter_writes_total\{policy="card_upload"\} (\d+)$/m)).toBe('2');
   });
 
   it('keeps attack-signal increments scoped to their own instance', async () => {

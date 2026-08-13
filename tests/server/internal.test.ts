@@ -67,16 +67,12 @@ vi.mock('../../server/discord_activity', () => ({
   requeueActivity: vi.fn(),
 }));
 vi.mock('../../server/discord_relay', () => ({ drainRelay: vi.fn(), requeueRelay: vi.fn() }));
-vi.mock('../../server/daily_rewards', () => ({
-  dailyRewardService: {
-    discordWinnerAnnouncements: vi.fn(),
-    markDiscordWinnersAnnounced: vi.fn(),
-  },
-}));
+// server/internal.ts still imports dailyRewardService; server/db is fully mocked
+// here, so stub the module rather than load the real one against the fake pool.
+vi.mock('../../server/daily_rewards', () => ({ dailyRewardService: {} }));
 
 import type * as http from 'node:http';
 import { MEMBERS_META_BATCH } from '../../bot/logic';
-import { dailyRewardService } from '../../server/daily_rewards';
 import { pool } from '../../server/db';
 import {
   type DiscordFlex,
@@ -128,7 +124,7 @@ const DISCORD_SECRET = 'discord-secret';
 const DEPLOY_HEADERS = { 'x-woc-deploy-secret': DEPLOY_SECRET };
 const DISCORD_HEADERS = { 'x-woc-discord-secret': DISCORD_SECRET };
 
-// The 11 routes as [method, path]: the legacy handleInternalApi ladder order
+// The 10 routes as [method, path]: the legacy handleInternalApi ladder order
 // (the migrated routes plus flaired-ids, added after the migration on both
 // arms per the dual-edit rule; the retired relay/activity/winners GETs are
 // gone from both arms, #2791), then flex-batch and outbox, which are
@@ -141,7 +137,6 @@ const EXPECTED_ROUTES: ReadonlyArray<readonly [Method, string]> = [
   ['POST', '/internal/discord/presence'],
   ['POST', '/internal/discord/grant'],
   ['POST', '/internal/discord/member'],
-  ['POST', '/internal/discord/daily-rewards-winners/mark'],
   ['POST', '/internal/discord/members-meta'],
   ['GET', '/internal/discord/flaired-ids'],
   ['POST', '/internal/discord/flex-batch'],
@@ -286,8 +281,8 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('internal route registration', () => {
-  it('registers exactly 11 routes matching the legacy ladder plus the RouteDef-only pair', () => {
-    expect(routes).toHaveLength(11);
+  it('registers exactly 10 routes matching the legacy ladder plus the RouteDef-only pair', () => {
+    expect(routes).toHaveLength(10);
     const actual = routes.map((r) => `${r.method} ${r.path}`).sort();
     const expected = EXPECTED_ROUTES.map(([m, p]) => `${m} ${p}`).sort();
     expect(actual).toEqual(expected);
@@ -1032,10 +1027,9 @@ describe('discord/member', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 8-9 (the relay and activity drain GETs) and the winners-GET half of 10
-// RETIRED with the per-endpoint pickup routes (#2791): the outbox block below
-// owns drain enrichment, participant batching, and the winners pass-through
-// now. Numbering is kept so the later section anchors stay stable.
+// 8-9 (the relay and activity drain GETs) and all of 10 RETIRED: the outbox
+// block below owns drain enrichment and participant batching now. Numbering is
+// kept so the later section anchors stay stable.
 // ---------------------------------------------------------------------------
 
 describe('retired per-endpoint pickup GETs (#2791)', () => {
@@ -1063,34 +1057,6 @@ describe('retired per-endpoint pickup GETs (#2791)', () => {
     // consume queue items it can no longer deliver.
     expect(vi.mocked(drainRelay)).not.toHaveBeenCalled();
     expect(vi.mocked(drainActivity)).not.toHaveBeenCalled();
-    expect(vi.mocked(dailyRewardService.discordWinnerAnnouncements)).not.toHaveBeenCalled();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// 10. discord/daily-rewards-winners/mark (POST).
-// ---------------------------------------------------------------------------
-
-describe('discord/daily-rewards-winners/mark', () => {
-  it('mark returns the service fail body on error and ok-wraps success', async () => {
-    process.env.DISCORD_BOT_SECRET = DISCORD_SECRET;
-    const mark = vi.mocked(dailyRewardService.markDiscordWinnersAnnounced);
-
-    mark.mockResolvedValue({ error: 'nope', status: 400 });
-    const failed = await runRoute('POST', '/internal/discord/daily-rewards-winners/mark', {
-      headers: DISCORD_HEADERS,
-      body: { day: 'not-a-day' },
-    });
-    expect(failed.status).toBe(400);
-    expect(failed.body).toEqual({ success: false, data: null, error: 'nope' });
-
-    mark.mockResolvedValue({ marked: 2 } as unknown as { ok: true });
-    const ok = await runRoute('POST', '/internal/discord/daily-rewards-winners/mark', {
-      headers: DISCORD_HEADERS,
-      body: {},
-    });
-    expect(ok.status).toBe(200);
-    expect(ok.body).toEqual({ success: true, data: { marked: 2 }, error: null });
   });
 });
 
@@ -1678,13 +1644,11 @@ describe('discord/flex-batch', () => {
 });
 
 // ---------------------------------------------------------------------------
-// discord/outbox (the consolidated poll: three drains + the winner days, with
-// ONE batched identity read for every account any of them mentions).
+// discord/outbox (the consolidated poll: three drains, with ONE batched
+// identity read for every account any of them mentions).
 // ---------------------------------------------------------------------------
 
 describe('discord/outbox', () => {
-  const NO_WINNERS = { days: [] };
-
   /** Arm the three drains; each is destructive in production, so this is per test. */
   function stubDrains(relay: QueuedRelay[] = [], activity: QueuedActivity[] = []): void {
     vi.mocked(drainRelay).mockReturnValue(relay);
@@ -1717,7 +1681,6 @@ describe('discord/outbox', () => {
     );
     enqueueLinkChange({ accountId: 4, kinds: ['flex'] }, 1000);
     enqueueLinkChange({ accountId: 5, kinds: ['points'] }, 1000);
-    vi.mocked(dailyRewardService.discordWinnerAnnouncements).mockResolvedValue(NO_WINNERS);
     vi.mocked(discordLinksForAccounts).mockResolvedValue([1, 2, 3, 4, 5].map(linkRow));
 
     const r = await runRoute('GET', '/internal/discord/outbox', { headers: DISCORD_HEADERS });
@@ -1737,7 +1700,6 @@ describe('discord/outbox', () => {
   it('reads nothing at all when every stream drained empty', async () => {
     process.env.DISCORD_BOT_SECRET = DISCORD_SECRET;
     stubDrains();
-    vi.mocked(dailyRewardService.discordWinnerAnnouncements).mockResolvedValue(NO_WINNERS);
 
     const r = await runRoute('GET', '/internal/discord/outbox', { headers: DISCORD_HEADERS });
 
@@ -1746,17 +1708,9 @@ describe('discord/outbox', () => {
     expect(vi.mocked(discordLinksForAccounts)).not.toHaveBeenCalled();
     expect(vi.mocked(discordForAccount)).not.toHaveBeenCalled();
     expect(vi.mocked(discordForAccounts)).not.toHaveBeenCalled();
-    // The winner days ride the service's TTL cache, so an idle poll costs at
-    // most one read there and zero on a warm cache. The service itself fixes
-    // the ask at ONE day (DAILY_REWARD_WINNER_DAY_LIMIT): the bot announces
-    // and marks one day per poll, so the handler passes no limit at all (the
-    // limit param retired with the standalone winners GET, #2791).
-    expect(vi.mocked(dailyRewardService.discordWinnerAnnouncements)).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(dailyRewardService.discordWinnerAnnouncements)).toHaveBeenCalledWith();
     expect(dataOf(r.body)).toEqual({
       relay: { items: [] },
       activity: { items: [] },
-      winners: NO_WINNERS,
       linkChanges: { items: [] },
     });
   });
@@ -1767,7 +1721,6 @@ describe('discord/outbox', () => {
     // under test is the link-change feed's (the module is not mocked).
     stubDrains();
     enqueueLinkChange({ accountId: 1, kinds: ['link'], discordId: 'du1' }, 1000);
-    vi.mocked(dailyRewardService.discordWinnerAnnouncements).mockResolvedValue(NO_WINNERS);
     vi.mocked(discordLinksForAccounts).mockResolvedValue([linkRow(1)]);
 
     const first = await runRoute('GET', '/internal/discord/outbox', { headers: DISCORD_HEADERS });
@@ -1777,7 +1730,6 @@ describe('discord/outbox', () => {
     expect(dataOf(second.body)).toEqual({
       relay: { items: [] },
       activity: { items: [] },
-      winners: NO_WINNERS,
       linkChanges: { items: [] },
     });
   });
@@ -1792,7 +1744,6 @@ describe('discord/outbox', () => {
     const activityItems = [activityItem(2, 'Bea')];
     stubDrains(relayItems, activityItems);
     enqueueLinkChange({ accountId: 3, kinds: ['link'], discordId: 'du3' }, 1000);
-    vi.mocked(dailyRewardService.discordWinnerAnnouncements).mockResolvedValue(NO_WINNERS);
     vi.mocked(discordLinksForAccounts).mockRejectedValueOnce(new Error('identity read failed'));
 
     const failed = await runRoute('GET', '/internal/discord/outbox', { headers: DISCORD_HEADERS });
@@ -1828,48 +1779,13 @@ describe('discord/outbox', () => {
     });
   });
 
-  it('reads the winner days BEFORE draining, so a winners failure costs no items', async () => {
-    // Ordering as durability. The winners read is the most failure-prone await on
-    // this path (a database read behind a TTL cache) and depends on nothing the
-    // drains produce, so it runs first: a failure there refuses the poll without
-    // having consumed a single queued item, and no requeue is even needed.
-    process.env.DISCORD_BOT_SECRET = DISCORD_SECRET;
-    stubDrains([relayItem(1, 'a')]);
-    enqueueLinkChange({ accountId: 4, kinds: ['flex'] }, 1000);
-    vi.mocked(dailyRewardService.discordWinnerAnnouncements).mockRejectedValueOnce(
-      new Error('winner days unavailable'),
-    );
-
-    const failed = await runRoute('GET', '/internal/discord/outbox', { headers: DISCORD_HEADERS });
-
-    expect(failed.status).toBe(500);
-    // Nothing was drained at all, so nothing had to be given back.
-    expect(vi.mocked(drainRelay)).not.toHaveBeenCalled();
-    expect(vi.mocked(drainActivity)).not.toHaveBeenCalled();
-    expect(vi.mocked(requeueRelay)).not.toHaveBeenCalled();
-    expect(vi.mocked(requeueActivity)).not.toHaveBeenCalled();
-    expect(vi.mocked(discordLinksForAccounts)).not.toHaveBeenCalled();
-
-    // And the untouched link change is still there on the next poll.
-    vi.mocked(dailyRewardService.discordWinnerAnnouncements).mockResolvedValue(NO_WINNERS);
-    vi.mocked(discordLinksForAccounts).mockResolvedValue([linkRow(4)]);
-    const retried = await runRoute('GET', '/internal/discord/outbox', { headers: DISCORD_HEADERS });
-
-    expect(
-      (dataOf(retried.body).linkChanges as { items: { accountId: number }[] }).items.map(
-        (it) => it.accountId,
-      ),
-    ).toEqual([4]);
-  });
-
   it('carries the envelope fields in the documented order', async () => {
     process.env.DISCORD_BOT_SECRET = DISCORD_SECRET;
     stubDrains();
-    vi.mocked(dailyRewardService.discordWinnerAnnouncements).mockResolvedValue(NO_WINNERS);
 
     const r = await runRoute('GET', '/internal/discord/outbox', { headers: DISCORD_HEADERS });
 
-    expect(Object.keys(dataOf(r.body))).toEqual(['relay', 'activity', 'winners', 'linkChanges']);
+    expect(Object.keys(dataOf(r.body))).toEqual(['relay', 'activity', 'linkChanges']);
   });
 
   it('emits relay items in the retired relay GET item shape, nulls for an unlinked issuer', async () => {
@@ -1878,7 +1794,6 @@ describe('discord/outbox', () => {
     // now the outbox's OWN contract with the bot and is pinned literally here.
     process.env.DISCORD_BOT_SECRET = DISCORD_SECRET;
     stubDrains([relayItem(1, 'a'), relayItem(2, 'b')]);
-    vi.mocked(dailyRewardService.discordWinnerAnnouncements).mockResolvedValue(NO_WINNERS);
     vi.mocked(discordLinksForAccounts).mockResolvedValue([linkRow(1)]); // account 2 is unlinked
 
     const r = await runRoute('GET', '/internal/discord/outbox', { headers: DISCORD_HEADERS });
@@ -1912,7 +1827,6 @@ describe('discord/outbox', () => {
         activityItem(3, 'Carol'), // nobody linked: dropped
       ],
     );
-    vi.mocked(dailyRewardService.discordWinnerAnnouncements).mockResolvedValue(NO_WINNERS);
     vi.mocked(discordLinksForAccounts).mockResolvedValue([linkRow(1)]);
 
     const r = await runRoute('GET', '/internal/discord/outbox', { headers: DISCORD_HEADERS });
@@ -1933,17 +1847,6 @@ describe('discord/outbox', () => {
     });
   });
 
-  it('passes the winner announcements through exactly as the service returns them', async () => {
-    process.env.DISCORD_BOT_SECRET = DISCORD_SECRET;
-    stubDrains();
-    const days = { days: [{ day: '2026-06-30', taskName: 'Complete quests', payouts: [] }] };
-    vi.mocked(dailyRewardService.discordWinnerAnnouncements).mockResolvedValue(days);
-
-    const r = await runRoute('GET', '/internal/discord/outbox', { headers: DISCORD_HEADERS });
-
-    expect(dataOf(r.body).winners).toEqual(days);
-  });
-
   it('enriches a link change from the map, and lets a carried id win over it', async () => {
     process.env.DISCORD_BOT_SECRET = DISCORD_SECRET;
     stubDrains();
@@ -1956,7 +1859,6 @@ describe('discord/outbox', () => {
     // The row's identity fields do NOT ride along, because they describe a
     // different Discord user (see the repoint case below).
     enqueueLinkChange({ accountId: 2, kinds: ['unlink'], discordId: 'carried-2' }, 1000);
-    vi.mocked(dailyRewardService.discordWinnerAnnouncements).mockResolvedValue(NO_WINNERS);
     vi.mocked(discordLinksForAccounts).mockResolvedValue([linkRow(1), linkRow(2)]);
 
     const r = await runRoute('GET', '/internal/discord/outbox', { headers: DISCORD_HEADERS });
@@ -1992,7 +1894,6 @@ describe('discord/outbox', () => {
     process.env.DISCORD_BOT_SECRET = DISCORD_SECRET;
     stubDrains();
     enqueueLinkChange({ accountId: 3, kinds: ['unlink'], discordId: 'old-user' }, 1000);
-    vi.mocked(dailyRewardService.discordWinnerAnnouncements).mockResolvedValue(NO_WINNERS);
     // The row is the account's NEW identity, under a different Discord id.
     vi.mocked(discordLinksForAccounts).mockResolvedValue([
       { ...linkRow(3), discord_user_id: 'new-user' },
@@ -2020,7 +1921,6 @@ describe('discord/outbox', () => {
     // every player), and the bot has nothing to push for them.
     enqueueLinkChange({ accountId: 7, kinds: ['points'] }, 1000);
     enqueueLinkChange({ accountId: 8, kinds: ['points'] }, 1000);
-    vi.mocked(dailyRewardService.discordWinnerAnnouncements).mockResolvedValue(NO_WINNERS);
     vi.mocked(discordLinksForAccounts).mockResolvedValue([linkRow(8)]);
 
     const r = await runRoute('GET', '/internal/discord/outbox', { headers: DISCORD_HEADERS });

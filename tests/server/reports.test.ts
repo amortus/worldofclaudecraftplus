@@ -432,7 +432,7 @@ describe('POST /api/reports rate limiter (coded 429)', () => {
 // readBody (no withBody), so a malformed body throws inside readBody and surfaces as
 // 500 application/problem+json (internal.error) through the shared withErrors
 // boundary, vs the legacy outer-catch 500 { error: 'internal error' } (same 500
-// STATUS, different body shape). Sibling to walletBodyValidationRemap.
+// STATUS, different body shape). Sibling to accountBodyValidationRemap.
 // ---------------------------------------------------------------------------
 
 describe('POST /api/reports body-read 500 remap (reportsBodyValidationRemap deviation)', () => {

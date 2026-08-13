@@ -19,7 +19,6 @@ import {
   resetRateLimitClock,
   resetRateLimits,
   resetReportsCreateRateLimits,
-  resetWalletLinkRateLimits,
   resetWocBalanceRateLimits,
 } from '../../../server/ratelimit';
 import { captureResponse, type Dispatch } from './golden';
@@ -64,7 +63,6 @@ export interface RunParityOpts {
 async function isolatePass(extraReset?: () => Promise<void> | void): Promise<void> {
   resetRateLimits();
   resetCardUploadRateLimits();
-  resetWalletLinkRateLimits();
   resetDiscordRateLimits();
   resetWocBalanceRateLimits();
   resetPublicReadRateLimits();

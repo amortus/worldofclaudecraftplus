@@ -31,8 +31,12 @@ import {
   routes,
   setClaudiumDbForTests,
 } from '../../server/claudium';
-import { claudiumSpend, claudiumStore, claudiumStripeWebhook } from '../../server/claudium_proxy';
-import { desktopWalletHandoffs } from '../../server/desktop_wallet_handoff';
+import {
+  claudiumSpend,
+  claudiumStore,
+  claudiumStripeWebhook,
+  desktopWalletHandoffs,
+} from '../../server/claudium_proxy';
 import { compose } from '../../server/http/compose';
 import {
   CLAUDIUM_CONFIRM_MAX_PER_MINUTE,

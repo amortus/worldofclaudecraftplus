@@ -2,7 +2,7 @@
 // Where ratelimit_clock.test focuses on the allowed flip across a window
 // boundary, this file pins the injected clock and asserts the exact { allowed,
 // remaining, resetSeconds } numbers: the record-then-judge counters (rateLimited),
-// the fused IP-AND-account merge (walletLinkRateLimited), and the read-only
+// the fused IP-AND-account merge (claudiumMutationRateLimited), and the read-only
 // per-account failed-login throttle (authThrottled). Every case pins the clock
 // with setRateLimitClock and restores it (plus the shared maps) in afterEach, so
 // the suite is deterministic and leaves global state clean.
@@ -21,14 +21,8 @@ import {
   resetClaudiumMutationRateLimits,
   resetRateLimitClock,
   resetRateLimits,
-  resetSeekerSpinVerifyRateLimits,
-  resetWalletLinkRateLimits,
-  SEEKER_SPIN_VERIFY_MAX_PER_MINUTE,
-  seekerSpinVerifyRateLimited,
   setRateLimitClock,
-  WALLET_LINK_MAX_PER_MINUTE,
   WINDOW_MS,
-  walletLinkRateLimited,
 } from '../../server/ratelimit';
 
 // Mirror the un-exported per-account failed-login constants in server/ratelimit.
@@ -50,8 +44,6 @@ function pinClock(start: number) {
 function resetAll() {
   resetRateLimits();
   resetClaudiumMutationRateLimits();
-  resetSeekerSpinVerifyRateLimits();
-  resetWalletLinkRateLimits();
   resetAuthFailures();
   resetRateLimitClock();
 }
@@ -104,72 +96,6 @@ describe('rateLimited: RateLimitOutcome accuracy', () => {
     expect(rateLimited(req, max)).toEqual({ allowed: true, remaining: 1, resetSeconds: 60 });
     expect(rateLimited(req, max)).toEqual({ allowed: true, remaining: 0, resetSeconds: 60 });
     expect(rateLimited(req, max)).toEqual({ allowed: false, remaining: 0, resetSeconds: 60 });
-  });
-});
-
-describe('walletLinkRateLimited: fused IP-AND-account merge', () => {
-  it('keeps the IP and account buckets independent', () => {
-    const T = 4_000_000;
-    pinClock(T);
-    // Drain the account bucket for account 1 across DISTINCT IPs. Each call records a
-    // fresh IP bucket (always allowed) but shares account 1, so account 1 is what caps.
-    for (let i = 0; i < WALLET_LINK_MAX_PER_MINUTE; i++) {
-      expect(walletLinkRateLimited(reqFrom(`10.2.0.${i + 1}`), 1).allowed).toBe(true);
-    }
-    // The (cap + 1)th call from a brand-new IP is still limited: the account bucket
-    // disallows, and the fused outcome is allowed only when BOTH buckets allow.
-    expect(walletLinkRateLimited(reqFrom('10.2.0.250'), 1)).toEqual({
-      allowed: false,
-      remaining: 0,
-      resetSeconds: 60,
-    });
-
-    // The mirror: drain ONE IP across distinct accounts. Now the IP bucket caps even
-    // though each account bucket is fresh.
-    resetWalletLinkRateLimits();
-    for (let i = 0; i < WALLET_LINK_MAX_PER_MINUTE; i++) {
-      expect(walletLinkRateLimited(reqFrom('10.2.9.9'), 1000 + i).allowed).toBe(true);
-    }
-    expect(walletLinkRateLimited(reqFrom('10.2.9.9'), 9999).allowed).toBe(false);
-  });
-
-  it('merges remaining (min) and resetSeconds (max) from the two buckets independently', () => {
-    const T = 5_000_000;
-    pinClock(T);
-    // Seed account X (and a throwaway IP) at T so account X's oldest entry is T.
-    expect(walletLinkRateLimited(reqFrom('10.3.0.1'), 42)).toEqual({
-      allowed: true,
-      remaining: WALLET_LINK_MAX_PER_MINUTE - 1,
-      resetSeconds: 60,
-    });
-
-    // 20s later, hit account X again from a FRESH IP. The fresh IP bucket has 9
-    // remaining and a full 60s reset (its only entry is at T + 20s). Account X now
-    // has 8 remaining and its oldest entry (T) clears in 40s. The merge takes the
-    // tighter remaining (8, account) and the longer reset (60, IP), from DIFFERENT
-    // buckets, proving min/max are applied independently.
-    fakeTime = T + 20_000;
-    expect(walletLinkRateLimited(reqFrom('10.3.0.2'), 42)).toEqual({
-      allowed: true,
-      remaining: WALLET_LINK_MAX_PER_MINUTE - 2,
-      resetSeconds: 60,
-    });
-  });
-});
-
-describe('seekerSpinVerifyRateLimited: upstream RPC isolation', () => {
-  it('caps both the account and IP before another ownership RPC can start', () => {
-    pinClock(5_250_000);
-    for (let i = 0; i < SEEKER_SPIN_VERIFY_MAX_PER_MINUTE; i++) {
-      expect(seekerSpinVerifyRateLimited(reqFrom(`10.3.5.${i + 1}`), 42).allowed).toBe(true);
-    }
-    expect(seekerSpinVerifyRateLimited(reqFrom('10.3.5.250'), 42).allowed).toBe(false);
-
-    resetSeekerSpinVerifyRateLimits();
-    for (let i = 0; i < SEEKER_SPIN_VERIFY_MAX_PER_MINUTE; i++) {
-      expect(seekerSpinVerifyRateLimited(reqFrom('10.3.6.1'), 100 + i).allowed).toBe(true);
-    }
-    expect(seekerSpinVerifyRateLimited(reqFrom('10.3.6.1'), 999).allowed).toBe(false);
   });
 });
 

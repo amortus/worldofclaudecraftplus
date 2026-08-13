@@ -391,10 +391,6 @@ describe('main /api characterization: bearer-auth denial contracts (no Authoriza
     );
   });
 
-  it('GET /api/wallet without auth is 401', async () => {
-    await characterize('wallet_get_noauth_401', makeReq({ method: 'GET', url: '/api/wallet' }));
-  });
-
   it('GET /api/referrals without auth is 401', async () => {
     await characterize(
       'referrals_get_noauth_401',
@@ -539,7 +535,6 @@ afterAll(() => {
 // (/api/project-stats and /api/arena/leaderboard graduated OUT of this list: a TTL
 // cache now fronts each, so a cold-cache db error degrades deterministically instead
 // of 500ing; both are captured goldens above.)
-//   - GET  /api/woc/balance            live Solana RPC fetch -> non-deterministic.
 //   - GET  /api/email/unsubscribe?token=<non-empty>   accountByUnsubscribeToken() -> db 500.
 //   - GET  /api/search?q=<term> WITH a valid bearer    searchCharacters() -> db.
 //   - the populated leaderboard / character / account success bodies (need seeded db rows).

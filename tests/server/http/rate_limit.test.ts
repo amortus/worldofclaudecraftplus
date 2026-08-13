@@ -36,8 +36,6 @@ import {
   REPORTS_CREATE_POLICY,
   rateLimit,
   resetTier2ErrorLogThrottle,
-  SEEKER_SPIN_VERIFY_POLICY,
-  WALLET_LINK_POLICY,
   WOC_BALANCE_POLICY,
 } from '../../../server/http/middleware/rate_limit';
 import type { RateLimitOutcome, RateLimitStore } from '../../../server/http/types';
@@ -55,12 +53,9 @@ import {
   resetClaudiumMutationRateLimits,
   resetDiscordRateLimits,
   resetRateLimitClock,
-  resetWalletLinkRateLimits,
   resetWocBalanceRateLimits,
-  SEEKER_SPIN_VERIFY_MAX_PER_MINUTE,
   setRateLimitClock,
   setRateLimitTier2Store,
-  WALLET_LINK_MAX_PER_MINUTE,
   WINDOW_MS,
   WOC_BALANCE_MAX_PER_MINUTE,
 } from '../../../server/ratelimit';
@@ -201,26 +196,12 @@ describe('rateLimit: ip+account policy', () => {
   });
 });
 
-describe('rateLimit: wallet-link and discord ip+account policies', () => {
+describe('rateLimit: discord ip+account policies', () => {
   beforeEach(() => {
-    resetWalletLinkRateLimits();
     resetDiscordRateLimits();
   });
   afterEach(() => {
-    resetWalletLinkRateLimits();
     resetDiscordRateLimits();
-  });
-
-  it('WALLET_LINK_POLICY is ip+account and 429s once its cap is exceeded', async () => {
-    expect(WALLET_LINK_POLICY.keyClass).toBe('ip+account');
-    const ctx = fakeCtx({ account: { accountId: 11, scope: 'full' } });
-    for (let i = 0; i < WALLET_LINK_MAX_PER_MINUTE; i++) {
-      await rateLimit(WALLET_LINK_POLICY)(ctx, async () => {});
-    }
-    await expect(rateLimit(WALLET_LINK_POLICY)(ctx, async () => {})).rejects.toMatchObject({
-      status: 429,
-      code: 'rate_limit.exceeded',
-    });
   });
 
   it('DISCORD_POLICY is ip+account and 429s once its cap is exceeded', async () => {
@@ -386,8 +367,6 @@ describe('rateLimit: policy derivation guard', () => {
       { policy: PUBLIC_READ_POLICY, limit: PUBLIC_READ_MAX_PER_MINUTE },
       { policy: WOC_BALANCE_POLICY, limit: WOC_BALANCE_MAX_PER_MINUTE },
       { policy: CARD_UPLOAD_POLICY, limit: CARD_UPLOAD_MAX_PER_MINUTE },
-      { policy: WALLET_LINK_POLICY, limit: WALLET_LINK_MAX_PER_MINUTE },
-      { policy: SEEKER_SPIN_VERIFY_POLICY, limit: SEEKER_SPIN_VERIFY_MAX_PER_MINUTE },
       { policy: CLAUDIUM_PURCHASE_PRE_AUTH_POLICY, limit: CLAUDIUM_PURCHASE_MAX_PER_MINUTE },
       { policy: CLAUDIUM_QUOTE_PRE_AUTH_POLICY, limit: CLAUDIUM_QUOTE_MAX_PER_MINUTE },
       { policy: CLAUDIUM_CONFIRM_PRE_AUTH_POLICY, limit: CLAUDIUM_CONFIRM_MAX_PER_MINUTE },
