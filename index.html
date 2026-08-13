@@ -168,10 +168,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..700&family=Alegreya:ital,wght@0,400;0,500;0,700;1,400&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-<!-- Analytics: upstream loaded Google Analytics (G-BR5Z7GT7C2) and a Meta Pixel
-     (1692101265042180) here. Both are UPSTREAM's own properties, so leaving them
-     in this fork would report every player on worldofclaudecraft.com.br to their
-     accounts. Removed rather than substituted: this fork has no analytics ids yet.
+<!-- Analytics: upstream loaded a Google Analytics tag and a Meta Pixel here. Both
+     were UPSTREAM's own properties, so leaving them in this fork would report
+     every player on worldofclaudecraft.com.br to their accounts. Removed rather
+     than substituted: this fork has no analytics ids yet. The ids are deliberately
+     not quoted here, because tests/client_shell.test.ts asserts this file contains
+     neither of them.
      The in-app trackMetaPixel() helpers in src/main.ts and src/ui/hud.ts are inert
      without a loader (they return early when window.fbq is undefined), so adding a
      loader back here is the only step needed to turn tracking on again. -->

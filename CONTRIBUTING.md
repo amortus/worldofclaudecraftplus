@@ -164,7 +164,7 @@ API, while `@typescript/native` provides the `tsc` binary. Things to know:
   `package.json` changes. CI installs with `pnpm install --frozen-lockfile`; a
   stale lockfile fails closed. Do not introduce a second lockfile
   (`package-lock.json` / yarn.lock): dual lockfiles diverge silently and are
-  forbidden. Peer dependency noise from optional wallet/solana trees is
+  forbidden. Peer dependency noise from optional dependency trees is
   tolerated via `.npmrc` (`strict-peer-dependencies=false`); do not loosen that
   further without measuring. The repo also carries a vendored three patch under
   `patches/` (regenerated with `pnpm patch three@0.165.0`); a three version
