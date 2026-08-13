@@ -110,10 +110,8 @@ import {
 import { configureCommunityTestAccounts } from './community_test_accounts';
 import {
   bustDailyRewardBoardCache,
-  bustDailyRewardWinnersCache,
   dailyRewardEventsCutoffDay,
   handleDailyRewardApi,
-  handleDailyRewardInternalApi,
 } from './daily_rewards';
 import { pruneDailyRewardEventsBatch } from './daily_rewards_db';
 import {
@@ -812,17 +810,6 @@ function bustBoardCaches(): void {
   // account's own key.
   bustAllLifetimeXpRankCache();
   // Not a board: the Discord winner-announcement snapshot. The daily-reward ban
-  // and IP-ban writes fire this same hook, and they feed the
-  // daily_reward_excluded_accounts view that unannouncedWinnerDays filters its
-  // payouts through, so an exclusion is a content change a warm snapshot would
-  // hide. Without this a just-banned winner's username could still be announced
-  // publicly for up to the winners TTL (wallet pubkeys left the winner rows
-  // with the #2791 narrowing). Scope, honestly: the
-  // bust is per process (the snapshot lives on this process's service singleton),
-  // so it is immediate on the process that served the moderation write; a peer
-  // realm process's warm snapshot converges within one TTL, the same fleet story
-  // every board cache above already has.
-  bustDailyRewardWinnersCache();
 }
 setOnAccountModerated(bustBoardCaches);
 // The admin moderation queue's cached base read (server/moderation_queue_cache.ts):
@@ -2843,14 +2830,10 @@ let oauthApiEntry: ApiDispatcher = selectApiEntry(
   oauthLegacy,
 );
 
-// The /internal surface's flag-gated dispatcher. The delegate is the EXACT
-// legacy composite from the pre-migration ladder arm: the daily-rewards ops
-// family (/internal/daily-rewards/*, never part of handleInternalApi) is tried
-// first and short-circuits when handled; everything else falls to the legacy
+// The /internal surface's flag-gated dispatcher. The delegate is the legacy
 // handleInternalApi ladder UNCHANGED (unknown endpoints, wrong methods, HEAD, and
 // the flag-off rollback path).
 const internalLegacy: ApiDelegate = async (req, res) => {
-  if (await handleDailyRewardInternalApi(req, res)) return;
   await handleInternalApi(req, res, liveGame());
 };
 const internalApiDispatcher = createApiDispatcher({

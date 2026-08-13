@@ -169,18 +169,10 @@ async function handleDiscordInternal(
     return ok(res, { updated: true });
   }
 
-  // The per-endpoint GET pickups this ladder used to serve (relay, activity,
-  // daily-rewards-winners) were RETIRED with their RouteDef twins once the bot
-  // moved to the single GET /internal/discord/outbox poll (#2791): both arms
-  // answer the terminal 404 below, in both dispatch modes.
-
-  if (req.method === 'POST' && url.pathname === '/internal/discord/daily-rewards-winners/mark') {
-    const result = await dailyRewardService.markDiscordWinnersAnnounced(
-      await readBody(req).catch(() => ({})),
-    );
-    if ('error' in result) return fail(res, result.status, result.error);
-    return ok(res, result);
-  }
+  // The per-endpoint GET pickups this ladder used to serve (relay, activity)
+  // were RETIRED with their RouteDef twins once the bot moved to the single
+  // GET /internal/discord/outbox poll (#2791): both arms answer the terminal
+  // 404 below, in both dispatch modes.
 
   // POST /internal/discord/members-meta -> the bot pushes guild join dates + top
   // staff/special role for members; we store it on the matching linked accounts.
@@ -344,12 +336,6 @@ export const flexBatchHandler: RouteHandler = async (ctx) => {
   return ok(ctx.res, { requested: ids.length, members: await discordFlexForAccounts(ids) });
 };
 
-// How many winner days one outbox drain carries: ONE, the ask the winners
-// service itself now fixes (DAILY_REWARD_WINNER_DAY_LIMIT, server/daily_rewards.ts).
-// The D11 retirement (#2791) removed the standalone winners GET whose limit
-// param was the one wider ask, so discordWinnerAnnouncements takes no limit and
-// a backlog drains across successive polls, one announce-and-mark per poll.
-
 // How many link changes one outbox drain carries. Tied to FLEX_BATCH_CAP: a page
 // larger than the bot's flex-batch cap is more than it can act on in one cycle
 // anyway, since acting on a link change means asking flex-batch about it. It also
@@ -365,40 +351,28 @@ export const OUTBOX_LINK_CHANGE_PAGE = 1000;
 /**
  * GET /internal/discord/outbox -> everything the bot has to pick up, in ONE poll.
  *
- * The bot used to poll four endpoints on their own timers (relay, activity,
- * daily-rewards-winners, and a full re-read of every online member to notice
- * flex changes). This answers all of them together, so the bot's steady-state
- * cost is one request per interval rather than four plus a sweep. Those three
- * per-endpoint GET pickups are now RETIRED from both dispatch arms (#2791):
- * this poll is the only pickup surface.
+ * The bot used to poll several endpoints on their own timers (relay, activity,
+ * and a full re-read of every online member to notice flex changes). This
+ * answers all of them together, so the bot's steady-state cost is one request
+ * per interval rather than several plus a sweep. Those per-endpoint GET pickups
+ * are now RETIRED from both dispatch arms (#2791): this poll is the only pickup
+ * surface.
  *
  * RouteDef-ONLY by design, like flex-batch: a route born after the pipeline
  * migration never gets a legacy handleDiscordInternal arm (server/http/CLAUDE.md),
  * so there is nothing to keep in lockstep here.
  *
  * ORDER OF WORK, and it is deliberate:
- *  1. Read the winner days FIRST, before anything is drained. It depends on
- *     nothing the drains produce, and it is the most failure-prone await here (a
- *     database read behind a TTL cache). Precisely: a COLD or just-busted winners
- *     cache whose refresh fails refuses the poll before a single queued item is
- *     consumed, while a WARM cache stale-serves through a refresh failure
- *     (createCachedRead's deliberate resilience). Stale-serve is safe here: it
- *     can only re-serve an UNMARKED day, which the retry contract below already
- *     delivers at-least-once, and a marked day can never be stale-served because
- *     markDiscordWinnersAnnounced busts the cache on success.
- *  2. Drain the three in-memory feeds. They are pure array splices, so a poll
+ *  1. Drain the three in-memory feeds. They are pure array splices, so a poll
  *     that finds nothing queued costs zero further Postgres round trips.
- *  3. Collect the account ids every drained item mentions. An EMPTY set issues no
+ *  2. Collect the account ids every drained item mentions. An EMPTY set issues no
  *     identity query at all.
- *  4. Otherwise resolve the whole union with ONE discordLinksForAccounts call.
+ *  3. Otherwise resolve the whole union with ONE discordLinksForAccounts call.
  *     The per-item discordForAccount lookup the retired relay GET ran once per
  *     item never appears here: that N+1 is what invariant D1 forbids on this
  *     path.
  *
  * RETRY CONTRACT (Phase 6's retry logic is written against this):
- *  - `winners` is an IDEMPOTENT READ. It stays unannounced until the bot calls
- *    the mark endpoint, so it is delivered at-least-once across retries and a
- *    repeated poll simply re-reads the same days.
  *  - The three in-memory streams are PRESERVED ON ERROR and CONSUMED ON SUCCESS.
  *    Everything from the identity read to the response build runs inside a try
  *    whose catch requeues all three drains at the front of their queues, in
@@ -409,15 +383,12 @@ export const OUTBOX_LINK_CHANGE_PAGE = 1000;
  *    successful response on the floor loses those items to its own next full
  *    resync, not to this endpoint.
  *
- * The envelope field order is relay, activity, winners, linkChanges, and each
- * stream keeps its queue's FIFO order. The relay and activity streams keep the
- * item shapes their retired per-endpoint GETs served (invariant D11, now this
- * poll's own contract with the bot); the winners stream dropped the fields
- * announcing never used when the standalone GET's byte-parity pin retired with
- * it (#2791); linkChanges was born here.
+ * The envelope field order is relay, activity, linkChanges, and each stream
+ * keeps its queue's FIFO order. The relay and activity streams keep the item
+ * shapes their retired per-endpoint GETs served (invariant D11, now this poll's
+ * own contract with the bot); linkChanges was born here.
  */
 export const outboxHandler: RouteHandler = async (ctx) => {
-  const winners = await dailyRewardService.discordWinnerAnnouncements();
   // The drains live INSIDE the try so the requeue guarantee is enforced by
   // structure rather than by the accident that a splice cannot throw: anything
   // that fails after the first item leaves a queue puts every drained item back.
@@ -495,7 +466,6 @@ export const outboxHandler: RouteHandler = async (ctx) => {
     return ok(ctx.res, {
       relay: { items: relay },
       activity: { items: activity },
-      winners,
       linkChanges: { items: linkChanges },
     });
   } catch (err) {
@@ -772,20 +742,6 @@ export const routes: RouteDef[] = [
         await grantRewardPoints(pool, accountId, g.points, g.reason, `${g.reason}:${accountId}`);
       }
       return ok(ctx.res, { updated: true });
-    },
-  },
-  {
-    method: 'POST',
-    path: '/internal/discord/daily-rewards-winners/mark',
-    surface: 'internal',
-    meta: INTERNAL_META,
-    middleware: [discordGate],
-    handler: async (ctx) => {
-      const result = await dailyRewardService.markDiscordWinnersAnnounced(
-        await readBody(ctx.req).catch(() => ({})),
-      );
-      if ('error' in result) return fail(ctx.res, result.status, result.error);
-      return ok(ctx.res, result);
     },
   },
   {

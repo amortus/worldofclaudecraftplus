@@ -59,12 +59,6 @@ export function dailyRewardReasonText(
   switch (eligibility.reason) {
     case 'eligible':
       return t('hudChrome.dailyRewards.reason.eligible');
-    case 'no_wallet':
-      return t('hudChrome.dailyRewards.reason.no_wallet');
-    case 'under_minimum':
-      return t('hudChrome.dailyRewards.reason.under_minimum');
-    case 'price_unavailable':
-      return t('hudChrome.dailyRewards.reason.price_unavailable');
     case 'banned':
       if (eligibility.banExpiresAt && Number.isFinite(Date.parse(eligibility.banExpiresAt))) {
         return t('hudChrome.dailyRewards.reason.bannedUntil', {
@@ -95,7 +89,6 @@ export interface DailyRewardsWindowDeps {
   /** Fired once per actual close (not when already closed). */
   onClose?(): void;
   onStatus?(status: DailyRewardStatus): void;
-  onWalletConnect?(): void;
   storeEnabled?(): boolean;
   storeSnapshot?(): Promise<{
     available: boolean;
@@ -674,7 +667,6 @@ export class DailyRewardsWindow {
     }
     body.innerHTML =
       this.summaryHtml(view) +
-      this.walletHtml(view) +
       this.spinHtml(view) +
       this.tasksHtml(view) +
       this.leaderboardHtml(view.status) +
@@ -682,11 +674,6 @@ export class DailyRewardsWindow {
     body.querySelector<HTMLButtonElement>('[data-spin]')?.addEventListener('click', () => {
       void this.spin();
     });
-    body
-      .querySelector<HTMLButtonElement>('[data-wallet-connect]')
-      ?.addEventListener('click', () => {
-        this.deps.onWalletConnect?.();
-      });
   }
 
   private async spin(): Promise<void> {
@@ -754,35 +741,15 @@ export class DailyRewardsWindow {
 
   private summaryHtml(view: Extract<DailyRewardsView, { kind: 'ready' }>): string {
     const s = view.status;
-    const prize =
-      s.prizePoolSol === null
-        ? t('hudChrome.dailyRewards.unknown')
-        : `${t('hudChrome.dailyRewards.sol', {
-            amount: formatNumber(s.prizePoolSol, { maximumFractionDigits: 3 }),
-          })} (${t('hudChrome.dailyRewards.usd', {
-            amount: `$${formatNumber(s.prizePoolUsd, {
-              maximumFractionDigits: 2,
-              minimumFractionDigits: 2,
-            })}`,
-          })})`;
     const reset = formatDateTime(new Date(s.resetAt), { hour: 'numeric', minute: '2-digit' });
     const remaining = this.remainingText(s.resetAt);
-    const value =
-      s.eligibility.usdValue === null
-        ? t('hudChrome.dailyRewards.unknown')
-        : t('hudChrome.dailyRewards.usd', {
-            amount: `$${formatNumber(s.eligibility.usdValue, { maximumFractionDigits: 2 })}`,
-          });
     const reason = dailyRewardReasonText(s.eligibility);
     return (
       `<p class="dr-intro">${esc(t('hudChrome.dailyRewards.intro'))}</p>` +
-      `<p class="dr-disclaimer">${esc(t('hudChrome.dailyRewards.disclaimer'))}</p>` +
       `<div class="dr-summary">` +
-      `<div><span>${esc(t('hudChrome.dailyRewards.prize'))}</span><strong>${esc(prize)}</strong></div>` +
       `<div><span>${esc(t('hudChrome.dailyRewards.reset'))}</span><strong>${esc(reset)}</strong></div>` +
       `<div class="dr-countdown"><span data-daily-rewards-countdown="${esc(s.resetAt)}">${esc(t('hudChrome.dailyRewards.endsIn', { time: remaining }))}</span></div>` +
       `<div><span>${esc(t('hudChrome.dailyRewards.score'))}</span><strong>${formatNumber(s.score, { maximumFractionDigits: 0 })}</strong></div>` +
-      `<div><span>${esc(t('hudChrome.dailyRewards.walletValue'))}</span><strong>${esc(value)}</strong></div>` +
       `<p class="${view.locked ? 'dr-lock' : 'dr-ok'}">${esc(reason)}</p>` +
       `</div>`
     );
@@ -825,35 +792,6 @@ export class DailyRewardsWindow {
       `<section class="dr-section"><h3>${esc(t('hudChrome.dailyRewards.spinTitle'))}</h3>` +
       `<div class="dr-spin"><div class="dr-wheel">${esc(spin.claimed ? `+${formatNumber(spin.points ?? 0, { maximumFractionDigits: 0 })}` : '?')}</div>` +
       `<div><p>${esc(text)}</p><button type="button" class="lb-page-btn" data-spin ${view.locked || spin.claimed ? 'disabled' : ''}>${esc(t('hudChrome.dailyRewards.spinButton'))}</button></div></div></section>`
-    );
-  }
-
-  private walletHtml(view: Extract<DailyRewardsView, { kind: 'ready' }>): string {
-    if (!view.locked) return '';
-    const reason = view.lockReason;
-    if (reason === 'banned') return '';
-    const title =
-      reason === 'no_wallet'
-        ? t('hudChrome.dailyRewards.walletConnectTitle')
-        : t('hudChrome.dailyRewards.walletHoldTitle');
-    const body =
-      reason === 'no_wallet'
-        ? t('hudChrome.dailyRewards.walletConnectBody')
-        : reason === 'under_minimum'
-          ? t('hudChrome.dailyRewards.walletHoldBody', {
-              amount: formatNumber(view.status.eligibility.minUsd, { maximumFractionDigits: 0 }),
-            })
-          : t('hudChrome.dailyRewards.walletPriceBody');
-    const button =
-      reason === 'no_wallet'
-        ? `<button type="button" class="lb-page-btn" data-wallet-connect>${esc(t('hudChrome.dailyRewards.walletConnectButton'))}</button>`
-        : '';
-    return (
-      `<section class="dr-wallet-card">` +
-      `<h3>${esc(title)}</h3>` +
-      `<p>${esc(body)}</p>` +
-      button +
-      `</section>`
     );
   }
 
@@ -950,12 +888,10 @@ export class DailyRewardsWindow {
         ? `<div class="dr-empty">${esc(t('hudChrome.dailyRewards.noHistory'))}</div>`
         : history.payouts
             .slice(0, 10)
-            .map((row) => {
-              const prize = `$${t('hudChrome.dailyRewards.usd', {
-                amount: formatNumber(row.prizeUsd, { maximumFractionDigits: 2 }),
-              })}`;
-              return `<div class="dr-rank"><span>${esc(row.day)} #${row.rank}</span><b>${esc(row.name)}</b><strong>${esc(prize)}</strong></div>`;
-            })
+            .map(
+              (row) =>
+                `<div class="dr-rank"><span>${esc(row.day)} #${row.rank}</span><b>${esc(row.name)}</b><strong>${formatNumber(row.points, { maximumFractionDigits: 0 })}</strong></div>`,
+            )
             .join('');
     return `<section class="dr-section"><h3>${esc(t('hudChrome.dailyRewards.history'))}</h3><div class="dr-ranks">${rows}</div></section>`;
   }

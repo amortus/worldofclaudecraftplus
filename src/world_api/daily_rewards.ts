@@ -32,28 +32,20 @@ export interface DailyRewardLeaderboardPage {
   total: number;
 }
 
+/** One past-day winner row. The reward carries no prize ledger, so the server
+ *  answers an empty list today; the shape is what a past-day board would fill. */
 export interface DailyRewardPayoutLogEntry {
   day: string;
   rank: number;
   name: string;
   points: number;
-  prizePercent: number;
-  prizeUsd: number;
-  status: string;
-  txSignature: string | null;
-  paidAt: string | null;
 }
 
 export interface DailyRewardEligibilityView {
   eligible: boolean;
-  reason: 'eligible' | 'no_wallet' | 'under_minimum' | 'price_unavailable' | 'banned';
+  reason: 'eligible' | 'banned';
   banReason?: string | null;
   banExpiresAt?: string | null;
-  walletPubkey: string | null;
-  wocBalance: number | null;
-  wocUsdPrice: number | null;
-  usdValue: number | null;
-  minUsd: number;
 }
 
 export interface DailyRewardStatus {
@@ -61,8 +53,6 @@ export interface DailyRewardStatus {
   enabled?: boolean;
   day: string;
   resetAt: string;
-  prizePoolUsd: number;
-  prizePoolSol: number | null;
   eligibility: DailyRewardEligibilityView;
   score: number;
   rank: number | null;

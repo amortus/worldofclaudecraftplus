@@ -51,7 +51,7 @@ import {
   pushRejected,
   refreshThenPushMeta,
 } from './member_writes';
-import { freshOutboxPollState, outboxIoFor, runOutboxPoll } from './outbox_consumer';
+import { outboxIoFor, runOutboxPoll } from './outbox_consumer';
 import { withPresenceCounters } from './presence_counters';
 import { LoopScheduler } from './scheduler';
 import { ServerClient, type VoiceMemberPush } from './server_client';
@@ -701,18 +701,16 @@ async function main(): Promise<void> {
   // the sweep. Every DECISION lives in bot/outbox_consumer.ts, where a test can
   // reach it; this is only the binding.
   //
-  // The three poll loops this replaces (relay, activity, daily-rewards winners)
-  // each ran their own timer and their own request against a server that usually
-  // had nothing for any of them. One request now answers all three, plus the
-  // link-change feed that tells the sweep which members actually moved, which is
-  // what let the periodic full-roster rescan go.
+  // The poll loops this replaces (relay, activity) each ran their own timer and
+  // their own request against a server that usually had nothing for either of
+  // them. One request now answers both, plus the link-change feed that tells the
+  // sweep which members actually moved, which is what let the periodic
+  // full-roster rescan go.
   const outboxIo = outboxIoFor({
     createMessage: (channelId, payload) => discord.createMessage(channelId, payload),
-    markDailyRewardWinners: (day) => server.markDailyRewardWinners(day),
     channels: {
       relay: cfg.relayChannelId,
       activity: cfg.activityChannelId,
-      dailyRewards: cfg.dailyRewardsChannelId,
     },
     gameUrl: cfg.gameUrl,
     // Read fresh per run, never captured: the gate exists to notice the breaker
@@ -794,13 +792,10 @@ async function main(): Promise<void> {
   // each ran at, so a busy bot delivers exactly as promptly as before; every
   // empty drain then decays the delay toward `idleMs`, and the first item to
   // arrive snaps it straight back, so the quiet-hours saving costs no latency.
-  // ONE state for the task's lifetime: the announced-days memo only suppresses
-  // duplicate winner announcements if it survives from poll to poll.
-  const outboxState = freshOutboxPollState();
   scheduler.add({
     name: 'outbox',
     cadence: { activeMs: cfg.outboxPollMs, idleMs: cfg.outboxIdleMs },
-    run: () => runOutboxPoll(outboxIo, outboxState),
+    run: () => runOutboxPoll(outboxIo),
   });
   const memberMetaTask = scheduler.add({
     name: 'special-roles-and-meta',

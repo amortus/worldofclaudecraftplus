@@ -2,14 +2,13 @@ import type { DailyRewardTaskSeed } from './daily_rewards_db';
 
 // Day-scoped memo that runs the daily-reward ensureDay plus seedTasks write pair
 // at most once per (day, realm, config) key, collapsing the storm of identical
-// seed writes that status(), spin(), recordOnlineMinute(), the five gameplay
-// event recorders, and finalizePreviousDay would otherwise each issue (one per
-// online player per minute, plus one per gameplay event, plus one per 3-second
-// internal poll). The key includes only the config fields the writes actually
-// persist (prizePoolUsd, wocUsdPrice, and a signature of the tasks array), so a
-// genuine config change forces exactly one reseed and nothing else does. It
-// holds MANY keys at once: the finalize path seeds yesterday while status seeds
-// today, so a single-slot cache would thrash and gate nothing.
+// seed writes that status(), spin(), recordOnlineMinute() and the five gameplay
+// event recorders would otherwise each issue (one per
+// online player per minute, plus one per gameplay event). The key includes only
+// the config fields the writes actually persist (a signature of the tasks
+// array), so a genuine config change forces exactly one reseed and nothing else
+// does. It holds MANY keys at once: a day can be seeded either side of the
+// reward-clock boundary, so a single-slot cache would thrash and gate nothing.
 //
 // This gate protects a WRITE, not a read, so its failure semantics are load
 // bearing:
@@ -44,8 +43,6 @@ const seeded = new Set<string>();
 const inflight = new Map<string, Promise<void>>();
 
 interface SeedConfig {
-  prizePoolUsd: number;
-  wocUsdPrice: number | null;
   tasks: DailyRewardTaskSeed[];
 }
 
@@ -72,13 +69,7 @@ export function buildSeedKey(day: string, realm: string, config: SeedConfig): st
   // no field separator. Erring toward a fresh key (for example if a config
   // object's property order ever varied) only costs one extra idempotent write,
   // the safe direction; a spurious SKIP would be the unsafe one.
-  return JSON.stringify([
-    day,
-    realm,
-    config.prizePoolUsd,
-    config.wocUsdPrice,
-    tasksSignature(config.tasks),
-  ]);
+  return JSON.stringify([day, realm, tasksSignature(config.tasks)]);
 }
 
 function markSeeded(key: string): void {

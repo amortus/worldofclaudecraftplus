@@ -162,17 +162,8 @@ import {
   sortCharacters,
 } from './net/char_sort';
 import { charselectPrimaryAction } from './net/charselect_action';
-import { performDesktopWalletHandoff } from './net/desktop_wallet_handoff';
-import {
-  desktopWalletManagerAction,
-  desktopWalletManagerView,
-  disconnectDesktopWalletSession,
-} from './net/desktop_wallet_manager';
 import { shouldEnterDiscordOnboarding } from './net/discord_onboarding_gate';
 import { EconomyClient, newIdempotencyKey, startClaudiumPurchase } from './net/economy_sdk';
-// The wallet module is loaded lazily via dynamic import() in the wallet
-// controller below, so it stays out of the main entry chunk and only loads when
-// the feature is enabled + used.
 import {
   isAppleAuthorizationCancellation,
   isNativeIos,
@@ -188,10 +179,6 @@ import {
   takeNativeDiscordVerifier,
 } from './net/native_discord';
 import { notifyOtaAppReady } from './net/native_ota';
-import {
-  createNativeSolanaWalletClient,
-  nativeSolanaMobileBridge,
-} from './net/native_solana_mobile';
 import {
   Api,
   ApiError,
@@ -212,11 +199,7 @@ import {
   resumeRoute,
   savePlayMarker,
 } from './net/resume_play';
-import { createSeekerEntitlementSync } from './net/seeker_entitlement_sync';
 import { openStripeCheckout } from './net/stripe_checkout';
-import type { WalletOption, WalletPickerMode, WalletPickerResult } from './net/wallet';
-import { resolveWalletCapability } from './net/wallet_capability';
-import { installWalletResumeHandlers } from './net/wallet_resume';
 import {
   prepareGraphicsProfileAssets,
   resetGraphicsProfileDerivedCaches,
@@ -359,7 +342,6 @@ import { CharselectRedesignEditor } from './ui/charselect_redesign';
 import { ChatCommandMenu } from './ui/chat_command_menu';
 import { CLASS_DETAILS, SIGNATURE_ABILITIES } from './ui/class_details_data';
 import { classIconUrl } from './ui/class_icon_art';
-import { claudiumBalanceAddress, currentWocDiscountBps } from './ui/claudium_view';
 import { isDevGuiCommand } from './ui/dev_command_view';
 import { devTierByIndex, devTierDisplayName } from './ui/dev_tier';
 import {
@@ -381,7 +363,6 @@ import { finderLootItemIds } from './ui/dungeon_finder_view';
 import { classDisplayName, tEntity } from './ui/entity_i18n';
 import { showEntryGuardBanner } from './ui/entry_guard_banner';
 import { refreshEpicLinkStatus, wireEpicLink } from './ui/epic_link';
-import { FocusManager, type FocusTrapHandle } from './ui/focus_manager';
 import {
   attachGatherNodeHoverTooltip,
   gatherNodeToolGateFor,
@@ -426,7 +407,6 @@ import {
 import { createLoadingTipRotation, type LoadingTipRotation } from './ui/loading_tips';
 import { CONTENT_LOCALE_CHANNEL_ENSURERS } from './ui/locale_channels';
 import { applyMinimapOrnamentVars } from './ui/minimap_gilded_ornament';
-import { showMobileWalletLauncher } from './ui/mobile_wallet_launcher';
 import { mobileMountAction } from './ui/mount_quick_summon';
 import { applyNativeDeviceLanguage } from './ui/native_language';
 import { scheduleNativeUpdateCheck } from './ui/native_update_prompt';
@@ -452,15 +432,6 @@ import {
 } from './ui/two_factor_setup';
 import { UiEffectsApplier } from './ui/ui_effects_applier';
 import { hydrateIcons } from './ui/ui_icons';
-import {
-  resolveWocBalanceUpdate,
-  setWalletConnectionAddresses,
-  setWalletDisplayAvailable,
-  setWalletUiEnabled,
-  setWocBalance,
-  shouldDisconnectUnverifiedWallet,
-} from './ui/wallet_balance';
-import { buildWalletConnectionView } from './ui/wallet_connection_view';
 import type { IWorld } from './world_api';
 
 const CLICK_MOVE_TURN_RATE = 4.2; // rad/sec; responsive turning while the camera stays decoupled from click spam
@@ -1470,7 +1441,7 @@ async function startGame(
     initSoftwareRenderNotice(DESKTOP_APP);
     loadPhaseStart('hud-ctor');
     hud = new Hud(world, renderer, keybinds, {
-      dailyRewardsEnabled: NATIVE_APP ? await walletCapabilityReady : true,
+      dailyRewardsEnabled: true,
       devCommandsEnabled: import.meta.env.DEV,
       constrainedMemory: GFX.constrainedMemory,
     });
@@ -2501,15 +2472,6 @@ async function startGame(
       perfOverlay.setEnabled(settings.set('showFps', !!value));
       return;
     }
-    if (key === 'showWalletOnCharacterScreen') {
-      settings.set('showWalletOnCharacterScreen', !!value);
-      syncWalletCharacterScreenVisibility();
-      return;
-    }
-    if (key === 'showWalletOnPlayerCard') {
-      settings.set('showWalletOnPlayerCard', !!value);
-      return;
-    }
     if (key === 'showPlaytime') {
       settings.set('showPlaytime', !!value);
       // The character sheet is a cold window (no repeating driver), so repaint
@@ -2955,7 +2917,6 @@ async function startGame(
       },
     },
     changeLanguage: (lang, onStatus) => changeLanguage(lang, onStatus),
-    refreshWocBalance: () => refreshWocBalanceOnDemand(),
     // Deed-broadcast opt-out: online only (an offline character has no account
     // row); the options row hides itself when this seam is absent.
     ...(online
@@ -3077,26 +3038,6 @@ async function startGame(
       token: () => api.token,
       base: api.base,
     });
-    const wocBalanceBaseUnits = (balance: number | null): string | null => {
-      if (balance === null || !Number.isFinite(balance) || balance < 0) return null;
-      return String(Math.floor(balance * 1_000_000));
-    };
-    const nativePriceCache = new Map<string, { amountBase: string; atMs: number }>();
-    const nativePriceCacheTtlMs = 60_000;
-    const nativeAmountBase = (
-      rail: 'sol' | 'usdc' | 'woc',
-      sku: string,
-      amountBase: string | null | undefined,
-    ): string | null => {
-      const key = `${rail}:${sku}`;
-      if (amountBase) {
-        nativePriceCache.set(key, { amountBase, atMs: Date.now() });
-        return amountBase;
-      }
-      const cached = nativePriceCache.get(key);
-      if (!cached || Date.now() - cached.atMs > nativePriceCacheTtlMs) return null;
-      return cached.amountBase;
-    };
     const claudiumHooks: ClaudiumHooks = {
       balance: async () => (await economy.balance()).balance,
       storeSnapshot: async () => {
@@ -5016,15 +4957,6 @@ async function startOffline(
 // ---------------------------------------------------------------------------
 
 const api = new Api();
-const seekerEntitlementSync = createSeekerEntitlementSync({
-  entitlement: async () => (await api.seekerEntitlement()).entitled,
-  createClaimProof: () => createNativeAttestationProof(api.base, 'seeker-claim'),
-  claim: async (proof) => (await api.claimSeekerEntitlement(proof)).entitled,
-  onPermanentFailure: (error) => {
-    console.error('[wallet] Seeker entitlement sync was rejected', error);
-    flashWalletError(userFacingApiError(error));
-  },
-});
 
 // Referral capture: a visitor who arrives from a shared player card link
 // (?ref=<slug>) carries the referrer's slug into registration. Read it once at
@@ -5921,28 +5853,9 @@ async function completeDesktopAppLogin(code: string): Promise<void> {
   }
 }
 
-// `focusWallet` differentiates the Wallet card's CTA from "View Characters":
-// both land on the realm/character picker, but Manage Wallet then scrolls to and
-// focuses the wallet control once it renders.
-let pendingWalletFocus = false;
-function accountGoToCharacters(focusWallet = false): void {
-  pendingWalletFocus = focusWallet;
+function accountGoToCharacters(): void {
   switchMainView('#hero-view');
-  void enterRealmFlow().then(() => {
-    if (pendingWalletFocus) tryFocusWalletButton();
-  });
-}
-
-function tryFocusWalletButton(attempt = 0): void {
-  const btn = document.getElementById('btn-wallet');
-  if (btn && btn.offsetParent !== null) {
-    pendingWalletFocus = false;
-    btn.scrollIntoView({ block: 'center' });
-    btn.focus();
-    return;
-  }
-  if (attempt < 20) window.setTimeout(() => tryFocusWalletButton(attempt + 1), 100);
-  else pendingWalletFocus = false;
+  void enterRealmFlow();
 }
 
 let accountPortalWired = false;
@@ -6011,11 +5924,8 @@ function setupAccountPortal(): void {
 
   setupSecuritySection();
 
-  document
-    .getElementById('account-manage-wallet')
-    ?.addEventListener('click', () => accountGoToCharacters(true));
   ($('#account-go-characters') as HTMLElement).addEventListener('click', () =>
-    accountGoToCharacters(false),
+    accountGoToCharacters(),
   );
   ($('#account-logout') as HTMLElement).addEventListener('click', logoutAccount);
 }
@@ -7333,7 +7243,6 @@ function translatePage(): void {
 }
 
 function refreshLocalizedDynamicShell(): void {
-  updateWalletButton();
   // Relabel the appearance customizers BEFORE the per-panel arms below: each
   // arm returns early for the panel that happens to be on screen, so a language
   // switch made from char-select would otherwise leave the create panel's baked
@@ -8412,7 +8321,6 @@ function wireStartScreens(): void {
   void loadProjectStats();
   wireContractAddressCopy();
   wireHomepageMusicToggle();
-  void wireWallet();
   wireGithubLink();
   wireSteamLink(api);
   wireEpicLink(api);
@@ -8459,7 +8367,6 @@ function wireStartScreens(): void {
     api.saveSession();
     enterLoggedInChrome();
     if (await completeDesktopBrowserLogin()) return;
-    void refreshWalletLinkStatus();
     void refreshGithubLinkStatus();
     void refreshSteamLinkStatus(api);
     void refreshEpicLinkStatus(api);
@@ -9562,7 +9469,6 @@ function wireStartScreens(): void {
     api.saveSession();
     enterLoggedInChrome();
     if (await completeDesktopBrowserLogin()) return;
-    void refreshWalletLinkStatus();
     void refreshGithubLinkStatus();
     void refreshSteamLinkStatus(api);
     void refreshEpicLinkStatus(api);
@@ -9859,10 +9765,6 @@ function wireStartScreens(): void {
       }
       goToLoggedInPlay();
     });
-    // Re-bind the account's linked wallet on a restored session (not just on fresh
-    // login), so an auto-reconnected wallet shows verified and is NOT treated as
-    // unverified and disconnected (the bug that forced a re-sign on every reload).
-    void refreshWalletLinkStatus();
     void refreshGithubLinkStatus();
     void refreshSteamLinkStatus(api);
     void refreshEpicLinkStatus(api);
