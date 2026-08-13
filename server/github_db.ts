@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS github_oauth_states (
 CREATE INDEX IF NOT EXISTS github_oauth_states_expires ON github_oauth_states(expires_at);
 `;
 
-// ── GitHub identity link (mirrors discord_links / wallet_links) ────────────────
+// ── GitHub identity link (mirrors discord_links) ────────────────
 
 export interface GitHubLinkRow {
   account_id: number;
