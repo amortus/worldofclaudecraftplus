@@ -4,7 +4,7 @@
 
 **브라우저에서 무료로 직접 만든 세계를 모험하고, 파티를 맺고, 레이드하세요. 오픈 소스, web3, 그리고 지금 바로 온라인.**
 
-**공식 웹사이트: https://worldofclaudecraft.com/**
+**공식 웹사이트: https://worldofclaudecraft.com.br/**
 
 [![CI](https://github.com/levy-street/world-of-claudecraft/actions/workflows/ci.yml/badge.svg)](https://github.com/levy-street/world-of-claudecraft/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -20,7 +20,7 @@
 
 [English](../../README.md) · [Español](README.es.md) · [Español (España)](README.es_ES.md) · [Français](README.fr_FR.md) · [Français (Canada)](README.fr_CA.md) · [Italiano](README.it_IT.md) · [Deutsch](README.de_DE.md) · [简体中文](README.zh_CN.md) · [繁體中文](README.zh_TW.md) · **한국어** · [日本語](README.ja_JP.md) · [Português (Brasil)](README.pt_BR.md) · [Русский](README.ru_RU.md) · [Čeština](README.cs_CZ.md) · [Nederlands](README.nl_NL.md) · [Polski](README.pl_PL.md) · [Bahasa Indonesia](README.id_ID.md) · [Türkçe](README.tr_TR.md) · [Svenska](README.sv_SE.md) · [Tiếng Việt](README.vi_VN.md) · [Dansk](README.da_DK.md)
 
-[지금 플레이](https://worldofclaudecraft.com/) · [직접 세계 호스팅하기](#host-your-own-world-one-command) · [에이전트 훈련하기](#train-an-agent-headless-rl) · [Web3](#web3) · [기여하기](CONTRIBUTING.ko_KR.md) · [Discord](https://discord.com/invite/worldofclaudecraft)
+[지금 플레이](https://worldofclaudecraft.com.br/) · [직접 세계 호스팅하기](#host-your-own-world-one-command) · [에이전트 훈련하기](#train-an-agent-headless-rl) · [Web3](#web3) · [기여하기](CONTRIBUTING.ko_KR.md) · [Discord](https://discord.com/invite/worldofclaudecraft)
 
 ![World of ClaudeCraft 타이틀 화면](../../docs/screenshots/title-screen.jpg)
 
@@ -28,11 +28,11 @@
 
 ## 이것은 무엇인가
 
-World of ClaudeCraft는 지금 바로 브라우저에서 플레이할 수 있고, 명령어 하나로 직접 호스팅할 수 있으며, 심지어 AI 에이전트를 훈련시켜 플레이하게 할 수도 있는 완성된 클래식 시대 MMO입니다. 무료이고, 오픈 소스이며, [worldofclaudecraft.com](https://worldofclaudecraft.com/)에서 실시간으로 운영됩니다.
+World of ClaudeCraft는 지금 바로 브라우저에서 플레이할 수 있고, 명령어 하나로 직접 호스팅할 수 있으며, 심지어 AI 에이전트를 훈련시켜 플레이하게 할 수도 있는 완성된 클래식 시대 MMO입니다. 무료이고, 오픈 소스이며, [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/)에서 실시간으로 운영됩니다.
 
 하나의 공유 세계가 모두 같은 게임 코어에서 세 곳에 걸쳐 실행됩니다:
 
-- **권위 있는 멀티플레이어 서버**, worldofclaudecraft.com에서 플레이하는 실시간 세계로, Postgres 기반 계정들이 하나의 영속적인 렐름을 공유합니다,
+- **권위 있는 멀티플레이어 서버**, worldofclaudecraft.com.br에서 플레이하는 실시간 세계로, Postgres 기반 계정들이 하나의 영속적인 렐름을 공유합니다,
 - **오프라인 브라우저 세계**, 개발 서버에서 얻는 로컬 싱글플레이 Sim으로, 개발할 때나 게임 코어를 처음부터 끝까지 읽어볼 때 유용합니다,
 - **헤드리스 RL 환경**, Python이 Gym 인터페이스를 통해 실제 게임을 구동합니다.
 
@@ -77,7 +77,7 @@ World of ClaudeCraft는 지금 바로 브라우저에서 플레이할 수 있고
 
 ## 플레이하기
 
-[worldofclaudecraft.com](https://worldofclaudecraft.com/)에서 브라우저로 플레이하거나, Windows, Linux, macOS, iOS, Android용 네이티브 앱을 설치하세요. 모든 클라이언트가 같은 온라인 세계에 접속합니다.
+[worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/)에서 브라우저로 플레이하거나, Windows, Linux, macOS, iOS, Android용 네이티브 앱을 설치하세요. 모든 클라이언트가 같은 온라인 세계에 접속합니다.
 
 ### 온라인, 다른 플레이어와 함께
 
@@ -113,7 +113,7 @@ npm run electron:build:steam  # SteamPipe depot layouts (in-app updater off)
 VITE_DESKTOP_API_ORIGIN=http://127.0.0.1:8787 npm run electron:dev
 ```
 
-스테이징 빌드에서 프로덕션 API 오리진을 덮어쓰려면 `VITE_DESKTOP_API_ORIGIN=https://dev.worldofclaudecraft.com`을 쓰세요(BUILD 시점 값입니다: 번들에 구워지고 패키징된 앱에 각인되며, 설치된 빌드는 이를 런타임 환경 변수로 무시합니다). Steam은 배포 채널이고(동일한 Electron 번들을 SteamPipe로 업로드), 데스크톱 플레이어는 Steam 계정을 연동해 획득한 deed를 Steam 업적으로 미러링할 수 있습니다; 로그인 자체는 이메일과 Discord로 유지됩니다. 전체 릴리스 런북(서명, 공증, 자동 업데이트 게시, SteamPipe depot, 서버 배포)은 `docs/desktop-release.md`에 있습니다. iOS와 Android는 Capacitor를 통해 출하되며, 자체 런북은 `docs/mobile-store-release.md`에 있습니다.
+스테이징 빌드에서 프로덕션 API 오리진을 덮어쓰려면 `VITE_DESKTOP_API_ORIGIN=https://dev.worldofclaudecraft.com.br`을 쓰세요(BUILD 시점 값입니다: 번들에 구워지고 패키징된 앱에 각인되며, 설치된 빌드는 이를 런타임 환경 변수로 무시합니다). Steam은 배포 채널이고(동일한 Electron 번들을 SteamPipe로 업로드), 데스크톱 플레이어는 Steam 계정을 연동해 획득한 deed를 Steam 업적으로 미러링할 수 있습니다; 로그인 자체는 이메일과 Discord로 유지됩니다. 전체 릴리스 런북(서명, 공증, 자동 업데이트 게시, SteamPipe depot, 서버 배포)은 `docs/desktop-release.md`에 있습니다. iOS와 Android는 Capacitor를 통해 출하되며, 자체 런북은 `docs/mobile-store-release.md`에 있습니다.
 
 <a id="host-your-own-world-one-command"></a>
 
@@ -200,7 +200,7 @@ $WOC는 실시간 게임 안에서 선택적인 용도도 갖습니다:
 3WjLscH2JsXLEFJZRA9z8ti8yRGxWGKbqymPd7UicRth
 ```
 
-토큰에 대한 더 자세한 내용은 [worldofclaudecraft.com](https://worldofclaudecraft.com/)에 있습니다.
+토큰에 대한 더 자세한 내용은 [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/)에 있습니다.
 
 ## 세계 둘러보기
 
@@ -418,4 +418,4 @@ core.hooksPath .githooks`로 클론을 공유 훅에 연결해 두면, 무엇이
 
 [CREDITS.md](../../CREDITS.md)가 권위 있는 목록이며, 에셋별 재배포 열을 담고 있습니다. 어떤 에셋이 거기에 기재되어 있다면, 프로젝트의 MIT 라이선스보다 그 라이선스가 우선합니다. 이 대장은 아직 작성 중이므로, 목록에 없는 미디어 에셋은 자유롭다는 뜻이 아니라 아직 기록되지 않았다는 뜻입니다: 의존하기 전에 문의하세요. 소스 코드는 반대이며, 따로 떼어내지 않은 모든 것은 MIT입니다.
 
-우리의 [이용 약관](https://worldofclaudecraft.com/terms)은 worldofclaudecraft.com에서 우리가 운영하는 호스팅 게임을 다룹니다: 계정, 행동 규범, 가상 아이템. 약관은 이 소스 코드에서 MIT 라이선스가 부여하는 권리를 제한하지 않습니다.
+우리의 [이용 약관](https://worldofclaudecraft.com.br/terms)은 worldofclaudecraft.com.br에서 우리가 운영하는 호스팅 게임을 다룹니다: 계정, 행동 규범, 가상 아이템. 약관은 이 소스 코드에서 MIT 라이선스가 부여하는 권리를 제한하지 않습니다.

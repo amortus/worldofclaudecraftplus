@@ -88,7 +88,7 @@ Linux artifacts on Linux). Cross-building is not part of this runbook.
 | Azure subscription + Artifact Signing account (Basic, USD 9.99/mo, 5000 sigs) | Windows signing | account + certificate profile in the Azure portal (needs identity validation; individuals: US/Canada only, orgs also EU/UK) |
 | Azure service principal with "Trusted Signing Certificate Profile Signer" role | CI auth for signing | CI secrets `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` |
 | Alternative: a code-signing certificate in Azure Key Vault (Route B, what CI uses) | Windows signing via AzureSignTool | CI secrets `AZURE_KEY_VAULT_URL`, `AZURE_KEY_VAULT_CERTIFICATE` (plus the service principal secrets above, granted vault sign/get access) |
-| Update host: a static HTTPS host / bucket serving `https://updates.worldofclaudecraft.com/desktop/` | website auto-update feed + installer downloads | e.g. Cloudflare R2 bucket behind that hostname (any static host works; the app only GETs) |
+| Update host: a static HTTPS host / bucket serving `https://updates.worldofclaudecraft.com.br/desktop/` | website auto-update feed + installer downloads | e.g. Cloudflare R2 bucket behind that hostname (any static host works; the app only GETs) |
 | Steam partner account + app ID + three depot IDs | Steam distribution | partner.steamgames.com |
 | Steamworks publisher Web API key (+ `STEAM_ENABLED=1`, `STEAM_APP_ID`) | the Book of Deeds achievement mirror + account link (`server/steam/`) | game-server runtime env `STEAM_WEB_API_KEY` (see `DEPLOY.md`) |
 | Epic org + product (+ sandboxes, clients, artifacts) | Epic Games Store distribution | [dev.epicgames.com/portal](https://dev.epicgames.com/portal) (see `docs/epic-games-integration/portal-checklist.md`) |
@@ -101,7 +101,7 @@ Never commit any of these values; they are env vars in CI or the local shell.
 ## Deploying the game server (required before any public desktop release)
 
 The desktop app is served from the private origin `app://worldofclaudecraft` and
-calls `https://worldofclaudecraft.com`, so production must run this branch's server
+calls `https://worldofclaudecraft.com.br`, so production must run this branch's server
 before a public desktop build ships. The server side is already on the branch and
 needs no desktop-specific configuration: deploy it like any server update
 (`DEPLOY.md`, "Updating the game": ssh to the box, `cd /opt/eastbrook`,
@@ -130,7 +130,7 @@ Verify after deploying (should print the origin back):
 
 ```bash
 curl -s -D - -o /dev/null -H "Origin: app://worldofclaudecraft" \
-  https://worldofclaudecraft.com/api/project-stats | grep -i access-control-allow-origin
+  https://worldofclaudecraft.com.br/api/project-stats | grep -i access-control-allow-origin
 ```
 
 ## macOS: signing + notarization
@@ -266,7 +266,7 @@ files are near-uncached, matching the existing host convention.
 One-time provisioning (maintainer):
 
 1. Cloudflare R2: create a bucket (any name, e.g. `woc-desktop-updates`) and
-   connect the custom domain `updates.worldofclaudecraft.com` to it (R2 bucket
+   connect the custom domain `updates.worldofclaudecraft.com.br` to it (R2 bucket
    settings, Custom Domains; the zone must be on the same Cloudflare account).
    Objects are uploaded under the `desktop/` prefix, matching the
    `/desktop/` path the feed URL and download page already use.
@@ -297,9 +297,9 @@ One-time provisioning (maintainer):
 Verify after the first publish:
 
 ```bash
-curl -sI https://updates.worldofclaudecraft.com/desktop/latest-linux.yml | head -1
-curl -sI https://updates.worldofclaudecraft.com/desktop/latest-mac.yml | head -1
-curl -s https://updates.worldofclaudecraft.com/desktop/SHA256SUMS-linux
+curl -sI https://updates.worldofclaudecraft.com.br/desktop/latest-linux.yml | head -1
+curl -sI https://updates.worldofclaudecraft.com.br/desktop/latest-mac.yml | head -1
+curl -s https://updates.worldofclaudecraft.com.br/desktop/SHA256SUMS-linux
 ```
 
 Users verify a download against the published checksums with

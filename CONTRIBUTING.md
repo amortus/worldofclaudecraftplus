@@ -432,8 +432,8 @@ project.
 
 The MIT License means what it says: anyone may use, modify, and redistribute the
 code, commercially or not. Our
-[Terms of Service](https://worldofclaudecraft.com/terms) govern the hosted game
-we operate at worldofclaudecraft.com (accounts, conduct, virtual items) and do
+[Terms of Service](https://worldofclaudecraft.com.br/terms) govern the hosted game
+we operate at worldofclaudecraft.com.br (accounts, conduct, virtual items) and do
 not restrict the rights the MIT License gives you or anyone else in this code.
 The "World of ClaudeCraft" and "Levy Street" names and branding are not covered
 by the MIT License.

@@ -24,7 +24,7 @@ const base = {
   linux: { target: [{ target: 'AppImage', arch: ['x64', 'arm64'] }] },
 };
 
-const prodOrigin = 'https://worldofclaudecraft.com';
+const prodOrigin = 'https://worldofclaudecraft.com.br';
 
 describe('desktopBuilderConfig', () => {
   it('stamps the website channel into extraMetadata and keeps the publish feed', () => {
@@ -45,7 +45,7 @@ describe('desktopBuilderConfig', () => {
 
   it('routes every non-production origin to the dev update channel (issue 1537)', () => {
     for (const apiOrigin of [
-      'https://dev.worldofclaudecraft.com',
+      'https://dev.worldofclaudecraft.com.br',
       'http://localhost:8787',
       undefined,
     ]) {
@@ -107,7 +107,7 @@ describe('desktopBuilderConfig', () => {
     // A schemeless origin derives the dev channel at build time but normalizes
     // to production in the runtime guard, refusing every stamped update on its
     // own track forever; that mistake must die here.
-    for (const apiOrigin of ['localhost:8787', 'worldofclaudecraft.com', 'not a url']) {
+    for (const apiOrigin of ['localhost:8787', 'worldofclaudecraft.com.br', 'not a url']) {
       expect(() => desktopBuilderConfig({ base, distribution: 'website', apiOrigin })).toThrow(
         /parseable http\(s\) VITE_DESKTOP_API_ORIGIN/,
       );
@@ -575,18 +575,18 @@ describe('stampFeedFile', () => {
   const yml = 'version: 0.23.0\nfiles:\n  - url: woc.zip\npath: woc.zip\n';
 
   it('appends the baked origin as a yml key the updater can read back', () => {
-    const stamped = stampFeedFile(yml, 'https://worldofclaudecraft.com');
+    const stamped = stampFeedFile(yml, 'https://worldofclaudecraft.com.br');
     expect(stamped).toBe(
       'version: 0.23.0\nfiles:\n  - url: woc.zip\npath: woc.zip\n' +
-        'wocApiOrigin: "https://worldofclaudecraft.com"\n',
+        'wocApiOrigin: "https://worldofclaudecraft.com.br"\n',
     );
   });
 
   it('replaces an existing stamp instead of stacking (idempotent re-stamp)', () => {
     const once = stampFeedFile(yml, 'http://localhost:8787');
-    const twice = stampFeedFile(once, 'https://worldofclaudecraft.com');
+    const twice = stampFeedFile(once, 'https://worldofclaudecraft.com.br');
     expect(twice.match(/wocApiOrigin/g)).toHaveLength(1);
-    expect(twice).toContain('wocApiOrigin: "https://worldofclaudecraft.com"');
+    expect(twice).toContain('wocApiOrigin: "https://worldofclaudecraft.com.br"');
     expect(twice).not.toContain('localhost');
   });
 
@@ -603,11 +603,11 @@ describe('stampFeedFile', () => {
     const require = createRequire(import.meta.url);
     const { parseUpdateInfo } = require('electron-updater/out/providers/Provider.js');
     const info = parseUpdateInfo(
-      stampFeedFile(yml, 'https://worldofclaudecraft.com'),
+      stampFeedFile(yml, 'https://worldofclaudecraft.com.br'),
       'latest-mac.yml',
       'https://updates.example.com/desktop/latest-mac.yml',
     );
-    expect(info.wocApiOrigin).toBe('https://worldofclaudecraft.com');
+    expect(info.wocApiOrigin).toBe('https://worldofclaudecraft.com.br');
     expect(info.version).toBe('0.23.0');
     expect(info.path).toBe('woc.zip');
   });
@@ -625,13 +625,13 @@ describe('stampChannelFeedFiles (the electron-build.mjs stamping orchestration)'
     const stamped = stampChannelFeedFiles({
       outDir: dir,
       channel: 'latest',
-      apiOrigin: 'https://worldofclaudecraft.com',
+      apiOrigin: 'https://worldofclaudecraft.com.br',
       fs: fsOps,
       joinPath: join,
     });
     expect([...stamped].sort()).toEqual(['latest-mac.yml', 'latest.yml']);
     expect(readFileSync(join(dir, 'latest-mac.yml'), 'utf8')).toContain(
-      'wocApiOrigin: "https://worldofclaudecraft.com"',
+      'wocApiOrigin: "https://worldofclaudecraft.com.br"',
     );
     expect(readFileSync(join(dir, 'latest.yml'), 'utf8')).toContain('wocApiOrigin');
     expect(readFileSync(join(dir, 'dev-mac.yml'), 'utf8')).not.toContain('wocApiOrigin');
@@ -645,7 +645,7 @@ describe('stampChannelFeedFiles (the electron-build.mjs stamping orchestration)'
       stampChannelFeedFiles({
         outDir: dir,
         channel: undefined,
-        apiOrigin: 'https://worldofclaudecraft.com',
+        apiOrigin: 'https://worldofclaudecraft.com.br',
         fs: fsOps,
         joinPath: join,
       }),
@@ -655,7 +655,7 @@ describe('stampChannelFeedFiles (the electron-build.mjs stamping orchestration)'
       stampChannelFeedFiles({
         outDir: join(dir, 'does-not-exist'),
         channel: 'latest',
-        apiOrigin: 'https://worldofclaudecraft.com',
+        apiOrigin: 'https://worldofclaudecraft.com.br',
         fs: fsOps,
         joinPath: join,
       }),

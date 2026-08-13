@@ -304,8 +304,8 @@ Přispěním kódu souhlasíš, že tvé kódové příspěvky budou licencovan�
 
 MIT licence znamená přesně to, co říká: kdokoli smí kód používat, upravovat a šířit
 dál, komerčně i nekomerčně. Naše
-[Podmínky služby](https://worldofclaudecraft.com/terms) upravují hostovanou hru,
-kterou provozujeme na worldofclaudecraft.com (účty, chování, virtuální předměty), a
+[Podmínky služby](https://worldofclaudecraft.com.br/terms) upravují hostovanou hru,
+kterou provozujeme na worldofclaudecraft.com.br (účty, chování, virtuální předměty), a
 neomezují práva, která MIT licence dává tobě ani komukoli jinému v tomto kódu.
 Názvy a branding "World of ClaudeCraft" a "Levy Street" MIT licence nekryje.
 

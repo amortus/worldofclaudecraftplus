@@ -175,7 +175,7 @@ World of ClaudeCraft 以多种语言发行。每一条玩家可见的字符串�
 
 贡献代码即表示，你同意你的代码贡献将依据项目的 [MIT 许可证](../../LICENSE)进行授权，与覆盖整个项目的许可证相同。
 
-MIT 许可证就是字面意思：任何人都可以使用、修改和再分发这些代码，无论商用与否。我们的[服务条款](https://worldofclaudecraft.com/terms)约束的是我们在 worldofclaudecraft.com 上运营的托管版游戏（账号、行为、虚拟物品），并不限制 MIT 许可证赋予你或其他任何人对这些代码的权利。"World of ClaudeCraft" 和 "Levy Street" 这两个名称及其品牌标识不在 MIT 许可证的覆盖范围内。
+MIT 许可证就是字面意思：任何人都可以使用、修改和再分发这些代码，无论商用与否。我们的[服务条款](https://worldofclaudecraft.com.br/terms)约束的是我们在 worldofclaudecraft.com.br 上运营的托管版游戏（账号、行为、虚拟物品），并不限制 MIT 许可证赋予你或其他任何人对这些代码的权利。"World of ClaudeCraft" 和 "Levy Street" 这两个名称及其品牌标识不在 MIT 许可证的覆盖范围内。
 
 原创的创作素材（录音、音乐、美术及类似的著作作品）是个例外。如果你贡献一份自己创作的原创素材，你可以选择保留版权，并按你选定的许可证（例如 CC BY-NC 4.0）来贡献它，但需要满足以下条件：
 

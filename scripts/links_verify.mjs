@@ -38,7 +38,7 @@ const server = http.createServer((req, res) => {
 
 const PORT = 8799;
 const EXPECTED_LINKS = [
-  'https://worldofclaudecraft.com/',
+  'https://worldofclaudecraft.com.br/',
   'https://x.com/WoClaudecraft',
   'https://www.instagram.com/worldofclaudecraft/',
   'https://www.tiktok.com/@worldofclaudecraft',
@@ -141,7 +141,7 @@ async function main() {
     });
     ok(ld && ld !== 'INVALID', `JSON-LD present and valid`);
     const sameAs = ld && ld !== 'INVALID' ? (ld.about?.sameAs ?? []) : [];
-    ok(EXPECTED_LINKS.filter((u) => u !== 'https://worldofclaudecraft.com/').every((u) => sameAs.includes(u)),
+    ok(EXPECTED_LINKS.filter((u) => u !== 'https://worldofclaudecraft.com.br/').every((u) => sameAs.includes(u)),
       `JSON-LD sameAs lists all 6 social profiles (${sameAs.length})`);
 
     // Verified wax seals must render as red discs (literal hex, not unresolved var()).

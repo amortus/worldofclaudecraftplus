@@ -344,8 +344,8 @@ Lizenz, die auch das Projekt abdeckt.
 
 Die MIT License meint genau das, was sie sagt: Jede und jeder darf den Code
 verwenden, verändern und weiterverbreiten, kommerziell oder nicht. Unsere
-[Nutzungsbedingungen](https://worldofclaudecraft.com/terms) regeln das von uns
-betriebene gehostete Spiel auf worldofclaudecraft.com (Accounts, Verhalten,
+[Nutzungsbedingungen](https://worldofclaudecraft.com.br/terms) regeln das von uns
+betriebene gehostete Spiel auf worldofclaudecraft.com.br (Accounts, Verhalten,
 virtuelle Gegenstände) und schränken die Rechte nicht ein, die die MIT License dir
 oder anderen an diesem Code gibt. Die Namen und das Branding "World of ClaudeCraft"
 und "Levy Street" sind nicht von der MIT License abgedeckt.

@@ -338,8 +338,8 @@ Al contribuir código, aceptas que tus contribuciones de código se licencien ba
 
 La Licencia MIT dice lo que dice: cualquiera puede usar, modificar y redistribuir el
 código, con fines comerciales o no. Nuestros
-[Términos del servicio](https://worldofclaudecraft.com/terms) rigen el juego alojado
-que gestionamos en worldofclaudecraft.com (cuentas, conducta, objetos virtuales) y no
+[Términos del servicio](https://worldofclaudecraft.com.br/terms) rigen el juego alojado
+que gestionamos en worldofclaudecraft.com.br (cuentas, conducta, objetos virtuales) y no
 restringen los derechos que la Licencia MIT te otorga a ti ni a nadie sobre este
 código. Los nombres y la marca de "World of ClaudeCraft" y "Levy Street" no están
 cubiertos por la Licencia MIT.

@@ -1,5 +1,5 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://worldofclaudecraft.com/sitemap.xml
-Sitemap: https://worldofclaudecraft.com/sitemap-characters.xml
+Sitemap: https://worldofclaudecraft.com.br/sitemap.xml
+Sitemap: https://worldofclaudecraft.com.br/sitemap-characters.xml

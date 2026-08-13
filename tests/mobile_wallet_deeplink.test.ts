@@ -22,8 +22,8 @@ function installFakeWindow() {
       clear: () => values.clear(),
     },
     location: {
-      href: 'https://dev.worldofclaudecraft.com/play',
-      origin: 'https://dev.worldofclaudecraft.com',
+      href: 'https://dev.worldofclaudecraft.com.br/play',
+      origin: 'https://dev.worldofclaudecraft.com.br',
       assign: vi.fn(),
     },
     open: vi.fn(),
@@ -67,16 +67,16 @@ describe('mobile Solana wallet deeplinks', () => {
     const dapp = nacl.box.keyPair();
     const phantom = buildConnectRequest({
       provider: 'phantom',
-      appUrl: 'https://dev.worldofclaudecraft.com',
+      appUrl: 'https://dev.worldofclaudecraft.com.br',
       redirectUrl:
-        'https://dev.worldofclaudecraft.com/wallet-return.html?woc_wallet_request=request-1',
+        'https://dev.worldofclaudecraft.com.br/wallet-return.html?woc_wallet_request=request-1',
       dappPublicKey: dapp.publicKey,
     });
     const solflare = buildConnectRequest({
       provider: 'solflare',
-      appUrl: 'https://dev.worldofclaudecraft.com',
+      appUrl: 'https://dev.worldofclaudecraft.com.br',
       redirectUrl:
-        'https://dev.worldofclaudecraft.com/wallet-return.html?woc_wallet_request=request-2',
+        'https://dev.worldofclaudecraft.com.br/wallet-return.html?woc_wallet_request=request-2',
       dappPublicKey: dapp.publicKey,
     });
 
@@ -114,7 +114,7 @@ describe('mobile Solana wallet deeplinks', () => {
       method: 'signMessage',
       dappPublicKey: new Uint8Array(nacl.box.publicKeyLength).fill(3),
       sharedSecret: shared,
-      redirectUrl: 'https://worldofclaudecraft.com/wallet-return.html?woc_wallet_request=req',
+      redirectUrl: 'https://worldofclaudecraft.com.br/wallet-return.html?woc_wallet_request=req',
       payload: { message: 'encoded-message', session: 'opaque-session', display: 'utf8' },
       nonce: new Uint8Array(nacl.box.nonceLength).fill(5),
     });

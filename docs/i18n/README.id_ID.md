@@ -4,7 +4,7 @@
 
 **Jalankan quest, bentuk grup, dan serbu dunia buatan tangan, gratis di browser Anda. Open source, web3, dan online sekarang juga.**
 
-**Situs resmi: https://worldofclaudecraft.com/**
+**Situs resmi: https://worldofclaudecraft.com.br/**
 
 [![CI](https://github.com/levy-street/world-of-claudecraft/actions/workflows/ci.yml/badge.svg)](https://github.com/levy-street/world-of-claudecraft/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -20,7 +20,7 @@
 
 [English](../../README.md) · [Español](README.es.md) · [Español (España)](README.es_ES.md) · [Français](README.fr_FR.md) · [Français (Canada)](README.fr_CA.md) · [Italiano](README.it_IT.md) · [Deutsch](README.de_DE.md) · [简体中文](README.zh_CN.md) · [繁體中文](README.zh_TW.md) · [한국어](README.ko_KR.md) · [日本語](README.ja_JP.md) · [Português (Brasil)](README.pt_BR.md) · [Русский](README.ru_RU.md) · [Čeština](README.cs_CZ.md) · [Nederlands](README.nl_NL.md) · [Polski](README.pl_PL.md) · **Bahasa Indonesia** · [Türkçe](README.tr_TR.md) · [Svenska](README.sv_SE.md) · [Tiếng Việt](README.vi_VN.md) · [Dansk](README.da_DK.md)
 
-[Main sekarang](https://worldofclaudecraft.com/) · [Hosting dunia Anda sendiri](#host-your-own-world-one-command) · [Latih sebuah agen](#train-an-agent-headless-rl) · [Web3](#web3) · [Berkontribusi](CONTRIBUTING.id_ID.md) · [Discord](https://discord.com/invite/worldofclaudecraft)
+[Main sekarang](https://worldofclaudecraft.com.br/) · [Hosting dunia Anda sendiri](#host-your-own-world-one-command) · [Latih sebuah agen](#train-an-agent-headless-rl) · [Web3](#web3) · [Berkontribusi](CONTRIBUTING.id_ID.md) · [Discord](https://discord.com/invite/worldofclaudecraft)
 
 ![Layar judul World of ClaudeCraft](../../docs/screenshots/title-screen.jpg)
 
@@ -28,11 +28,11 @@
 
 ## Apa ini
 
-World of ClaudeCraft adalah MMO era klasik yang lengkap dan bisa Anda mainkan sekarang juga di browser, Anda hosting sendiri dengan satu perintah, dan bahkan bisa melatih agen AI untuk memainkannya. Ini gratis, open source, dan live di [worldofclaudecraft.com](https://worldofclaudecraft.com/).
+World of ClaudeCraft adalah MMO era klasik yang lengkap dan bisa Anda mainkan sekarang juga di browser, Anda hosting sendiri dengan satu perintah, dan bahkan bisa melatih agen AI untuk memainkannya. Ini gratis, open source, dan live di [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/).
 
 Satu dunia bersama berjalan di tiga tempat, semuanya dari inti game yang sama:
 
-- **server multiplayer otoritatif**, dunia hidup yang Anda mainkan di worldofclaudecraft.com, tempat akun yang didukung Postgres berbagi satu realm persisten,
+- **server multiplayer otoritatif**, dunia hidup yang Anda mainkan di worldofclaudecraft.com.br, tempat akun yang didukung Postgres berbagi satu realm persisten,
 - **dunia browser offline**, sebuah Sim single-player lokal yang Anda dapatkan dari server dev, berguna untuk pengembangan dan untuk membaca inti game dari ujung ke ujung,
 - **env RL headless**, di mana Python menggerakkan game sungguhan melalui antarmuka Gym.
 
@@ -77,7 +77,7 @@ Cuaca didorong oleh bioma dan hanya render, jadi tidak pernah menyentuh sim dete
 
 ## Mainkan
 
-Mainkan di browser Anda di [worldofclaudecraft.com](https://worldofclaudecraft.com/), atau pasang aplikasi native untuk Windows, Linux, macOS, iOS, atau Android. Setiap client terhubung ke dunia online yang sama.
+Mainkan di browser Anda di [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/), atau pasang aplikasi native untuk Windows, Linux, macOS, iOS, atau Android. Setiap client terhubung ke dunia online yang sama.
 
 ### Online, dengan pemain lain
 
@@ -113,7 +113,7 @@ Arahkan shell ke API lain dengan `VITE_DESKTOP_API_ORIGIN`, misalnya server loka
 VITE_DESKTOP_API_ORIGIN=http://127.0.0.1:8787 npm run electron:dev
 ```
 
-Timpa origin API produksi untuk build staging dengan `VITE_DESKTOP_API_ORIGIN=https://dev.worldofclaudecraft.com` (sebuah nilai BUILD-time: nilai itu dipanggang ke dalam bundel dan dicap ke aplikasi yang dikemas, dan build yang sudah terpasang mengabaikannya sebagai env var runtime). Steam adalah kanal distribusi (bundel Electron yang sama, diunggah lewat SteamPipe), dan pemain desktop dapat menautkan akun Steam untuk mencerminkan deed yang mereka raih menjadi achievement Steam; proses masuk sendiri tetap email dan Discord. Runbook rilis lengkap (penandatanganan, notarisasi, publikasi pembaruan otomatis, depot SteamPipe, deploy server) ada di `docs/desktop-release.md`. iOS dan Android dikirim melalui Capacitor, dengan runbook-nya sendiri di `docs/mobile-store-release.md`.
+Timpa origin API produksi untuk build staging dengan `VITE_DESKTOP_API_ORIGIN=https://dev.worldofclaudecraft.com.br` (sebuah nilai BUILD-time: nilai itu dipanggang ke dalam bundel dan dicap ke aplikasi yang dikemas, dan build yang sudah terpasang mengabaikannya sebagai env var runtime). Steam adalah kanal distribusi (bundel Electron yang sama, diunggah lewat SteamPipe), dan pemain desktop dapat menautkan akun Steam untuk mencerminkan deed yang mereka raih menjadi achievement Steam; proses masuk sendiri tetap email dan Discord. Runbook rilis lengkap (penandatanganan, notarisasi, publikasi pembaruan otomatis, depot SteamPipe, deploy server) ada di `docs/desktop-release.md`. iOS dan Android dikirim melalui Capacitor, dengan runbook-nya sendiri di `docs/mobile-store-release.md`.
 
 <a id="host-your-own-world-one-command"></a>
 
@@ -200,7 +200,7 @@ Tidak satu pun dari ini diperlukan untuk bermain. Menautkan dompet bersifat opsi
 3WjLscH2JsXLEFJZRA9z8ti8yRGxWGKbqymPd7UicRth
 ```
 
-Selengkapnya tentang token di [worldofclaudecraft.com](https://worldofclaudecraft.com/).
+Selengkapnya tentang token di [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/).
 
 ## Tur keliling dunia
 
@@ -420,4 +420,4 @@ Yang perlu Anda hapus atau ganti sebelum mendistribusikan ulang:
 
 [CREDITS.md](../../CREDITS.md) adalah daftar yang otoritatif, dengan kolom distribusi ulang per aset. Di mana sebuah aset terdaftar di sana, lisensi itulah yang berlaku di atas lisensi MIT proyek ini. Register tersebut masih dilengkapi, jadi aset media yang belum ada di sana berarti belum tercatat, bukan bebas: tanyakan dulu sebelum mengandalkannya. Kode sumber berlaku sebaliknya, dan semua yang tidak dikecualikan adalah MIT.
 
-[Ketentuan Layanan](https://worldofclaudecraft.com/terms) kami mencakup game terhosting yang kami jalankan di worldofclaudecraft.com: akun, perilaku, item virtual. Ketentuan itu tidak membatasi hak yang diberikan Lisensi MIT kepada Anda atas kode sumber ini.
+[Ketentuan Layanan](https://worldofclaudecraft.com.br/terms) kami mencakup game terhosting yang kami jalankan di worldofclaudecraft.com.br: akun, perilaku, item virtual. Ketentuan itu tidak membatasi hak yang diberikan Lisensi MIT kepada Anda atas kode sumber ini.

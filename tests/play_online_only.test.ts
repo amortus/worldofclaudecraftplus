@@ -98,17 +98,20 @@ describe('/play uses the landing hero backdrop', () => {
 });
 
 describe('/play keeps its tracking and SEO head', () => {
-  it('play.html keeps the Google tag with the localhost guard', () => {
-    expect(playHtml).toContain('googletagmanager.com/gtag/js?id=G-BR5Z7GT7C2');
-    expect(playHtml).toContain("gtag('config', 'G-BR5Z7GT7C2')");
-    expect(playHtml).toContain("['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)");
+  // Fork divergence, same reason as tests/client_shell.test.ts: upstream's Google
+  // tag is their analytics property, so this fork removed it rather than pointing
+  // our players' pageviews at their account.
+  it('play.html ships no third-party analytics loader', () => {
+    expect(playHtml).not.toContain('googletagmanager.com');
+    expect(playHtml).not.toContain('G-BR5Z7GT7C2');
+    expect(playHtml).not.toContain('connect.facebook.net');
   });
 
   it('play.html keeps its canonical /play SEO surface', () => {
     expect(playHtml).toContain(
-      '<link rel="canonical" href="https://worldofclaudecraft.com/play" />',
+      '<link rel="canonical" href="https://worldofclaudecraft.com.br/play" />',
     );
-    expect(playHtml).toContain('property="og:url" content="https://worldofclaudecraft.com/play"');
+    expect(playHtml).toContain('property="og:url" content="https://worldofclaudecraft.com.br/play"');
   });
 });
 

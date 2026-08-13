@@ -82,7 +82,7 @@ function input(over: Partial<CharacterSheetInput> = {}): CharacterSheetInput {
     row: makeRow('shaman', 20, makeState()),
     visibility: 'owner',
     realm: 'Claudemoon',
-    origin: 'https://worldofclaudecraft.com',
+    origin: 'https://worldofclaudecraft.com.br',
     guild: 'Echoes of Claude',
     rank: { scope: 'realm', rank: 27, total: 4012 },
     updatedAt: '2026-06-23T00:00:00.000Z',
@@ -111,8 +111,8 @@ describe('characterSheet: shared fields', () => {
     expect(sheet.zone).toBe(zoneAt(0, 0).name);
     expect(sheet.guild).toBe('Echoes of Claude');
     expect(sheet.rank).toEqual({ scope: 'realm', rank: 27, total: 4012 });
-    expect(sheet.avatarUrl).toBe('https://worldofclaudecraft.com/avatar/shaman/0.png');
-    expect(sheet.profileUrl).toBe('https://worldofclaudecraft.com/c/Thrallish');
+    expect(sheet.avatarUrl).toBe('https://worldofclaudecraft.com.br/avatar/shaman/0.png');
+    expect(sheet.profileUrl).toBe('https://worldofclaudecraft.com.br/c/Thrallish');
     expect(sheet.arena['1v1']).toEqual({ rating: 1600, wins: 10, losses: 4, draws: 2 });
   });
 

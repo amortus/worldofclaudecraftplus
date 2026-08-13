@@ -32,23 +32,23 @@ MARKETING_VERSION = 0.20.0;
 CURRENT_PROJECT_VERSION = 4;
 MARKETING_VERSION = 0.20.0;`;
 
-const INDEX_HTML = `<a href="https://updates.worldofclaudecraft.com/desktop/world-of-claudecraft-0.20.0-mac-universal.dmg">Download</a>
-<a href="https://updates.worldofclaudecraft.com/desktop/world-of-claudecraft-0.20.0-linux-x86_64.AppImage">Download</a>
-<a href="https://updates.worldofclaudecraft.com/desktop/world-of-claudecraft-0.20.0-win-x64.exe">Download</a>
+const INDEX_HTML = `<a href="https://updates.worldofclaudecraft.com.br/desktop/world-of-claudecraft-0.20.0-mac-universal.dmg">Download</a>
+<a href="https://updates.worldofclaudecraft.com.br/desktop/world-of-claudecraft-0.20.0-linux-x86_64.AppImage">Download</a>
+<a href="https://updates.worldofclaudecraft.com.br/desktop/world-of-claudecraft-0.20.0-win-x64.exe">Download</a>
 <div id="game-version">v0.10</div>`;
 
 // play.html omits Linux but carries the macOS and Windows links.
-const PLAY_HTML = `<a href="https://updates.worldofclaudecraft.com/desktop/world-of-claudecraft-0.20.0-mac-universal.dmg">Download</a>
-<a href="https://updates.worldofclaudecraft.com/desktop/world-of-claudecraft-0.20.0-win-x64.exe">Download</a>
+const PLAY_HTML = `<a href="https://updates.worldofclaudecraft.com.br/desktop/world-of-claudecraft-0.20.0-mac-universal.dmg">Download</a>
+<a href="https://updates.worldofclaudecraft.com.br/desktop/world-of-claudecraft-0.20.0-win-x64.exe">Download</a>
 <div id="game-version">v0.10</div>`;
 
 const DESKTOP_TS = `export const DESKTOP_VERSION = '0.20.0';
-const DESKTOP_HOST = 'https://updates.worldofclaudecraft.com/desktop';`;
+const DESKTOP_HOST = 'https://updates.worldofclaudecraft.com.br/desktop';`;
 
 // A page migrated before the per-arch cutover (or hand-edited afterward) can still
 // carry the legacy combined-installer filename ("-win.exe", no arch suffix).
-const LEGACY_WINDOWS_HTML = `<a href="https://updates.worldofclaudecraft.com/desktop/world-of-claudecraft-0.20.0-mac-universal.dmg">Download</a>
-<a href="https://updates.worldofclaudecraft.com/desktop/world-of-claudecraft-0.20.0-win.exe">Download</a>
+const LEGACY_WINDOWS_HTML = `<a href="https://updates.worldofclaudecraft.com.br/desktop/world-of-claudecraft-0.20.0-mac-universal.dmg">Download</a>
+<a href="https://updates.worldofclaudecraft.com.br/desktop/world-of-claudecraft-0.20.0-win.exe">Download</a>
 <div id="game-version">v0.10</div>`;
 
 const README_MD = `[![Version](https://img.shields.io/badge/version-0.20.0-blue)](package.json)`;

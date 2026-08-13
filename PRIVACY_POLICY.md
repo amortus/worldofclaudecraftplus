@@ -4,7 +4,7 @@
 
 Last updated: 21 June 2026
 
-This Privacy Policy explains what personal information we collect, why we collect it, how we use and share it, and the choices you have. It applies when you play World of ClaudeCraft (the "Game"), visit worldofclaudecraft.com (the "Site"), or use our mobile application (the "App"). The Game, Site, and App together are the "Service."
+This Privacy Policy explains what personal information we collect, why we collect it, how we use and share it, and the choices you have. It applies when you play World of ClaudeCraft (the "Game"), visit worldofclaudecraft.com.br (the "Site"), or use our mobile application (the "App"). The Game, Site, and App together are the "Service."
 
 **Who we are.** The Service is operated by the World of ClaudeCraft team, an independent project based in Brazil ("we," "us," "our"). We are the data controller for personal information processed through the Service.
 

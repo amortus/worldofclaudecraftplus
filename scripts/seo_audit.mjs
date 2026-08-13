@@ -7,29 +7,29 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const indexPath = path.resolve(__dirname, '../index.html');
 const expectedAlternates = [
-  { hreflang: 'en', href: 'https://worldofclaudecraft.com/' },
-  { hreflang: 'es', href: 'https://worldofclaudecraft.com/?lang=es' },
-  { hreflang: 'es-ES', href: 'https://worldofclaudecraft.com/?lang=es_ES' },
-  { hreflang: 'fr-FR', href: 'https://worldofclaudecraft.com/?lang=fr_FR' },
-  { hreflang: 'fr-CA', href: 'https://worldofclaudecraft.com/?lang=fr_CA' },
-  { hreflang: 'en-CA', href: 'https://worldofclaudecraft.com/?lang=en_CA' },
-  { hreflang: 'it-IT', href: 'https://worldofclaudecraft.com/?lang=it_IT' },
-  { hreflang: 'de-DE', href: 'https://worldofclaudecraft.com/?lang=de_DE' },
-  { hreflang: 'zh-CN', href: 'https://worldofclaudecraft.com/?lang=zh_CN' },
-  { hreflang: 'zh-TW', href: 'https://worldofclaudecraft.com/?lang=zh_TW' },
-  { hreflang: 'ko-KR', href: 'https://worldofclaudecraft.com/?lang=ko_KR' },
-  { hreflang: 'ja-JP', href: 'https://worldofclaudecraft.com/?lang=ja_JP' },
-  { hreflang: 'pt-BR', href: 'https://worldofclaudecraft.com/?lang=pt_BR' },
-  { hreflang: 'ru-RU', href: 'https://worldofclaudecraft.com/?lang=ru_RU' },
-  { hreflang: 'cs-CZ', href: 'https://worldofclaudecraft.com/?lang=cs_CZ' },
-  { hreflang: 'nl-NL', href: 'https://worldofclaudecraft.com/?lang=nl_NL' },
-  { hreflang: 'pl-PL', href: 'https://worldofclaudecraft.com/?lang=pl_PL' },
-  { hreflang: 'id-ID', href: 'https://worldofclaudecraft.com/?lang=id_ID' },
-  { hreflang: 'tr-TR', href: 'https://worldofclaudecraft.com/?lang=tr_TR' },
-  { hreflang: 'sv-SE', href: 'https://worldofclaudecraft.com/?lang=sv_SE' },
-  { hreflang: 'vi-VN', href: 'https://worldofclaudecraft.com/?lang=vi_VN' },
-  { hreflang: 'da-DK', href: 'https://worldofclaudecraft.com/?lang=da_DK' },
-  { hreflang: 'x-default', href: 'https://worldofclaudecraft.com/' },
+  { hreflang: 'en', href: 'https://worldofclaudecraft.com.br/' },
+  { hreflang: 'es', href: 'https://worldofclaudecraft.com.br/?lang=es' },
+  { hreflang: 'es-ES', href: 'https://worldofclaudecraft.com.br/?lang=es_ES' },
+  { hreflang: 'fr-FR', href: 'https://worldofclaudecraft.com.br/?lang=fr_FR' },
+  { hreflang: 'fr-CA', href: 'https://worldofclaudecraft.com.br/?lang=fr_CA' },
+  { hreflang: 'en-CA', href: 'https://worldofclaudecraft.com.br/?lang=en_CA' },
+  { hreflang: 'it-IT', href: 'https://worldofclaudecraft.com.br/?lang=it_IT' },
+  { hreflang: 'de-DE', href: 'https://worldofclaudecraft.com.br/?lang=de_DE' },
+  { hreflang: 'zh-CN', href: 'https://worldofclaudecraft.com.br/?lang=zh_CN' },
+  { hreflang: 'zh-TW', href: 'https://worldofclaudecraft.com.br/?lang=zh_TW' },
+  { hreflang: 'ko-KR', href: 'https://worldofclaudecraft.com.br/?lang=ko_KR' },
+  { hreflang: 'ja-JP', href: 'https://worldofclaudecraft.com.br/?lang=ja_JP' },
+  { hreflang: 'pt-BR', href: 'https://worldofclaudecraft.com.br/?lang=pt_BR' },
+  { hreflang: 'ru-RU', href: 'https://worldofclaudecraft.com.br/?lang=ru_RU' },
+  { hreflang: 'cs-CZ', href: 'https://worldofclaudecraft.com.br/?lang=cs_CZ' },
+  { hreflang: 'nl-NL', href: 'https://worldofclaudecraft.com.br/?lang=nl_NL' },
+  { hreflang: 'pl-PL', href: 'https://worldofclaudecraft.com.br/?lang=pl_PL' },
+  { hreflang: 'id-ID', href: 'https://worldofclaudecraft.com.br/?lang=id_ID' },
+  { hreflang: 'tr-TR', href: 'https://worldofclaudecraft.com.br/?lang=tr_TR' },
+  { hreflang: 'sv-SE', href: 'https://worldofclaudecraft.com.br/?lang=sv_SE' },
+  { hreflang: 'vi-VN', href: 'https://worldofclaudecraft.com.br/?lang=vi_VN' },
+  { hreflang: 'da-DK', href: 'https://worldofclaudecraft.com.br/?lang=da_DK' },
+  { hreflang: 'x-default', href: 'https://worldofclaudecraft.com.br/' },
 ];
 
 function audit() {
@@ -211,7 +211,7 @@ function audit() {
 
   // 8. Canonical Link Check
   const hasCanonical =
-    html.includes('rel="canonical"') && html.includes('href="https://worldofclaudecraft.com/"');
+    html.includes('rel="canonical"') && html.includes('href="https://worldofclaudecraft.com.br/"');
   checks.push({
     category: 'SEO',
     name: 'Canonical link tag is present and correct',
@@ -219,7 +219,7 @@ function audit() {
     score: hasCanonical ? 10 : 0,
     maxScore: 10,
     details: hasCanonical
-      ? 'Found rel="canonical" pointing to worldofclaudecraft.com.'
+      ? 'Found rel="canonical" pointing to worldofclaudecraft.com.br.'
       : 'Missing rel="canonical" link tag.',
   });
 

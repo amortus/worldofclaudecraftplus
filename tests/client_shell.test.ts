@@ -809,53 +809,53 @@ describe('client HTML shell', () => {
     expect(html).toContain(
       '<meta name="robots" content="index, follow, max-image-preview:large" />',
     );
-    expect(html).toContain('<link rel="canonical" href="https://worldofclaudecraft.com/" />');
+    expect(html).toContain('<link rel="canonical" href="https://worldofclaudecraft.com.br/" />');
     expect(html).toContain('<meta property="og:site_name" content="World of ClaudeCraft" />');
     expect(html).toContain('"alternateName": "World of Claudecraft"');
     expect(html).toContain('"https://github.com/levy-street/world-of-claudecraft"');
     expect(mainTs).toContain("alternateName: 'World of Claudecraft'");
     expect(mainTs).toContain("'https://github.com/levy-street/world-of-claudecraft'");
     expect(robotsTxt.trim()).toBe(
-      'User-agent: *\nAllow: /\n\nSitemap: https://worldofclaudecraft.com/sitemap.xml\nSitemap: https://worldofclaudecraft.com/sitemap-characters.xml',
+      'User-agent: *\nAllow: /\n\nSitemap: https://worldofclaudecraft.com.br/sitemap.xml\nSitemap: https://worldofclaudecraft.com.br/sitemap-characters.xml',
     );
-    expect(robotsTxt).toContain('Sitemap: https://worldofclaudecraft.com/sitemap.xml');
+    expect(robotsTxt).toContain('Sitemap: https://worldofclaudecraft.com.br/sitemap.xml');
     // The dynamic per-character sitemap (served by the game server) is advertised too.
-    expect(robotsTxt).toContain('Sitemap: https://worldofclaudecraft.com/sitemap-characters.xml');
-    expect(sitemapXml).toContain('<loc>https://worldofclaudecraft.com/</loc>');
-    expect(sitemapXml).toContain('<loc>https://worldofclaudecraft.com/links</loc>');
-    expect(sitemapXml).toContain('<loc>https://worldofclaudecraft.com/play</loc>');
+    expect(robotsTxt).toContain('Sitemap: https://worldofclaudecraft.com.br/sitemap-characters.xml');
+    expect(sitemapXml).toContain('<loc>https://worldofclaudecraft.com.br/</loc>');
+    expect(sitemapXml).toContain('<loc>https://worldofclaudecraft.com.br/links</loc>');
+    expect(sitemapXml).toContain('<loc>https://worldofclaudecraft.com.br/play</loc>');
     expect(playHtml).toContain(
-      '<link rel="canonical" href="https://worldofclaudecraft.com/play" />',
+      '<link rel="canonical" href="https://worldofclaudecraft.com.br/play" />',
     );
     expect(playHtml).toContain(
-      '<meta property="og:url" content="https://worldofclaudecraft.com/play" />',
+      '<meta property="og:url" content="https://worldofclaudecraft.com.br/play" />',
     );
-    expect(playHtml).toContain('"url": "https://worldofclaudecraft.com/play"');
-    expect(sitemapXml).toContain('<loc>https://worldofclaudecraft.com/privacy</loc>');
-    expect(sitemapXml).toContain('<loc>https://worldofclaudecraft.com/terms</loc>');
-    expect(sitemapXml).toContain('<loc>https://worldofclaudecraft.com/data-deletion</loc>');
-    expect(sitemapXml).toContain('<loc>https://worldofclaudecraft.com/support</loc>');
+    expect(playHtml).toContain('"url": "https://worldofclaudecraft.com.br/play"');
+    expect(sitemapXml).toContain('<loc>https://worldofclaudecraft.com.br/privacy</loc>');
+    expect(sitemapXml).toContain('<loc>https://worldofclaudecraft.com.br/terms</loc>');
+    expect(sitemapXml).toContain('<loc>https://worldofclaudecraft.com.br/data-deletion</loc>');
+    expect(sitemapXml).toContain('<loc>https://worldofclaudecraft.com.br/support</loc>');
     expect(privacyHtml).toContain(
-      '<link rel="canonical" href="https://worldofclaudecraft.com/privacy" />',
+      '<link rel="canonical" href="https://worldofclaudecraft.com.br/privacy" />',
     );
     expect(privacyHtml).toContain('<h1>Privacy Policy</h1>');
     expect(privacyHtml).toContain('href="/support">Support</a>');
     expect(privacyHtml).toContain('href="/data-deletion">Data Deletion</a>');
     expect(termsHtml).toContain(
-      '<link rel="canonical" href="https://worldofclaudecraft.com/terms" />',
+      '<link rel="canonical" href="https://worldofclaudecraft.com.br/terms" />',
     );
     expect(termsHtml).toContain('<h1>Terms and Conditions</h1>');
     expect(termsHtml).toContain('href="/support">Support</a>');
     expect(termsHtml).toContain('href="/data-deletion">Data Deletion</a>');
     expect(dataDeletionHtml).toContain(
-      '<link rel="canonical" href="https://worldofclaudecraft.com/data-deletion" />',
+      '<link rel="canonical" href="https://worldofclaudecraft.com.br/data-deletion" />',
     );
     expect(dataDeletionHtml).toContain('<h1>Data Deletion</h1>');
     expect(dataDeletionHtml).toContain('href="mailto:woc@levystreet.com"');
     expect(dataDeletionHtml).toContain('href="https://discord.com/invite/worldofclaudecraft"');
     expect(dataDeletionHtml).toContain('href="/support">Support</a>');
     expect(supportHtml).toContain(
-      '<link rel="canonical" href="https://worldofclaudecraft.com/support" />',
+      '<link rel="canonical" href="https://worldofclaudecraft.com.br/support" />',
     );
     expect(supportHtml).toContain('<h1>Support</h1>');
     expect(supportHtml).toContain('href="mailto:woc@levystreet.com"');
@@ -882,16 +882,18 @@ describe('client HTML shell', () => {
     expect(serverMain).toContain("['/support', '/support.html']");
   });
 
-  it('loads Meta Pixel outside local development and tracks level 5', () => {
-    expect(html).toContain('https://connect.facebook.net/en_US/fbevents.js');
-    expect(html).toContain("fbq('init', '1692101265042180');");
-    expect(html).toContain("fbq('track', 'PageView');");
-    expect(html).toContain(
-      'https://www.facebook.com/tr?id=1692101265042180&ev=PageView&noscript=1',
-    );
-    expect(html).toContain(
-      "if (!['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) {",
-    );
+  // Fork divergence: upstream shipped a Google Analytics tag and a Meta Pixel in
+  // index.html, both bound to THEIR properties. Reporting this fork's players to
+  // upstream's analytics accounts is not acceptable, so the loaders are gone and
+  // this test guards their absence. The in-page trackMetaPixel() helpers stay: they
+  // return early when window.fbq is undefined, so they are inert with no loader and
+  // a future owner-supplied pixel only needs the loader added back.
+  it('ships no third-party analytics loader, and keeps the pixel helpers inert', () => {
+    expect(html).not.toContain('connect.facebook.net');
+    expect(html).not.toContain('1692101265042180');
+    expect(html).not.toContain('googletagmanager.com');
+    expect(html).not.toContain('G-BR5Z7GT7C2');
+    expect(html).not.toContain('facebook.com/tr?id=');
     expect(hudTs).toContain("if (options) fbq('trackCustom', eventName, data ?? {}, options);");
     expect(hudTs).toContain("else fbq('trackCustom', eventName, data ?? {});");
     expect(hudTs).toContain('if (ev.level === 5) {');

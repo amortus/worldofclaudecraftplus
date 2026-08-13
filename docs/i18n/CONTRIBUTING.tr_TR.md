@@ -328,8 +328,8 @@ edersiniz.
 
 MIT Lisansı ne diyorsa odur: herkes kodu ticari olsun olmasın kullanabilir,
 değiştirebilir ve yeniden dağıtabilir.
-[Hizmet Şartlarımız](https://worldofclaudecraft.com/terms),
-worldofclaudecraft.com adresinde işlettiğimiz barındırılan oyunu (hesaplar,
+[Hizmet Şartlarımız](https://worldofclaudecraft.com.br/terms),
+worldofclaudecraft.com.br adresinde işlettiğimiz barındırılan oyunu (hesaplar,
 davranış, sanal eşyalar) düzenler ve MIT Lisansı'nın bu kod üzerinde size veya
 başkasına verdiği hakları kısıtlamaz. "World of ClaudeCraft" ve "Levy Street"
 adları ile markaları MIT Lisansı kapsamında değildir.

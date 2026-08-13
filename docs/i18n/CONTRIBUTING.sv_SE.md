@@ -321,8 +321,8 @@ projektets [MIT-licens](../../LICENSE), samma licens som täcker projektet.
 
 MIT-licensen betyder precis vad den säger: vem som helst får använda, ändra och
 vidaredistribuera koden, kommersiellt eller inte. Våra
-[användarvillkor](https://worldofclaudecraft.com/terms) styr det värdbaserade
-spelet vi driver på worldofclaudecraft.com (konton, uppförande, virtuella föremål)
+[användarvillkor](https://worldofclaudecraft.com.br/terms) styr det värdbaserade
+spelet vi driver på worldofclaudecraft.com.br (konton, uppförande, virtuella föremål)
 och begränsar inte de rättigheter MIT-licensen ger dig eller någon annan i den här
 koden. Namnen och varumärkena "World of ClaudeCraft" och "Levy Street" omfattas
 inte av MIT-licensen.

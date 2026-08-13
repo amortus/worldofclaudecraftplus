@@ -4,7 +4,7 @@
 
 **Plň questy, spoj se do skupiny a raiduj ručně stavěný svět, zdarma ve svém prohlížeči. Open source, web3 a online právě teď.**
 
-**Oficiální web: https://worldofclaudecraft.com/**
+**Oficiální web: https://worldofclaudecraft.com.br/**
 
 [![CI](https://github.com/levy-street/world-of-claudecraft/actions/workflows/ci.yml/badge.svg)](https://github.com/levy-street/world-of-claudecraft/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -20,7 +20,7 @@
 
 [English](../../README.md) · [Español](README.es.md) · [Español (España)](README.es_ES.md) · [Français](README.fr_FR.md) · [Français (Canada)](README.fr_CA.md) · [Italiano](README.it_IT.md) · [Deutsch](README.de_DE.md) · [简体中文](README.zh_CN.md) · [繁體中文](README.zh_TW.md) · [한국어](README.ko_KR.md) · [日本語](README.ja_JP.md) · [Português (Brasil)](README.pt_BR.md) · [Русский](README.ru_RU.md) · **Čeština** · [Nederlands](README.nl_NL.md) · [Polski](README.pl_PL.md) · [Bahasa Indonesia](README.id_ID.md) · [Türkçe](README.tr_TR.md) · [Svenska](README.sv_SE.md) · [Tiếng Việt](README.vi_VN.md) · [Dansk](README.da_DK.md)
 
-[Hraj hned](https://worldofclaudecraft.com/) · [Postav si vlastní svět](#host-your-own-world-one-command) · [Vytrénuj agenta](#train-an-agent-headless-rl) · [Web3](#web3) · [Přispívání](CONTRIBUTING.cs_CZ.md) · [Discord](https://discord.com/invite/worldofclaudecraft)
+[Hraj hned](https://worldofclaudecraft.com.br/) · [Postav si vlastní svět](#host-your-own-world-one-command) · [Vytrénuj agenta](#train-an-agent-headless-rl) · [Web3](#web3) · [Přispívání](CONTRIBUTING.cs_CZ.md) · [Discord](https://discord.com/invite/worldofclaudecraft)
 
 ![Úvodní obrazovka World of ClaudeCraft](../../docs/screenshots/title-screen.jpg)
 
@@ -28,11 +28,11 @@
 
 ## Co to je
 
-World of ClaudeCraft je kompletní MMO klasické éry, které si můžeš zahrát hned teď v prohlížeči, jedním příkazem hostovat sám a dokonce na něm trénovat AI agenty, aby ho hráli. Je zdarma, open source a běží živě na [worldofclaudecraft.com](https://worldofclaudecraft.com/).
+World of ClaudeCraft je kompletní MMO klasické éry, které si můžeš zahrát hned teď v prohlížeči, jedním příkazem hostovat sám a dokonce na něm trénovat AI agenty, aby ho hráli. Je zdarma, open source a běží živě na [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/).
 
 Jeden sdílený svět běží na třech místech, všechna z téhož herního jádra:
 
-- **autoritativní multiplayerový server**, živý svět, který hraješ na worldofclaudecraft.com, kde účty uložené v Postgresu sdílejí jednu trvalou říši,
+- **autoritativní multiplayerový server**, živý svět, který hraješ na worldofclaudecraft.com.br, kde účty uložené v Postgresu sdílejí jednu trvalou říši,
 - **offline svět v prohlížeči**, lokální Sim pro jednoho hráče, který dostaneš z vývojového serveru, užitečný pro vývoj a pro přečtení herního jádra od začátku do konce,
 - **bezhlavé RL prostředí**, kde Python řídí skutečnou hru přes rozhraní Gym.
 
@@ -77,7 +77,7 @@ Počasí je řízené biomy a existuje jen ve vykreslování, takže se nikdy ne
 
 ## Zahraj si
 
-Hraj v prohlížeči na [worldofclaudecraft.com](https://worldofclaudecraft.com/), nebo si nainstaluj nativní aplikaci pro Windows, Linux, macOS, iOS či Android. Každý klient se připojuje k témuž online světu.
+Hraj v prohlížeči na [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/), nebo si nainstaluj nativní aplikaci pro Windows, Linux, macOS, iOS či Android. Každý klient se připojuje k témuž online světu.
 
 ### Online, s ostatními hráči
 
@@ -113,7 +113,7 @@ Nasměruj shell na jiné API pomocí `VITE_DESKTOP_API_ORIGIN`, například na l
 VITE_DESKTOP_API_ORIGIN=http://127.0.0.1:8787 npm run electron:dev
 ```
 
-Produkční API origin pro staging buildy přepíšeš pomocí `VITE_DESKTOP_API_ORIGIN=https://dev.worldofclaudecraft.com` (je to hodnota z doby BUILDU: zapeče se do bundlu a otiskne se do zabalené aplikace, a nainstalované buildy ji jako runtime proměnnou prostředí ignorují). Steam je distribuční kanál (tentýž Electron bundle, nahraný přes SteamPipe) a desktopoví hráči si mohou propojit účet na Steamu a zrcadlit do Steam achievementů deeds, které si vyslouží; samotné přihlášení zůstává e-mail a Discord. Kompletní release runbook (podepisování, notarizace, publikování automatické aktualizace, SteamPipe depoty, nasazení serveru) je `docs/desktop-release.md`. iOS a Android se dodávají přes Capacitor a mají vlastní runbook v `docs/mobile-store-release.md`.
+Produkční API origin pro staging buildy přepíšeš pomocí `VITE_DESKTOP_API_ORIGIN=https://dev.worldofclaudecraft.com.br` (je to hodnota z doby BUILDU: zapeče se do bundlu a otiskne se do zabalené aplikace, a nainstalované buildy ji jako runtime proměnnou prostředí ignorují). Steam je distribuční kanál (tentýž Electron bundle, nahraný přes SteamPipe) a desktopoví hráči si mohou propojit účet na Steamu a zrcadlit do Steam achievementů deeds, které si vyslouží; samotné přihlášení zůstává e-mail a Discord. Kompletní release runbook (podepisování, notarizace, publikování automatické aktualizace, SteamPipe depoty, nasazení serveru) je `docs/desktop-release.md`. iOS a Android se dodávají přes Capacitor a mají vlastní runbook v `docs/mobile-store-release.md`.
 
 <a id="host-your-own-world-one-command"></a>
 
@@ -200,7 +200,7 @@ Nic z toho není ke hraní potřeba. Propojení peněženky je volitelné a neku
 3WjLscH2JsXLEFJZRA9z8ti8yRGxWGKbqymPd7UicRth
 ```
 
-Více o tokenu na [worldofclaudecraft.com](https://worldofclaudecraft.com/).
+Více o tokenu na [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/).
 
 ## Prohlídka světa
 
@@ -418,4 +418,4 @@ Co bys musel odstranit nebo nahradit, než to budeš šířit dál:
 
 [CREDITS.md](../../CREDITS.md) je autoritativní seznam se sloupcem o dalším šíření pro každý asset. Kde je asset uvedený tam, tamní licence má přednost před MIT licencí projektu. Ten registr se pořád ještě dokončuje, takže mediální asset, který v něm chybí, je nezaznamenaný, ne volný: než se na něj spolehneš, zeptej se. U zdrojového kódu to platí naopak a všechno, co není vyčleněné, je MIT.
 
-Naše [Podmínky služby](https://worldofclaudecraft.com/terms) pokrývají hostovanou hru, kterou provozujeme na worldofclaudecraft.com: účty, chování, virtuální předměty. Neomezují práva, která ti k tomuto zdrojovému kódu dává MIT licence.
+Naše [Podmínky služby](https://worldofclaudecraft.com.br/terms) pokrývají hostovanou hru, kterou provozujeme na worldofclaudecraft.com.br: účty, chování, virtuální předměty. Neomezují práva, která ti k tomuto zdrojovému kódu dává MIT licence.

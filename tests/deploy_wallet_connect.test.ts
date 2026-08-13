@@ -9,7 +9,7 @@ const composeEnv = (name: string) => `$${`{${name}:-}`}`;
 function runWalletReturn(options: { closeSucceeds: boolean; includePending?: boolean }) {
   const callbackScript = readFileSync('public/wallet-return.js', 'utf8');
   const replace = vi.fn();
-  const returnUrl = 'https://dev.worldofclaudecraft.com/play';
+  const returnUrl = 'https://dev.worldofclaudecraft.com.br/play';
   const storage = new Map<string, string>();
   if (options.includePending !== false) {
     storage.set(
@@ -27,7 +27,7 @@ function runWalletReturn(options: { closeSucceeds: boolean; includePending?: boo
     closed: boolean;
   } = {
     location: {
-      origin: 'https://dev.worldofclaudecraft.com',
+      origin: 'https://dev.worldofclaudecraft.com.br',
       search: '?woc_wallet_request=request-1&data=encrypted',
       replace,
     },

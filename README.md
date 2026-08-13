@@ -4,7 +4,7 @@
 
 **Quest, group up, and raid a hand-built world, free in your browser. Open source, web3, and online right now.**
 
-**Official website: https://worldofclaudecraft.com/**
+**Official website: https://worldofclaudecraft.com.br/**
 
 [![CI](https://github.com/levy-street/world-of-claudecraft/actions/workflows/ci.yml/badge.svg)](https://github.com/levy-street/world-of-claudecraft/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -20,7 +20,7 @@
 
 **English** · [Español](docs/i18n/README.es.md) · [Español (España)](docs/i18n/README.es_ES.md) · [Français](docs/i18n/README.fr_FR.md) · [Français (Canada)](docs/i18n/README.fr_CA.md) · [Italiano](docs/i18n/README.it_IT.md) · [Deutsch](docs/i18n/README.de_DE.md) · [简体中文](docs/i18n/README.zh_CN.md) · [繁體中文](docs/i18n/README.zh_TW.md) · [한국어](docs/i18n/README.ko_KR.md) · [日本語](docs/i18n/README.ja_JP.md) · [Português (Brasil)](docs/i18n/README.pt_BR.md) · [Русский](docs/i18n/README.ru_RU.md) · [Čeština](docs/i18n/README.cs_CZ.md) · [Nederlands](docs/i18n/README.nl_NL.md) · [Polski](docs/i18n/README.pl_PL.md) · [Bahasa Indonesia](docs/i18n/README.id_ID.md) · [Türkçe](docs/i18n/README.tr_TR.md) · [Svenska](docs/i18n/README.sv_SE.md) · [Tiếng Việt](docs/i18n/README.vi_VN.md) · [Dansk](docs/i18n/README.da_DK.md)
 
-[Play now](https://worldofclaudecraft.com/) · [Host your own world](#host-your-own-world-one-command) · [Train an agent](#train-an-agent-headless-rl) · [Web3](#web3) · [Contributing](CONTRIBUTING.md) · [Discord](https://discord.com/invite/worldofclaudecraft)
+[Play now](https://worldofclaudecraft.com.br/) · [Host your own world](#host-your-own-world-one-command) · [Train an agent](#train-an-agent-headless-rl) · [Web3](#web3) · [Contributing](CONTRIBUTING.md) · [Discord](https://discord.com/invite/worldofclaudecraft)
 
 ![World of ClaudeCraft title screen](docs/screenshots/title-screen.jpg)
 
@@ -28,11 +28,11 @@
 
 ## What this is
 
-World of ClaudeCraft is a complete classic-era MMO you can play right now in your browser, host yourself with one command, and even train AI agents to play. It is free, open source, and live at [worldofclaudecraft.com](https://worldofclaudecraft.com/).
+World of ClaudeCraft is a complete classic-era MMO you can play right now in your browser, host yourself with one command, and even train AI agents to play. It is free, open source, and live at [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/).
 
 One shared world runs in three places, all from the same game core:
 
-- the **authoritative multiplayer server**, the live world you play at worldofclaudecraft.com, where Postgres-backed accounts share one persistent realm,
+- the **authoritative multiplayer server**, the live world you play at worldofclaudecraft.com.br, where Postgres-backed accounts share one persistent realm,
 - the **offline browser world**, a local single-player Sim you get from the dev server, useful for development and for reading the game core end to end,
 - the **headless RL env**, where Python drives the real game through a Gym interface.
 
@@ -79,7 +79,7 @@ Weather is biome-driven and render-only, so it never touches the deterministic s
 
 ## Play it
 
-Play in your browser at [worldofclaudecraft.com](https://worldofclaudecraft.com/), or install the native app for Windows, Linux, macOS, iOS, or Android. Every client connects to the same online world.
+Play in your browser at [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/), or install the native app for Windows, Linux, macOS, iOS, or Android. Every client connects to the same online world.
 
 ### Online, with other players
 
@@ -118,7 +118,7 @@ Point the shell at a different API with `VITE_DESKTOP_API_ORIGIN`, for example a
 VITE_DESKTOP_API_ORIGIN=http://127.0.0.1:8787 npm run electron:dev
 ```
 
-Override the production API origin for staging builds with `VITE_DESKTOP_API_ORIGIN=https://dev.worldofclaudecraft.com` (a BUILD-time value: it is baked into the bundle and stamped into the packaged app, and installed builds ignore it as a runtime env var). Steam is a distribution channel (the same Electron bundle, uploaded via SteamPipe), and desktop players can link a Steam account to mirror the deeds they earn into Steam achievements; sign-in itself stays email and Discord. The full release runbook (signing, notarization, publishing an auto-update, SteamPipe depots, the server deploy) is `docs/desktop-release.md`. iOS and Android ship through Capacitor, with their own runbook in `docs/mobile-store-release.md`.
+Override the production API origin for staging builds with `VITE_DESKTOP_API_ORIGIN=https://dev.worldofclaudecraft.com.br` (a BUILD-time value: it is baked into the bundle and stamped into the packaged app, and installed builds ignore it as a runtime env var). Steam is a distribution channel (the same Electron bundle, uploaded via SteamPipe), and desktop players can link a Steam account to mirror the deeds they earn into Steam achievements; sign-in itself stays email and Discord. The full release runbook (signing, notarization, publishing an auto-update, SteamPipe depots, the server deploy) is `docs/desktop-release.md`. iOS and Android ship through Capacitor, with their own runbook in `docs/mobile-store-release.md`.
 
 ## Host your own world (one command)
 
@@ -197,7 +197,7 @@ None of this is needed to play. Wallet linking is optional and non-custodial, th
 3WjLscH2JsXLEFJZRA9z8ti8yRGxWGKbqymPd7UicRth
 ```
 
-More on the token at [worldofclaudecraft.com](https://worldofclaudecraft.com/).
+More on the token at [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/).
 
 ## A tour of the world
 
@@ -215,7 +215,7 @@ Every class runs on classic-era MMO mechanics implemented from first principles,
 - **Warlock**: dark pacts and creeping rot, a stable of summonable demons, and a necromancy line that raises graveguard, skeletal warriors, bone mages, and gravewings from the ossuary-marked dead.
 - **Druid**: nature's caster, shapeshifting between wolf, bruin, and moonwing forms as the fight demands.
 
-Heals and buffs land on party members, healing can crit, and absorb shields soak damage before health. Spend points across **three talent specs per class**; allocation is server-validated and exportable as a build string. Every spellbook, rank, and talent tree is listed in the [wiki](https://worldofclaudecraft.com/wiki).
+Heals and buffs land on party members, healing can crit, and absorb shields soak damage before health. Spend points across **three talent specs per class**; allocation is server-validated and exportable as a build string. Every spellbook, rank, and talent tree is listed in the [wiki](https://worldofclaudecraft.com.br/wiki).
 
 ### Dungeons
 
@@ -229,7 +229,7 @@ The Gravecaller storyline runs through five-player elite instances at every stag
 - **The Abandoned Crypt** (solo), in Thornpeak: a quiet keystone-and-diary dive whose trail unseals the royal door to **Nythraxis, Scourge of Thornpeak**, a ten-player raid finale.
 - **The Last Keep**, out in the Drakelands: a cold, silent memorial keep with no fight in it at all, only a keepsake waiting for whoever walks its halls.
 
-The elite instances and the raid also run on **Heroic**: higher-level enemies, sharper mechanics, and their own loot and vendor currency. Past the authored set, ranked **rift portals** tear open onto seed-generated floors capped by the hand-authored Infernal Citadel, with rare, epic, and legendary loot riding on the rank of the clear. The lead-up quest chains are soloable, so the story is never gated behind finding a group. Boss-by-boss mechanics, loot tables, and the rest of the depth live in the [wiki](https://worldofclaudecraft.com/wiki). Our automated five-bot raid (warrior, paladin, priest, mage, hunter with focus-fire and healer AI) clears the Hollow Crypt in about five minutes (`node scripts/crypt_raid.mjs`, needs `ALLOW_DEV_COMMANDS=1`).
+The elite instances and the raid also run on **Heroic**: higher-level enemies, sharper mechanics, and their own loot and vendor currency. Past the authored set, ranked **rift portals** tear open onto seed-generated floors capped by the hand-authored Infernal Citadel, with rare, epic, and legendary loot riding on the rank of the clear. The lead-up quest chains are soloable, so the story is never gated behind finding a group. Boss-by-boss mechanics, loot tables, and the rest of the depth live in the [wiki](https://worldofclaudecraft.com.br/wiki). Our automated five-bot raid (warrior, paladin, priest, mage, hunter with focus-fire and healer AI) clears the Hollow Crypt in about five minutes (`node scripts/crypt_raid.mjs`, needs `ALLOW_DEV_COMMANDS=1`).
 
 ### Delves
 
@@ -426,4 +426,4 @@ What you would need to remove or replace before redistributing:
 
 [CREDITS.md](CREDITS.md) is the authoritative list, with a redistribution column per asset. Where an asset is listed there, that license controls over the project's MIT license. That register is still being completed, so a media asset missing from it is unrecorded rather than free: ask before relying on it. Source code is the other way around, and everything not carved out is MIT.
 
-Our [Terms of Service](https://worldofclaudecraft.com/terms) cover the hosted game that we run at worldofclaudecraft.com: accounts, conduct, virtual items. They do not restrict the rights the MIT License gives you in this source code.
+Our [Terms of Service](https://worldofclaudecraft.com.br/terms) cover the hosted game that we run at worldofclaudecraft.com.br: accounts, conduct, virtual items. They do not restrict the rights the MIT License gives you in this source code.

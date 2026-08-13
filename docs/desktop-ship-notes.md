@@ -70,7 +70,7 @@ node_modules in the asar, all seven fuses set.
 
 1. At build time, electron-builder bakes `resources/app-update.yml` into the
    app (from `build.publish`: generic provider, feed URL
-   `https://updates.worldofclaudecraft.com/desktop`), and the publish channel
+   `https://updates.worldofclaudecraft.com.br/desktop`), and the publish channel
    is derived from the baked API origin (`electron/update_guard.cjs`): the
    production origin emits the `latest` feed files, any other origin (dev,
    staging, localhost smoke packs) emits `dev` ones, and each emitted feed
@@ -272,7 +272,7 @@ bump the version, rebuild, upload, and watch the toast + install cycle.
   verification builds. `WOC_DISTRIBUTION=steam npm run electron:dev` exercises
   the steam runtime path unpackaged.
 - **Production server dependency**: the packaged app calls
-  `https://worldofclaudecraft.com` from origin `app://worldofclaudecraft`;
+  `https://worldofclaudecraft.com.br` from origin `app://worldofclaudecraft`;
   production must be running this branch's server (CORS reflection for that
   origin) or every REST call fails. The log file shows the CORS errors
   plainly until then. Deploying is the standard server update in `DEPLOY.md`

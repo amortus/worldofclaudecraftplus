@@ -8641,7 +8641,7 @@ export const pl_PL: Partial<Record<TranslationKey, string>> = {
     'Wyrusz na epicką przygodę w World of ClaudeCraft, klasycznym mikro-MMO grywalnym bezpośrednio w przeglądarce. Dołącz do trwałego wspólnego świata, rozwijaj klasy postaci i pokonuj wrogów!',
   'seo.genre': 'MMORPG',
   'seo.officialBody':
-    'worldofclaudecraft.com to oficjalne, darmowe przeglądarkowe MMO dla świata Claudemoon. Graj online z trwałą postacią, eksploruj solo w trybie offline, czytaj wiki i śledź zweryfikowane linki społeczności z tej strony.',
+    'worldofclaudecraft.com.br to oficjalne, darmowe przeglądarkowe MMO dla świata Claudemoon. Graj online z trwałą postacią, eksploruj solo w trybie offline, czytaj wiki i śledź zweryfikowane linki społeczności z tej strony.',
   'seo.officialLabel': 'Oficjalna strona World of ClaudeCraft',
   'seo.operatingSystem': 'Przeglądarka internetowa',
   'seo.playMode': 'Wieloosobowy',

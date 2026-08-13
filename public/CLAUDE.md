@@ -9,7 +9,7 @@
 copies the whole tree (there is no exclusion) into `dist/`, and the server serves
 `dist/` statically, so every file here, **including every CLAUDE.md and reviewer note
 in this tree** (the model notes under `models/`, `claudium/ASSETS.md`,
-`claudium/gallery.html`), is world-readable at worldofclaudecraft.com. Keep all of it
+`claudium/gallery.html`), is world-readable at worldofclaudecraft.com.br. Keep all of it
 safe-for-public: no secrets, no internal URLs or credentials, no unannounced-feature
 or exploit detail.
 

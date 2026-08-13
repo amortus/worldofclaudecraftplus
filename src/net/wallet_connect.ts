@@ -90,7 +90,7 @@ function metadataUrl(): string {
   if (typeof window !== 'undefined' && /^https?:$/.test(window.location.protocol)) {
     return window.location.origin;
   }
-  return 'https://worldofclaudecraft.com';
+  return 'https://worldofclaudecraft.com.br';
 }
 
 function connectionCancelled(): Error {
@@ -118,7 +118,7 @@ export async function createWalletConnectClient(projectId: string): Promise<Wall
       name: 'World of ClaudeCraft',
       description: 'Connect a Solana wallet to World of ClaudeCraft',
       url: metadataUrl(),
-      icons: ['https://worldofclaudecraft.com/icons/icon-512.png'],
+      icons: ['https://worldofclaudecraft.com.br/icons/icon-512.png'],
     },
     featuredWalletIds: [...FEATURED_WALLET_IDS],
     allWallets: runtime.allWallets,
@@ -127,8 +127,8 @@ export async function createWalletConnectClient(projectId: string): Promise<Wall
     enableMobileFullScreen: true,
     experimental_preferUniversalLinks: true,
     themeMode: 'dark',
-    termsConditionsUrl: 'https://worldofclaudecraft.com/terms',
-    privacyPolicyUrl: 'https://worldofclaudecraft.com/privacy',
+    termsConditionsUrl: 'https://worldofclaudecraft.com.br/terms',
+    privacyPolicyUrl: 'https://worldofclaudecraft.com.br/privacy',
     features: {
       analytics: false,
       email: false,

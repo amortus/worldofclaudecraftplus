@@ -555,7 +555,7 @@ applyNativeDeviceLanguage({
 // boot's profile is already resolved, and a missing bridge no-ops.
 void primeNativeDeviceMemoryHint();
 
-const SITE_URL = 'https://worldofclaudecraft.com/';
+const SITE_URL = 'https://worldofclaudecraft.com.br/';
 
 const RESOURCE_KEYS = {
   mana: 'classDetails.resources.mana',
@@ -7322,27 +7322,27 @@ function updateSeoMetadata(lang: SupportedLanguage): void {
         '@graph': [
           {
             '@type': 'WebSite',
-            '@id': 'https://worldofclaudecraft.com/#website',
+            '@id': 'https://worldofclaudecraft.com.br/#website',
             name: 'World of ClaudeCraft',
             alternateName: 'World of Claudecraft',
             url: canonicalHref,
             inLanguage: languageTag(lang),
             description: t('seo.description'),
             publisher: {
-              '@id': 'https://worldofclaudecraft.com/#organization',
+              '@id': 'https://worldofclaudecraft.com.br/#organization',
             },
           },
           {
             '@type': 'Organization',
-            '@id': 'https://worldofclaudecraft.com/#organization',
+            '@id': 'https://worldofclaudecraft.com.br/#organization',
             name: 'World of ClaudeCraft',
-            url: 'https://worldofclaudecraft.com/',
-            logo: 'https://worldofclaudecraft.com/woc_logo_square.webp',
+            url: 'https://worldofclaudecraft.com.br/',
+            logo: 'https://worldofclaudecraft.com.br/woc_logo_square.webp',
             sameAs,
           },
           {
             '@type': 'VideoGame',
-            '@id': 'https://worldofclaudecraft.com/#game',
+            '@id': 'https://worldofclaudecraft.com.br/#game',
             name: 'World of ClaudeCraft',
             alternateName: 'World of Claudecraft',
             genre: t('seo.genre'),
@@ -7350,11 +7350,11 @@ function updateSeoMetadata(lang: SupportedLanguage): void {
             applicationCategory: t('seo.applicationCategory'),
             operatingSystem: t('seo.operatingSystem'),
             url: canonicalHref,
-            image: 'https://worldofclaudecraft.com/woc_logo_square.webp',
+            image: 'https://worldofclaudecraft.com.br/woc_logo_square.webp',
             description: t('seo.description'),
             inLanguage: languageTag(lang),
             publisher: {
-              '@id': 'https://worldofclaudecraft.com/#organization',
+              '@id': 'https://worldofclaudecraft.com.br/#organization',
             },
             sameAs,
           },

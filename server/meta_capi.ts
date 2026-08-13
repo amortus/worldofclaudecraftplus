@@ -1,18 +1,21 @@
 import { createHash } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
 
-const DEFAULT_PIXEL_ID = '1692101265042180';
+// Upstream defaulted PIXEL_ID to their own pixel (1692101265042180). This fork must
+// never post player conversions to someone else's Meta account, so there is NO
+// default: the Conversions API is off unless BOTH META_CAPI_PIXEL_ID and
+// META_CAPI_ACCESS_TOKEN are set to this deployment's own credentials.
 const DEFAULT_API_VERSION = 'v21.0';
 const SEND_TIMEOUT_MS = 3000;
 
-const PIXEL_ID = process.env.META_CAPI_PIXEL_ID ?? DEFAULT_PIXEL_ID;
+const PIXEL_ID = process.env.META_CAPI_PIXEL_ID ?? '';
 const ACCESS_TOKEN = process.env.META_CAPI_ACCESS_TOKEN ?? '';
 const TEST_CODE = process.env.META_CAPI_TEST_EVENT_CODE ?? '';
 const API_VERSION = process.env.META_CAPI_API_VERSION ?? DEFAULT_API_VERSION;
-const ENABLED = ACCESS_TOKEN.length > 0;
+const ENABLED = ACCESS_TOKEN.length > 0 && PIXEL_ID.length > 0;
 
 if (!ENABLED) {
-  console.log('[capi] META_CAPI_ACCESS_TOKEN unset; Conversions API disabled.');
+  console.log('[capi] META_CAPI_PIXEL_ID / META_CAPI_ACCESS_TOKEN unset; Conversions API disabled.');
 }
 
 export interface CapiUserData {

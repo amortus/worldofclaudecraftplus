@@ -7650,7 +7650,7 @@ export const sv_SE: EnTranslations = {
     "applicationCategory": "Spel",
     "operatingSystem": "Webbläsare",
     "officialLabel": "Officiell webbplats för World of ClaudeCraft",
-    "officialBody": "worldofclaudecraft.com är den officiella gratis webbläsar-MMO:n för Claudemoon-världen. Spela online med en beständig karaktär, utforska solo offline, läs wikin och följ verifierade gemenskapslänkar från den här webbplatsen."
+    "officialBody": "worldofclaudecraft.com.br är den officiella gratis webbläsar-MMO:n för Claudemoon-världen. Spela online med en beständig karaktär, utforska solo offline, läs wikin och följ verifierade gemenskapslänkar från den här webbplatsen."
   },
   "a11y": {
     "goHome": "Gå till startsidan",

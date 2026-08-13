@@ -76,7 +76,12 @@ export const supportedLanguages = [...SUPPORTED_LANGUAGES] as SupportedLanguage[
 // map (whose keys were the old membership test) is no longer imported.
 const SUPPORTED_SET: ReadonlySet<string> = new Set(SUPPORTED_LANGUAGES);
 
-let currentLanguage: SupportedLanguage = 'en';
+// Fork divergence: upstream's default is 'en'. This fork serves a Brazilian
+// audience, so pt_BR is the default a visitor gets with no ?lang= and no stored
+// locale. Everything downstream already handles a non-en boot language: the
+// module-eval prefetchLocale() below puts the pt_BR chunk in flight immediately
+// and startGame awaits ensureLocaleLoaded before the first localized paint.
+let currentLanguage: SupportedLanguage = 'pt_BR';
 
 // --- en_XA dev-only pseudo-locale --------------------------------------
 //

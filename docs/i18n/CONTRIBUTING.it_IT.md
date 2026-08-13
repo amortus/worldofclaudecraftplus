@@ -329,8 +329,8 @@ copre il progetto.
 
 La Licenza MIT dice quello che intende: chiunque può usare, modificare e
 ridistribuire il codice, a fini commerciali o meno. I nostri
-[Termini di Servizio](https://worldofclaudecraft.com/terms) regolano il gioco
-ospitato che gestiamo su worldofclaudecraft.com (account, condotta, oggetti
+[Termini di Servizio](https://worldofclaudecraft.com.br/terms) regolano il gioco
+ospitato che gestiamo su worldofclaudecraft.com.br (account, condotta, oggetti
 virtuali) e non limitano i diritti che la Licenza MIT concede a te o a chiunque
 altro su questo codice. I nomi e il marchio "World of ClaudeCraft" e "Levy Street"
 non sono coperti dalla Licenza MIT.

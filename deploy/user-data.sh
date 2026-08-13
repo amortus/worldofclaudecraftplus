@@ -17,7 +17,7 @@
 # by IP first, set the domain later — see DEPLOY.md).
 DOMAIN=""
 
-# Admin dashboard domain (e.g. "admin.worldofclaudecraft.com"), also with an
+# Admin dashboard domain (e.g. "admin.worldofclaudecraft.com.br"), also with an
 # A record at this instance. Leave empty to skip; the dashboard then stays
 # reachable only at /admin on the game site. Access still requires an
 # is_admin account regardless of hostname (see DEPLOY.md).

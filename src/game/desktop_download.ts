@@ -7,11 +7,11 @@
 export type DesktopPlatform = 'mac' | 'win' | 'linux' | 'other';
 
 // The published desktop build on the update host. Bump in lockstep with the
-// artifacts uploaded to updates.worldofclaudecraft.com/desktop/ at release
+// artifacts uploaded to updates.worldofclaudecraft.com.br/desktop/ at release
 // (see docs/desktop-release.md). The static hrefs in index.html carry the same
 // version as a no-JS fallback.
 export const DESKTOP_VERSION = '0.36.0';
-const DESKTOP_HOST = 'https://updates.worldofclaudecraft.com/desktop';
+const DESKTOP_HOST = 'https://updates.worldofclaudecraft.com.br/desktop';
 
 // electron-builder website-channel artifact names (docs/desktop-release.md):
 // mac ships one universal dmg; the x64 Linux AppImage is named x86_64 (that is

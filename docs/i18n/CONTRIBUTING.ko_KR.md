@@ -306,7 +306,7 @@ World of ClaudeCraft는 여러 언어로 제공됩니다. 플레이어에게 보
 
 MIT 라이선스는 문자 그대로를 뜻합니다. 누구든 상업적으로든 아니든 코드를 사용하고,
 수정하고, 재배포할 수 있습니다. 저희의
-[이용 약관](https://worldofclaudecraft.com/terms)은 worldofclaudecraft.com에서
+[이용 약관](https://worldofclaudecraft.com.br/terms)은 worldofclaudecraft.com.br에서
 저희가 운영하는 호스팅 게임(계정, 행동 규범, 가상 아이템)에 적용되며, MIT 라이선스가
 이 코드에 대해 여러분이나 다른 누구에게 주는 권리를 제한하지 않습니다. "World of
 ClaudeCraft"와 "Levy Street"라는 이름과 브랜딩은 MIT 라이선스의 적용 대상이

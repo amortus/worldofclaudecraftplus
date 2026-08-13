@@ -224,12 +224,12 @@ describe('resolveDesktopOrigins (the packaged-build VITE_DESKTOP_* hatch closure
 
   it('falls back to the production origin, and login falls back to the api origin', () => {
     expect(resolveDesktopOrigins({})).toEqual({
-      apiOrigin: 'https://worldofclaudecraft.com',
-      loginOrigin: 'https://worldofclaudecraft.com',
+      apiOrigin: 'https://worldofclaudecraft.com.br',
+      loginOrigin: 'https://worldofclaudecraft.com.br',
     });
     expect(resolveDesktopOrigins()).toEqual({
-      apiOrigin: 'https://worldofclaudecraft.com',
-      loginOrigin: 'https://worldofclaudecraft.com',
+      apiOrigin: 'https://worldofclaudecraft.com.br',
+      loginOrigin: 'https://worldofclaudecraft.com.br',
     });
     expect(
       resolveDesktopOrigins({
@@ -241,8 +241,8 @@ describe('resolveDesktopOrigins (the packaged-build VITE_DESKTOP_* hatch closure
 });
 
 const defaultOrigins = {
-  apiOrigin: 'https://worldofclaudecraft.com',
-  loginOrigin: 'https://worldofclaudecraft.com',
+  apiOrigin: 'https://worldofclaudecraft.com.br',
+  loginOrigin: 'https://worldofclaudecraft.com.br',
 };
 
 describe('resolveDesktopConfig', () => {
@@ -293,7 +293,7 @@ describe('resolveDesktopConfig', () => {
   it('derives the update channel from the baked origin: non-production reads the dev feed', () => {
     const dev = resolveDesktopConfig({
       packagedMetadata: {
-        wocDesktop: { distribution: 'website', apiOrigin: 'https://dev.worldofclaudecraft.com' },
+        wocDesktop: { distribution: 'website', apiOrigin: 'https://dev.worldofclaudecraft.com.br' },
       },
       isPackaged: true,
     });
@@ -309,9 +309,9 @@ describe('resolveDesktopConfig', () => {
     // No env hatch: a packaged build's channel follows its baked origin only.
     const forced = resolveDesktopConfig({
       packagedMetadata: {
-        wocDesktop: { distribution: 'website', apiOrigin: 'https://dev.worldofclaudecraft.com' },
+        wocDesktop: { distribution: 'website', apiOrigin: 'https://dev.worldofclaudecraft.com.br' },
       },
-      env: { VITE_DESKTOP_API_ORIGIN: 'https://worldofclaudecraft.com' },
+      env: { VITE_DESKTOP_API_ORIGIN: 'https://worldofclaudecraft.com.br' },
       isPackaged: true,
     });
     expect(forced.updateChannel).toBe('dev');

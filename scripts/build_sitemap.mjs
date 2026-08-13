@@ -15,7 +15,7 @@ import * as esbuild from 'esbuild';
 
 const root = process.cwd();
 const sitemapPath = path.join(root, 'public', 'sitemap.xml');
-const ORIGIN = 'https://worldofclaudecraft.com';
+const ORIGIN = 'https://worldofclaudecraft.com.br';
 
 const entrySource = `
   export { GUIDE_ROUTES, hrefFor } from './src/guide/routes.ts';

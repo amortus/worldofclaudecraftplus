@@ -94,7 +94,7 @@ describe('native attestation', () => {
   it('does not allow non-native origins through the native path', async () => {
     process.env.NATIVE_ATTESTATION_REQUIRED = '0';
     await expect(
-      verifyNativeAttestation(req({ origin: 'https://worldofclaudecraft.com' }), undefined),
+      verifyNativeAttestation(req({ origin: 'https://worldofclaudecraft.com.br' }), undefined),
     ).resolves.toBe(false);
   });
 

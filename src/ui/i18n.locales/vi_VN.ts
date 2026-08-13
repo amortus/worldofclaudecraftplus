@@ -9127,7 +9127,7 @@ export const vi_VN: Partial<Record<TranslationKey, string>> = {
     'Bắt đầu cuộc phiêu lưu hoành tráng trong World of ClaudeCraft, một micro-MMO phong cách cổ điển chơi trực tiếp trên trình duyệt của bạn. Tham gia một thế giới chung bền vững, lên cấp các lớp nhân vật và đánh bại kẻ thù!',
   'seo.genre': 'MMORPG',
   'seo.officialBody':
-    'worldofclaudecraft.com là trang MMO trên trình duyệt miễn phí chính thức cho thế giới Claudemoon. Chơi trực tuyến với một nhân vật bền vững, khám phá đơn lẻ ngoại tuyến, đọc wiki và theo dõi các liên kết cộng đồng đã được xác minh từ trang này.',
+    'worldofclaudecraft.com.br là trang MMO trên trình duyệt miễn phí chính thức cho thế giới Claudemoon. Chơi trực tuyến với một nhân vật bền vững, khám phá đơn lẻ ngoại tuyến, đọc wiki và theo dõi các liên kết cộng đồng đã được xác minh từ trang này.',
   'seo.officialLabel': 'Trang web World of ClaudeCraft chính thức',
   'seo.operatingSystem': 'Trình duyệt web',
   'seo.playMode': 'Nhiều người chơi',

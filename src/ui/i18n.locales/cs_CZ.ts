@@ -2970,7 +2970,7 @@ export const cs_CZ: Partial<Record<TranslationKey, string>> = {
     'Vydej se na epické dobrodružství ve World of ClaudeCraft, klasicky laděném micro-MMO hratelném přímo v prohlížeči. Připoj se k trvalému sdílenému světu, zvyšuj úrovně tříd a porážej nepřátele!',
   'seo.genre': 'MMORPG',
   'seo.officialBody':
-    'worldofclaudecraft.com je oficiální bezplatné prohlížečové MMO pro svět Claudemoon. Hraj online s trvalou postavou, prozkoumávej sólo offline, čti wiki a používej ověřené komunitní odkazy z tohoto webu.',
+    'worldofclaudecraft.com.br je oficiální bezplatné prohlížečové MMO pro svět Claudemoon. Hraj online s trvalou postavou, prozkoumávej sólo offline, čti wiki a používej ověřené komunitní odkazy z tohoto webu.',
   'seo.officialLabel': 'Oficiální web World of ClaudeCraft',
   'seo.operatingSystem': 'Webový prohlížeč',
   'seo.playMode': 'Multiplayer',

@@ -150,7 +150,7 @@ describe('ALLOWED_PERMISSIONS (deny-by-default allow-list)', () => {
 
 describe('buildContentSecurityPolicy', () => {
   const csp = buildContentSecurityPolicy({
-    apiOrigin: 'https://worldofclaudecraft.com',
+    apiOrigin: 'https://worldofclaudecraft.com.br',
     scriptHashes: ['sha256-abc123'],
   });
   const directive = (name: string) => csp.split('; ').find((d) => d.startsWith(`${name} `));
@@ -170,7 +170,7 @@ describe('buildContentSecurityPolicy', () => {
   });
 
   it('lists the HTTPS API origin, wss:, and blob: explicitly in connect-src', () => {
-    expect(directive('connect-src')).toContain('https://worldofclaudecraft.com');
+    expect(directive('connect-src')).toContain('https://worldofclaudecraft.com.br');
     expect(directive('connect-src')).toContain('wss:');
     // blob: is required: GLTFLoader fetch()es a model's embedded textures as blob: URLs.
     expect(directive('connect-src')).toContain('blob:');

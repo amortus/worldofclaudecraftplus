@@ -9140,7 +9140,7 @@ export const tr_TR: Partial<Record<TranslationKey, string>> = {
     "Doğrudan tarayıcında oynanabilen klasik tarzı bir mikro MMO olan World of ClaudeCraft'ta destansı bir maceraya atıl. Kalıcı bir ortak dünyaya katıl, sınıfları geliştir ve düşmanları alt et!",
   'seo.genre': 'MMORPG',
   'seo.officialBody':
-    "worldofclaudecraft.com, Claudemoon dünyasının resmi ücretsiz tarayıcı MMO'sudur. Kalıcı bir karakterle çevrimiçi oyna, çevrimdışı tek başına keşfet, wiki'yi oku ve bu siteden doğrulanmış topluluk bağlantılarını takip et.",
+    "worldofclaudecraft.com.br, Claudemoon dünyasının resmi ücretsiz tarayıcı MMO'sudur. Kalıcı bir karakterle çevrimiçi oyna, çevrimdışı tek başına keşfet, wiki'yi oku ve bu siteden doğrulanmış topluluk bağlantılarını takip et.",
   'seo.officialLabel': 'Resmi World of ClaudeCraft web sitesi',
   'seo.operatingSystem': 'Web tarayıcısı',
   'seo.playMode': 'Çok Oyunculu',

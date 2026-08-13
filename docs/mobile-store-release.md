@@ -2,7 +2,7 @@
 
 World of ClaudeCraft ships to iOS and Android through Capacitor. The native apps
 bundle the built Vite client and connect to the production backend at
-`https://worldofclaudecraft.com`.
+`https://worldofclaudecraft.com.br`.
 
 ## Prerequisites
 
@@ -56,7 +56,7 @@ npm run native:open:android
 
 ```sh
 VITE_NATIVE_APP=1
-VITE_API_ORIGIN=https://worldofclaudecraft.com
+VITE_API_ORIGIN=https://worldofclaudecraft.com.br
 ```
 
 The copied web assets under the native projects are generated and ignored by git.
@@ -452,5 +452,5 @@ offline launch to ensure startup does not depend on an update service.
   native builds.
 - Online play uses the hosted production REST and WebSocket backend.
 - Privacy and terms URLs:
-  - `https://worldofclaudecraft.com/privacy.html`
-  - `https://worldofclaudecraft.com/terms.html`
+  - `https://worldofclaudecraft.com.br/privacy.html`
+  - `https://worldofclaudecraft.com.br/terms.html`

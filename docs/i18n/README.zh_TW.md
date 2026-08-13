@@ -4,7 +4,7 @@
 
 **在瀏覽器中免費探索一個純手工打造的世界：接任務、組隊、打團。開放原始碼、web3，現在就能上線遊玩。**
 
-**官方網站：https://worldofclaudecraft.com/**
+**官方網站：https://worldofclaudecraft.com.br/**
 
 [![CI](https://github.com/levy-street/world-of-claudecraft/actions/workflows/ci.yml/badge.svg)](https://github.com/levy-street/world-of-claudecraft/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -20,7 +20,7 @@
 
 [English](../../README.md) · [Español](README.es.md) · [Español (España)](README.es_ES.md) · [Français](README.fr_FR.md) · [Français (Canada)](README.fr_CA.md) · [Italiano](README.it_IT.md) · [Deutsch](README.de_DE.md) · [简体中文](README.zh_CN.md) · **繁體中文** · [한국어](README.ko_KR.md) · [日本語](README.ja_JP.md) · [Português (Brasil)](README.pt_BR.md) · [Русский](README.ru_RU.md) · [Čeština](README.cs_CZ.md) · [Nederlands](README.nl_NL.md) · [Polski](README.pl_PL.md) · [Bahasa Indonesia](README.id_ID.md) · [Türkçe](README.tr_TR.md) · [Svenska](README.sv_SE.md) · [Tiếng Việt](README.vi_VN.md) · [Dansk](README.da_DK.md)
 
-[立即遊玩](https://worldofclaudecraft.com/) · [架設你自己的世界](#host-your-own-world-one-command) · [訓練一個代理](#train-an-agent-headless-rl) · [Web3](#web3) · [參與貢獻](CONTRIBUTING.zh_TW.md) · [Discord](https://discord.com/invite/worldofclaudecraft)
+[立即遊玩](https://worldofclaudecraft.com.br/) · [架設你自己的世界](#host-your-own-world-one-command) · [訓練一個代理](#train-an-agent-headless-rl) · [Web3](#web3) · [參與貢獻](CONTRIBUTING.zh_TW.md) · [Discord](https://discord.com/invite/worldofclaudecraft)
 
 ![World of ClaudeCraft 標題畫面](../../docs/screenshots/title-screen.jpg)
 
@@ -28,11 +28,11 @@
 
 ## 這是什麼
 
-World of ClaudeCraft 是一款完整的經典時代 MMO，你現在就能直接在瀏覽器裡遊玩，用一行指令自行架設，甚至還能訓練 AI 代理來遊玩。它免費、開放原始碼，並在 [worldofclaudecraft.com](https://worldofclaudecraft.com/) 上線運作中。
+World of ClaudeCraft 是一款完整的經典時代 MMO，你現在就能直接在瀏覽器裡遊玩，用一行指令自行架設，甚至還能訓練 AI 代理來遊玩。它免費、開放原始碼，並在 [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/) 上線運作中。
 
 同一個共用世界在三個地方運行，全都來自同一套遊戲核心：
 
-- **權威多人伺服器**，也就是你在 worldofclaudecraft.com 上遊玩的即時世界，由 Postgres 支撐的帳號共享同一個持久化的國度，
+- **權威多人伺服器**，也就是你在 worldofclaudecraft.com.br 上遊玩的即時世界，由 Postgres 支撐的帳號共享同一個持久化的國度，
 - **離線瀏覽器世界**，一個由開發伺服器提供的本地單人 Sim，適合開發，也適合從頭到尾閱讀遊戲核心，
 - **無頭 RL 環境**，Python 透過 Gym 介面驅動真正的遊戲。
 
@@ -77,7 +77,7 @@ World of ClaudeCraft 是一款完整的經典時代 MMO，你現在就能直接�
 
 ## 開始遊玩
 
-在 [worldofclaudecraft.com](https://worldofclaudecraft.com/) 用瀏覽器遊玩，或安裝 Windows、Linux、macOS、iOS 或 Android 的原生應用程式。每一個客戶端都連到同一個線上世界。
+在 [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/) 用瀏覽器遊玩，或安裝 Windows、Linux、macOS、iOS 或 Android 的原生應用程式。每一個客戶端都連到同一個線上世界。
 
 ### 連線，與其他玩家一起
 
@@ -113,7 +113,7 @@ npm run electron:build:steam  # SteamPipe depot layouts (in-app updater off)
 VITE_DESKTOP_API_ORIGIN=http://127.0.0.1:8787 npm run electron:dev
 ```
 
-以 `VITE_DESKTOP_API_ORIGIN=https://dev.worldofclaudecraft.com` 覆寫預備版本的生產 API 來源（這是一個建置期的值：它會被烘焙進套件並蓋印到打包後的應用程式中，已安裝的版本會忽略它作為執行期環境變數）。Steam 是一個發行通道（同一個 Electron 套件，透過 SteamPipe 上傳），桌面玩家可以連結一個 Steam 帳號，把他們獲得的 deeds 同步成 Steam 成就；登入本身仍維持電子郵件與 Discord。完整的發布流程手冊（簽章、公證、發布自動更新、SteamPipe depot、伺服器部署）位於 `docs/desktop-release.md`。iOS 與 Android 透過 Capacitor 發布，並有自己的流程手冊 `docs/mobile-store-release.md`。
+以 `VITE_DESKTOP_API_ORIGIN=https://dev.worldofclaudecraft.com.br` 覆寫預備版本的生產 API 來源（這是一個建置期的值：它會被烘焙進套件並蓋印到打包後的應用程式中，已安裝的版本會忽略它作為執行期環境變數）。Steam 是一個發行通道（同一個 Electron 套件，透過 SteamPipe 上傳），桌面玩家可以連結一個 Steam 帳號，把他們獲得的 deeds 同步成 Steam 成就；登入本身仍維持電子郵件與 Discord。完整的發布流程手冊（簽章、公證、發布自動更新、SteamPipe depot、伺服器部署）位於 `docs/desktop-release.md`。iOS 與 Android 透過 Capacitor 發布，並有自己的流程手冊 `docs/mobile-store-release.md`。
 
 <a id="host-your-own-world-one-command"></a>
 
@@ -200,7 +200,7 @@ $WOC 在即時遊戲中也具備可選的效用：
 3WjLscH2JsXLEFJZRA9z8ti8yRGxWGKbqymPd7UicRth
 ```
 
-關於代幣的更多資訊請見 [worldofclaudecraft.com](https://worldofclaudecraft.com/)。
+關於代幣的更多資訊請見 [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/)。
 
 ## 世界巡禮
 
@@ -414,4 +414,4 @@ node scripts/crypt_raid.mjs     # five bots clear the Hollow Crypt (ALLOW_DEV_CO
 
 [CREDITS.md](../../CREDITS.md) 是權威清單，並為每一件素材列出再散布欄位。凡是列在那裡的素材，其授權優先於本專案的 MIT 授權。那份登錄表仍在補齊中，所以一件未列於其中的媒體素材是尚未記錄，而非可自由使用：在依賴它之前請先詢問。原始碼則相反，凡是未被劃分出去的內容都是 MIT。
 
-我們的[服務條款](https://worldofclaudecraft.com/terms)涵蓋我們在 worldofclaudecraft.com 上運營的託管遊戲：帳號、行為規範、虛擬物品。它們不會限制 MIT 授權在這份原始碼上賦予你的權利。
+我們的[服務條款](https://worldofclaudecraft.com.br/terms)涵蓋我們在 worldofclaudecraft.com.br 上運營的託管遊戲：帳號、行為規範、虛擬物品。它們不會限制 MIT 授權在這份原始碼上賦予你的權利。

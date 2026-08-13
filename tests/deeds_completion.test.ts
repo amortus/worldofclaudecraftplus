@@ -221,7 +221,7 @@ describe('cross-surface parity', () => {
       row,
       visibility: 'public',
       realm: 'Claudemoon',
-      origin: 'https://worldofclaudecraft.com',
+      origin: 'https://worldofclaudecraft.com.br',
       guild: null,
       rank: null,
     });

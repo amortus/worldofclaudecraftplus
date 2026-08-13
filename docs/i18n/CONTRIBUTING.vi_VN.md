@@ -330,8 +330,8 @@ dự án.
 
 Giấy phép MIT có ý nghĩa đúng như những gì nó nói: bất kỳ ai cũng có thể sử dụng,
 sửa đổi, và phân phối lại mã nguồn, dù vì mục đích thương mại hay không.
-[Điều khoản Dịch vụ](https://worldofclaudecraft.com/terms) của chúng tôi điều chỉnh
-trò chơi được lưu trữ mà chúng tôi vận hành tại worldofclaudecraft.com (tài khoản,
+[Điều khoản Dịch vụ](https://worldofclaudecraft.com.br/terms) của chúng tôi điều chỉnh
+trò chơi được lưu trữ mà chúng tôi vận hành tại worldofclaudecraft.com.br (tài khoản,
 ứng xử, vật phẩm ảo) và không hạn chế các quyền mà Giấy phép MIT trao cho bạn hay
 bất kỳ ai khác đối với mã nguồn này. Tên và nhận diện thương hiệu "World of
 ClaudeCraft" và "Levy Street" không nằm trong phạm vi Giấy phép MIT.

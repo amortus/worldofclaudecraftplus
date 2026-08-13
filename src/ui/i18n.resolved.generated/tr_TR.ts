@@ -7650,7 +7650,7 @@ export const tr_TR: EnTranslations = {
     "applicationCategory": "Oyun",
     "operatingSystem": "Web tarayıcısı",
     "officialLabel": "Resmi World of ClaudeCraft web sitesi",
-    "officialBody": "worldofclaudecraft.com, Claudemoon dünyasının resmi ücretsiz tarayıcı MMO'sudur. Kalıcı bir karakterle çevrimiçi oyna, çevrimdışı tek başına keşfet, wiki'yi oku ve bu siteden doğrulanmış topluluk bağlantılarını takip et."
+    "officialBody": "worldofclaudecraft.com.br, Claudemoon dünyasının resmi ücretsiz tarayıcı MMO'sudur. Kalıcı bir karakterle çevrimiçi oyna, çevrimdışı tek başına keşfet, wiki'yi oku ve bu siteden doğrulanmış topluluk bağlantılarını takip et."
   },
   "a11y": {
     "goHome": "Ana sayfaya git",

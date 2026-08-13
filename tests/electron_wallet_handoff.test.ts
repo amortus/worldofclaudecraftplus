@@ -11,8 +11,8 @@ describe('Electron wallet browser handoff', () => {
   const code = 'A'.repeat(43);
 
   it('puts the secret in the URL fragment so it is not sent in the HTTP request', () => {
-    const url = buildWalletHandoffBrowserUrl('https://worldofclaudecraft.com', code);
-    expect(url).toBe(`https://worldofclaudecraft.com/wallet-handoff#code=${code}`);
+    const url = buildWalletHandoffBrowserUrl('https://worldofclaudecraft.com.br', code);
+    expect(url).toBe(`https://worldofclaudecraft.com.br/wallet-handoff#code=${code}`);
     expect(new URL(url).search).toBe('');
   });
 

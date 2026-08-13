@@ -13,7 +13,7 @@ finding and re-check its currency.
 These were locked with the maintainer during the audit:
 
 1. Distribution is two channels: the Steam store AND direct downloads from
-   worldofclaudecraft.com. One Electron bundle serves both; no separate native Steam build.
+   worldofclaudecraft.com.br. One Electron bundle serves both; no separate native Steam build.
 2. Sign-in is Discord plus email only, exactly the web flow: email/password logs in
    inside the app, and Discord goes through the browser plus deep-link `desktop-login`
    handoff. There is no Steam sign-in (Discord is the community-growth funnel, and one
@@ -123,7 +123,7 @@ changes, each its own commit.
   in-app; it returns via the worldofclaudecraft://desktop-login?code= deep link (unchanged).
 
 Known dependency, not a wrapper bug (server deploy): the packaged app is served from origin
-app://worldofclaudecraft and calls https://worldofclaudecraft.com, a cross-origin request that
+app://worldofclaudecraft and calls https://worldofclaudecraft.com.br, a cross-origin request that
 needs the server to reflect Access-Control-Allow-Origin for that origin. This branch's server
 already allows it (server/web_login_guard.ts DESKTOP_APP_ORIGINS includes app://worldofclaudecraft,
 reflected by maybeCors), but a live probe of production returns no CORS header for that origin,
@@ -200,7 +200,7 @@ below), and zero node_modules in the asar with the vendor bundles loading.
 Still with the maintainer (accounts and infrastructure, not code; see the
 provisioning table in docs/desktop-release.md): the Developer ID certificate +
 notarytool API key, the Azure Artifact Signing account + service principal, the
-update host for https://updates.worldofclaudecraft.com/desktop, the Steam
+update host for https://updates.worldofclaudecraft.com.br/desktop, the Steam
 partner app + depots, the optional crash-minidump endpoint, and deploying this
 branch's server so production reflects CORS for app://worldofclaudecraft.
 

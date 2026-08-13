@@ -61,7 +61,7 @@ literally true; until then, prefer OTA for genuine fixes, not routine content.
 
 ## One-time setup
 
-The bundle host already exists. `https://updates.worldofclaudecraft.com` is the
+The bundle host already exists. `https://updates.worldofclaudecraft.com.br` is the
 Cloudflare R2 bucket `worldofclaudecraft-updates` (public via a Cloudflare custom
 domain), which serves desktop Electron updates under `desktop/`. OTA publishes to
 the SAME bucket under a separate `ota/` prefix, so there is no new bucket, no new
@@ -98,7 +98,7 @@ What is actually left to do:
    the desktop publish workflow (`.github/workflows/desktop-publish.yml`).
    Verified end to end against R2 on aws-cli 2.27.25: upload, head-object,
    delete, and content-type/cache-control preservation on the `ota/` prefix.
-3. Set `OTA_MANIFEST_URL=https://updates.worldofclaudecraft.com/ota/latest.json`
+3. Set `OTA_MANIFEST_URL=https://updates.worldofclaudecraft.com.br/ota/latest.json`
    on the game server and restart it. The value must be https and must share its
    origin with the bundle URLs inside the manifest. It also has to be listed in
    the game service `environment:` block in `docker-compose.yml`, which uses an
@@ -234,7 +234,7 @@ feed. Keep it scoped to the one bucket and rotate it on any suspicion.
 ## Verifying an update end to end
 
 1. `curl -s $OTA_MANIFEST_URL` shows the new version/url/checksum.
-2. `curl -s -X POST https://worldofclaudecraft.com/api/ota/updates \
+2. `curl -s -X POST https://worldofclaudecraft.com.br/api/ota/updates \
    -H 'content-type: application/json' \
    -d '{"platform":"ios","version_name":"builtin","version_build":"0.31.0"}'`
    answers the offer; posting the published version back answers the

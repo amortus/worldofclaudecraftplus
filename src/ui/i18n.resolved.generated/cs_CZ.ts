@@ -7650,7 +7650,7 @@ export const cs_CZ: EnTranslations = {
     "applicationCategory": "Hra",
     "operatingSystem": "Webový prohlížeč",
     "officialLabel": "Oficiální web World of ClaudeCraft",
-    "officialBody": "worldofclaudecraft.com je oficiální bezplatné prohlížečové MMO pro svět Claudemoon. Hraj online s trvalou postavou, prozkoumávej sólo offline, čti wiki a používej ověřené komunitní odkazy z tohoto webu."
+    "officialBody": "worldofclaudecraft.com.br je oficiální bezplatné prohlížečové MMO pro svět Claudemoon. Hraj online s trvalou postavou, prozkoumávej sólo offline, čti wiki a používej ověřené komunitní odkazy z tohoto webu."
   },
   "a11y": {
     "goHome": "Přejít na domovskou stránku",

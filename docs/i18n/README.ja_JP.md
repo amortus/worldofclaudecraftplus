@@ -4,7 +4,7 @@
 
 **手作りの世界でクエストを進め、パーティを組み、レイドに挑もう。ブラウザで無料、オープンソース、web3対応、そして今すぐオンラインでプレイできます。**
 
-**公式サイト: https://worldofclaudecraft.com/**
+**公式サイト: https://worldofclaudecraft.com.br/**
 
 [![CI](https://github.com/levy-street/world-of-claudecraft/actions/workflows/ci.yml/badge.svg)](https://github.com/levy-street/world-of-claudecraft/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -20,7 +20,7 @@
 
 [English](../../README.md) · [Español](README.es.md) · [Español (España)](README.es_ES.md) · [Français](README.fr_FR.md) · [Français (Canada)](README.fr_CA.md) · [Italiano](README.it_IT.md) · [Deutsch](README.de_DE.md) · [简体中文](README.zh_CN.md) · [繁體中文](README.zh_TW.md) · [한국어](README.ko_KR.md) · **日本語** · [Português (Brasil)](README.pt_BR.md) · [Русский](README.ru_RU.md) · [Čeština](README.cs_CZ.md) · [Nederlands](README.nl_NL.md) · [Polski](README.pl_PL.md) · [Bahasa Indonesia](README.id_ID.md) · [Türkçe](README.tr_TR.md) · [Svenska](README.sv_SE.md) · [Tiếng Việt](README.vi_VN.md) · [Dansk](README.da_DK.md)
 
-[今すぐプレイ](https://worldofclaudecraft.com/) · [自分の世界をホストする](#host-your-own-world-one-command) · [エージェントを訓練する](#train-an-agent-headless-rl) · [Web3](#web3) · [コントリビュート](CONTRIBUTING.ja_JP.md) · [Discord](https://discord.com/invite/worldofclaudecraft)
+[今すぐプレイ](https://worldofclaudecraft.com.br/) · [自分の世界をホストする](#host-your-own-world-one-command) · [エージェントを訓練する](#train-an-agent-headless-rl) · [Web3](#web3) · [コントリビュート](CONTRIBUTING.ja_JP.md) · [Discord](https://discord.com/invite/worldofclaudecraft)
 
 ![World of ClaudeCraft タイトル画面](../../docs/screenshots/title-screen.jpg)
 
@@ -28,11 +28,11 @@
 
 ## これは何か
 
-World of ClaudeCraft は、今すぐブラウザでプレイでき、コマンド一つで自分でホストでき、さらにはAIエージェントにプレイを学習させることもできる、完全なクラシック時代のMMOです。無料でオープンソース、[worldofclaudecraft.com](https://worldofclaudecraft.com/) で稼働中です。
+World of ClaudeCraft は、今すぐブラウザでプレイでき、コマンド一つで自分でホストでき、さらにはAIエージェントにプレイを学習させることもできる、完全なクラシック時代のMMOです。無料でオープンソース、[worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/) で稼働中です。
 
 一つの共有された世界が、同じゲームコアから三つの場所で動きます。
 
-- **権威ある（オーソリタティブな）マルチプレイヤーサーバー**。worldofclaudecraft.com で実際に遊べるライブな世界で、Postgres を背後に持つアカウントが一つの永続的なレルムを共有します。
+- **権威ある（オーソリタティブな）マルチプレイヤーサーバー**。worldofclaudecraft.com.br で実際に遊べるライブな世界で、Postgres を背後に持つアカウントが一つの永続的なレルムを共有します。
 - **オフラインのブラウザ世界**。開発サーバーから入れるローカルのシングルプレイヤー `Sim` で、開発にも、ゲームコアを端から端まで読むのにも役立ちます。
 - **ヘッドレスのRL環境**。Python が Gym インターフェース越しに本物のゲームを動かします。
 
@@ -77,7 +77,7 @@ World of ClaudeCraft は、今すぐブラウザでプレイでき、コマン�
 
 ## プレイする
 
-[worldofclaudecraft.com](https://worldofclaudecraft.com/) のブラウザで遊ぶか、Windows、Linux、macOS、iOS、Android 向けのネイティブアプリをインストールしてください。どのクライアントも同じオンライン世界に接続します。
+[worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/) のブラウザで遊ぶか、Windows、Linux、macOS、iOS、Android 向けのネイティブアプリをインストールしてください。どのクライアントも同じオンライン世界に接続します。
 
 ### オンライン、他のプレイヤーと
 
@@ -113,7 +113,7 @@ npm run electron:build:steam  # SteamPipe depot layouts (in-app updater off)
 VITE_DESKTOP_API_ORIGIN=http://127.0.0.1:8787 npm run electron:dev
 ```
 
-ステージングビルドで本番のAPIオリジンを上書きするには `VITE_DESKTOP_API_ORIGIN=https://dev.worldofclaudecraft.com` を使います（これはビルド時の値です。バンドルに焼き込まれてパッケージ済みアプリに刻まれるので、インストール済みビルドは実行時の環境変数としては無視します）。Steam は配布チャネルであり（同じ Electron バンドルを SteamPipe 経由でアップロードします）、デスクトッププレイヤーは Steam アカウントをリンクして、獲得した deed を Steam 実績にミラーリングできます。サインイン自体はメールと Discord のままです。リリースの完全な手順書（署名、公証、自動更新の公開、SteamPipe の depot、サーバーのデプロイ）は `docs/desktop-release.md` にあります。iOS と Android は Capacitor 経由で出荷され、専用の手順書が `docs/mobile-store-release.md` にあります。
+ステージングビルドで本番のAPIオリジンを上書きするには `VITE_DESKTOP_API_ORIGIN=https://dev.worldofclaudecraft.com.br` を使います（これはビルド時の値です。バンドルに焼き込まれてパッケージ済みアプリに刻まれるので、インストール済みビルドは実行時の環境変数としては無視します）。Steam は配布チャネルであり（同じ Electron バンドルを SteamPipe 経由でアップロードします）、デスクトッププレイヤーは Steam アカウントをリンクして、獲得した deed を Steam 実績にミラーリングできます。サインイン自体はメールと Discord のままです。リリースの完全な手順書（署名、公証、自動更新の公開、SteamPipe の depot、サーバーのデプロイ）は `docs/desktop-release.md` にあります。iOS と Android は Capacitor 経由で出荷され、専用の手順書が `docs/mobile-store-release.md` にあります。
 
 <a id="host-your-own-world-one-command"></a>
 
@@ -200,7 +200,7 @@ $WOC はライブなゲーム内でも任意のユーティリティを持ちま
 3WjLscH2JsXLEFJZRA9z8ti8yRGxWGKbqymPd7UicRth
 ```
 
-トークンの詳細は [worldofclaudecraft.com](https://worldofclaudecraft.com/) で。
+トークンの詳細は [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/) で。
 
 ## 世界をめぐる
 
@@ -396,4 +396,4 @@ node scripts/crypt_raid.mjs     # five bots clear the Hollow Crypt (ALLOW_DEV_CO
 
 [CREDITS.md](../../CREDITS.md) が正式な一覧で、アセットごとに再配布の列があります。あるアセットがそこに載っている場合、そのライセンスがプロジェクトのMITライセンスに優先します。この登録簿はまだ整備中なので、そこに見当たらないメディアアセットは自由なのではなく未記録なのです。頼りにする前に確認してください。ソースコードは逆で、切り出されていないものはすべてMITです。
 
-私たちの [利用規約](https://worldofclaudecraft.com/terms) は、worldofclaudecraft.com で私たちが運営するホスト版のゲーム（アカウント、行為、仮想アイテム）を対象とします。このソースコードにおいてMITライセンスがあなたに与える権利を制限するものではありません。
+私たちの [利用規約](https://worldofclaudecraft.com.br/terms) は、worldofclaudecraft.com.br で私たちが運営するホスト版のゲーム（アカウント、行為、仮想アイテム）を対象とします。このソースコードにおいてMITライセンスがあなたに与える権利を制限するものではありません。

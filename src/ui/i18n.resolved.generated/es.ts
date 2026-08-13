@@ -7650,7 +7650,7 @@ export const es: EnTranslations = {
     "applicationCategory": "Juego",
     "operatingSystem": "Navegador web",
     "officialLabel": "Sitio web oficial de World of ClaudeCraft",
-    "officialBody": "worldofclaudecraft.com es el MMO de navegador gratuito oficial del mundo Claudemoon. Juega en línea con un personaje persistente, explora en solitario sin conexión, lee la wiki y sigue los enlaces comunitarios verificados desde este sitio."
+    "officialBody": "worldofclaudecraft.com.br es el MMO de navegador gratuito oficial del mundo Claudemoon. Juega en línea con un personaje persistente, explora en solitario sin conexión, lee la wiki y sigue los enlaces comunitarios verificados desde este sitio."
   },
   "a11y": {
     "goHome": "Ir a la página principal",

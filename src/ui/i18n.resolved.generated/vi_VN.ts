@@ -7650,7 +7650,7 @@ export const vi_VN: EnTranslations = {
     "applicationCategory": "Trò chơi",
     "operatingSystem": "Trình duyệt web",
     "officialLabel": "Trang web World of ClaudeCraft chính thức",
-    "officialBody": "worldofclaudecraft.com là trang MMO trên trình duyệt miễn phí chính thức cho thế giới Claudemoon. Chơi trực tuyến với một nhân vật bền vững, khám phá đơn lẻ ngoại tuyến, đọc wiki và theo dõi các liên kết cộng đồng đã được xác minh từ trang này."
+    "officialBody": "worldofclaudecraft.com.br là trang MMO trên trình duyệt miễn phí chính thức cho thế giới Claudemoon. Chơi trực tuyến với một nhân vật bền vững, khám phá đơn lẻ ngoại tuyến, đọc wiki và theo dõi các liên kết cộng đồng đã được xác minh từ trang này."
   },
   "a11y": {
     "goHome": "Về trang chủ",

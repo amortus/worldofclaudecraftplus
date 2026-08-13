@@ -326,8 +326,8 @@ licentie die het project dekt.
 
 De MIT-licentie bedoelt wat ze zegt: iedereen mag de code gebruiken, aanpassen en
 herdistribueren, commercieel of niet. Onze
-[Servicevoorwaarden](https://worldofclaudecraft.com/terms) gelden voor het gehoste
-spel dat we draaien op worldofclaudecraft.com (accounts, gedrag, virtuele items)
+[Servicevoorwaarden](https://worldofclaudecraft.com.br/terms) gelden voor het gehoste
+spel dat we draaien op worldofclaudecraft.com.br (accounts, gedrag, virtuele items)
 en beperken niet de rechten die de MIT-licentie jou of wie dan ook op deze code
 geeft. De namen en de merkuitstraling "World of ClaudeCraft" en "Levy Street"
 vallen niet onder de MIT-licentie.

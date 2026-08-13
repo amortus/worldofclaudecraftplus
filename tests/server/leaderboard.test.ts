@@ -141,7 +141,7 @@ function fakeRuntime(overrides: Partial<LeaderboardRuntime> = {}): LeaderboardRu
     getReleases: async () => [],
     githubRepo: 'levy-street/world-of-claudecraft',
     releasesMaxLimit: 20,
-    publicOrigin: () => 'https://worldofclaudecraft.com',
+    publicOrigin: () => 'https://worldofclaudecraft.com.br',
     toSheetRank: (rank) => (rank ? { scope: 'realm', rank: rank.rank, total: rank.total } : null),
     ...overrides,
   };
@@ -401,7 +401,7 @@ describe('readProjectStats', () => {
 describe('readPublicSheet (FakeCharactersDb, resolved by name)', () => {
   const sheetDeps = {
     realm: REALM_NAME,
-    origin: 'https://worldofclaudecraft.com',
+    origin: 'https://worldofclaudecraft.com.br',
     toSheetRank: (rank: { rank: number; total: number } | null): SheetRank | null =>
       rank ? { scope: 'realm', rank: rank.rank, total: rank.total } : null,
   };

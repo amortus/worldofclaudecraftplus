@@ -7650,7 +7650,7 @@ export const id_ID: EnTranslations = {
     "applicationCategory": "Permainan",
     "operatingSystem": "Peramban web",
     "officialLabel": "Situs resmi World of ClaudeCraft",
-    "officialBody": "worldofclaudecraft.com adalah MMO peramban gratis resmi untuk dunia Claudemoon. Bermain daring dengan karakter yang persisten, jelajahi solo secara luring, baca wiki, dan ikuti tautan komunitas terverifikasi dari situs ini."
+    "officialBody": "worldofclaudecraft.com.br adalah MMO peramban gratis resmi untuk dunia Claudemoon. Bermain daring dengan karakter yang persisten, jelajahi solo secara luring, baca wiki, dan ikuti tautan komunitas terverifikasi dari situs ini."
   },
   "a11y": {
     "goHome": "Ke halaman utama",

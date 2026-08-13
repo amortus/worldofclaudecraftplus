@@ -13,8 +13,8 @@ describe('desktop runtime helpers', () => {
   });
 
   it('normalizes HTTP origins and rejects non-web origins', () => {
-    expect(normalizeOrigin('https://worldofclaudecraft.com/')).toBe(
-      'https://worldofclaudecraft.com',
+    expect(normalizeOrigin('https://worldofclaudecraft.com.br/')).toBe(
+      'https://worldofclaudecraft.com.br',
     );
     expect(() => normalizeOrigin('app://worldofclaudecraft')).toThrow(
       'unsupported origin protocol',
@@ -23,8 +23,8 @@ describe('desktop runtime helpers', () => {
 
   it('builds websocket URLs from desktop API origins', () => {
     expect(
-      runtimeWebSocketUrl('app:', 'worldofclaudecraft', 'https://worldofclaudecraft.com'),
-    ).toBe('wss://worldofclaudecraft.com/ws');
+      runtimeWebSocketUrl('app:', 'worldofclaudecraft', 'https://worldofclaudecraft.com.br'),
+    ).toBe('wss://worldofclaudecraft.com.br/ws');
     expect(runtimeWebSocketUrl('http:', '127.0.0.1:5173', '')).toBe('ws://127.0.0.1:5173/ws');
   });
 

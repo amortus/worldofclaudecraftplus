@@ -58,7 +58,7 @@
     "note": "fog easing on screen after the cut: 1501 at reveal, 3883 at +23s, target 5120; under a loaded production boot the base far grid additionally takes its idle timeout ceiling (~164 slices x 200ms, tens of seconds of classic fog) before the vista can flip at all"
   },
   "after": {
-    "source": "fix branch deployed to dev.worldofclaudecraft.com (b3d965040e), real network, fresh account first entry",
+    "source": "fix branch deployed to dev.worldofclaudecraft.com.br (b3d965040e), real network, fresh account first entry",
     "summary": {
       "label": "dev-after",
       "cpuRate": 1,

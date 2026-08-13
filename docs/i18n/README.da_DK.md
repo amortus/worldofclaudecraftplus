@@ -4,7 +4,7 @@
 
 **Tag på quests, dan grupper, og raid en håndbygget verden, gratis i din browser. Open source, web3, og online lige nu.**
 
-**Officiel hjemmeside: https://worldofclaudecraft.com/**
+**Officiel hjemmeside: https://worldofclaudecraft.com.br/**
 
 [![CI](https://github.com/levy-street/world-of-claudecraft/actions/workflows/ci.yml/badge.svg)](https://github.com/levy-street/world-of-claudecraft/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -20,7 +20,7 @@
 
 [English](../../README.md) · [Español](README.es.md) · [Español (España)](README.es_ES.md) · [Français](README.fr_FR.md) · [Français (Canada)](README.fr_CA.md) · [Italiano](README.it_IT.md) · [Deutsch](README.de_DE.md) · [简体中文](README.zh_CN.md) · [繁體中文](README.zh_TW.md) · [한국어](README.ko_KR.md) · [日本語](README.ja_JP.md) · [Português (Brasil)](README.pt_BR.md) · [Русский](README.ru_RU.md) · [Čeština](README.cs_CZ.md) · [Nederlands](README.nl_NL.md) · [Polski](README.pl_PL.md) · [Bahasa Indonesia](README.id_ID.md) · [Türkçe](README.tr_TR.md) · [Svenska](README.sv_SE.md) · [Tiếng Việt](README.vi_VN.md) · **Dansk**
 
-[Spil nu](https://worldofclaudecraft.com/) · [Hav din egen verden](#host-your-own-world-one-command) · [Træn en agent](#train-an-agent-headless-rl) · [Web3](#web3) · [Bidrag](CONTRIBUTING.da_DK.md) · [Discord](https://discord.com/invite/worldofclaudecraft)
+[Spil nu](https://worldofclaudecraft.com.br/) · [Hav din egen verden](#host-your-own-world-one-command) · [Træn en agent](#train-an-agent-headless-rl) · [Web3](#web3) · [Bidrag](CONTRIBUTING.da_DK.md) · [Discord](https://discord.com/invite/worldofclaudecraft)
 
 ![World of ClaudeCraft titelskærm](../../docs/screenshots/title-screen.jpg)
 
@@ -28,11 +28,11 @@
 
 ## Hvad er dette
 
-World of ClaudeCraft er en komplet MMO i klassisk stil, som du kan spille lige nu i din browser, selv hoste med en enkelt kommando, og endda træne AI-agenter til at spille. Den er gratis, open source, og live på [worldofclaudecraft.com](https://worldofclaudecraft.com/).
+World of ClaudeCraft er en komplet MMO i klassisk stil, som du kan spille lige nu i din browser, selv hoste med en enkelt kommando, og endda træne AI-agenter til at spille. Den er gratis, open source, og live på [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/).
 
 Én fælles verden kører tre steder, alt sammen fra den samme spilkerne:
 
-- den **autoritative multiplayer-server**, den levende verden du spiller i på worldofclaudecraft.com, hvor Postgres-understøttede konti deler ét persistent realm,
+- den **autoritative multiplayer-server**, den levende verden du spiller i på worldofclaudecraft.com.br, hvor Postgres-understøttede konti deler ét persistent realm,
 - den **offline browser-verden**, en lokal single-player Sim som du får fra dev-serveren, nyttig til udvikling og til at læse spilkernen fra ende til anden,
 - det **headless RL-miljø**, hvor Python driver det rigtige spil gennem en Gym-grænseflade.
 
@@ -77,7 +77,7 @@ Vejret er biome-drevet og findes kun i rendereren, så det rører aldrig den det
 
 ## Spil det
 
-Spil i din browser på [worldofclaudecraft.com](https://worldofclaudecraft.com/), eller installer den native app til Windows, Linux, macOS, iOS, eller Android. Hver klient forbinder til den samme online verden.
+Spil i din browser på [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/), eller installer den native app til Windows, Linux, macOS, iOS, eller Android. Hver klient forbinder til den samme online verden.
 
 ### Online, med andre spillere
 
@@ -113,7 +113,7 @@ Peg shell'en mod et andet API med `VITE_DESKTOP_API_ORIGIN`, for eksempel en lok
 VITE_DESKTOP_API_ORIGIN=http://127.0.0.1:8787 npm run electron:dev
 ```
 
-Tilsidesæt produktions-API-origin for staging-builds med `VITE_DESKTOP_API_ORIGIN=https://dev.worldofclaudecraft.com` (en værdi på BUILD-tidspunktet: den bages ind i bundlen og stemples ind i den pakkede app, og installerede builds ignorerer den som runtime-env-variabel). Steam er en distributionskanal (den samme Electron-bundle, uploadet via SteamPipe), og desktop-spillere kan linke en Steam-konto for at spejle de deeds de optjener over i Steam-achievements; selve login forbliver email og Discord. Den fulde release-runbook (signering, notarisering, udgivelse af en auto-opdatering, SteamPipe-depoter, server-deploy) er `docs/desktop-release.md`. iOS og Android leveres gennem Capacitor, med deres egen runbook i `docs/mobile-store-release.md`.
+Tilsidesæt produktions-API-origin for staging-builds med `VITE_DESKTOP_API_ORIGIN=https://dev.worldofclaudecraft.com.br` (en værdi på BUILD-tidspunktet: den bages ind i bundlen og stemples ind i den pakkede app, og installerede builds ignorerer den som runtime-env-variabel). Steam er en distributionskanal (den samme Electron-bundle, uploadet via SteamPipe), og desktop-spillere kan linke en Steam-konto for at spejle de deeds de optjener over i Steam-achievements; selve login forbliver email og Discord. Den fulde release-runbook (signering, notarisering, udgivelse af en auto-opdatering, SteamPipe-depoter, server-deploy) er `docs/desktop-release.md`. iOS og Android leveres gennem Capacitor, med deres egen runbook i `docs/mobile-store-release.md`.
 
 <a id="host-your-own-world-one-command"></a>
 
@@ -200,7 +200,7 @@ Intet af dette er nødvendigt for at spille. Wallet-linking er valgfrit og non-c
 3WjLscH2JsXLEFJZRA9z8ti8yRGxWGKbqymPd7UicRth
 ```
 
-Mere om token'et på [worldofclaudecraft.com](https://worldofclaudecraft.com/).
+Mere om token'et på [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/).
 
 ## En rundtur i verdenen
 
@@ -418,4 +418,4 @@ Hvad du ville skulle fjerne eller erstatte før videredistribution:
 
 [CREDITS.md](../../CREDITS.md) er den autoritative liste, med en kolonne om videredistribution per asset. Hvor et asset er opført der, gælder den licens over projektets MIT-licens. Det register er stadig ved at blive færdiggjort, så et medieasset der mangler i det, er uregistreret snarere end frit: spørg før du regner med det. For kildekode er det omvendt, og alt der ikke er skåret ud, er MIT.
 
-Vores [Servicevilkår](https://worldofclaudecraft.com/terms) dækker det hostede spil, som vi kører på worldofclaudecraft.com: konti, adfærd, virtuelle genstande. De begrænser ikke de rettigheder, MIT-licensen giver dig i denne kildekode.
+Vores [Servicevilkår](https://worldofclaudecraft.com.br/terms) dækker det hostede spil, som vi kører på worldofclaudecraft.com.br: konti, adfærd, virtuelle genstande. De begrænser ikke de rettigheder, MIT-licensen giver dig i denne kildekode.

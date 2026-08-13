@@ -49,7 +49,7 @@ function makeReq(opts: { url?: string; body?: unknown; origin?: string } = {}): 
           },
         });
   req.url = opts.url ?? '/';
-  req.headers = { host: 'worldofclaudecraft.com', ...(opts.origin ? { origin: opts.origin } : {}) };
+  req.headers = { host: 'worldofclaudecraft.com.br', ...(opts.origin ? { origin: opts.origin } : {}) };
   req.socket = { remoteAddress: '127.0.0.1' };
   return req;
 }

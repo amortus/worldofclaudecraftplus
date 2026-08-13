@@ -48,37 +48,37 @@ describe('web login guard (anti-bot)', () => {
 
   it('accepts Capacitor native app origins', () => {
     expect(
-      isWebClientRequest(req({ origin: 'capacitor://localhost', host: 'worldofclaudecraft.com' })),
+      isWebClientRequest(req({ origin: 'capacitor://localhost', host: 'worldofclaudecraft.com.br' })),
     ).toBe(true);
     expect(
-      isWebClientRequest(req({ origin: 'http://localhost', host: 'worldofclaudecraft.com' })),
+      isWebClientRequest(req({ origin: 'http://localhost', host: 'worldofclaudecraft.com.br' })),
     ).toBe(true);
     expect(
-      isWebClientRequest(req({ origin: 'https://localhost', host: 'worldofclaudecraft.com' })),
+      isWebClientRequest(req({ origin: 'https://localhost', host: 'worldofclaudecraft.com.br' })),
     ).toBe(true);
   });
 
   it('identifies native app origins for Turnstile bypass', () => {
     expect(
-      isNativeAppRequest(req({ origin: 'capacitor://localhost', host: 'worldofclaudecraft.com' })),
+      isNativeAppRequest(req({ origin: 'capacitor://localhost', host: 'worldofclaudecraft.com.br' })),
     ).toBe(true);
     expect(
-      isNativeAppRequest(req({ origin: 'http://localhost', host: 'worldofclaudecraft.com' })),
+      isNativeAppRequest(req({ origin: 'http://localhost', host: 'worldofclaudecraft.com.br' })),
     ).toBe(true);
     expect(
-      isNativeAppRequest(req({ origin: 'https://localhost', host: 'worldofclaudecraft.com' })),
+      isNativeAppRequest(req({ origin: 'https://localhost', host: 'worldofclaudecraft.com.br' })),
     ).toBe(true);
     expect(
       isNativeAppRequest(
-        req({ origin: 'https://worldofclaudecraft.com', host: 'worldofclaudecraft.com' }),
+        req({ origin: 'https://worldofclaudecraft.com.br', host: 'worldofclaudecraft.com.br' }),
       ),
     ).toBe(false);
     expect(
       isNativeAppRequest(
-        req({ origin: 'https://evil.example.com', host: 'worldofclaudecraft.com' }),
+        req({ origin: 'https://evil.example.com', host: 'worldofclaudecraft.com.br' }),
       ),
     ).toBe(false);
-    expect(isNativeAppRequest(req({ host: 'worldofclaudecraft.com' }))).toBe(false);
+    expect(isNativeAppRequest(req({ host: 'worldofclaudecraft.com.br' }))).toBe(false);
   });
 
   it('rejects a foreign origin', () => {
@@ -98,7 +98,7 @@ describe('desktop app origins (Electron shell)', () => {
   it('rejects look-alike, web, native, and missing origins', () => {
     expect(isDesktopAppRequest(req({ origin: 'app://evil' }))).toBe(false);
     expect(isDesktopAppRequest(req({ origin: 'app://worldofclaudecraft.evil' }))).toBe(false);
-    expect(isDesktopAppRequest(req({ origin: 'https://worldofclaudecraft.com' }))).toBe(false);
+    expect(isDesktopAppRequest(req({ origin: 'https://worldofclaudecraft.com.br' }))).toBe(false);
     expect(isDesktopAppRequest(req({ origin: 'capacitor://localhost' }))).toBe(false);
     expect(isDesktopAppRequest(req({}))).toBe(false);
   });
@@ -106,9 +106,9 @@ describe('desktop app origins (Electron shell)', () => {
   it('passes the web-login guard for every desktop origin while enforcement is on', () => {
     expect(webLoginEnforced({ NODE_ENV: 'production' } as any)).toBe(true);
     for (const origin of DESKTOP_APP_ORIGINS) {
-      expect(isWebClientRequest(req({ origin, host: 'worldofclaudecraft.com' }))).toBe(true);
+      expect(isWebClientRequest(req({ origin, host: 'worldofclaudecraft.com.br' }))).toBe(true);
     }
-    expect(isWebClientRequest(req({ origin: 'app://evil', host: 'worldofclaudecraft.com' }))).toBe(
+    expect(isWebClientRequest(req({ origin: 'app://evil', host: 'worldofclaudecraft.com.br' }))).toBe(
       false,
     );
   });
@@ -133,7 +133,7 @@ describe('API CORS reflection allow-list (allowedCorsOrigin)', () => {
     // Unlisted here because REALM_ORIGINS is empty in the test env; a
     // deployment that lists the site origin as a realm URL reflects it. The
     // same-origin page never needs CORS either way.
-    expect(allowedCorsOrigin('https://worldofclaudecraft.com')).toBeNull();
+    expect(allowedCorsOrigin('https://worldofclaudecraft.com.br')).toBeNull();
     expect(allowedCorsOrigin(undefined)).toBeNull();
     expect(allowedCorsOrigin('')).toBeNull();
   });

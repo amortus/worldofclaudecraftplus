@@ -4,7 +4,7 @@
 
 **Haz misiones, forma grupo e incursiona en un mundo hecho a mano, gratis en tu navegador. De código abierto, web3 y en línea ahora mismo.**
 
-**Sitio web oficial: https://worldofclaudecraft.com/**
+**Sitio web oficial: https://worldofclaudecraft.com.br/**
 
 [![CI](https://github.com/levy-street/world-of-claudecraft/actions/workflows/ci.yml/badge.svg)](https://github.com/levy-street/world-of-claudecraft/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -20,7 +20,7 @@
 
 [English](../../README.md) · **Español** · [Español (España)](README.es_ES.md) · [Français](README.fr_FR.md) · [Français (Canada)](README.fr_CA.md) · [Italiano](README.it_IT.md) · [Deutsch](README.de_DE.md) · [简体中文](README.zh_CN.md) · [繁體中文](README.zh_TW.md) · [한국어](README.ko_KR.md) · [日本語](README.ja_JP.md) · [Português (Brasil)](README.pt_BR.md) · [Русский](README.ru_RU.md) · [Čeština](README.cs_CZ.md) · [Nederlands](README.nl_NL.md) · [Polski](README.pl_PL.md) · [Bahasa Indonesia](README.id_ID.md) · [Türkçe](README.tr_TR.md) · [Svenska](README.sv_SE.md) · [Tiếng Việt](README.vi_VN.md) · [Dansk](README.da_DK.md)
 
-[Jugar ahora](https://worldofclaudecraft.com/) · [Aloja tu propio mundo](#host-your-own-world-one-command) · [Entrena un agente](#train-an-agent-headless-rl) · [Web3](#web3) · [Contribuir](CONTRIBUTING.es.md) · [Discord](https://discord.com/invite/worldofclaudecraft)
+[Jugar ahora](https://worldofclaudecraft.com.br/) · [Aloja tu propio mundo](#host-your-own-world-one-command) · [Entrena un agente](#train-an-agent-headless-rl) · [Web3](#web3) · [Contribuir](CONTRIBUTING.es.md) · [Discord](https://discord.com/invite/worldofclaudecraft)
 
 ![Pantalla de título de World of ClaudeCraft](../../docs/screenshots/title-screen.jpg)
 
@@ -28,11 +28,11 @@
 
 ## ¿Qué es esto?
 
-World of ClaudeCraft es un MMO completo de la era clásica que puedes jugar ahora mismo en tu navegador, alojar tú mismo con un solo comando e incluso usar para entrenar agentes de IA que aprendan a jugar. Es gratis, de código abierto y está en línea en [worldofclaudecraft.com](https://worldofclaudecraft.com/).
+World of ClaudeCraft es un MMO completo de la era clásica que puedes jugar ahora mismo en tu navegador, alojar tú mismo con un solo comando e incluso usar para entrenar agentes de IA que aprendan a jugar. Es gratis, de código abierto y está en línea en [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/).
 
 Un mismo mundo compartido corre en tres lugares, todos desde el mismo núcleo de juego:
 
-- el **servidor multijugador autoritativo**, el mundo en vivo que juegas en worldofclaudecraft.com, donde las cuentas respaldadas por Postgres comparten un único reino persistente,
+- el **servidor multijugador autoritativo**, el mundo en vivo que juegas en worldofclaudecraft.com.br, donde las cuentas respaldadas por Postgres comparten un único reino persistente,
 - el **mundo offline del navegador**, una Sim local para un solo jugador que obtienes desde el servidor de desarrollo, útil para desarrollar y para leer el núcleo del juego de principio a fin,
 - el **entorno de RL headless**, donde Python controla el juego real a través de una interfaz Gym.
 
@@ -77,7 +77,7 @@ El clima está impulsado por el bioma y es solo de renderizado, así que nunca t
 
 ## Juégalo
 
-Juega en tu navegador en [worldofclaudecraft.com](https://worldofclaudecraft.com/), o instala la aplicación nativa para Windows, Linux, macOS, iOS o Android. Todos los clientes se conectan al mismo mundo en línea.
+Juega en tu navegador en [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/), o instala la aplicación nativa para Windows, Linux, macOS, iOS o Android. Todos los clientes se conectan al mismo mundo en línea.
 
 ### En línea, con otros jugadores
 
@@ -113,7 +113,7 @@ Apunta el shell a otra API con `VITE_DESKTOP_API_ORIGIN`, por ejemplo un servido
 VITE_DESKTOP_API_ORIGIN=http://127.0.0.1:8787 npm run electron:dev
 ```
 
-Sobrescribe el origen de la API de producción para las compilaciones de staging con `VITE_DESKTOP_API_ORIGIN=https://dev.worldofclaudecraft.com` (un valor de tiempo de COMPILACIÓN: queda incrustado en el bundle y grabado en la aplicación empaquetada, y las compilaciones instaladas lo ignoran como variable de entorno en tiempo de ejecución). Steam es un canal de distribución (el mismo bundle de Electron, subido mediante SteamPipe), y los jugadores de escritorio pueden vincular una cuenta de Steam para reflejar los deeds que consigan como logros de Steam; el inicio de sesión en sí sigue siendo por correo y Discord. El runbook completo de lanzamiento (firma, notarización, publicación de una actualización automática, depósitos de SteamPipe, el despliegue del servidor) es `docs/desktop-release.md`. iOS y Android se distribuyen mediante Capacitor, con su propio runbook en `docs/mobile-store-release.md`.
+Sobrescribe el origen de la API de producción para las compilaciones de staging con `VITE_DESKTOP_API_ORIGIN=https://dev.worldofclaudecraft.com.br` (un valor de tiempo de COMPILACIÓN: queda incrustado en el bundle y grabado en la aplicación empaquetada, y las compilaciones instaladas lo ignoran como variable de entorno en tiempo de ejecución). Steam es un canal de distribución (el mismo bundle de Electron, subido mediante SteamPipe), y los jugadores de escritorio pueden vincular una cuenta de Steam para reflejar los deeds que consigan como logros de Steam; el inicio de sesión en sí sigue siendo por correo y Discord. El runbook completo de lanzamiento (firma, notarización, publicación de una actualización automática, depósitos de SteamPipe, el despliegue del servidor) es `docs/desktop-release.md`. iOS y Android se distribuyen mediante Capacitor, con su propio runbook en `docs/mobile-store-release.md`.
 
 <a id="host-your-own-world-one-command"></a>
 
@@ -200,7 +200,7 @@ Nada de esto hace falta para jugar. Vincular la cartera es opcional y no custodi
 3WjLscH2JsXLEFJZRA9z8ti8yRGxWGKbqymPd7UicRth
 ```
 
-Más sobre el token en [worldofclaudecraft.com](https://worldofclaudecraft.com/).
+Más sobre el token en [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/).
 
 ## Un recorrido por el mundo
 
@@ -419,4 +419,4 @@ Lo que tendrías que quitar o reemplazar antes de redistribuir:
 
 [CREDITS.md](../../CREDITS.md) es la lista autoritativa, con una columna de redistribución por recurso. Cuando un recurso figura ahí, esa licencia prevalece sobre la licencia MIT del proyecto. Ese registro todavía se está completando, así que un recurso multimedia que falte en él está sin registrar, no libre: pregunta antes de basarte en él. Con el código fuente ocurre al revés, y todo lo que no esté excluido es MIT.
 
-Nuestros [Términos de Servicio](https://worldofclaudecraft.com/terms) cubren el juego alojado que operamos en worldofclaudecraft.com: cuentas, conducta, objetos virtuales. No restringen los derechos que la Licencia MIT te otorga sobre este código fuente.
+Nuestros [Términos de Servicio](https://worldofclaudecraft.com.br/terms) cubren el juego alojado que operamos en worldofclaudecraft.com.br: cuentas, conducta, objetos virtuales. No restringen los derechos que la Licencia MIT te otorga sobre este código fuente.

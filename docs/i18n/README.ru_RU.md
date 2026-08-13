@@ -4,7 +4,7 @@
 
 **Выполняйте задания, собирайтесь в группы и штурмуйте вручную созданный мир, бесплатно прямо в браузере. Открытый исходный код, web3 и онлайн прямо сейчас.**
 
-**Официальный сайт: https://worldofclaudecraft.com/**
+**Официальный сайт: https://worldofclaudecraft.com.br/**
 
 [![CI](https://github.com/levy-street/world-of-claudecraft/actions/workflows/ci.yml/badge.svg)](https://github.com/levy-street/world-of-claudecraft/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -20,7 +20,7 @@
 
 [English](../../README.md) · [Español](README.es.md) · [Español (España)](README.es_ES.md) · [Français](README.fr_FR.md) · [Français (Canada)](README.fr_CA.md) · [Italiano](README.it_IT.md) · [Deutsch](README.de_DE.md) · [简体中文](README.zh_CN.md) · [繁體中文](README.zh_TW.md) · [한국어](README.ko_KR.md) · [日本語](README.ja_JP.md) · [Português (Brasil)](README.pt_BR.md) · **Русский** · [Čeština](README.cs_CZ.md) · [Nederlands](README.nl_NL.md) · [Polski](README.pl_PL.md) · [Bahasa Indonesia](README.id_ID.md) · [Türkçe](README.tr_TR.md) · [Svenska](README.sv_SE.md) · [Tiếng Việt](README.vi_VN.md) · [Dansk](README.da_DK.md)
 
-[Играть сейчас](https://worldofclaudecraft.com/) · [Разверните свой мир](#host-your-own-world-one-command) · [Обучите агента](#train-an-agent-headless-rl) · [Web3](#web3) · [Участие в разработке](CONTRIBUTING.ru_RU.md) · [Discord](https://discord.com/invite/worldofclaudecraft)
+[Играть сейчас](https://worldofclaudecraft.com.br/) · [Разверните свой мир](#host-your-own-world-one-command) · [Обучите агента](#train-an-agent-headless-rl) · [Web3](#web3) · [Участие в разработке](CONTRIBUTING.ru_RU.md) · [Discord](https://discord.com/invite/worldofclaudecraft)
 
 ![Титульный экран World of ClaudeCraft](../../docs/screenshots/title-screen.jpg)
 
@@ -28,11 +28,11 @@
 
 ## Что это такое
 
-World of ClaudeCraft — это полноценная MMO классической эпохи, в которую можно играть прямо сейчас в браузере, развернуть самостоятельно одной командой и даже обучать ИИ-агентов игре. Она бесплатна, имеет открытый исходный код и работает по адресу [worldofclaudecraft.com](https://worldofclaudecraft.com/).
+World of ClaudeCraft — это полноценная MMO классической эпохи, в которую можно играть прямо сейчас в браузере, развернуть самостоятельно одной командой и даже обучать ИИ-агентов игре. Она бесплатна, имеет открытый исходный код и работает по адресу [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/).
 
 Один общий мир работает в трёх местах, и всё из одного игрового ядра:
 
-- **авторитетный многопользовательский сервер**, живой мир, в который вы играете на worldofclaudecraft.com, где аккаунты, хранящиеся в Postgres, разделяют один постоянный realm,
+- **авторитетный многопользовательский сервер**, живой мир, в который вы играете на worldofclaudecraft.com.br, где аккаунты, хранящиеся в Postgres, разделяют один постоянный realm,
 - **офлайновый браузерный мир**, локальная однопользовательская симуляция, которую вы получаете из dev-сервера, полезная для разработки и для чтения игрового ядра от начала до конца,
 - **headless RL-окружение**, где Python управляет настоящей игрой через интерфейс Gym.
 
@@ -77,7 +77,7 @@ World of ClaudeCraft — это полноценная MMO классическ�
 
 ## Как играть
 
-Играйте в браузере на [worldofclaudecraft.com](https://worldofclaudecraft.com/) или установите нативное приложение для Windows, Linux, macOS, iOS или Android. Каждый клиент подключается к одному и тому же онлайн-миру.
+Играйте в браузере на [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/) или установите нативное приложение для Windows, Linux, macOS, iOS или Android. Каждый клиент подключается к одному и тому же онлайн-миру.
 
 ### Онлайн, с другими игроками
 
@@ -113,7 +113,7 @@ npm run electron:build:steam  # SteamPipe depot layouts (in-app updater off)
 VITE_DESKTOP_API_ORIGIN=http://127.0.0.1:8787 npm run electron:dev
 ```
 
-Переопределите продакшен-origin API для стендовых сборок через `VITE_DESKTOP_API_ORIGIN=https://dev.worldofclaudecraft.com` (это значение времени СБОРКИ: оно вшивается в бандл и штампуется в упакованное приложение, а установленные сборки игнорируют его как переменную окружения времени выполнения). Steam — это канал распространения (тот же бандл Electron, загруженный через SteamPipe), и десктопные игроки могут привязать аккаунт Steam, чтобы зеркалить заработанные деяния в достижения Steam; сам вход остаётся через почту и Discord. Полный релизный runbook (подпись, нотаризация, публикация автообновления, депоты SteamPipe, деплой сервера) — это `docs/desktop-release.md`. iOS и Android поставляются через Capacitor, со своим runbook в `docs/mobile-store-release.md`.
+Переопределите продакшен-origin API для стендовых сборок через `VITE_DESKTOP_API_ORIGIN=https://dev.worldofclaudecraft.com.br` (это значение времени СБОРКИ: оно вшивается в бандл и штампуется в упакованное приложение, а установленные сборки игнорируют его как переменную окружения времени выполнения). Steam — это канал распространения (тот же бандл Electron, загруженный через SteamPipe), и десктопные игроки могут привязать аккаунт Steam, чтобы зеркалить заработанные деяния в достижения Steam; сам вход остаётся через почту и Discord. Полный релизный runbook (подпись, нотаризация, публикация автообновления, депоты SteamPipe, деплой сервера) — это `docs/desktop-release.md`. iOS и Android поставляются через Capacitor, со своим runbook в `docs/mobile-store-release.md`.
 
 <a id="host-your-own-world-one-command"></a>
 
@@ -200,7 +200,7 @@ World of ClaudeCraft является web3-native вокруг **$WOC**, наш�
 3WjLscH2JsXLEFJZRA9z8ti8yRGxWGKbqymPd7UicRth
 ```
 
-Подробнее о токене на [worldofclaudecraft.com](https://worldofclaudecraft.com/).
+Подробнее о токене на [worldofclaudecraft.com.br](https://worldofclaudecraft.com.br/).
 
 ## Тур по миру
 
@@ -420,4 +420,4 @@ node scripts/crypt_raid.mjs     # five bots clear the Hollow Crypt (ALLOW_DEV_CO
 
 [CREDITS.md](../../CREDITS.md) — это авторитетный список, с колонкой распространения для каждого ассета. Там, где ассет указан, его лицензия имеет приоритет над MIT-лицензией проекта. Этот реестр ещё дополняется, поэтому медиа-ассет, отсутствующий в нём, скорее не записан, чем свободен: спросите, прежде чем на него полагаться. С исходным кодом наоборот, и всё, что не выделено отдельно, идёт под MIT.
 
-Наши [Условия использования](https://worldofclaudecraft.com/terms) распространяются на размещённую нами игру, которую мы запускаем на worldofclaudecraft.com: аккаунты, поведение, виртуальные предметы. Они не ограничивают права, которые даёт вам лицензия MIT в этом исходном коде.
+Наши [Условия использования](https://worldofclaudecraft.com.br/terms) распространяются на размещённую нами игру, которую мы запускаем на worldofclaudecraft.com.br: аккаунты, поведение, виртуальные предметы. Они не ограничивают права, которые даёт вам лицензия MIT в этом исходном коде.

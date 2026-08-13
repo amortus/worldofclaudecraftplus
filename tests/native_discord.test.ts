@@ -48,7 +48,7 @@ describe('native Discord OAuth deep link', () => {
   });
 
   it('rejects unrelated schemes, hosts, and modes', () => {
-    expect(parseNativeDiscordUrl('https://worldofclaudecraft.com/discord-auth')).toBeNull();
+    expect(parseNativeDiscordUrl('https://worldofclaudecraft.com.br/discord-auth')).toBeNull();
     expect(parseNativeDiscordUrl('worldofclaudecraft://desktop-login?mode=login')).toBeNull();
     expect(parseNativeDiscordUrl('worldofclaudecraft://discord-auth?mode=nope')).toBeNull();
   });

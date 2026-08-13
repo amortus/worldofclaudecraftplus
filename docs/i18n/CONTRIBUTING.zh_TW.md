@@ -176,7 +176,7 @@ World of ClaudeCraft 以多種語言發行。每一段玩家可見的字串都�
 
 只要貢獻程式碼，就代表你同意你的程式碼貢獻將以本專案的 [MIT License](../../LICENSE) 授權，與涵蓋整個專案的授權相同。
 
-MIT License 的意思就如同字面：任何人都可以使用、修改與再散布這些程式碼，商用或非商用皆可。我們的[服務條款](https://worldofclaudecraft.com/terms)規範的是我們在 worldofclaudecraft.com 營運的託管遊戲（帳號、行為規範、虛擬物品），並不會限制 MIT License 賦予你或任何人對這份程式碼的權利。「World of ClaudeCraft」與「Levy Street」的名稱和品牌識別不在 MIT License 的涵蓋範圍內。
+MIT License 的意思就如同字面：任何人都可以使用、修改與再散布這些程式碼，商用或非商用皆可。我們的[服務條款](https://worldofclaudecraft.com.br/terms)規範的是我們在 worldofclaudecraft.com.br 營運的託管遊戲（帳號、行為規範、虛擬物品），並不會限制 MIT License 賦予你或任何人對這份程式碼的權利。「World of ClaudeCraft」與「Levy Street」的名稱和品牌識別不在 MIT License 的涵蓋範圍內。
 
 原創的創作素材（錄音、音樂、美術，以及類似的著作）是例外。如果你貢獻的是由你自己創作的原創素材，你可以選擇保留著作權，並以你選擇的授權方式提供（例如 CC BY-NC 4.0），前提是：
 

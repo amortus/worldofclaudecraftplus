@@ -3825,7 +3825,7 @@ export const pt_BR: Partial<Record<TranslationKey, string>> = {
   'hudChrome.unitFrame.targetLabel': 'Seu alvo',
   'seo.officialLabel': 'Site oficial de World of ClaudeCraft',
   'seo.officialBody':
-    'worldofclaudecraft.com é o MMO de navegador gratuito oficial do mundo Claudemoon. Jogue online com um personagem persistente, explore solo offline, leia a wiki e siga os links verificados da comunidade a partir deste site.',
+    'worldofclaudecraft.com.br é o MMO de navegador gratuito oficial do mundo Claudemoon. Jogue online com um personagem persistente, explore solo offline, leia a wiki e siga os links verificados da comunidade a partir deste site.',
   'hudChrome.questShare.notShareable': 'Esta missão não pode ser compartilhada.',
   'hudChrome.questShare.notInSharerParty':
     'Você precisa estar no grupo de {name} para aceitar essa missão.',

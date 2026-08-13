@@ -7650,7 +7650,7 @@ export const ko_KR: EnTranslations = {
     "applicationCategory": "게임",
     "operatingSystem": "웹 브라우저",
     "officialLabel": "World of ClaudeCraft 공식 웹사이트",
-    "officialBody": "worldofclaudecraft.com은 Claudemoon 월드의 공식 무료 브라우저 MMO입니다. 지속 캐릭터로 온라인 플레이를 하거나, 오프라인에서 혼자 탐험하고, 위키를 읽고, 이 사이트에서 검증된 커뮤니티 링크를 확인하세요."
+    "officialBody": "worldofclaudecraft.com.br은 Claudemoon 월드의 공식 무료 브라우저 MMO입니다. 지속 캐릭터로 온라인 플레이를 하거나, 오프라인에서 혼자 탐험하고, 위키를 읽고, 이 사이트에서 검증된 커뮤니티 링크를 확인하세요."
   },
   "a11y": {
     "goHome": "홈으로 이동",

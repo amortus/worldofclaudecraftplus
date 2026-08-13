@@ -334,8 +334,8 @@ ini.
 
 Lisensi MIT berarti persis seperti yang tertulis: siapa pun boleh menggunakan,
 memodifikasi, dan mendistribusikan ulang kodenya, secara komersial maupun tidak.
-[Ketentuan Layanan](https://worldofclaudecraft.com/terms) kami mengatur game yang
-kami hosting di worldofclaudecraft.com (akun, perilaku, item virtual) dan tidak
+[Ketentuan Layanan](https://worldofclaudecraft.com.br/terms) kami mengatur game yang
+kami hosting di worldofclaudecraft.com.br (akun, perilaku, item virtual) dan tidak
 membatasi hak yang diberikan Lisensi MIT kepadamu atau siapa pun atas kode ini.
 Nama dan branding "World of ClaudeCraft" serta "Levy Street" tidak dicakup oleh
 Lisensi MIT.
